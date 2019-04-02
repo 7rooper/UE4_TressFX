@@ -10,6 +10,7 @@
 #include "HAL/IConsoleManager.h"
 #include "RHIDefinitions.h"
 #include "RHI.h"
+#include "RHI.h"
 #include "RenderResource.h"
 #include "UniformBuffer.h"
 #include "SceneInterface.h"
@@ -485,6 +486,10 @@ public:
 	
 	ERHIFeatureLevel::Type GetCurrentFeatureLevel() const { return CurrentFeatureLevel; }
 
+	/*@BEGIN Third party code TressFX*/
+	void AllocatTressFXTargets(FRHICommandList& RHICmdList, const FSceneViewFamily& ViewFamily);
+	/*@END Third party code TressFX*/
+
 private: // Get...() methods instead of direct access
 
 	// 0 before BeginRenderingSceneColor and after tone mapping in deferred shading
@@ -571,6 +576,22 @@ public:
 
 	// todo: free ScreenSpaceAO so pool can reuse
 	bool bCustomDepthIsValid;
+
+	/*@BEGIN Third party code TressFX*/
+	TRefCountPtr<IPooledRenderTarget> TressFXSceneDepth;
+	TRefCountPtr<FRHIShaderResourceView> TressFXStencilSRV;
+	TRefCountPtr<IPooledRenderTarget> TressFXVelocity;
+
+	//shortcut
+	TRefCountPtr<IPooledRenderTarget> AccumInvAlpha;
+	TRefCountPtr<IPooledRenderTarget> FragmentDepthsTexture;
+	TRefCountPtr<IPooledRenderTarget> FragmentColorsTexture;
+
+	//k-buffer
+	TRefCountPtr<IPooledRenderTarget> PPLLHeads;
+	FRWBufferStructured PPLLNodes;
+	int32 NodePoolSize;
+	/*@END Third party code TressFX*/
 
 private:
 	/** used by AdjustGBufferRefCount */

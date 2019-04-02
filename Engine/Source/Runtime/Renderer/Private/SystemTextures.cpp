@@ -84,6 +84,22 @@ void FSystemTextures::InitializeCommonTextures(FRHICommandListImmediate& RHICmdL
 			RHICmdList.CopyToResolveTarget(DefaultNormal8Bit->GetRenderTargetItem().TargetableTexture, DefaultNormal8Bit->GetRenderTargetItem().ShaderResourceTexture, FResolveParams());
 		}
 
+		/*@BEGIN Third party code TressFX*/
+		{
+			FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(FIntPoint(512, 512), PF_A32B32G32R32F, FClearValueBinding::None, TexCreate_ShaderResource, TexCreate_None, false));
+			GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXNoise, TEXT("TressFXNoise"));
+			TArray<FLinearColor> NoiseArray;
+			for (int32 i = 0; i < Desc.Extent.X * Desc.Extent.Y; ++i)
+			{
+				NoiseArray.Add(FLinearColor::MakeRandomColor());
+			}
+			uint32 DestStride;
+			void* Dest = RHICmdList.LockTexture2D((FTexture2DRHIRef&)TressFXNoise->GetRenderTargetItem().ShaderResourceTexture, 0, RLM_WriteOnly, DestStride, false);
+			FMemory::Memcpy(Dest, NoiseArray.GetData(), NoiseArray.Num() * sizeof(FVector4));
+			RHICmdList.UnlockTexture2D((FTexture2DRHIRef&)TressFXNoise->GetRenderTargetItem().ShaderResourceTexture, 0, false);
+		}
+		/*@END Third party code TressFX*/
+
 		// Create the PerlinNoiseGradient texture
 		{
 			FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(FIntPoint(128, 128), PF_B8G8R8A8, FClearValueBinding::None, TexCreate_HideInVisualizeTexture, TexCreate_None | TexCreate_NoFastClear, false));
@@ -576,6 +592,11 @@ void FSystemTextures::ReleaseDynamicRHI()
 	GreenDummy.SafeRelease();
 	DefaultNormal8Bit.SafeRelease();
 	VolumetricBlackDummy.SafeRelease();
+
+	/*@BEGIN Third party code TressFX*/
+	TressFXNoise.SafeRelease();
+	/*@END Third party code TressFX*/
+
 
 	GRenderTargetPool.FreeUnusedResources();
 

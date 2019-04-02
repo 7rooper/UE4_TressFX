@@ -209,6 +209,12 @@
 #include "Materials/MaterialExpressionMaterialLayerOutput.h"
 #include "Materials/MaterialExpressionCurveAtlasRowParameter.h"
 #include "Materials/MaterialUniformExpressions.h"
+
+/*@BEGIN Third party code TressFX*/
+#include "Materials/MaterialExpressionTressFXGetHairTangent.h"
+#include "Materials/MaterialExpressionTressFXGetStrandUV.h"
+/*@END Third party code TressFX*/
+
 #include "EditorSupportDelegates.h"
 #include "MaterialCompiler.h"
 #if WITH_EDITOR
@@ -15136,4 +15142,95 @@ void UMaterialExpressionCurveAtlasRowParameter::PostEditChangeProperty(FProperty
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 #endif
+
+/*@BEGIN Third party code TressFX*/
+///////////////////////////////////////////////////////////////////////////////
+// UMaterialExpressionTressFXGetHairTangent
+///////////////////////////////////////////////////////////////////////////////
+UMaterialExpressionTressFXGetHairTangent::UMaterialExpressionTressFXGetHairTangent(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
+{
+	// Structure to hold one-time initialization
+	struct FConstructorStatics
+	{
+		FText NAME_Vectors;
+		FText NAME_Coordinates;
+		FConstructorStatics()
+			: NAME_Vectors(LOCTEXT("Vectors", "Vectors"))
+			, NAME_Coordinates(LOCTEXT("Coordinates", "Coordinates"))
+		{
+		}
+	};
+	static FConstructorStatics ConstructorStatics;
+
+#if WITH_EDITORONLY_DATA
+	MenuCategories.Add(ConstructorStatics.NAME_Vectors);
+	MenuCategories.Add(ConstructorStatics.NAME_Coordinates);
+#endif
+
+	bShaderInputData = true;
+}
+
+#if WITH_EDITOR
+int32 UMaterialExpressionTressFXGetHairTangent::Compile(class FMaterialCompiler* Compiler, int32 OutputIndex)
+{
+	if (Material && Material->MaterialDomain == MD_DeferredDecal)
+	{
+		return CompilerError(Compiler, TEXT("Expression not available in the deferred decal material domain."));
+	}
+
+	return Compiler->GetHairTangent();
+}
+
+void UMaterialExpressionTressFXGetHairTangent::GetCaption(TArray<FString>& OutCaptions) const
+{
+	OutCaptions.Add(TEXT("TressFX Hair Tangent"));
+}
+#endif // WITH_EDITOR
+
+///////////////////////////////////////////////////////////////////////////////
+// UMaterialExpressionTressFXGetStrandUV
+///////////////////////////////////////////////////////////////////////////////
+UMaterialExpressionTressFXGetStrandUV::UMaterialExpressionTressFXGetStrandUV(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
+{
+	// Structure to hold one-time initialization
+	struct FConstructorStatics
+	{
+		FText NAME_Vectors;
+		FText NAME_Coordinates;
+		FConstructorStatics()
+			: NAME_Vectors(LOCTEXT("Vectors", "Vectors"))
+			, NAME_Coordinates(LOCTEXT("Coordinates", "Coordinates"))
+		{
+		}
+	};
+	static FConstructorStatics ConstructorStatics;
+
+#if WITH_EDITORONLY_DATA
+	MenuCategories.Add(ConstructorStatics.NAME_Vectors);
+	MenuCategories.Add(ConstructorStatics.NAME_Coordinates);
+#endif
+
+	bShaderInputData = true;
+}
+
+#if WITH_EDITOR
+int32 UMaterialExpressionTressFXGetStrandUV::Compile(class FMaterialCompiler* Compiler, int32 OutputIndex)
+{
+	if (Material && Material->MaterialDomain == MD_DeferredDecal || !Material->bUsedWithTressFX)
+	{
+		return CompilerError(Compiler, TEXT("Expression not available in the deferred decal material domain."));
+	}
+
+	return Compiler->GetStrandUV();
+}
+
+void UMaterialExpressionTressFXGetStrandUV::GetCaption(TArray<FString>& OutCaptions) const
+{
+	OutCaptions.Add(TEXT("TressFX Hair UV"));
+}
+#endif // WITH_EDITOR
+/*@END Third party code TressFX*/
+
 #undef LOCTEXT_NAMESPACE

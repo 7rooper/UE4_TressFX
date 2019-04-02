@@ -1,0 +1,68 @@
+#include "Common.ush"
+
+void CopyDepthPS(FScreenVertexOutput Input, out float Depth : SV_Depth)
+{
+    Depth = SceneTexturesStruct.SceneDepthTexture[uint2(Input.Position.xy)].r;
+}
+
+Texture2D<float> DepthTexture;
+Texture2D<uint2> StencilTexture;
+
+
+float CopyHairDepthPs(FScreenVertexOutput Input) : SV_Depth
+{
+    uint3 ScreenAddr = uint3(uint2(Input.Position.xy),0);
+    float NearestDepth = 0;
+
+	// Skip non-hair depth using stencil
+    uint Stencil = StencilTexture.Load(ScreenAddr).g;
+
+	// if we ever get shader model 11.3 support i would rather use sv_stencil in TressFXShortCut_ResolveDepthPS.usf
+	// to make sure we are only returning hair depths here...
+	if (Stencil == 0)
+	{
+		return NearestDepth;
+    }
+    else
+    {
+        return DepthTexture.Load(ScreenAddr);
+    }
+}
+
+
+
+Texture2D<float> tAccumInvAlpha;
+
+#ifndef TRESSFX_ALPHA_THRESHOLD_FOR_SCENE
+	#define TRESSFX_ALPHA_THRESHOLD_FOR_SCENE 0.7f
+#endif
+
+void CopyOpaqueDepthPs(FScreenVertexOutput Input, out float Depth : SV_Depth)
+{
+    uint3 ScreenAddr = uint3(uint2(Input.Position.xy), 0);
+    float fInvAlpha = tAccumInvAlpha[uint2(Input.Position.xy)];
+
+	float fAlpha = saturate(1.0 - fInvAlpha);
+
+    if (fAlpha < TRESSFX_ALPHA_THRESHOLD_FOR_SCENE)
+	{
+        Depth = 0;
+		discard;
+	}
+    else
+    {
+        Depth = DepthTexture.Load(ScreenAddr);
+    }
+}
+
+Texture2D<float4> VelocityTexture;
+
+float4 ResolveVelocityPS(FScreenVertexOutput Input) : SV_Target0
+{
+    float4 Velocity = VelocityTexture[uint2(Input.Position.xy)];
+    if (!any(Velocity.xy))
+    {
+		 discard;
+    }
+    return Velocity;
+}

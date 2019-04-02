@@ -1,0 +1,112 @@
+//---------------------------------------------------------------------------------------
+// Shader code related to simulating hair strands in compute.
+//-------------------------------------------------------------------------------------
+//
+// Copyright (c) 2017 Advanced Micro Devices, Inc. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+
+
+#include "TressFXShortCutCommon.ush"
+#include "TressFXRendering.ush"
+
+#if WITH_TRESSFX_VERTEX_FACTORY
+	#include "/Engine/Generated/Material.ush"
+	#include "/Engine/Generated/VertexFactory.ush"
+#endif
+
+struct FTressFXPPLLBuildVSOutput
+{
+	float4 Position : SV_Position;
+	FVertexFactoryInterpolantsVSToPS FactoryInterpolants;
+}; 
+
+
+void VF_MainVS(
+	FVertexFactoryInput Input,
+	out FTressFXPPLLBuildVSOutput Output
+#if USE_GLOBAL_CLIP_PLANE && !USING_TESSELLATION
+	, out float OutGlobalClipPlaneDistance : SV_ClipDistance
+#endif
+#if INSTANCED_STEREO
+	, uint InstanceId : SV_InstanceID
+#if !MULTI_VIEW
+	, out float OutClipDistance : SV_ClipDistance1
+#else
+	, out uint ViewportIndex : SV_ViewPortArrayIndex
+#endif
+#endif
+)
+{
+#if INSTANCED_STEREO
+	uint EyeIndex;
+	BRANCH
+		if (bIsInstancedStereoEmulated)
+		{
+			EyeIndex = View.StereoPassIndex;
+		}
+		else
+		{
+			EyeIndex = VertexFactoryGetEyeIndex(InstanceId);
+		}
+
+	ResolvedView = ResolveView(EyeIndex);
+#if !MULTI_VIEW
+	OutClipDistance = 0.0;
+#else
+	ViewportIndex = EyeIndex;
+#endif
+#else
+	ResolvedView = ResolveView();
+#endif
+
+	FVertexFactoryIntermediates VFIntermediates = GetVertexFactoryIntermediates(Input);
+	float4 WorldPos = VertexFactoryGetWorldPosition(Input, VFIntermediates);
+
+	float3x3 TangentToLocal = VertexFactoryGetTangentToLocal(Input, VFIntermediates);
+	FMaterialVertexParameters VertexParameters = GetMaterialVertexParameters(Input, VFIntermediates, WorldPos.xyz, TangentToLocal);
+
+	// Isolate instructions used for world position offset
+	// As these cause the optimizer to generate different position calculating instructions in each pass, resulting in self-z-fighting.
+	// This is only necessary for shaders used in passes that have depth testing enabled.
+	ISOLATE
+	{
+		WorldPos.xyz += GetMaterialWorldPositionOffset(VertexParameters);
+	}
+
+	ISOLATE
+	{
+		float4 RasterizedWorldPosition = VertexFactoryGetRasterizedWorldPosition(Input, VFIntermediates, WorldPos);
+		Output.Position = mul(RasterizedWorldPosition, ResolvedView.TranslatedWorldToClip);
+    }
+
+#if NEEDS_VELOCITY
+
+	ISOLATE
+	{
+        float4 RasterizedWorldPosition = VFIntermediates.tfxVer.PrevPosition;
+        VFIntermediates.tfxVer.PrevPosition = mul(RasterizedWorldPosition, ResolvedView.PrevTranslatedWorldToClip);
+    }
+
+#endif
+
+    Output.FactoryInterpolants = VertexFactoryGetInterpolantsVSToPS(Input, VFIntermediates, VertexParameters);
+	OutputVertexID(Output);
+}

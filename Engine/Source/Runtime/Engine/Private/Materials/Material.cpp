@@ -893,6 +893,13 @@ UMaterial::UMaterial(const FObjectInitializer& ObjectInitializer)
 
 	bIsPreviewMaterial = false;
 	bIsFunctionPreviewMaterial = false;
+
+	/*@BEGIN Third party code TressFX*/
+	bTressFXAllowPrecomputedLighting = true;
+	bTressFXUseUnrealHairShadingModel = false;
+	bTressFXDirectionalLightingOnly = false;
+	bTressFXRenderVelocity = true;
+	/*@End Third party code TressFX*/
 }
 
 void UMaterial::PreSave(const class ITargetPlatform* TargetPlatform)
@@ -1246,6 +1253,9 @@ bool UMaterial::GetUsageByFlag(EMaterialUsage Usage) const
 		case MATUSAGE_InstancedStaticMeshes: UsageValue = bUsedWithInstancedStaticMeshes; break;
 		case MATUSAGE_Clothing: UsageValue = bUsedWithClothing; break;
 		case MATUSAGE_GeometryCache: UsageValue = bUsedWithGeometryCache; break;
+			/*@BEGIN Third party code TressFX*/
+		case MATUSAGE_TressFX: UsageValue = bUsedWithTressFX; break;
+			/*@END Third party code TressFX*/
 		default: UE_LOG(LogMaterial, Fatal,TEXT("Unknown material usage: %u"), (int32)Usage);
 	};
 	return UsageValue;
@@ -1626,6 +1636,12 @@ void UMaterial::SetUsageByFlag(EMaterialUsage Usage, bool NewValue)
 		{
 			bUsedWithGeometryCache = NewValue; break;
 		}
+		/*@BEGIN Third party code TressFX*/
+		case MATUSAGE_TressFX:
+		{
+			bUsedWithTressFX = NewValue; break;
+		}
+		/*@END Third party code TressFX*/
 		default: UE_LOG(LogMaterial, Fatal,TEXT("Unknown material usage: %u"), (int32)Usage);
 	};
 #if WITH_EDITOR
@@ -1652,6 +1668,9 @@ FString UMaterial::GetUsageName(EMaterialUsage Usage) const
 		case MATUSAGE_InstancedStaticMeshes: UsageName = TEXT("bUsedWithInstancedStaticMeshes"); break;
 		case MATUSAGE_Clothing: UsageName = TEXT("bUsedWithClothing"); break;
 		case MATUSAGE_GeometryCache: UsageName = TEXT("bUsedWithGeometryCache"); break;
+			/*@BEGIN Third party code TressFX*/
+		case MATUSAGE_TressFX: UsageName = TEXT("bUsedWithTressFX"); break;
+			/*@END Third party code TressFX*/
 		default: UE_LOG(LogMaterial, Fatal,TEXT("Unknown material usage: %u"), (int32)Usage);
 	};
 	return UsageName;
@@ -1724,7 +1743,10 @@ static bool IsPrimitiveTypeUsageFlag(EMaterialUsage Usage)
 		|| Usage == MATUSAGE_SplineMesh
 		|| Usage == MATUSAGE_InstancedStaticMeshes
 		|| Usage == MATUSAGE_Clothing
-		|| Usage == MATUSAGE_GeometryCache;
+		|| Usage == MATUSAGE_GeometryCache
+		/*@BEGIN Third party code TressFX*/
+		|| Usage == MATUSAGE_TressFX;
+		/*@END Third party code TressFX*/
 }
 
 bool UMaterial::NeedsSetMaterialUsage_Concurrent(bool &bOutHasUsage, EMaterialUsage Usage) const
@@ -3765,6 +3787,15 @@ void UMaterial::PostLoad()
 
 	SCOPED_LOADTIMER(MaterialPostLoad);
 
+	/*@BEGIN Third party code TressFX*/
+#if WITH_EDITOR
+	if (bUsedWithTressFX && ShadingModel != EMaterialShadingModel::MSM_Hair)
+	{
+		ShadingModel = EMaterialShadingModel::MSM_Hair;
+	}
+#endif
+	/*@End Third party code TressFX*/
+
 	Super::PostLoad();
 
 	if (FApp::CanEverRender())
@@ -4146,6 +4177,23 @@ bool UMaterial::CanEditChange(const UProperty* InProperty) const
 	{
 		FString PropertyName = InProperty->GetName();
 
+		/*@BEGIN Third party code TressFX*/
+		if (
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXAllowPrecomputedLighting)
+			|| PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXDirectionalLightingOnly)
+			|| PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXUseUnrealHairShadingModel)
+			|| PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXRenderVelocity)
+			)
+		{
+			return bUsedWithTressFX;
+		}
+
+		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, MaterialDomain))
+		{
+			return !bUsedWithTressFX;
+		}
+		/*@End Third party code TressFX*/
+
 		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, PhysMaterial))
 		{
 			return MaterialDomain == MD_Surface;
@@ -4228,7 +4276,10 @@ bool UMaterial::CanEditChange(const UProperty* InProperty) const
 	
 		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, ShadingModel))
 		{
-			return MaterialDomain == MD_Surface || (MaterialDomain == MD_DeferredDecal && DecalBlendMode == DBM_Volumetric_DistanceFunction);
+			return 	/*@BEGIN Third party code TressFX*/
+				!bUsedWithTressFX &&
+				/*@END Third party code TressFX*/ 
+				(MaterialDomain == MD_Surface || (MaterialDomain == MD_DeferredDecal && DecalBlendMode == DBM_Volumetric_DistanceFunction));
 		}
 
 		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, DecalBlendMode))

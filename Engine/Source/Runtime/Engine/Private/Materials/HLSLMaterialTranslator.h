@@ -1079,6 +1079,10 @@ public:
 		OutEnvironment.SetDefine(TEXT("MATERIAL_COMPUTE_FOG_PER_PIXEL"), Material->ComputeFogPerPixel());
 		OutEnvironment.SetDefine(TEXT("MATERIAL_FULLY_ROUGH"), bIsFullyRough || Material->IsFullyRough());
 
+		/*@BEGIN Third party code TressFX*/
+		OutEnvironment.SetDefine(TEXT("USED_WITH_TRESSFX"), Material->IsUsedWithTressFX());
+		/*@END Third party code TressFX*/
+
 		for (int32 CollectionIndex = 0; CollectionIndex < ParameterCollections.Num(); CollectionIndex++)
 		{
 			// Add uniform buffer declarations for any parameter collections referenced
@@ -5722,6 +5726,18 @@ protected:
 			return AddInlinedCodeChunk(MCT_Float, TEXT("GetPerInstanceFadeAmount(Parameters)"));
 		}
 	}
+
+	/*@BEGIN Third party code TressFX*/
+	virtual int32 GetHairTangent() override
+	{
+		return AddInlinedCodeChunk(MCT_Float4, TEXT("GetTressFXHairTangent(Parameters)"));
+	}
+
+	virtual int32 GetStrandUV() override
+	{
+		return AddInlinedCodeChunk(MCT_Float2, TEXT("GetTressFXStrandUV(Parameters)"));
+	}
+	/*@END Third party code TressFX*/
 
 	/**
 	 * Returns a float2 texture coordinate after 2x2 transform and offset applied

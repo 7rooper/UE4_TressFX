@@ -31,6 +31,10 @@
 #include "RenderGraph.h"
 #include "MeshDrawCommands.h"
 
+/*@BEGIN Third party code TressFX*/
+#include "TressFX/TressFXRendering.h"
+/*@END Third party code TressFX*/
+
 // Forward declarations.
 class FScene;
 class FSceneViewState;
@@ -798,6 +802,11 @@ public:
 	/** Mesh batches with a volumetric material. */
 	TArray<FVolumetricMeshBatch, SceneRenderingAllocator> VolumetricMeshBatches;
 
+	/*@BEGIN Third party code TressFX*/
+	//	FTressFXPrimSet TressFXSet;
+	TArray<FTressFXMeshBatch, SceneRenderingAllocator> TressFXMeshBatches;
+	/*@END Third party code TressFX*/
+
 	/** A map from light ID to a boolean visibility value. */
 	TArray<FVisibleLightViewInfo,SceneRenderingAllocator> VisibleLightInfos;
 
@@ -1562,6 +1571,14 @@ protected:
 	void RenderPlanarReflection(class FPlanarReflectionSceneProxy* ReflectionSceneProxy);
 
 	void ResolveSceneColor(FRHICommandList& RHICmdList);
+
+	/*@BEGIN Third party code TressFX*/
+	bool ShouldRenderTressFX();
+	void RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList);
+	void RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHICmdList);
+	void RenderTressFXResolveVelocity(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& VelocityRT);
+	void RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList);
+	/*@END Third party code TressFX*/
 
 private:
 	void ComputeFamilySize();

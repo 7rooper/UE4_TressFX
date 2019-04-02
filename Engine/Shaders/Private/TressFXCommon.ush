@@ -1,0 +1,54 @@
+//
+// Copyright (c) 2017 Advanced Micro Devices, Inc. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+
+//Unreal Engin 4 integration written by Leon Rosengarten 2017
+#pragma once
+
+cbuffer tressfxShadeParameters
+{
+    float g_HairShadowAlpha;
+    float g_FiberRadius;
+    float g_FiberSpacing;
+    int g_NumVerticesPerStrand;
+    float g_ratio;
+};
+
+
+float4x4 g_mVP;
+float4 g_vViewport;
+float3 g_vEye;
+float4x4 g_mInvViewProj;
+
+uint packFloat2ToUint(float2 UnPackedValue)
+{
+    uint packedOutput;
+    packedOutput = asuint(f32tof16(UnPackedValue.x)) | (asuint(f32tof16(UnPackedValue.y)) << 16);
+    return packedOutput;
+}
+
+float2 UnpackFloat2FromUint(uint PackedValue)
+{
+    float2 unpackedOutput;
+    unpackedOutput.x = f16tof32(PackedValue & 0x0000ffff);
+    unpackedOutput.y = f16tof32(PackedValue >> 16);
+    return unpackedOutput;
+}

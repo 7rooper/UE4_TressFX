@@ -70,6 +70,14 @@
 
 #define IS_MESHPARTICLE_FACTORY (PARTICLE_MESH_FACTORY || NIAGARA_MESH_FACTORY)
 
+//@BEGIN Third party code TressFX
+#ifdef TRESSFX_VERTEX_FACTORY
+	#define USE_TRESSFX 1
+#else
+	#define USE_TRESSFX 0
+#endif
+//@END Third party code TressFX
+
 /**
  * Parameters used by vertex and pixel shaders to access particle properties.
  */
@@ -241,6 +249,13 @@ struct FMaterialPixelParameters
 
 	float AOMaterialMask;
 
+	//@BEGIN Third party code TressFX
+	#if USE_TRESSFX
+		float4 HairTangent;
+		float2 StrandUV;
+	#endif
+	//@END Third party code TressFX
+
 #if LIGHTMAP_UV_ACCESS
 	float2	LightmapUVs;
 #endif
@@ -344,6 +359,13 @@ struct FMaterialVertexParameters
 	float2 TexCoordOffset; // Offset for UV localization for large UV values
 	#endif
 #endif
+
+	//@BEGIN Third party code TressFX
+	#if USE_TRESSFX
+		float4 HairTangent;
+		float2 StrandUV;
+	#endif
+	//@END Third party code TressFX
 
 	/** Per-particle properties. Only valid for particle vertex factories. */
 	FMaterialParticleParameters Particle;
@@ -811,6 +833,35 @@ float3 GetObjectWorldPosition(FMaterialVertexParameters Parameters)
 }
 
 #endif
+
+//@BEGIN Third party code TressFX
+float4 GetTressFXHairTangent(FMaterialPixelParameters Parameters)
+{
+#if USE_TRESSFX
+	return Parameters.HairTangent;
+#else
+    return float4(0, 0, 0, 0);
+#endif
+}
+
+float2 GetTressFXStrandUV(FMaterialPixelParameters Parameters)
+{
+#if USE_TRESSFX
+		return Parameters.StrandUV.xy;
+#else
+    return float2(0, 0);
+#endif
+}
+
+float2 GetTressFXStrandUV(FMaterialVertexParameters Parameters)
+{
+#if USE_TRESSFX
+		return Parameters.StrandUV.xy;
+#else
+    return float2(0, 0);
+#endif
+}
+//@END Third party code TressFX
 
 /** Get the per-instance random value when instancing */
 float GetPerInstanceRandom(FMaterialVertexParameters Parameters)

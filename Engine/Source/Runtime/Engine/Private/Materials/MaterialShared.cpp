@@ -1083,6 +1083,13 @@ bool FMaterialResource::IsUsedWithAPEXCloth() const
 	return Material->bUsedWithClothing;
 }
 
+/*@BEGIN Third party code TressFX*/
+bool FMaterialResource::IsUsedWithTressFX() const
+{
+	return Material->bUsedWithTressFX;
+}
+/*@END Third party code TressFX*/
+
 EMaterialTessellationMode FMaterialResource::GetTessellationMode() const 
 { 
 	return (EMaterialTessellationMode)Material->D3D11TessellationMode; 
@@ -1184,6 +1191,12 @@ ERefractionMode FMaterialResource::GetRefractionMode() const
 
 EMaterialShadingModel FMaterialResource::GetShadingModel() const 
 {
+	/*@BEGIN Third party code TressFX*/
+	if (Material->bUsedWithTressFX)
+	{
+		return EMaterialShadingModel::MSM_Hair;
+	}
+	/*@END Third party code TressFX*/
 	return MaterialInstance ? MaterialInstance->GetShadingModel() : Material->GetShadingModel();
 }
 
@@ -1234,6 +1247,14 @@ float FMaterialResource::GetTranslucentShadowStartOffset() const { return Materi
 float FMaterialResource::GetRefractionDepthBiasValue() const { return Material->RefractionDepthBias; }
 float FMaterialResource::GetMaxDisplacement() const { return Material->MaxDisplacement; }
 bool FMaterialResource::ShouldApplyFogging() const {return Material->bUseTranslucencyVertexFog;}
+
+/*@BEGIN Third party code TressFX*/
+bool FMaterialResource::TressFXAllowPrecomputedLighting() const { return Material->bTressFXAllowPrecomputedLighting; }
+bool FMaterialResource::TressFXUseUnrealHairShadingModel() const { return Material->bTressFXUseUnrealHairShadingModel; }
+bool FMaterialResource::TressFXDirectionalLightingOnly() const { return Material->bTressFXDirectionalLightingOnly; }
+bool FMaterialResource::TressFXShouldRenderVelocity() const { return Material->bTressFXRenderVelocity; }
+/*@End Third party code TressFX*/
+
 bool FMaterialResource::ComputeFogPerPixel() const {return Material->bComputeFogPerPixel;}
 FString FMaterialResource::GetFriendlyName() const { return *GetNameSafe(Material); } //avoid using the material instance name here, we want materials that share a shadermap to also share a friendly name.
 
@@ -1587,6 +1608,15 @@ void FMaterial::SetupMaterialEnvironment(
 			case MD_UI:				OutEnvironment.SetDefine(TEXT("MATERIALDOMAIN_UI"), 1u); break;
 		}
 	}
+
+	/*@BEGIN Third party code TressFX*/
+	if (IsUsedWithTressFX())
+	{
+		OutEnvironment.SetDefine(TEXT("TRESSFX_ALLOW_PRECOMPUTED_LIGHTING"), TressFXAllowPrecomputedLighting() ? TEXT("1") : TEXT("0"));
+		OutEnvironment.SetDefine(TEXT("TRESSFX_UNREAL_HAIR_ONLY"), TressFXUseUnrealHairShadingModel() ? TEXT("1") : TEXT("0"));
+		OutEnvironment.SetDefine(TEXT("TRESSFX_DIRECTIONAL_LIGHT_ONLY"), TressFXDirectionalLightingOnly() ? TEXT("1") : TEXT("0"));
+	}
+	/*@END Third party code TressFX*/
 }
 
 /**

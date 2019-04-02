@@ -1235,6 +1235,9 @@ public:
 	virtual bool IsUsedWithSplineMeshes() const { return false; }
 	virtual bool IsUsedWithInstancedStaticMeshes() const { return false; }
 	virtual bool IsUsedWithAPEXCloth() const { return false; }
+	/*@BEGIN Third party code TressFX*/
+	virtual bool IsUsedWithTressFX() const { return false; }
+	/*@END Third party code TressFX*/
 	virtual bool IsUsedWithUI() const { return false; }
 	virtual bool IsUsedWithGeometryCache() const { return false; }
 	ENGINE_API virtual enum EMaterialTessellationMode GetTessellationMode() const;
@@ -1271,6 +1274,14 @@ public:
 	virtual float GetRefractionDepthBiasValue() const { return 0.0f; }
 	virtual float GetMaxDisplacement() const { return 0.0f; }
 	virtual bool ShouldApplyFogging() const { return false; }
+
+	/*@BEGIN Third party code TressFX*/
+	virtual bool TressFXAllowPrecomputedLighting() const { return true; }
+	virtual bool TressFXUseUnrealHairShadingModel() const { return false; }
+	virtual bool TressFXDirectionalLightingOnly() const { return false; }
+	virtual bool TressFXShouldRenderVelocity() const { return true; }
+	/*@End Third party code TressFX*/
+
 	virtual bool ComputeFogPerPixel() const { return false; }
 	virtual FString GetFriendlyName() const = 0;
 	virtual bool HasVertexPositionOffsetConnected() const { return false; }
@@ -1913,6 +1924,9 @@ public:
 	ENGINE_API virtual bool IsUsedWithSplineMeshes() const override;
 	ENGINE_API virtual bool IsUsedWithInstancedStaticMeshes() const override;
 	ENGINE_API virtual bool IsUsedWithAPEXCloth() const override;
+	/*@BEGIN Third party code TressFX*/
+	ENGINE_API virtual bool IsUsedWithTressFX() const override;
+	/*@END Third party code TressFX*/
 	ENGINE_API virtual bool IsUsedWithGeometryCache() const override;
 	ENGINE_API virtual enum EMaterialTessellationMode GetTessellationMode() const override;
 	ENGINE_API virtual bool IsCrackFreeDisplacementEnabled() const override;
@@ -1958,6 +1972,14 @@ public:
 	ENGINE_API virtual float GetRefractionDepthBiasValue() const override;
 	ENGINE_API virtual float GetMaxDisplacement() const override;
 	ENGINE_API virtual bool ShouldApplyFogging() const override;
+
+	/*@BEGIN Third party code TressFX*/
+	ENGINE_API virtual bool TressFXAllowPrecomputedLighting() const override;
+	ENGINE_API virtual bool TressFXUseUnrealHairShadingModel() const override;
+	ENGINE_API virtual bool TressFXDirectionalLightingOnly() const override;
+	ENGINE_API virtual bool TressFXShouldRenderVelocity() const override;
+	/*@End Third party code TressFX*/
+
 	ENGINE_API virtual bool ComputeFogPerPixel() const override;
 	ENGINE_API virtual UMaterialInterface* GetMaterialInterface() const override;
 	/**

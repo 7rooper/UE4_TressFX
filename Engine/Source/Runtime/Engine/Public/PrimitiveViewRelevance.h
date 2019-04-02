@@ -76,6 +76,10 @@ struct FPrimitiveViewRelevance
 	/** Whether the view use custom data. */
 	uint32 bUseCustomViewData : 1;
 
+	/*@BEGIN Third party code TressFX*/
+	uint32 bTressFX : 1;
+	/*@END Third party code TressFX*/
+
 	/** 
 	 * Whether this primitive view relevance has been initialized this frame.  
 	 * Primitives that have not had ComputeRelevanceForView called on them (because they were culled) will not be initialized,

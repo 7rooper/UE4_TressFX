@@ -1,0 +1,165 @@
+
+#pragma once
+#include "TressFXCommon.ush"
+
+float4x4 PreviousLocalToWorld;
+
+#include "TressFXStrands.ush"
+
+struct FVertexFactoryInterpolantsVSToPS
+{
+
+    float4 Tangent : Tangent;
+#if NUM_MATERIAL_TEXCOORDS
+	float2	TexCoords[NUM_MATERIAL_TEXCOORDS]	: ATTRIBUTE0;
+#endif
+    float4 p0p1 : TEXCOORD1;
+    nointerpolation float2 strandUV : TEXCOORD3;
+#if NEEDS_VELOCITY
+	// .xy is clip position, pre divide by w; .w is clip W; .z is 0 or 1 to mask out the velocity output
+    float4 VelocityPrevScreenPosition : VELOCITY_PREV_POS;
+#endif
+};
+
+struct FVertexFactoryInput
+{
+    uint vertexId : SV_VertexID;
+};
+
+ 
+struct FVertexFactoryIntermediates
+{
+    half3x3 TangentToLocal;
+    half3x3 TangentToWorld;
+    half TangentToWorldSign;
+    TressFXVertex tfxVer;
+    half4 Color;
+#if USE_INSTANCING
+	// x = per-instance random, y = per-instance fade out amount, z = hide/show flag, w dither fade cutoff
+	float4 PerInstanceParams;
+#endif	// USE_INSTANCING
+};
+
+float4 VertexFactoryGetWorldPosition(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates)
+{
+    return Intermediates.tfxVer.Position;
+}
+
+
+/**
+* Get the 3x3 tangent basis vectors for this vertex factory
+* this vertex factory will calculate the binormal on-the-fly
+*
+* @param Input - vertex input stream structure
+* @return 3x3 matrix
+*/
+half3x3 VertexFactoryGetTangentToLocal(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates)
+{
+    return Intermediates.TangentToLocal;
+}
+
+
+// @return previous translated world position
+float4 VertexFactoryGetPreviousWorldPosition(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates)
+{
+	float4x4 PreviousLocalToWorldTranslated = PreviousLocalToWorld;
+    PreviousLocalToWorldTranslated[3][0] += ResolvedView.PrevPreViewTranslation.x;
+    PreviousLocalToWorldTranslated[3][1] += ResolvedView.PrevPreViewTranslation.y;
+    PreviousLocalToWorldTranslated[3][2] += ResolvedView.PrevPreViewTranslation.z;
+    return mul(Intermediates.tfxVer.Position, PreviousLocalToWorldTranslated);
+}
+
+
+FVertexFactoryInterpolantsVSToPS VertexFactoryGetInterpolantsVSToPS(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates, FMaterialVertexParameters VertexParameters)
+{
+    FVertexFactoryInterpolantsVSToPS Interpolants;
+    Interpolants = (FVertexFactoryInterpolantsVSToPS) 0;
+
+    TressFXVertex tressfxVert = Intermediates.tfxVer;
+
+#if NEEDS_VELOCITY
+    Interpolants.VelocityPrevScreenPosition = tressfxVert.PrevPosition;
+#endif
+    Interpolants.Tangent = tressfxVert.Tangent;
+    Interpolants.p0p1 = tressfxVert.p0p1;
+    Interpolants.strandUV = tressfxVert.strandUV;
+#if NUM_MATERIAL_TEXCOORDS
+	Interpolants.TexCoords[0] = VertexParameters.TexCoords[0];
+#endif
+    return Interpolants;
+
+}
+
+FMaterialPixelParameters GetMaterialPixelParameters(FVertexFactoryInterpolantsVSToPS Interpolants, float4 SvPosition)
+{
+
+    FMaterialPixelParameters Result = MakeInitializedMaterialPixelParameters();
+
+#if USE_TRESSFX
+    Result.HairTangent = Interpolants.Tangent;
+	Result.StrandUV = Interpolants.strandUV;
+#endif
+
+#if NUM_MATERIAL_TEXCOORDS
+	Result.TexCoords[0] = Interpolants.TexCoords[0];
+#endif
+
+    return Result;
+
+}
+
+FVertexFactoryIntermediates GetVertexFactoryIntermediates(FVertexFactoryInput Input)
+{
+    FVertexFactoryIntermediates Intermediates;
+    Intermediates = (FVertexFactoryIntermediates) 0;
+
+    Intermediates.tfxVer = GetExpandedTressFXVert(
+		Input.vertexId
+		,ResolvedView.WorldCameraOrigin //eye
+		,ResolvedView.ViewSizeAndInvSize.xy //winsize
+		,ResolvedView.WorldToClip	// viewproj
+#if NEEDS_VELOCITY
+		,ResolvedView.PrevWorldCameraOrigin
+		,ResolvedView.PrevViewProj
+#endif
+	);
+    Intermediates.tfxVer.Position = mul(Intermediates.tfxVer.Position, ResolvedView.ClipToTranslatedWorld);
+#if NEEDS_VELOCITY
+    Intermediates.tfxVer.PrevPosition = mul(Intermediates.tfxVer.PrevPosition, ResolvedView.PrevClipToTranslatedWorld);
+#endif
+	// JAKETODO, maybe actually set tangenttolocal...
+    return Intermediates;
+}
+
+FMaterialVertexParameters GetMaterialVertexParameters(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates, float3 WorldPosition, float3x3 TangentToLocal)
+{
+    FMaterialVertexParameters Result = (FMaterialVertexParameters) 0;
+    Result.WorldPosition = Intermediates.tfxVer.Position;
+    Result.VertexColor = Intermediates.Color;
+    Result.TangentToWorld = mul(TangentToLocal, GetLocalToWorld3x3());
+
+#if NUM_MATERIAL_TEXCOORDS_VERTEX
+	Result.TexCoords[0] = Intermediates.tfxVer.strandUV.xy;
+///*#if NUM_MATERIAL_TEXCOORDS_VERTEX > 1
+//	UNROLL
+//	for (int CoordinateIndex = 1; CoordinateIndex < NUM_MATERIAL_TEXCOORDS_VERTEX; CoordinateIndex++)
+//	{
+//		Result.TexCoords[CoordinateIndex] = Input.TexCoords[CoordinateIndex];
+//	}
+//#endif*/
+#endif
+
+
+    return Result;
+}
+
+
+float4 VertexFactoryGetRasterizedWorldPosition(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates, float4 InWorldPosition)
+{
+    return Intermediates.tfxVer.Position;
+}
+
+float4 GetClipSpacePosition(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates, float4 InWorldPosition)
+{
+    return Intermediates.tfxVer.Position;
+}

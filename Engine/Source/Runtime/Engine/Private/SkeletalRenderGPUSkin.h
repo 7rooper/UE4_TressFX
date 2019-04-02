@@ -237,6 +237,10 @@ public:
 	
 	// section ids that are using this Morph buffer
 	TArray<int32> SectionIds;
+
+	// @third party code - BEGIN TRessFX
+	void RequireSRV();
+	// @third party code - End TRessFX
 protected:
 	// guaranteed only to be valid if the vertex buffer is valid
 	FShaderResourceViewRHIRef SRVValue;
@@ -319,6 +323,10 @@ public:
 	//~ End FSkeletalMeshObject Interface
 
 	FSkinWeightVertexBuffer* GetSkinWeightVertexBuffer(int32 LODIndex) const;
+
+	// @BEGIN third party code TressFX
+	FMorphVertexBuffer& GetMorphVertexBuffer();
+	// @End third party code TressFX
 
 	/** 
 	 * Vertex buffers that can be used for GPU skinning factories 

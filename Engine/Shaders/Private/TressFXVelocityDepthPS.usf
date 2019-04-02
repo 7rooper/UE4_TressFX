@@ -1,0 +1,85 @@
+//
+// Copyright (c) 2017 Advanced Micro Devices, Inc. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+
+#pragma once
+#include "TressFXShortCutCommon.ush"
+#include "VelocityCommon.ush"
+
+
+#include "/Engine/Generated/Material.ush"
+#include "/Engine/Generated/VertexFactory.ush"
+
+
+#include "TressFXRendering.ush"
+
+struct PS_INPUT_HAIR_AA
+{
+    float4 Position : SV_POSITION;
+    FVertexFactoryInterpolantsVSToPS FactoryInterpolants;
+
+};
+
+#ifndef OPTIONAL_IsFrontFace
+	#define OPTIONAL_IsFrontFace
+#endif
+
+#ifndef NEEDS_VELOCITY
+	#define NEEDS_VELOCITY 1
+#endif
+
+EARLYDEPTHSTENCIL
+void TRessFXVelocityDepthPS(
+	PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace
+	,out float4 OutVelocity : SV_Target0
+)
+{
+
+	#if NEEDS_VELOCITY
+		  float4 position = input.Position;
+		ResolvedView = ResolveView();
+
+		float4 p0p1 = input.FactoryInterpolants.p0p1;
+		float4 Tangent = input.FactoryInterpolants.Tangent;;
+
+		FMaterialPixelParameters MaterialParameters = GetMaterialPixelParameters(input.FactoryInterpolants, input.Position);
+		FPixelMaterialInputs PixelMaterialInputs;
+
+		#if USE_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS
+				{
+					float4 ScreenPosition = SvPositionToResolvedScreenPosition(input.Position);
+					float3 TranslatedWorldPosition = SvPositionToResolvedTranslatedWorld(input.Position);
+					CalcMaterialParametersEx(MaterialParameters, PixelMaterialInputs, input.Position, ScreenPosition, bIsFrontFace, TranslatedWorldPosition, BasePassInterpolants.PixelPositionExcludingWPO);
+				}
+		#else
+				{
+				float4 ScreenPosition = SvPositionToResolvedScreenPosition(input.Position);
+				float3 TranslatedWorldPosition = SvPositionToResolvedTranslatedWorld(input.Position);
+				CalcMaterialParametersEx(MaterialParameters, PixelMaterialInputs, input.Position, ScreenPosition, bIsFrontFace, TranslatedWorldPosition, TranslatedWorldPosition);
+			}
+		#endif
+
+		float2 Velocity = Calculate2DVelocity(MaterialParameters.ScreenPosition, input.FactoryInterpolants.VelocityPrevScreenPosition);
+		OutVelocity = float4(EncodeVelocityToTexture(Velocity), 0, 0);
+	#else
+		OutVelocity = float4(0, 0, 0, 0);
+#endif
+}

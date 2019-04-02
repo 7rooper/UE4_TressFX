@@ -344,6 +344,9 @@ SHOWFLAG_FIXED_IN_SHIPPING(0, PathTracing, SFG_Developer, NSLOCTEXT("UnrealEd", 
 SHOWFLAG_FIXED_IN_SHIPPING(0, RayTracingDebug, SFG_Developer, NSLOCTEXT("UnrealEd", "RayTracingDebug", "Ray tracing debug"))
 // RHI_RAYTRACING end
 
+/*@BEGIN Third party code TressFX*/
+SHOWFLAG_ALWAYS_ACCESSIBLE(TressFX, SFG_Advanced, NSLOCTEXT("TressFX", "TressFX", "TressFX"))
+/*@END Third party code TressFX*/
 
 #undef SHOWFLAG_ALWAYS_ACCESSIBLE
 #undef SHOWFLAG_FIXED_IN_SHIPPING

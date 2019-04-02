@@ -28,6 +28,16 @@
 #include "SphericalGaussian.ush"
 #include "DBufferDecalShared.ush"
 
+/*@BEGIN Third party code TressFX*/
+#ifndef USE_TRESSFX
+	#ifdef TRESSFX_VERTEX_FACTORY
+		#define USE_TRESSFX 1
+	#else
+		#define USE_TRESSFX 0
+	#endif
+#endif
+/*@END Third party code TressFX*/
+
 #define PREV_FRAME_COLOR	1
 #include "ScreenSpaceRayCast.ush"
 

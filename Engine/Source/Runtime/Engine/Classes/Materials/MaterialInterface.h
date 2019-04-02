@@ -49,7 +49,9 @@ enum EMaterialUsage
 	MATUSAGE_NiagaraRibbons,
 	MATUSAGE_NiagaraMeshParticles,
 	MATUSAGE_GeometryCache,
-
+	/*@BEGIN Third party code TressFX*/
+	MATUSAGE_TressFX,
+	/*@END Third party code TressFX*/
 	MATUSAGE_MAX,
 };
 

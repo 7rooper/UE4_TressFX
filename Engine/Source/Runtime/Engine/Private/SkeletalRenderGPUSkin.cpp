@@ -1532,6 +1532,24 @@ const TArray<FMatrix>& FSkeletalMeshObjectGPUSkin::GetReferenceToLocalMatrices()
 	return DynamicData->ReferenceToLocal;
 }
 
+// @third party code - BEGIN TressFX
+FMorphVertexBuffer& FSkeletalMeshObjectGPUSkin::GetMorphVertexBuffer()
+{
+	// GetLOD() should be called in rendering thread to avoid crash. 
+	return LODs[GetLOD()].MorphVertexBuffer;
+}
+
+void FMorphVertexBuffer::RequireSRV()
+{
+	if (SRVValue != nullptr)
+	{
+		return;
+	}
+
+	SRVValue = RHICreateShaderResourceView(VertexBufferRHI, 4, PF_R32_FLOAT);
+}
+// @third party code - END TressFX
+
 /*-----------------------------------------------------------------------------
 FDynamicSkelMeshObjectDataGPUSkin
 -----------------------------------------------------------------------------*/

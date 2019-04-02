@@ -37,6 +37,11 @@
 #include "RayTracingDefinitions.h"
 #include "RayTracingInstance.h"
 
+/*@BEGIN Third party code TressFX*/
+#include "TressFX/TressFXRenderer.h"
+#include "TressFX/TressFXShortCut.h"
+/*@END Third party code TressFX*/
+
 static TAutoConsoleVariable<int32> CVarStencilForLODDither(
 	TEXT("r.StencilForLODDither"),
 	0,
@@ -1103,6 +1108,13 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 		bDepthWasCleared = RenderPrePassHMD(RHICmdList);
 	}
 	check(bDidAfterTaskWork);
+
+	/*@BEGIN Third party code TressFX*/
+	{
+		RenderTressFXVelocitiesDepth(RHICmdList);
+	}
+	/*@End Third party code TressFX*/
+
 	RHICmdList.SetCurrentStat(GET_STATID(STAT_CLM_AfterPrePass));
 	ServiceLocalQueue();
 

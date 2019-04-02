@@ -78,6 +78,11 @@ struct FMeshBatchElement
 	uint32 BaseVertexIndex;
 	uint32 MinVertexIndex;
 	uint32 MaxVertexIndex;
+
+	/*@BEGIN Third party code TressFX*/
+	uint32 NumIndices;
+	/*@END Third party code TressFX*/
+
 	// Meaning depends on the vertex factory, e.g. FGPUSkinPassthroughVertexFactory: element index in FGPUSkinCache::CachedElements
 	void* VertexFactoryUserData;
 	int32 UserIndex;

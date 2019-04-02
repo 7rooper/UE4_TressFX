@@ -87,6 +87,10 @@ public:
 	// SRV for WhiteDummy Texture.
 	TRefCountPtr<FRHIShaderResourceView> WhiteDummySRV;
 
+	/*@BEGIN Third party code TressFX*/
+	TRefCountPtr<IPooledRenderTarget> TressFXNoise;
+	/*@END Third party code TressFX*/
+
 protected:
 	/** Maximum feature level that the textures have been initialized up to */
 	ERHIFeatureLevel::Type FeatureLevelInitializedTo;

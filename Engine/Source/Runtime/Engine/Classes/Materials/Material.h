@@ -696,6 +696,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Usage)
 	uint32 bUsedWithClothing:1;
 
+	/*@BEGIN Third party code TressFX*/
+	/**
+	* Indicates that the material and its instances can be use with TressFX Hair
+	* This will result in the shaders required to support TressFX being compiled which will increase shader compile time and memory usage.
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Usage)
+	uint32 bUsedWithTressFX : 1;
+	/*@END Third party code TressFX*/
+
 	/** 
 	 * Indicates that the material and its instances can be use with Slate UI and UMG
 	 * This will result in the shaders required to support UI materials being compiled which will increase shader compile time and memory usage.
@@ -819,6 +828,26 @@ public:
 	/** when true, the material attributes pin is used instead of the regular pins. */
 	UPROPERTY(EditAnywhere, Category=Material)
 	uint32 bUseMaterialAttributes:1;
+
+	/*@BEGIN Third party code TressFX*/
+
+	/** When true, allows skylighting and indirect lighting for hair */
+	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Allow Precomputed Lighting"))
+		uint32 bTressFXAllowPrecomputedLighting : 1;
+
+	/** by default, directional lights will use tressfx hair shading for light. But if this is true, they will use the UE4 hair shader instead. Non-directional lights will always use UE4 hair shading if they are enabled. */
+	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Use unreal hair shading model only"))
+		uint32 bTressFXUseUnrealHairShadingModel : 1;
+
+	/** Only light hair with directional lights. This can save on performance but will disable all but directional lights. */
+	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Directional Lighting Only"))
+		uint32 bTressFXDirectionalLightingOnly : 1;
+
+	/** Render Hair velocity into UE4's Velocity buffer. This is requried for temporal AA, motion blur etc. But could save on performance if disabled for greater lods. */
+	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Render Hair Velocity"))
+		uint32 bTressFXRenderVelocity : 1;
+
+	/*@End Third party code TressFX*/
 
 	/** When true, translucent materials are fogged. Defaults to true. */
 	UPROPERTY(EditAnywhere, Category=Translucency, meta=(DisplayName = "Apply Fogging"))

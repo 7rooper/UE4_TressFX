@@ -37,6 +37,10 @@
 #include "TranslucentRendering.h"
 #include "Async/ParallelFor.h"
 
+/*@BEGIN Third party code TressFX*/
+#include "TressFX/TressFXRenderer.h"
+/*@END Third party code TressFX*/
+
 /*------------------------------------------------------------------------------
 	Globals
 ------------------------------------------------------------------------------*/
@@ -1763,6 +1767,10 @@ struct FRelevancePacket
 	FRelevancePrimSet<FPrimitiveSceneInfo*> DirtyIndirectLightingCacheBufferPrimitives;
 	FRelevancePrimSet<FPrimitiveSceneInfo*> RecachedReflectionCapturePrimitives;
 
+	/*@BEGIN Third party code TressFX*/
+	FRelevancePrimSet<FPrimitiveSceneProxy*> TressFXSet;
+	/*@END Third party code TressFX*/
+
 	TArray<FMeshDecalBatch> MeshDecalBatches;
 	TArray<FVolumetricMeshBatch> VolumetricMeshBatches;
 	FDrawCommandRelevancePacket DrawCommandPacket;
@@ -1966,6 +1974,13 @@ struct FRelevancePacket
 			{
 				TranslucentSelfShadowPrimitives.AddPrim(BitIndex);
 			}
+
+			/*@BEGIN Third party code TressFX*/
+			if (ViewRelevance.bTressFX)
+			{
+				TressFXSet.AddPrim(PrimitiveSceneInfo->Proxy);
+			}
+			/*@END Third party code TressFX*/
 
 			// INITVIEWS_TODO: Do this in a separate pass? There are no dependencies
 			// here except maybe ParentPrimitives. This could be done in a 
@@ -2288,6 +2303,10 @@ struct FRelevancePacket
 
 		WriteView.MeshDecalBatches.Append(MeshDecalBatches);
 		WriteView.VolumetricMeshBatches.Append(VolumetricMeshBatches);
+
+		/*@BEGIN Third party code TressFX*/
+		TressFXSet.AppendTo(WriteView.TressFXSet);
+		/*@END Third party code TressFX*/
 
 		for (int32 Index = 0; Index < RecachedReflectionCapturePrimitives.NumPrims; ++Index)
 		{
@@ -4114,6 +4133,10 @@ void FDeferredShadingSceneRenderer::InitViewsPossiblyAfterPrepass(FRHICommandLis
 		// Now that the indirect lighting cache is updated, we can update the primitive precomputed lighting buffers.
 		UpdatePrimitiveIndirectLightingCacheBuffers();
 	}
+
+	/*@BEGIN Third party code TressFX*/
+	TressFXRendering::TressFXSetupViews(Views);
+	/*@End Third party code TressFX*/
 
 	UpdateTranslucencyTimersAndSeparateTranslucencyBufferSize(RHICmdList);
 

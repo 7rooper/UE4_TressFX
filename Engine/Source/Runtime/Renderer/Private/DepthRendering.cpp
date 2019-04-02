@@ -743,6 +743,12 @@ void FDepthPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch,
 {
 	bool bDraw = MeshBatch.bUseForDepthPass;
 
+	/*@BEGIN Third party code TressFX*/
+	//tressfx depth rendered in a special path
+	// JAKETODO, maybe jst set bUseAsOccluder as MesshBatch instead.
+	bDraw = bDraw && MeshBatch.MaterialRenderProxy->GetMaterial(FeatureLevel)->IsUsedWithTressFX() == false;
+	/*@End Third party code TressFX*/
+
 	// Filter by occluder flags and settings if required.
 	if (bDraw && bRespectUseAsOccluderFlag && !MeshBatch.bUseAsOccluder && EarlyZPassMode < DDM_AllOpaque)
 	{

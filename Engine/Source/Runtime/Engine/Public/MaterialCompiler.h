@@ -292,6 +292,12 @@ public:
 	virtual int32 EyeAdaptation() = 0;
 	virtual int32 AtmosphericLightVector() = 0;
 	virtual int32 AtmosphericLightColor() = 0;
+
+	/*@BEGIN Third party code TressFX*/
+	virtual int32 GetHairTangent() = 0;
+	virtual int32 GetStrandUV() = 0;
+	/*@END Third party code TressFX*/
+
 	// The compiler can run in a different state and this affects caching of sub expression, Expressions are different (e.g. View.PrevWorldViewOrigin) when using previous frame's values
 	// If possible we should re-factor this to avoid having to deal with compiler state
 	virtual bool IsCurrentlyCompilingForPreviousFrame() const { return false; }
@@ -553,6 +559,18 @@ public:
 	{
 		return Compiler->EyeAdaptation();
 	}
+
+	/*@BEGIN Third party code TressFX*/
+	virtual int32 GetHairTangent() override
+	{
+		return Compiler->GetHairTangent();
+	}
+
+	virtual int32 GetStrandUV() override
+	{
+		return Compiler->GetStrandUV();
+	}
+	/*@END Third party code TressFX*/
 
 	virtual bool IsDevelopmentFeatureEnabled(const FName& FeatureName) const override
 	{
