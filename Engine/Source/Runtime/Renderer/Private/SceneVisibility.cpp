@@ -1768,7 +1768,8 @@ struct FRelevancePacket
 	FRelevancePrimSet<FPrimitiveSceneInfo*> RecachedReflectionCapturePrimitives;
 
 	/*@BEGIN Third party code TressFX*/
-	FRelevancePrimSet<FPrimitiveSceneProxy*> TressFXSet;
+	bool bHasTressFX;
+	TArray<FTressFXMeshBatch> TressFXMeshBatches;
 	/*@END Third party code TressFX*/
 
 	TArray<FMeshDecalBatch> MeshDecalBatches;
@@ -1854,6 +1855,9 @@ struct FRelevancePacket
 		, bUsesLightingChannels(false)
 		, bTranslucentSurfaceLighting(false)
 		, bUsesSceneDepth(false)
+		/*@BEGIN Third party code TressFX*/
+		, bHasTressFX(false)
+		/*@END Third party code TressFX*/
 	{
 	}
 
@@ -1978,7 +1982,8 @@ struct FRelevancePacket
 			/*@BEGIN Third party code TressFX*/
 			if (ViewRelevance.bTressFX)
 			{
-				TressFXSet.AddPrim(PrimitiveSceneInfo->Proxy);
+				bHasTressFX = true;
+				//TressFXSet.AddPrim(PrimitiveSceneInfo);
 			}
 			/*@END Third party code TressFX*/
 
@@ -2305,7 +2310,8 @@ struct FRelevancePacket
 		WriteView.VolumetricMeshBatches.Append(VolumetricMeshBatches);
 
 		/*@BEGIN Third party code TressFX*/
-		TressFXSet.AppendTo(WriteView.TressFXSet);
+		WriteView.TressFXMeshBatches.Append(TressFXMeshBatches);	
+		WriteView.bHasTressFX |= bHasTressFX;
 		/*@END Third party code TressFX*/
 
 		for (int32 Index = 0; Index < RecachedReflectionCapturePrimitives.NumPrims; ++Index)
@@ -2663,6 +2669,16 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 		BatchAndProxy.Mesh = MeshBatch.Mesh;
 		BatchAndProxy.Proxy = MeshBatch.PrimitiveSceneProxy;
 	}
+
+	/*@BEGIN Third party code TressFX*/
+	if (ViewRelevance.bTressFX) 
+	{
+		View.TressFXMeshBatches.AddUninitialized(1);
+		FTressFXMeshBatch& BatchAndProxy = View.TressFXMeshBatches.Last();
+		BatchAndProxy.Mesh = MeshBatch.Mesh;
+		BatchAndProxy.Proxy = MeshBatch.PrimitiveSceneProxy;
+	}
+	/*@END Third party code TressFX*/
 
 	if (ViewRelevance.bRenderInMainPass && ViewRelevance.bDecal)
 	{

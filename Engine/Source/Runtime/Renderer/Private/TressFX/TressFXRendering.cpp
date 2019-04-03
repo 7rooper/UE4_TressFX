@@ -115,63 +115,63 @@ void TressFXCopySceneDepth(FRHICommandList& RHICmdList, const FViewInfo& View, F
 FTressFXPrimSet
 -----------------------------------------------------------------------------*/
 
-bool FTressFXPrimSet::DrawPrims(FRHICommandListImmediate& RHICmdList, const FViewInfo& View, FDrawingPolicyRenderState& DrawRenderState, bool bWriteCustomStencilValues, ETressFXRenderUsage UsageType)
-{
+//bool FTressFXPrimSet::DrawPrims(FRHICommandListImmediate& RHICmdList, const FViewInfo& View, FMeshPassProcessorRenderState& DrawRenderState, bool bWriteCustomStencilValues, ETressFXRenderUsage UsageType)
+//{
 
-	bool bDirty = false;
+	//bool bDirty = false;
 
-	if (Prims.Num())
-	{
-		for (int32 PrimIdx = 0; PrimIdx < Prims.Num(); PrimIdx++)
-		{
-			FPrimitiveSceneProxy* PrimitiveSceneProxy = Prims[PrimIdx];
-			const FPrimitiveSceneInfo* PrimitiveSceneInfo = PrimitiveSceneProxy->GetPrimitiveSceneInfo();
+	//if (Prims.Num())
+	//{
+	//	for (int32 PrimIdx = 0; PrimIdx < Prims.Num(); PrimIdx++)
+	//	{
+	//		FPrimitiveSceneProxy* PrimitiveSceneProxy = Prims[PrimIdx];
+	//		const FPrimitiveSceneInfo* PrimitiveSceneInfo = PrimitiveSceneProxy->GetPrimitiveSceneInfo();
 
-			if (View.PrimitiveVisibilityMap[PrimitiveSceneInfo->GetIndex()])
-			{
-				const FPrimitiveViewRelevance& ViewRelevance = View.PrimitiveViewRelevanceMap[PrimitiveSceneInfo->GetIndex()];
-				FDrawingPolicyRenderState DrawRenderStateLocal(DrawRenderState);
-				{
-					FInt32Range range = View.GetDynamicMeshElementRange(PrimitiveSceneInfo->GetIndex());
+	//		if (View.PrimitiveVisibilityMap[PrimitiveSceneInfo->GetIndex()])
+	//		{
+	//			const FPrimitiveViewRelevance& ViewRelevance = View.PrimitiveViewRelevanceMap[PrimitiveSceneInfo->GetIndex()];
+	//			FMeshPassProcessorRenderState DrawRenderStateLocal(DrawRenderState);
+	//			{
+	//				FInt32Range range = View.GetDynamicMeshElementRange(PrimitiveSceneInfo->GetIndex());
 
-					for (int32 MeshBatchIndex = range.GetLowerBoundValue(); MeshBatchIndex < range.GetUpperBoundValue(); MeshBatchIndex++)
-					{
-						const FMeshBatchAndRelevance& MeshBatchAndRelevance = View.DynamicMeshElements[MeshBatchIndex];
+	//				for (int32 MeshBatchIndex = range.GetLowerBoundValue(); MeshBatchIndex < range.GetUpperBoundValue(); MeshBatchIndex++)
+	//				{
+	//					const FMeshBatchAndRelevance& MeshBatchAndRelevance = View.DynamicMeshElements[MeshBatchIndex];
 
-						checkSlow(MeshBatchAndRelevance.PrimitiveSceneProxy == PrimitiveSceneInfo->Proxy);
+	//					checkSlow(MeshBatchAndRelevance.PrimitiveSceneProxy == PrimitiveSceneInfo->Proxy);
 
-						const FMeshBatch& MeshBatch = *MeshBatchAndRelevance.Mesh;
-						
-						//UE_LOG(TressFXRenderingLog, Log, TEXT("TressFX Proxy owner name:  %s"), *PrimitiveSceneProxy->GetOwnerName().ToString());
-						//UE_LOG(TressFXRenderingLog, Log, TEXT("TressFX Proxy resource name:  %s"), *PrimitiveSceneProxy->GetResourceName().ToString());
+	//					const FMeshBatch& MeshBatch = *MeshBatchAndRelevance.Mesh;
+	//					
+	//					//UE_LOG(TressFXRenderingLog, Log, TEXT("TressFX Proxy owner name:  %s"), *PrimitiveSceneProxy->GetOwnerName().ToString());
+	//					//UE_LOG(TressFXRenderingLog, Log, TEXT("TressFX Proxy resource name:  %s"), *PrimitiveSceneProxy->GetResourceName().ToString());
 
-						switch (UsageType)
-						{
-						case ETressFXRenderUsage::TFXRU_DepthsVelocity:
-							FTressFXDepthsVelocityDrawingPolicyFactory::DrawDynamicMesh(RHICmdList, View, FTressFXDepthsVelocityDrawingPolicyFactory::ContextType(), MeshBatch, true, DrawRenderStateLocal, MeshBatchAndRelevance.PrimitiveSceneProxy, MeshBatch.BatchHitProxyId);
-							break;
-						case ETressFXRenderUsage::TFXRU_PPLL:
-							//FTressFXPPLLDrawingPolicyFactory::DrawDynamicMesh(RHICmdList, View, FTressFXPPLLDrawingPolicyFactory::ContextType(), MeshBatch, true, DrawRenderStateLocal, MeshBatchAndRelevance.PrimitiveSceneProxy, MeshBatch.BatchHitProxyId);
-							break;
-						case ETressFXRenderUsage::TFXRU_DepthsAlpha:
-							FTressFXDepthsAlphaDrawingPolicyFactory::DrawDynamicMesh(RHICmdList, View, FTressFXDepthsAlphaDrawingPolicyFactory::ContextType(), MeshBatch, true, DrawRenderStateLocal, MeshBatchAndRelevance.PrimitiveSceneProxy, MeshBatch.BatchHitProxyId);
-							break;
-						case ETressFXRenderUsage::TFXRU_FillColor:
-							//FTressFXFillColorDrawingPolicyFactory::DrawDynamicMesh(RHICmdList, View, FTressFXFillColorDrawingPolicyFactory::ContextType(), MeshBatch, true, DrawRenderStateLocal, MeshBatchAndRelevance.PrimitiveSceneProxy, MeshBatch.BatchHitProxyId);
-							break;
-						default:
-							break;
-						}
+	//					switch (UsageType)
+	//					{
+	//					case ETressFXRenderUsage::TFXRU_DepthsVelocity:
+	//						FTressFXDepthsVelocityDrawingPolicyFactory::DrawDynamicMesh(RHICmdList, View, FTressFXDepthsVelocityDrawingPolicyFactory::ContextType(), MeshBatch, true, DrawRenderStateLocal, MeshBatchAndRelevance.PrimitiveSceneProxy, MeshBatch.BatchHitProxyId);
+	//						break;
+	//					case ETressFXRenderUsage::TFXRU_PPLL:
+	//						//FTressFXPPLLDrawingPolicyFactory::DrawDynamicMesh(RHICmdList, View, FTressFXPPLLDrawingPolicyFactory::ContextType(), MeshBatch, true, DrawRenderStateLocal, MeshBatchAndRelevance.PrimitiveSceneProxy, MeshBatch.BatchHitProxyId);
+	//						break;
+	//					case ETressFXRenderUsage::TFXRU_DepthsAlpha:
+	//						FTressFXDepthsAlphaDrawingPolicyFactory::DrawDynamicMesh(RHICmdList, View, FTressFXDepthsAlphaDrawingPolicyFactory::ContextType(), MeshBatch, true, DrawRenderStateLocal, MeshBatchAndRelevance.PrimitiveSceneProxy, MeshBatch.BatchHitProxyId);
+	//						break;
+	//					case ETressFXRenderUsage::TFXRU_FillColor:
+	//						//FTressFXFillColorDrawingPolicyFactory::DrawDynamicMesh(RHICmdList, View, FTressFXFillColorDrawingPolicyFactory::ContextType(), MeshBatch, true, DrawRenderStateLocal, MeshBatchAndRelevance.PrimitiveSceneProxy, MeshBatch.BatchHitProxyId);
+	//						break;
+	//					default:
+	//						break;
+	//					}
 
-						bDirty = true;
+	//					bDirty = true;
 
-					}
-				}
-			}
-		}
-	}
-	return bDirty;
-}
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
+	//return bDirty;
+//}
 
 //FTressFXPPLLDrawingPolicy::FTressFXPPLLDrawingPolicy(const FVertexFactory* InVertexFactory, const FMaterialRenderProxy* InMaterialRenderProxy, const FMaterial& InMaterialResource, const FMeshDrawingPolicyOverrideSettings& InOverrideSettings, ERHIFeatureLevel::Type InFeatureLevel) :
 //	FMeshDrawingPolicy(InVertexFactory, InMaterialRenderProxy, InMaterialResource, InOverrideSettings, DVSM_None)
@@ -262,125 +262,125 @@ bool FTressFXPrimSet::DrawPrims(FRHICommandListImmediate& RHICmdList, const FVie
 //	return false;
 //}
 
-FTressFXDepthsAlphaDrawingPolicy<true>::FTressFXDepthsAlphaDrawingPolicy(const FVertexFactory* InVertexFactory, const FMaterialRenderProxy* InMaterialRenderProxy, const FMaterial& InMaterialResource, const FMeshDrawingPolicyOverrideSettings& InOverrideSettings, ERHIFeatureLevel::Type InFeatureLevel)
-	:FMeshDrawingPolicy(InVertexFactory, InMaterialRenderProxy, InMaterialResource, InOverrideSettings, DVSM_None)
-{
-	VertexShader = InMaterialResource.GetShader<TTressFX_ShortCutVS<true>>(VertexFactory->GetType());
-	PixelShader = InMaterialResource.GetShader<FTressFX_DepthsAlphaPS<true>>(InVertexFactory->GetType());
-}
+//FTressFXDepthsAlphaDrawingPolicy<true>::FTressFXDepthsAlphaDrawingPolicy(const FVertexFactory* InVertexFactory, const FMaterialRenderProxy* InMaterialRenderProxy, const FMaterial& InMaterialResource, const FMeshDrawingPolicyOverrideSettings& InOverrideSettings, ERHIFeatureLevel::Type InFeatureLevel)
+//	:FMeshDrawingPolicy(InVertexFactory, InMaterialRenderProxy, InMaterialResource, InOverrideSettings, DVSM_None)
+//{
+//	VertexShader = InMaterialResource.GetShader<TTressFX_ShortCutVS<true>>(VertexFactory->GetType());
+//	PixelShader = InMaterialResource.GetShader<FTressFX_DepthsAlphaPS<true>>(InVertexFactory->GetType());
+//}
+//
+//FTressFXDepthsAlphaDrawingPolicy<false>::FTressFXDepthsAlphaDrawingPolicy(const FVertexFactory* InVertexFactory, const FMaterialRenderProxy* InMaterialRenderProxy, const FMaterial& InMaterialResource, const FMeshDrawingPolicyOverrideSettings& InOverrideSettings, ERHIFeatureLevel::Type InFeatureLevel)
+//	:FMeshDrawingPolicy(InVertexFactory, InMaterialRenderProxy, InMaterialResource, InOverrideSettings, DVSM_None)
+//{
+//	VertexShader = InMaterialResource.GetShader<TTressFX_ShortCutVS<false>>(VertexFactory->GetType());
+//	PixelShader = InMaterialResource.GetShader<FTressFX_DepthsAlphaPS<false>>(InVertexFactory->GetType());
+//}
 
-FTressFXDepthsAlphaDrawingPolicy<false>::FTressFXDepthsAlphaDrawingPolicy(const FVertexFactory* InVertexFactory, const FMaterialRenderProxy* InMaterialRenderProxy, const FMaterial& InMaterialResource, const FMeshDrawingPolicyOverrideSettings& InOverrideSettings, ERHIFeatureLevel::Type InFeatureLevel)
-	:FMeshDrawingPolicy(InVertexFactory, InMaterialRenderProxy, InMaterialResource, InOverrideSettings, DVSM_None)
-{
-	VertexShader = InMaterialResource.GetShader<TTressFX_ShortCutVS<false>>(VertexFactory->GetType());
-	PixelShader = InMaterialResource.GetShader<FTressFX_DepthsAlphaPS<false>>(InVertexFactory->GetType());
-}
+//bool FTressFXDepthsVelocityDrawingPolicyFactory::DrawDynamicMesh(FRHICommandList & RHICmdList, const FSceneView & View, ContextType DrawingContext, const FMeshBatch & Mesh, bool bPreFog, const FMeshPassProcessorRenderState & DrawRenderState, const FPrimitiveSceneProxy * PrimitiveSceneProxy, FHitProxyId HitProxyId)
+//{
+	//if (PrimitiveSceneProxy)
+	//{
+	//	SCOPED_DRAW_EVENT(RHICmdList, TressFXDepthsVelocityPass);
+	//	const FMaterialRenderProxy* MaterialRenderProxy = Mesh.MaterialRenderProxy;
 
-bool FTressFXDepthsVelocityDrawingPolicyFactory::DrawDynamicMesh(FRHICommandList & RHICmdList, const FSceneView & View, ContextType DrawingContext, const FMeshBatch & Mesh, bool bPreFog, const FDrawingPolicyRenderState & DrawRenderState, const FPrimitiveSceneProxy * PrimitiveSceneProxy, FHitProxyId HitProxyId)
-{
-	if (PrimitiveSceneProxy)
-	{
-		SCOPED_DRAW_EVENT(RHICmdList, TressFXDepthsVelocityPass);
-		const FMaterialRenderProxy* MaterialRenderProxy = Mesh.MaterialRenderProxy;
+	//	const bool bWantsVelocity = MaterialRenderProxy->GetMaterial(View.GetFeatureLevel())->TressFXShouldRenderVelocity();
+	//	EBlendMode BlendMode = MaterialRenderProxy->GetMaterial(View.GetFeatureLevel())->GetBlendMode();
 
-		const bool bWantsVelocity = MaterialRenderProxy->GetMaterial(View.GetFeatureLevel())->TressFXShouldRenderVelocity();
-		EBlendMode BlendMode = MaterialRenderProxy->GetMaterial(View.GetFeatureLevel())->GetBlendMode();
+	//	const bool bNoDepth = (BlendMode == EBlendMode::BLEND_Translucent || BlendMode == EBlendMode::BLEND_Additive || BlendMode == EBlendMode::BLEND_AlphaComposite);
 
-		const bool bNoDepth = (BlendMode == EBlendMode::BLEND_Translucent || BlendMode == EBlendMode::BLEND_Additive || BlendMode == EBlendMode::BLEND_AlphaComposite);
+	//	if(bNoDepth && !bWantsVelocity)
+	//	{
+	//		return false;
+	//	}
+	//	if (bWantsVelocity)
+	//	{
+	//		FTressFXDepthsVelocityDrawingPolicy<true> DrawingPolicy(Mesh.VertexFactory, MaterialRenderProxy, *MaterialRenderProxy->GetMaterial(View.GetFeatureLevel()), ComputeMeshOverrideSettings(Mesh), View.GetFeatureLevel(), bNoDepth);
 
-		if(bNoDepth && !bWantsVelocity)
-		{
-			return false;
-		}
-		if (bWantsVelocity)
-		{
-			FTressFXDepthsVelocityDrawingPolicy<true> DrawingPolicy(Mesh.VertexFactory, MaterialRenderProxy, *MaterialRenderProxy->GetMaterial(View.GetFeatureLevel()), ComputeMeshOverrideSettings(Mesh), View.GetFeatureLevel(), bNoDepth);
+	//		FMeshPassProcessorRenderState DrawRenderStateLocal(DrawRenderState);
+	//		//DrawRenderStateLocal.SetDitheredLODTransitionAlpha(Mesh.DitheredLODTransitionAlpha);
+	//		DrawingPolicy.SetupPipelineState(DrawRenderStateLocal, View);
+	//		CommitGraphicsPipelineState(RHICmdList, DrawingPolicy, DrawRenderStateLocal, DrawingPolicy.GetBoundShaderStateInput(View.GetFeatureLevel()));
+	//		DrawingPolicy.SetSharedState(RHICmdList, &View, FTressFXDepthsVelocityDrawingPolicy<true>::ContextDataType(), DrawRenderStateLocal);
 
-			FDrawingPolicyRenderState DrawRenderStateLocal(DrawRenderState);
-			DrawRenderStateLocal.SetDitheredLODTransitionAlpha(Mesh.DitheredLODTransitionAlpha);
-			DrawingPolicy.SetupPipelineState(DrawRenderStateLocal, View);
-			CommitGraphicsPipelineState(RHICmdList, DrawingPolicy, DrawRenderStateLocal, DrawingPolicy.GetBoundShaderStateInput(View.GetFeatureLevel()));
-			DrawingPolicy.SetSharedState(RHICmdList, &View, FTressFXDepthsVelocityDrawingPolicy<true>::ContextDataType(), DrawRenderStateLocal);
+	//		for (int32 BatchElementIndex = 0; BatchElementIndex < Mesh.Elements.Num(); BatchElementIndex++)
+	//		{
+	//			DrawingPolicy.SetMeshRenderState(RHICmdList, View, PrimitiveSceneProxy, Mesh, BatchElementIndex, DrawRenderStateLocal);
+	//			SCOPED_DRAW_EVENTF(RHICmdList, TressFXDrawMeshDepthsVelocity, TEXT("Asset  %s"), *PrimitiveSceneProxy->GetOwnerName().ToString());
+	//			DrawingPolicy.DrawMesh(RHICmdList, View, Mesh, BatchElementIndex);
+	//		}
+	//		return true;
+	//	}
+	//	else
+	//	{
+	//		FTressFXDepthsVelocityDrawingPolicy<false> DrawingPolicy(Mesh.VertexFactory, MaterialRenderProxy, *MaterialRenderProxy->GetMaterial(View.GetFeatureLevel()), ComputeMeshOverrideSettings(Mesh), View.GetFeatureLevel(), bNoDepth);
+	//		FMeshPassProcessorRenderState DrawRenderStateLocal(DrawRenderState);
+	//		//DrawRenderStateLocal.SetDitheredLODTransitionAlpha(Mesh.DitheredLODTransitionAlpha);
+	//		DrawingPolicy.SetupPipelineState(DrawRenderStateLocal, View);
+	//		CommitGraphicsPipelineState(RHICmdList, DrawingPolicy, DrawRenderStateLocal, DrawingPolicy.GetBoundShaderStateInput(View.GetFeatureLevel()));
+	//		DrawingPolicy.SetSharedState(RHICmdList, &View, FTressFXDepthsVelocityDrawingPolicy<false>::ContextDataType(), DrawRenderStateLocal);
 
-			for (int32 BatchElementIndex = 0; BatchElementIndex < Mesh.Elements.Num(); BatchElementIndex++)
-			{
-				DrawingPolicy.SetMeshRenderState(RHICmdList, View, PrimitiveSceneProxy, Mesh, BatchElementIndex, DrawRenderStateLocal);
-				SCOPED_DRAW_EVENTF(RHICmdList, TressFXDrawMeshDepthsVelocity, TEXT("Asset  %s"), *PrimitiveSceneProxy->GetOwnerName().ToString());
-				DrawingPolicy.DrawMesh(RHICmdList, View, Mesh, BatchElementIndex);
-			}
-			return true;
-		}
-		else
-		{
-			FTressFXDepthsVelocityDrawingPolicy<false> DrawingPolicy(Mesh.VertexFactory, MaterialRenderProxy, *MaterialRenderProxy->GetMaterial(View.GetFeatureLevel()), ComputeMeshOverrideSettings(Mesh), View.GetFeatureLevel(), bNoDepth);
-			FDrawingPolicyRenderState DrawRenderStateLocal(DrawRenderState);
-			DrawRenderStateLocal.SetDitheredLODTransitionAlpha(Mesh.DitheredLODTransitionAlpha);
-			DrawingPolicy.SetupPipelineState(DrawRenderStateLocal, View);
-			CommitGraphicsPipelineState(RHICmdList, DrawingPolicy, DrawRenderStateLocal, DrawingPolicy.GetBoundShaderStateInput(View.GetFeatureLevel()));
-			DrawingPolicy.SetSharedState(RHICmdList, &View, FTressFXDepthsVelocityDrawingPolicy<false>::ContextDataType(), DrawRenderStateLocal);
+	//		for (int32 BatchElementIndex = 0; BatchElementIndex < Mesh.Elements.Num(); BatchElementIndex++)
+	//		{
+	//			DrawingPolicy.SetMeshRenderState(RHICmdList, View, PrimitiveSceneProxy, Mesh, BatchElementIndex, DrawRenderStateLocal);
+	//			SCOPED_DRAW_EVENTF(RHICmdList, TressFXDrawMeshDepthsVelocity, TEXT("Asset  %s"), *PrimitiveSceneProxy->GetOwnerName().ToString());
+	//			DrawingPolicy.DrawMesh(RHICmdList, View, Mesh, BatchElementIndex);
+	//		}
+	//		return true;
+	//	}		
+	//}
+	//return false;
+//}
 
-			for (int32 BatchElementIndex = 0; BatchElementIndex < Mesh.Elements.Num(); BatchElementIndex++)
-			{
-				DrawingPolicy.SetMeshRenderState(RHICmdList, View, PrimitiveSceneProxy, Mesh, BatchElementIndex, DrawRenderStateLocal);
-				SCOPED_DRAW_EVENTF(RHICmdList, TressFXDrawMeshDepthsVelocity, TEXT("Asset  %s"), *PrimitiveSceneProxy->GetOwnerName().ToString());
-				DrawingPolicy.DrawMesh(RHICmdList, View, Mesh, BatchElementIndex);
-			}
-			return true;
-		}		
-	}
-	return false;
-}
+//bool FTressFXDepthsAlphaDrawingPolicyFactory::DrawDynamicMesh(FRHICommandList & RHICmdList, const FSceneView & View, ContextType DrawingContext, const FMeshBatch & Mesh, bool bPreFog, const FMeshPassProcessorRenderState & DrawRenderState, const FPrimitiveSceneProxy * PrimitiveSceneProxy, FHitProxyId HitProxyId)
+//{
+	//if (PrimitiveSceneProxy)
+	//{
 
-bool FTressFXDepthsAlphaDrawingPolicyFactory::DrawDynamicMesh(FRHICommandList & RHICmdList, const FSceneView & View, ContextType DrawingContext, const FMeshBatch & Mesh, bool bPreFog, const FDrawingPolicyRenderState & DrawRenderState, const FPrimitiveSceneProxy * PrimitiveSceneProxy, FHitProxyId HitProxyId)
-{
-	if (PrimitiveSceneProxy)
-	{
+	//	SCOPED_DRAW_EVENT(RHICmdList, TressFXShortCutDepthsAlphaPass);
+	//	const FMaterialRenderProxy* MaterialRenderProxy = Mesh.MaterialRenderProxy;
+	//	const FMaterial* Material = MaterialRenderProxy->GetMaterial(View.GetFeatureLevel());
 
-		SCOPED_DRAW_EVENT(RHICmdList, TressFXShortCutDepthsAlphaPass);
-		const FMaterialRenderProxy* MaterialRenderProxy = Mesh.MaterialRenderProxy;
-		const FMaterial* Material = MaterialRenderProxy->GetMaterial(View.GetFeatureLevel());
+	//	//velocity expensive, only render if material wants it
+	//	const bool bNeedsVelocity = Material->TressFXShouldRenderVelocity();
+	//	if(bNeedsVelocity)
+	//	{
+	//		FTressFXDepthsAlphaDrawingPolicy<true> DrawingPolicy(Mesh.VertexFactory, MaterialRenderProxy, *MaterialRenderProxy->GetMaterial(View.GetFeatureLevel()), ComputeMeshOverrideSettings(Mesh), View.GetFeatureLevel());
 
-		//velocity expensive, only render if material wants it
-		const bool bNeedsVelocity = Material->TressFXShouldRenderVelocity();
-		if(bNeedsVelocity)
-		{
-			FTressFXDepthsAlphaDrawingPolicy<true> DrawingPolicy(Mesh.VertexFactory, MaterialRenderProxy, *MaterialRenderProxy->GetMaterial(View.GetFeatureLevel()), ComputeMeshOverrideSettings(Mesh), View.GetFeatureLevel());
+	//		FMeshPassProcessorRenderState DrawRenderStateLocal(DrawRenderState);
+	//		//DrawRenderStateLocal.SetDitheredLODTransitionAlpha(Mesh.DitheredLODTransitionAlpha);
+	//		DrawingPolicy.SetupPipelineState(DrawRenderStateLocal, View);
+	//		CommitGraphicsPipelineState(RHICmdList, DrawingPolicy, DrawRenderStateLocal, DrawingPolicy.GetBoundShaderStateInput(View.GetFeatureLevel()));
+	//		DrawingPolicy.SetSharedState(RHICmdList, &View, FTressFXDepthsAlphaDrawingPolicy<true>::ContextDataType(), DrawRenderStateLocal);
 
-			FDrawingPolicyRenderState DrawRenderStateLocal(DrawRenderState);
-			DrawRenderStateLocal.SetDitheredLODTransitionAlpha(Mesh.DitheredLODTransitionAlpha);
-			DrawingPolicy.SetupPipelineState(DrawRenderStateLocal, View);
-			CommitGraphicsPipelineState(RHICmdList, DrawingPolicy, DrawRenderStateLocal, DrawingPolicy.GetBoundShaderStateInput(View.GetFeatureLevel()));
-			DrawingPolicy.SetSharedState(RHICmdList, &View, FTressFXDepthsAlphaDrawingPolicy<true>::ContextDataType(), DrawRenderStateLocal);
+	//		for (int32 BatchElementIndex = 0; BatchElementIndex < Mesh.Elements.Num(); BatchElementIndex++)
+	//		{
+	//			DrawingPolicy.SetMeshRenderState(RHICmdList, View, PrimitiveSceneProxy, Mesh, BatchElementIndex, DrawRenderStateLocal);
+	//			SCOPED_DRAW_EVENTF(RHICmdList, TressFXDrawMeshDepthsAlpha, TEXT("Asset  %s"), *PrimitiveSceneProxy->GetOwnerName().ToString());
+	//			DrawingPolicy.DrawMesh(RHICmdList, View, Mesh, BatchElementIndex);
+	//		}
+	//		return true;
+	//	}
+	//	else
+	//	{
+	//		FTressFXDepthsAlphaDrawingPolicy<false> DrawingPolicy(Mesh.VertexFactory, MaterialRenderProxy, *MaterialRenderProxy->GetMaterial(View.GetFeatureLevel()), ComputeMeshOverrideSettings(Mesh), View.GetFeatureLevel());
 
-			for (int32 BatchElementIndex = 0; BatchElementIndex < Mesh.Elements.Num(); BatchElementIndex++)
-			{
-				DrawingPolicy.SetMeshRenderState(RHICmdList, View, PrimitiveSceneProxy, Mesh, BatchElementIndex, DrawRenderStateLocal);
-				SCOPED_DRAW_EVENTF(RHICmdList, TressFXDrawMeshDepthsAlpha, TEXT("Asset  %s"), *PrimitiveSceneProxy->GetOwnerName().ToString());
-				DrawingPolicy.DrawMesh(RHICmdList, View, Mesh, BatchElementIndex);
-			}
-			return true;
-		}
-		else
-		{
-			FTressFXDepthsAlphaDrawingPolicy<false> DrawingPolicy(Mesh.VertexFactory, MaterialRenderProxy, *MaterialRenderProxy->GetMaterial(View.GetFeatureLevel()), ComputeMeshOverrideSettings(Mesh), View.GetFeatureLevel());
+	//		FMeshPassProcessorRenderState DrawRenderStateLocal(DrawRenderState);
+	//		DrawRenderStateLocal.SetDitheredLODTransitionAlpha(Mesh.DitheredLODTransitionAlpha);
+	//		DrawingPolicy.SetupPipelineState(DrawRenderStateLocal, View);
+	//		CommitGraphicsPipelineState(RHICmdList, DrawingPolicy, DrawRenderStateLocal, DrawingPolicy.GetBoundShaderStateInput(View.GetFeatureLevel()));
+	//		DrawingPolicy.SetSharedState(RHICmdList, &View, FTressFXDepthsAlphaDrawingPolicy<false>::ContextDataType(), DrawRenderStateLocal);
 
-			FDrawingPolicyRenderState DrawRenderStateLocal(DrawRenderState);
-			DrawRenderStateLocal.SetDitheredLODTransitionAlpha(Mesh.DitheredLODTransitionAlpha);
-			DrawingPolicy.SetupPipelineState(DrawRenderStateLocal, View);
-			CommitGraphicsPipelineState(RHICmdList, DrawingPolicy, DrawRenderStateLocal, DrawingPolicy.GetBoundShaderStateInput(View.GetFeatureLevel()));
-			DrawingPolicy.SetSharedState(RHICmdList, &View, FTressFXDepthsAlphaDrawingPolicy<false>::ContextDataType(), DrawRenderStateLocal);
-
-			for (int32 BatchElementIndex = 0; BatchElementIndex < Mesh.Elements.Num(); BatchElementIndex++)
-			{
-				DrawingPolicy.SetMeshRenderState(RHICmdList, View, PrimitiveSceneProxy, Mesh, BatchElementIndex, DrawRenderStateLocal);
-				SCOPED_DRAW_EVENTF(RHICmdList, TressFXDrawMeshDepthsAlpha, TEXT("Asset  %s"), *PrimitiveSceneProxy->GetOwnerName().ToString());
-				DrawingPolicy.DrawMesh(RHICmdList, View, Mesh, BatchElementIndex);
-			}
-			return true;
-		}
-	}
-	return false;
-}
+	//		for (int32 BatchElementIndex = 0; BatchElementIndex < Mesh.Elements.Num(); BatchElementIndex++)
+	//		{
+	//			DrawingPolicy.SetMeshRenderState(RHICmdList, View, PrimitiveSceneProxy, Mesh, BatchElementIndex, DrawRenderStateLocal);
+	//			SCOPED_DRAW_EVENTF(RHICmdList, TressFXDrawMeshDepthsAlpha, TEXT("Asset  %s"), *PrimitiveSceneProxy->GetOwnerName().ToString());
+	//			DrawingPolicy.DrawMesh(RHICmdList, View, Mesh, BatchElementIndex);
+	//		}
+	//		return true;
+	//	}
+	//}
+	//return false;
+//}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -575,138 +575,138 @@ bool FSceneRenderer::ShouldRenderTressFX()
 void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views)
 {
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
-	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
-	{
-		FViewInfo& View = Views[ViewIndex];
+	//for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
+	//{
+	//	FViewInfo& View = Views[ViewIndex];
 
-		if (View.TressFXSet.NumPrims() < 1)
-		{
-			continue;
-		}
+	//	if (View.TressFXMeshBatches.Num() < 1)
+	//	{
+	//		continue;
+	//	}
 
-		SCOPED_DRAW_EVENT(RHICmdList, TressFXShortcut_BasePass);
+	//	SCOPED_DRAW_EVENT(RHICmdList, TressFXShortcut_BasePass);
 
-		{
-			// Make a copy of scene depth for us to use
-			SCOPED_DRAW_EVENT(RHICmdList, CopySceneDepth);
-			TressFXCopySceneDepth(RHICmdList, View, SceneContext, SceneContext.TressFXSceneDepth);
-		}
+	//	{
+	//		// Make a copy of scene depth for us to use
+	//		SCOPED_DRAW_EVENT(RHICmdList, CopySceneDepth);
+	//		TressFXCopySceneDepth(RHICmdList, View, SceneContext, SceneContext.TressFXSceneDepth);
+	//	}
 
-		static const uint32 ShortcutClearValue[4] = { SHORTCUT_INITIAL_DEPTH ,SHORTCUT_INITIAL_DEPTH,SHORTCUT_INITIAL_DEPTH,SHORTCUT_INITIAL_DEPTH };
-		ClearUAV(RHICmdList, SceneContext.FragmentDepthsTexture->GetRenderTargetItem(), ShortcutClearValue);
-		RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
+	//	static const uint32 ShortcutClearValue[4] = { SHORTCUT_INITIAL_DEPTH ,SHORTCUT_INITIAL_DEPTH,SHORTCUT_INITIAL_DEPTH,SHORTCUT_INITIAL_DEPTH };
+	//	ClearUAV(RHICmdList, SceneContext.FragmentDepthsTexture->GetRenderTargetItem(), ShortcutClearValue);
+	//	RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 
-		// shortcut pass 1, accumulate alpha, depths, and optionally velocity if using temporal aa
-		{
-			SCOPED_DRAW_EVENT(RHICmdList, DepthsAlpha);
+	//	// shortcut pass 1, accumulate alpha, depths, and optionally velocity if using temporal aa
+	//	{
+	//		SCOPED_DRAW_EVENT(RHICmdList, DepthsAlpha);
 
-			FRHIRenderTargetView ColorTargetsRTV[2];
+	//		FRHIRenderTargetView ColorTargetsRTV[2];
 
-			ColorTargetsRTV[0] = FRHIRenderTargetView(SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture, ERenderTargetLoadAction::ELoad);
-			ColorTargetsRTV[1] = FRHIRenderTargetView(SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture, ERenderTargetLoadAction::ELoad);
-			FRHIDepthRenderTargetView DepthRTV(SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore);
-			FUnorderedAccessViewRHIParamRef UAVs[8] = { SceneContext.FragmentDepthsTexture->GetRenderTargetItem().UAV,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr };
-			FUAVCountInitializerRHI UAVCountInitializer(0, 0, 0, 0, 0, 0, 0, 0);
-			RHICmdList.SetRenderTargets(2, ColorTargetsRTV, &DepthRTV, 1, UAVs, &UAVCountInitializer);
-			RHICmdList.TransitionResources(EResourceTransitionAccess::EWritable, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
-			FLinearColor ClearColors[] = { FLinearColor::White, FLinearColor::Transparent };
-			DrawClearQuadMRT( RHICmdList, true, 2, ClearColors, false, 0, false, 0);
-			FDrawingPolicyRenderState DrawRenderState(View);
-			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
-			View.TressFXSet.DrawPrims(RHICmdList, View, DrawRenderState, false, ETressFXRenderUsage::TFXRU_DepthsAlpha);
-			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, UAVs, 1);
-			RHICmdList.TransitionResource(EResourceTransitionAccess::EReadable, SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture);
-		}
-		// shortcut pass 2, depths resolve
-		{
-			SCOPED_DRAW_EVENT(RHICmdList, ResolveDepths);
+	//		ColorTargetsRTV[0] = FRHIRenderTargetView(SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture, ERenderTargetLoadAction::ELoad);
+	//		ColorTargetsRTV[1] = FRHIRenderTargetView(SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture, ERenderTargetLoadAction::ELoad);
+	//		FRHIDepthRenderTargetView DepthRTV(SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore);
+	//		FUnorderedAccessViewRHIParamRef UAVs[8] = { SceneContext.FragmentDepthsTexture->GetRenderTargetItem().UAV,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr };
+	//		//FUAVCountInitializerRHI UAVCountInitializer(0, 0, 0, 0, 0, 0, 0, 0);
+	//		RHICmdList.SetRenderTargets(2, ColorTargetsRTV, &DepthRTV, 1, UAVs);
+	//		RHICmdList.TransitionResources(EResourceTransitionAccess::EWritable, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
+	//		FLinearColor ClearColors[] = { FLinearColor::White, FLinearColor::Transparent };
+	//		DrawClearQuadMRT( RHICmdList, true, 2, ClearColors, false, 0, false, 0);
+	//		FMeshPassProcessorRenderState DrawRenderState(View);
+	//		RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
+	//		View.TressFXSet.DrawPrims(RHICmdList, View, DrawRenderState, false, ETressFXRenderUsage::TFXRU_DepthsAlpha);
+	//		RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, UAVs, 1);
+	//		RHICmdList.TransitionResource(EResourceTransitionAccess::EReadable, SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture);
+	//	}
+	//	// shortcut pass 2, depths resolve
+	//	{
+	//		SCOPED_DRAW_EVENT(RHICmdList, ResolveDepths);
 
-			SetRenderTarget(RHICmdList, NULL, SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture);
+	//		SetRenderTarget(RHICmdList, NULL, SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture);
 
-			TShaderMapRef<FScreenVS>							VertexShader(View.ShaderMap);
-			TShaderMapRef<FTressFXShortCut_ResolveDepthPS>		PixelShader(View.ShaderMap);
+	//		TShaderMapRef<FScreenVS>							VertexShader(View.ShaderMap);
+	//		TShaderMapRef<FTressFXShortCut_ResolveDepthPS>		PixelShader(View.ShaderMap);
 
-			FGraphicsPipelineStateInitializer GraphicsPSOInit;
-			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+	//		FGraphicsPipelineStateInitializer GraphicsPSOInit;
+	//		RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 
-			GraphicsPSOInit.BlendState = TStaticBlendState<CW_NONE>::GetRHI();
-			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<true, CF_Always>::GetRHI();
+	//		GraphicsPSOInit.BlendState = TStaticBlendState<CW_NONE>::GetRHI();
+	//		GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
+	//		GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<true, CF_Always>::GetRHI();
 
-			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
-			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
-			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
-			GraphicsPSOInit.PrimitiveType = PT_TriangleList;
+	//		GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
+	//		GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
+	//		GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
+	//		GraphicsPSOInit.PrimitiveType = PT_TriangleList;
 
-			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
+	//		SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
 
-			VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
-			PixelShader->SetParameters(RHICmdList, View, SceneContext);
+	//		VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
+	//		PixelShader->SetParameters(RHICmdList, View, SceneContext);
 
-			const FIntPoint Size = View.ViewRect.Size();
-			RHICmdList.SetViewport(0, 0, 0, Size.X, Size.Y, 1);
-			DrawRectangle(
-				RHICmdList,
-				0, 0,
-				Size.X, Size.Y,
-				0, 0,
-				Size.X, Size.Y,
-				Size,
-				Size,
-				*VertexShader,
-				EDRF_Default,
-				1
-			);
-		}
+	//		const FIntPoint Size = View.ViewRect.Size();
+	//		RHICmdList.SetViewport(0, 0, 0, Size.X, Size.Y, 1);
+	//		DrawRectangle(
+	//			RHICmdList,
+	//			0, 0,
+	//			Size.X, Size.Y,
+	//			0, 0,
+	//			Size.X, Size.Y,
+	//			Size,
+	//			Size,
+	//			*VertexShader,
+	//			EDRF_Default,
+	//			1
+	//		);
+	//	}
 
-		const bool CopyHairDepthToSceneDepth = true;
-		if(CopyHairDepthToSceneDepth)
-		{
-			SCOPED_DRAW_EVENT(RHICmdList, TressFXSCopyHairDepthToSceneDepth);
+	//	const bool CopyHairDepthToSceneDepth = true;
+	//	if(CopyHairDepthToSceneDepth)
+	//	{
+	//		SCOPED_DRAW_EVENT(RHICmdList, TressFXSCopyHairDepthToSceneDepth);
 
-			FTextureRHIParamRef Resources[1] = {
-				SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture
-			};
-			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources, 1);
+	//		FTextureRHIParamRef Resources[1] = {
+	//			SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture
+	//		};
+	//		RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources, 1);
 
-			TShaderMapRef<FScreenVS>							VertexShader(View.ShaderMap);
-			TShaderMapRef<FTressFXCopyOpaqueDepthPS>			PixelShader(View.ShaderMap);
+	//		TShaderMapRef<FScreenVS>							VertexShader(View.ShaderMap);
+	//		TShaderMapRef<FTressFXCopyOpaqueDepthPS>			PixelShader(View.ShaderMap);
 
-			SetRenderTarget(RHICmdList, NULL, SceneContext.GetSceneDepthSurface());
+	//		SetRenderTarget(RHICmdList, NULL, SceneContext.GetSceneDepthSurface());
 
-			FGraphicsPipelineStateInitializer GraphicsPSOInit;
-			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+	//		FGraphicsPipelineStateInitializer GraphicsPSOInit;
+	//		RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 
-			GraphicsPSOInit.BlendState = TStaticBlendState<CW_NONE>::GetRHI();
-			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<true, CF_Always>::GetRHI();
+	//		GraphicsPSOInit.BlendState = TStaticBlendState<CW_NONE>::GetRHI();
+	//		GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
+	//		GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<true, CF_Always>::GetRHI();
 
-			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
-			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
-			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
-			GraphicsPSOInit.PrimitiveType = PT_TriangleList;
+	//		GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
+	//		GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
+	//		GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
+	//		GraphicsPSOInit.PrimitiveType = PT_TriangleList;
 
-			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
+	//		SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
 
-			VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
-			PixelShader->SetParameters(RHICmdList, View, SceneContext.AccumInvAlpha, SceneContext.TressFXSceneDepth);
+	//		VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
+	//		PixelShader->SetParameters(RHICmdList, View, SceneContext.AccumInvAlpha, SceneContext.TressFXSceneDepth);
 
-			const FIntPoint Size = View.ViewRect.Size();
-			RHICmdList.SetViewport(0, 0, 0, Size.X, Size.Y, 1);
-			DrawRectangle(
-				RHICmdList,
-				0, 0,
-				Size.X, Size.Y,
-				0, 0,
-				Size.X, Size.Y,
-				Size,
-				Size,
-				*VertexShader,
-				EDRF_Default,
-				1
-			);
-		}
-	}
+	//		const FIntPoint Size = View.ViewRect.Size();
+	//		RHICmdList.SetViewport(0, 0, 0, Size.X, Size.Y, 1);
+	//		DrawRectangle(
+	//			RHICmdList,
+	//			0, 0,
+	//			Size.X, Size.Y,
+	//			0, 0,
+	//			Size.X, Size.Y,
+	//			Size,
+	//			Size,
+	//			*VertexShader,
+	//			EDRF_Default,
+	//			1
+	//		);
+	//	}
+	//}
 }
 
 void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views)
@@ -714,126 +714,126 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
 	SCOPED_DRAW_EVENT(RHICmdList, TressFXShortcut_Resolve);
 
-	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
-	{
-		FViewInfo& View = Views[ViewIndex];
+	//for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
+	//{
+	//	FViewInfo& View = Views[ViewIndex];
 
-		if (View.TressFXSet.NumPrims() < 1)
-		{
-			continue;
-		}
+	//	if (View.TressFXMeshBatches.Num() < 1)
+	//	{
+	//		continue;
+	//	}
 
 
-		// shortcut pass 3, fill colors
-		{
-			SCOPED_DRAW_EVENT(RHICmdList, FillColors);
+	//	// shortcut pass 3, fill colors
+	//	{
+	//		SCOPED_DRAW_EVENT(RHICmdList, FillColors);
 
-			TUniformBufferRef<FOpaqueBasePassUniformParameters> BasePassUniformBuffer;
-			CreateOpaqueBasePassUniformBuffer(RHICmdList, View, nullptr, BasePassUniformBuffer);
-			FDrawingPolicyRenderState DrawRenderState(View, BasePassUniformBuffer);
+	//		TUniformBufferRef<FOpaqueBasePassUniformParameters> BasePassUniformBuffer;
+	//		CreateOpaqueBasePassUniformBuffer(RHICmdList, View, nullptr, BasePassUniformBuffer);
+	//		FMeshPassProcessorRenderState DrawRenderState(View, BasePassUniformBuffer);
 
-			FUnorderedAccessViewRHIParamRef UAVs[7] = { nullptr,nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
-			FUAVCountInitializerRHI UAVCounts(0, 0, 0, 0, 0, 0, 0, 0);
+	//		FUnorderedAccessViewRHIParamRef UAVs[7] = { nullptr,nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+	//		//FUAVCountInitializerRHI UAVCounts(0, 0, 0, 0, 0, 0, 0, 0);
 
-			{
-				FTextureRHIParamRef RenderTargets[] = {
-					SceneContext.FragmentColorsTexture->GetRenderTargetItem().TargetableTexture
-				};
-				SetRenderTargets(RHICmdList, 1, RenderTargets, SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, 6, UAVs, false, &UAVCounts);
-			}
+	//		{
+	//			FTextureRHIParamRef RenderTargets[] = {
+	//				SceneContext.FragmentColorsTexture->GetRenderTargetItem().TargetableTexture
+	//			};
+	//			SetRenderTargets(RHICmdList, 1, RenderTargets, SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, 6, UAVs, false);
+	//		}
 
-			DrawClearQuad(RHICmdList, true, FLinearColor::Transparent, false, 0, false, 0);
+	//		DrawClearQuad(RHICmdList, true, FLinearColor::Transparent, false, 0, false, 0);
 
-			{
-				FTextureRHIParamRef RenderTargets[] = {
-					SceneContext.FragmentColorsTexture->GetRenderTargetItem().TargetableTexture,
-					SceneContext.GBufferA->GetRenderTargetItem().TargetableTexture,
-					SceneContext.GBufferB->GetRenderTargetItem().TargetableTexture,
-					SceneContext.GBufferE->GetRenderTargetItem().TargetableTexture,
-					SceneContext.GBufferD->GetRenderTargetItem().TargetableTexture,
-					SceneContext.GBufferC->GetRenderTargetItem().TargetableTexture,
-					SceneContext.GetSceneColorSurface()
-				};
+	//		{
+	//			FTextureRHIParamRef RenderTargets[] = {
+	//				SceneContext.FragmentColorsTexture->GetRenderTargetItem().TargetableTexture,
+	//				SceneContext.GBufferA->GetRenderTargetItem().TargetableTexture,
+	//				SceneContext.GBufferB->GetRenderTargetItem().TargetableTexture,
+	//				SceneContext.GBufferE->GetRenderTargetItem().TargetableTexture,
+	//				SceneContext.GBufferD->GetRenderTargetItem().TargetableTexture,
+	//				SceneContext.GBufferC->GetRenderTargetItem().TargetableTexture,
+	//				SceneContext.GetSceneColorSurface()
+	//			};
 
-				SetRenderTargets(RHICmdList, ARRAY_COUNT(RenderTargets), RenderTargets, SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, ESimpleRenderTargetMode::EExistingColorAndDepth, FExclusiveDepthStencil::DepthWrite_StencilWrite);
-			}
-			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
-			View.TressFXSet.DrawPrims(RHICmdList, View, DrawRenderState, false, ETressFXRenderUsage::TFXRU_FillColor);
-		}
+	//			SetRenderTargets(RHICmdList, ARRAY_COUNT(RenderTargets), RenderTargets, SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, ESimpleRenderTargetMode::EExistingColorAndDepth, FExclusiveDepthStencil::DepthWrite_StencilWrite);
+	//		}
+	//		RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
+	//		View.TressFXSet.DrawPrims(RHICmdList, View, DrawRenderState, false, ETressFXRenderUsage::TFXRU_FillColor);
+	//	}
 
-		{
-			FTextureRHIParamRef RTVs[6] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
-			FUnorderedAccessViewRHIParamRef UAVs[2] = { nullptr,nullptr };
-			SetRenderTargets(RHICmdList, ARRAY_COUNT(RTVs), RTVs, nullptr, 2, UAVs);
-		}
-		// shortcut pass 4: resolve color
-		{
-			SCOPED_DRAW_EVENT(RHICmdList, ResolveColors);
+	//	{
+	//		FTextureRHIParamRef RTVs[6] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+	//		FUnorderedAccessViewRHIParamRef UAVs[2] = { nullptr,nullptr };
+	//		SetRenderTargets(RHICmdList, ARRAY_COUNT(RTVs), RTVs, nullptr, 2, UAVs);
+	//	}
+	//	// shortcut pass 4: resolve color
+	//	{
+	//		SCOPED_DRAW_EVENT(RHICmdList, ResolveColors);
 
-			FTextureRHIParamRef Resources[2] = {
-				SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture,
-				SceneContext.FragmentColorsTexture->GetRenderTargetItem().TargetableTexture
-			};
-			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources,2);
+	//		FTextureRHIParamRef Resources[2] = {
+	//			SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture,
+	//			SceneContext.FragmentColorsTexture->GetRenderTargetItem().TargetableTexture
+	//		};
+	//		RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources,2);
 
-			FRHIDepthRenderTargetView DepthRTV(
-				SceneContext.GetSceneDepthSurface(),
-				ERenderTargetLoadAction::ENoAction,
-				ERenderTargetStoreAction::ENoAction
-			);
-			FRHIRenderTargetView ColorRTV(
-				SceneContext.GBufferC->GetRenderTargetItem().TargetableTexture,
-				ERenderTargetLoadAction::ELoad
-			);
+	//		FRHIDepthRenderTargetView DepthRTV(
+	//			SceneContext.GetSceneDepthSurface(),
+	//			ERenderTargetLoadAction::ENoAction,
+	//			ERenderTargetStoreAction::ENoAction
+	//		);
+	//		FRHIRenderTargetView ColorRTV(
+	//			SceneContext.GBufferC->GetRenderTargetItem().TargetableTexture,
+	//			ERenderTargetLoadAction::ELoad
+	//		);
 
-			RHICmdList.SetRenderTargets(1, &ColorRTV, &DepthRTV, 0, nullptr);
+	//		RHICmdList.SetRenderTargets(1, &ColorRTV, &DepthRTV, 0, nullptr);
 
-			TShaderMapRef<FPostProcessVS>						VertexShader(View.ShaderMap);
-			TShaderMapRef<FTressFXShortCut_ResolveColorPS>		PixelShader(View.ShaderMap);
+	//		TShaderMapRef<FPostProcessVS>						VertexShader(View.ShaderMap);
+	//		TShaderMapRef<FTressFXShortCut_ResolveColorPS>		PixelShader(View.ShaderMap);
 
-			FRenderingCompositePassContext Context(RHICmdList, View);
+	//		FRenderingCompositePassContext Context(RHICmdList, View);
 
-			Context.SetViewportAndCallRHI(View.ViewRect);
+	//		Context.SetViewportAndCallRHI(View.ViewRect);
 
-			FGraphicsPipelineStateInitializer GraphicsPSOInit;
-			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+	//		FGraphicsPipelineStateInitializer GraphicsPSOInit;
+	//		RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 
-			GraphicsPSOInit.BlendState = TStaticBlendState<
-				CW_RGBA
-				, BO_Add // color blend op
-				, BF_One // color source blend
-				, BF_SourceAlpha //color dest blend
-				, BO_Add //alpha blend op
-				, BF_Zero // alpha src blend
-				, BF_Zero //alpha dest blend
-			>::GetRHI();
-			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
-			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<
-				false, CF_Always
-			>::GetRHI();
+	//		GraphicsPSOInit.BlendState = TStaticBlendState<
+	//			CW_RGBA
+	//			, BO_Add // color blend op
+	//			, BF_One // color source blend
+	//			, BF_SourceAlpha //color dest blend
+	//			, BO_Add //alpha blend op
+	//			, BF_Zero // alpha src blend
+	//			, BF_Zero //alpha dest blend
+	//		>::GetRHI();
+	//		GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
+	//		GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<
+	//			false, CF_Always
+	//		>::GetRHI();
 
-			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
-			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
-			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
-			GraphicsPSOInit.PrimitiveType = PT_TriangleList;
+	//		GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
+	//		GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
+	//		GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
+	//		GraphicsPSOInit.PrimitiveType = PT_TriangleList;
 
-			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
+	//		SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
 
-			VertexShader->SetParameters(Context);
-			PixelShader->SetParameters(Context.RHICmdList, View, SceneContext);
+	//		VertexShader->SetParameters(Context);
+	//		PixelShader->SetParameters(Context.RHICmdList, View, SceneContext);
 
-			DrawRectangle(
-				RHICmdList,
-				0, 0,
-				View.ViewRect.Width(), View.ViewRect.Height(),
-				View.ViewRect.Min.X, View.ViewRect.Min.Y,
-				View.ViewRect.Width(), View.ViewRect.Height(),
-				View.ViewRect.Size(),
-				SceneContext.GetBufferSizeXY(),
-				*VertexShader,
-				EDRF_UseTriangleOptimization);
-		}
-	}
+	//		DrawRectangle(
+	//			RHICmdList,
+	//			0, 0,
+	//			View.ViewRect.Width(), View.ViewRect.Height(),
+	//			View.ViewRect.Min.X, View.ViewRect.Min.Y,
+	//			View.ViewRect.Width(), View.ViewRect.Height(),
+	//			View.ViewRect.Size(),
+	//			SceneContext.GetBufferSizeXY(),
+	//			*VertexShader,
+	//			EDRF_UseTriangleOptimization);
+	//	}
+	//}
 }
 
 void FSceneRenderer::RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHICmdList)
@@ -845,11 +845,11 @@ void FSceneRenderer::RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHIC
 
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
 
-	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
+	/*for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
 	{
 		FViewInfo& View = Views[ViewIndex];
 
-		if (View.TressFXSet.NumPrims() < 1)
+		if (View.TressFXMeshBatches.Num() < 1)
 		{
 			continue;
 		}
@@ -866,11 +866,11 @@ void FSceneRenderer::RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHIC
 			RHICmdList.SetRenderTargets(1, ColorTargetsRTV, &DepthRTV, 0, nullptr);
 			DrawClearQuad(RHICmdList, true, FLinearColor::Transparent, false, 0, false,0);
 
-			FDrawingPolicyRenderState DrawRenderState(View);
+			FMeshPassProcessorRenderState DrawRenderState(View);
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 			View.TressFXSet.DrawPrims(RHICmdList, View, DrawRenderState, false, ETressFXRenderUsage::TFXRU_DepthsVelocity);
 		}
-	}
+	}*/
 }
 
 void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList)

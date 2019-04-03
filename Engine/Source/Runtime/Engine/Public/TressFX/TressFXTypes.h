@@ -32,73 +32,73 @@
 	#define AMD_TRESSFX_MAX_NUM_BONES 256
 #endif 
 
-BEGIN_UNIFORM_BUFFER_STRUCT_WITH_CONSTRUCTOR(FTressFXShadeParametersUniformBuffer, ENGINE_API)
-	UNIFORM_MEMBER(float, g_HairShadowAlpha)
-	UNIFORM_MEMBER(float, g_FiberRadius)
-	UNIFORM_MEMBER(float, g_FiberSpacing)
-	UNIFORM_MEMBER(int32, g_NumVerticesPerStrand)
-	UNIFORM_MEMBER(float, g_ratio)
-END_UNIFORM_BUFFER_STRUCT(FTressFXShadeParametersUniformBuffer)
+BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXShadeParametersUniformBuffer, ENGINE_API)
+	SHADER_PARAMETER(float, g_HairShadowAlpha)
+	SHADER_PARAMETER(float, g_FiberRadius)
+	SHADER_PARAMETER(float, g_FiberSpacing)
+	SHADER_PARAMETER(int32, g_NumVerticesPerStrand)
+	SHADER_PARAMETER(float, g_ratio)
+END_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXShadeParametersUniformBuffer)
 
-template<>
-class TUniformBufferTypeInfo<FIntVector4, false>
-{
-public:
-	enum { BaseType = UBMT_FLOAT32 };
-	enum { NumRows = 1 };
-	enum { NumColumns = 4 };
-	enum { NumElements = 0 };
-	enum { Alignment = 16 };
-	enum { IsResource = 0 };
-	typedef TAlignedTypedef<FIntVector4, Alignment>::TAlignedType TAlignedType;
-	static const FUniformBufferStruct* GetStruct() { return NULL; }
-};
+//template<>
+//class TUniformBufferTypeInfo<FIntVector4, false>
+//{
+//public:
+//	enum { BaseType = UBMT_FLOAT32 };
+//	enum { NumRows = 1 };
+//	enum { NumColumns = 4 };
+//	enum { NumElements = 0 };
+//	enum { Alignment = 16 };
+//	enum { IsResource = 0 };
+//	typedef TAlignedTypedef<FIntVector4, Alignment>::TAlignedType TAlignedType;
+//	static const FUniformBufferStruct* GetStruct() { return NULL; }
+//};
 
-BEGIN_UNIFORM_BUFFER_STRUCT_WITH_CONSTRUCTOR(FTressFXSimParametersUniformBuffer, ENGINE_API)
-UNIFORM_MEMBER(FVector4, g_Wind)
-UNIFORM_MEMBER(FVector4, g_Wind1)
-UNIFORM_MEMBER(FVector4, g_Wind2)
-UNIFORM_MEMBER(FVector4, g_Wind3)
-UNIFORM_MEMBER(FVector4, g_Shape)
-UNIFORM_MEMBER(FVector4, g_GravTimeTip)
-UNIFORM_MEMBER(FIntVector4, g_SimInts)
-UNIFORM_MEMBER(FIntVector4, g_Counts)
-UNIFORM_MEMBER(FVector4, g_VSP)
+BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXSimParametersUniformBuffer, ENGINE_API)
+SHADER_PARAMETER(FVector4, g_Wind)
+SHADER_PARAMETER(FVector4, g_Wind1)
+SHADER_PARAMETER(FVector4, g_Wind2)
+SHADER_PARAMETER(FVector4, g_Wind3)
+SHADER_PARAMETER(FVector4, g_Shape)
+SHADER_PARAMETER(FVector4, g_GravTimeTip)
+SHADER_PARAMETER(FIntVector4, g_SimInts)
+SHADER_PARAMETER(FIntVector4, g_Counts)
+SHADER_PARAMETER(FVector4, g_VSP)
 #if TRESSFX_DQ
-UNIFORM_MEMBER_ARRAY(FVector4, g_BoneSkinningDQ, [AMD_TRESSFX_MAX_NUM_BONES * 2])
+SHADER_PARAMETER_ARRAY(FVector4, g_BoneSkinningDQ, [AMD_TRESSFX_MAX_NUM_BONES * 2])
 #else
-UNIFORM_MEMBER_ARRAY(FMatrix, g_BoneSkinningMatrix, [AMD_TRESSFX_MAX_NUM_BONES])
+SHADER_PARAMETER_ARRAY(FMatrix, g_BoneSkinningMatrix, [AMD_TRESSFX_MAX_NUM_BONES])
 #endif
 
 #if TRESSFX_COLLISION_CAPSULES
-UNIFORM_MEMBER_ARRAY(FVector4, g_centerAndRadius0, [TRESSFX_MAX_NUM_COLLISION_CAPSULES])
-UNIFORM_MEMBER_ARRAY(FVector4, g_centerAndRadius1, [TRESSFX_MAX_NUM_COLLISION_CAPSULES])
-UNIFORM_MEMBER(FIntVector4, g_numCollisionCapsules)
+SHADER_PARAMETER_ARRAY(FVector4, g_centerAndRadius0, [TRESSFX_MAX_NUM_COLLISION_CAPSULES])
+SHADER_PARAMETER_ARRAY(FVector4, g_centerAndRadius1, [TRESSFX_MAX_NUM_COLLISION_CAPSULES])
+SHADER_PARAMETER(FIntVector4, g_numCollisionCapsules)
 #endif
 
-END_UNIFORM_BUFFER_STRUCT(FTressFXSimParametersUniformBuffer)
+END_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXSimParametersUniformBuffer)
 
-BEGIN_UNIFORM_BUFFER_STRUCT_WITH_CONSTRUCTOR(FTressFXBoneSkinningUniformBuffer, ENGINE_API)
-UNIFORM_MEMBER_ARRAY(FMatrix, g_BoneSkinningMatrix, [AMD_TRESSFX_MAX_NUM_BONES])
-UNIFORM_MEMBER(int32, g_NumMeshVertices)
-END_UNIFORM_BUFFER_STRUCT(FTressFXBoneSkinningUniformBuffer)
+BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXBoneSkinningUniformBuffer, ENGINE_API)
+SHADER_PARAMETER_ARRAY(FMatrix, g_BoneSkinningMatrix, [AMD_TRESSFX_MAX_NUM_BONES])
+SHADER_PARAMETER(int32, g_NumMeshVertices)
+END_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXBoneSkinningUniformBuffer)
 
 
-BEGIN_UNIFORM_BUFFER_STRUCT_WITH_CONSTRUCTOR(FTressFXSDFUniformBuffer, ENGINE_API)
-UNIFORM_MEMBER(FVector4, g_Origin)
-UNIFORM_MEMBER(float, g_CellSize)
-UNIFORM_MEMBER(int32, g_NumCellsX)
-UNIFORM_MEMBER(int32, g_NumCellsY)
-UNIFORM_MEMBER(int32, g_NumCellsZ)
-UNIFORM_MEMBER(int32, g_MaxMarchingCubesVertices)
-UNIFORM_MEMBER(float, g_MarchingCubesIsolevel)
-UNIFORM_MEMBER(float, g_CollisionMargin)
-UNIFORM_MEMBER(int32, g_NumHairVerticesPerStrand)
-UNIFORM_MEMBER(int32, g_NumTotalHairVertices)
-UNIFORM_MEMBER(float, pad1)
-UNIFORM_MEMBER(float, pad2)
-UNIFORM_MEMBER(float, pad3)
-END_UNIFORM_BUFFER_STRUCT(FTressFXSDFUniformBuffer)
+BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXSDFUniformBuffer, ENGINE_API)
+SHADER_PARAMETER(FVector4, g_Origin)
+SHADER_PARAMETER(float, g_CellSize)
+SHADER_PARAMETER(int32, g_NumCellsX)
+SHADER_PARAMETER(int32, g_NumCellsY)
+SHADER_PARAMETER(int32, g_NumCellsZ)
+SHADER_PARAMETER(int32, g_MaxMarchingCubesVertices)
+SHADER_PARAMETER(float, g_MarchingCubesIsolevel)
+SHADER_PARAMETER(float, g_CollisionMargin)
+SHADER_PARAMETER(int32, g_NumHairVerticesPerStrand)
+SHADER_PARAMETER(int32, g_NumTotalHairVertices)
+SHADER_PARAMETER(float, pad1)
+SHADER_PARAMETER(float, pad2)
+SHADER_PARAMETER(float, pad3)
+END_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXSDFUniformBuffer)
 
 UENUM()
 enum ETressFXCollisionType

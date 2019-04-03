@@ -805,6 +805,7 @@ public:
 	/*@BEGIN Third party code TressFX*/
 	//	FTressFXPrimSet TressFXSet;
 	TArray<FTressFXMeshBatch, SceneRenderingAllocator> TressFXMeshBatches;
+	bool bHasTressFX;
 	/*@END Third party code TressFX*/
 
 	/** A map from light ID to a boolean visibility value. */

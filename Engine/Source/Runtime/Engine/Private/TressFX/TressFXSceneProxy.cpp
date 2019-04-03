@@ -57,10 +57,10 @@ class FTressFXCopyMorphDeltasCs : public FGlobalShader
 
 IMPLEMENT_GLOBAL_SHADER(FTressFXCopyMorphDeltasCs, "/Engine/Private/TressFXSimulation.usf", "CopyMorphDeltas", SF_Compute);
 
-IMPLEMENT_UNIFORM_BUFFER_STRUCT(FTressFXShadeParametersUniformBuffer, TEXT("TressFXShadeParameters"));
-IMPLEMENT_UNIFORM_BUFFER_STRUCT(FTressFXSimParametersUniformBuffer, TEXT("TressFXSimParameters"));
-IMPLEMENT_UNIFORM_BUFFER_STRUCT(FTressFXBoneSkinningUniformBuffer, TEXT("TressFXBoneSkinningParameters"));
-IMPLEMENT_UNIFORM_BUFFER_STRUCT(FTressFXSDFUniformBuffer, TEXT("ConstBuffer_SDF"));
+IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXShadeParametersUniformBuffer, "TressFXShadeParameters");
+IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXSimParametersUniformBuffer, "TressFXSimParameters");
+IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXBoneSkinningUniformBuffer, "TressFXBoneSkinningParameters");
+IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXSDFUniformBuffer, "ConstBuffer_SDF");
 
 FTressFXShadeParametersUniformBuffer::FTressFXShadeParametersUniformBuffer()
 {
@@ -317,7 +317,8 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 		return;
 	}
 
-	FMaterialRenderProxy* MaterialProxy = Material->GetRenderProxy(IsSelected());
+	//FMaterialRenderProxy* MaterialProxy = Material->GetRenderProxy(IsSelected());
+	FMaterialRenderProxy* MaterialProxy = Material->GetRenderProxy();
 
 	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
 	{
@@ -337,7 +338,7 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 				BatchElement.PrimitiveUniformBuffer = CreatePrimitiveUniformBufferImmediate(GetLocalToWorld(), GetBounds(), GetLocalBounds(), true, UseEditorDepthTest());
 				BatchElement.FirstIndex = 0;
 				BatchElement.NumIndices = TressFXHairObject->mtotalIndices;
-				BatchElement.bDrawIndexedInstanced = true;
+				//BatchElement.bDrawIndexedInstanced = true;
 				BatchElement.NumPrimitives = TressFXHairObject->mtotalIndices / 3;
 				BatchElement.MinVertexIndex = 0;
 				BatchElement.MaxVertexIndex = TressFXHairObject->PosTanCollection.PositionsData.Num() - 1;
