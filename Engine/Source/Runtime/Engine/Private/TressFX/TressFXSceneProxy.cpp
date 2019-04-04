@@ -105,7 +105,6 @@ FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName 
 
 FTressFXSceneProxy::~FTressFXSceneProxy()
 {
-
 	TressFXHairObject = nullptr;
 	VertexFactory.ReleaseResource();
 

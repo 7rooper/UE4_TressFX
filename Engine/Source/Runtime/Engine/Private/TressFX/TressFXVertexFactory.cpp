@@ -50,22 +50,20 @@ void FTressFXVertexFactoryShaderParameters::GetElementShaderBindings(
 	FVertexInputStreamArray& VertexStreams
 ) const
 {
-
 	const FTressFXVertexFactory* TFXVertexFactory = ((const FTressFXVertexFactory*)VertexFactory);
 	FRHIVertexShader* VertexShader = Shader->GetVertexShader();
-
-	FUnorderedAccessViewRHIParamRef UAVs[] = {
-		TFXVertexFactory->TressFXHairObject->PosTanCollection.Positions.UAV
-		,TFXVertexFactory->TressFXHairObject->PosTanCollection.Tangents.UAV
-	};
-
-	//how the fuck to do this, might need to do it before it gets to this functions...
-	//JAKETODO, transition to readable immediately after simulation.
-	//RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EComputeToGfx, UAVs, ARRAY_COUNT(UAVs));
-	
-	// bind ur shit like this..
-	ShaderBindings.Add(Shader->GetUniformBufferParameter<FViewUniformShaderParameters>(), View->ViewUniformBuffer);
-
+	if (TFXVertexFactory->TressFXHairObject)
+	{
+		// UAVS should already be transitioned to readable by the end of the simulation
+		ShaderBindings.Add(Shader->GetUniformBufferParameter<FViewUniformShaderParameters>(), View->ViewUniformBuffer);
+		ShaderBindings.Add(tressfxShadeParameters, TFXVertexFactory->TressFXHairObject->ShadeParametersUniformBuffer);
+		ShaderBindings.Add(g_bThinTip, true); // just always use true for this, no ones wants hairs that are an inch thick
+		ShaderBindings.Add(g_GuideHairVertexPositions, TFXVertexFactory->TressFXHairObject->PosTanCollection.Positions.SRV);
+		ShaderBindings.Add(g_HairVertexPositionsPrev, TFXVertexFactory->TressFXHairObject->PosTanCollection.PositionsPrev.SRV);
+		ShaderBindings.Add(g_GuideHairVertexTangents, TFXVertexFactory->TressFXHairObject->PosTanCollection.Tangents.SRV);
+		ShaderBindings.Add(HairStrandTexCd, TFXVertexFactory->TressFXHairObject->HairTexCoords.SRV);
+		ShaderBindings.Add(HairThicknessCoeffs, TFXVertexFactory->TressFXHairObject->HairThicknessCoeffs.SRV);
+	}
 }
 //
 //void FTressFXVertexFactoryShaderParameters::SetMesh(FRHICommandList& RHICmdList, FShader* Shader, const FVertexFactory* VertexFactory, const FSceneView& View, const FMeshBatchElement& BatchElement, uint32 DataFlags) const

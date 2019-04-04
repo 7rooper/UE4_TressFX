@@ -153,6 +153,17 @@ public:
 //  TTressFX_ShortCutVS - Vertex Shader for shortcut
 ////////////////////////////////////////////////////////////////////////////////
 
+class TTressFX_ShortCutVSShaderElementData : public FMeshMaterialShaderElementData
+{
+public:
+	TTressFX_ShortCutVSShaderElementData(FVector4 InFragmentBufferSize)
+		: FragmentBufferSize(InFragmentBufferSize)
+	{
+	}
+
+	FVector4 FragmentBufferSize;
+};
+
 
 template <bool bCalcVelocity>
 class TTressFX_ShortCutVS : public FMeshMaterialShader
@@ -166,10 +177,7 @@ public:
 	TTressFX_ShortCutVS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
 	{
 		vFragmentBufferSize.Bind(Initializer.ParameterMap, TEXT("vFragmentBufferSize"));
-		//PreviousLocalToWorldParameter.Bind(Initializer.ParameterMap, TEXT("PreviousLocalToWorld"));
 	}
-
-
 
 	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
 	{
@@ -196,27 +204,40 @@ public:
 		return result;
 	}
 
-	void SetMesh(FRHICommandList& RHICmdList, const FVertexFactory* VertexFactory, const FSceneView& View, const FPrimitiveSceneProxy* Proxy, const FMeshBatch& Mesh, const FMeshBatchElement& BatchElement, const FDrawingPolicyRenderState& DrawRenderState)
-	{
-		FMeshMaterialShader::SetMesh(RHICmdList, GetVertexShader(), VertexFactory, View, Proxy, BatchElement, DrawRenderState);
-	}
+	//void SetMesh(FRHICommandList& RHICmdList, const FVertexFactory* VertexFactory, const FSceneView& View, const FPrimitiveSceneProxy* Proxy, const FMeshBatch& Mesh, const FMeshBatchElement& BatchElement, const FDrawingPolicyRenderState& DrawRenderState)
+	//{
+	//	FMeshMaterialShader::SetMesh(RHICmdList, GetVertexShader(), VertexFactory, View, Proxy, BatchElement, DrawRenderState);
+	//}
 
-	void SetParameters(
-		FRHICommandList& RHICmdList,
-		const FMaterialRenderProxy* MaterialRenderProxy,
-		const FMaterial& MaterialResource,
-		const FSceneView& View,
-		const TUniformBufferRef<FViewUniformShaderParameters>& ViewUniformBuffer,
-		const bool bIsInstancedStereo,
-		const bool bIsInstancedStereoEmulated,
-		const FDrawingPolicyRenderState& DrawRenderState
-	)
-	{
-		FMeshMaterialShader::SetParameters(RHICmdList, GetVertexShader(), MaterialRenderProxy, MaterialResource, View, ViewUniformBuffer, DrawRenderState.GetPassUniformBuffer());
-		auto ViewSize = View.UnscaledViewRect.Size();
-		FVector4 FragmentBufferSize(ViewSize.X, ViewSize.Y, ViewSize.X*ViewSize.Y, 0);
+	//void SetParameters(
+	//	FRHICommandList& RHICmdList,
+	//	const FMaterialRenderProxy* MaterialRenderProxy,
+	//	const FMaterial& MaterialResource,
+	//	const FSceneView& View,
+	//	const TUniformBufferRef<FViewUniformShaderParameters>& ViewUniformBuffer,
+	//	const bool bIsInstancedStereo,
+	//	const bool bIsInstancedStereoEmulated,
+	//	const FMeshPassProcessorRenderState& DrawRenderState
+	//)
+	//{
+	//	FMeshMaterialShader::SetParameters(RHICmdList, GetVertexShader(), MaterialRenderProxy, MaterialResource, View, ViewUniformBuffer, DrawRenderState.GetPassUniformBuffer());
+	//	auto ViewSize = View.UnscaledViewRect.Size();
+	//	FVector4 FragmentBufferSize(ViewSize.X, ViewSize.Y, ViewSize.X*ViewSize.Y, 0);
+	//	SetShaderValue(RHICmdList, GetVertexShader(), vFragmentBufferSize, FragmentBufferSize);
+	//}
 
-		SetShaderValue(RHICmdList, GetVertexShader(), vFragmentBufferSize, FragmentBufferSize);
+	GetShaderBindings(
+		const FScene* Scene,
+		ERHIFeatureLevel::Type FeatureLevel,
+		const FPrimitiveSceneProxy* PrimitiveSceneProxy,
+		const FMaterialRenderProxy& MaterialRenderProxy,
+		const FMaterial& Material,
+		const FMeshPassProcessorRenderState& DrawRenderState,
+		const TTressFX_ShortCutVSShaderElementData& ShaderElementData,
+		FMeshDrawSingleShaderBindings& ShaderBindings) const
+	{
+		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
+		ShaderBindings.Add(vFragmentBufferSize, ShaderElementData.FragmentBufferSize);
 	}
 
 public:
@@ -229,6 +250,19 @@ private:
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFX_VelocityDepthPS
 ////////////////////////////////////////////////////////////////////////////////
+
+class FTressFX_VelocityDepthPSShaderElementData : public FMeshMaterialShaderElementData
+{
+public:
+	FTressFX_VelocityDepthPSShaderElementData(FIntRect InViewRect)
+		: ViewRect(InViewRect)
+	{
+	}
+
+	FIntRect ViewRect;
+};
+
+
 template <bool bCalcVelocity>
 class FTressFX_VelocityDepthPS : public FMeshMaterialShader
 {
@@ -270,25 +304,39 @@ public:
 		return result;
 	}
 
-	void SetMesh(FRHICommandList& RHICmdList, const FVertexFactory* VertexFactory, const FSceneView& View, const FPrimitiveSceneProxy* Proxy, const FMeshBatchElement& BatchElement, const FDrawingPolicyRenderState& DrawRenderState)
-	{
-		FMeshMaterialShader::SetMesh(RHICmdList, GetPixelShader(), VertexFactory, View, Proxy, BatchElement, DrawRenderState);
-	}
+	//void SetMesh(FRHICommandList& RHICmdList, const FVertexFactory* VertexFactory, const FSceneView& View, const FPrimitiveSceneProxy* Proxy, const FMeshBatchElement& BatchElement, const FDrawingPolicyRenderState& DrawRenderState)
+	//{
+	//	FMeshMaterialShader::SetMesh(RHICmdList, GetPixelShader(), VertexFactory, View, Proxy, BatchElement, DrawRenderState);
+	//}
 
-	void SetParameters(
-		FRHICommandList& RHICmdList,
-		const FMaterialRenderProxy* MaterialRenderProxy,
-		const FMaterial& MaterialResource,
-		const FSceneView& View,
-		const TUniformBufferRef<FViewUniformShaderParameters>& ViewUniformBuffer,
-		const bool bIsInstancedStereo,
-		const bool bIsInstancedStereoEmulated,
-		const FDrawingPolicyRenderState& DrawRenderState
-	)
+	//void SetParameters(
+	//	FRHICommandList& RHICmdList,
+	//	const FMaterialRenderProxy* MaterialRenderProxy,
+	//	const FMaterial& MaterialResource,
+	//	const FSceneView& View,
+	//	const TUniformBufferRef<FViewUniformShaderParameters>& ViewUniformBuffer,
+	//	const bool bIsInstancedStereo,
+	//	const bool bIsInstancedStereoEmulated,
+	//	const FMeshPassProcessorRenderState& DrawRenderState
+	//)
+	//{
+	//	FMeshMaterialShader::SetParameters(RHICmdList, GetPixelShader(), MaterialRenderProxy, MaterialResource, View, ViewUniformBuffer, DrawRenderState.GetPassUniformBuffer());
+	//	FIntRect ViewRect = View.UnscaledViewRect;
+	//	SetShaderValue(RHICmdList, GetPixelShader(), g_vViewport, FVector4(0, 0, ViewRect.Width(), ViewRect.Height()));
+	//}
+
+	GetShaderBindings(
+		const FScene* Scene,
+		ERHIFeatureLevel::Type FeatureLevel,
+		const FPrimitiveSceneProxy* PrimitiveSceneProxy,
+		const FMaterialRenderProxy& MaterialRenderProxy,
+		const FMaterial& Material,
+		const FMeshPassProcessorRenderState& DrawRenderState,
+		const FTressFX_VelocityDepthPSShaderElementData& ShaderElementData,
+		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
-		FMeshMaterialShader::SetParameters(RHICmdList, GetPixelShader(), MaterialRenderProxy, MaterialResource, View, ViewUniformBuffer, DrawRenderState.GetPassUniformBuffer());
-		FIntRect ViewRect = View.UnscaledViewRect;
-		SetShaderValue(RHICmdList, GetPixelShader(), g_vViewport, FVector4(0, 0, ViewRect.Width(), ViewRect.Height()));
+		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
+		ShaderBindings.Add(g_vViewport, FVector4(0, 0, ShaderElementData.ViewRect.Width(), ShaderElementData.ViewRect.Height()));
 	}
 
 public:
@@ -299,6 +347,19 @@ public:
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFX_DepthsAlphaPS - Pixel shader for First pass of shortcut
 ////////////////////////////////////////////////////////////////////////////////
+
+
+class FTressFX_DepthsAlphaPSShaderElementData : public FMeshMaterialShaderElementData
+{
+public:
+	FTressFX_DepthsAlphaPSShaderElementData(FIntRect InViewRect)
+		: ViewRect(InViewRect)
+	{
+	}
+
+	FIntRect ViewRect;
+};
+
 
 template<bool bNeedsVelocity>
 class FTressFX_DepthsAlphaPS : public FMeshMaterialShader
@@ -342,30 +403,44 @@ public:
 		return result;
 	}
 
-	void SetMesh(FRHICommandList& RHICmdList, const FVertexFactory* VertexFactory, const FSceneView& View, const FPrimitiveSceneProxy* Proxy, const FMeshBatchElement& BatchElement, const FDrawingPolicyRenderState& DrawRenderState)
-	{
-		FMeshMaterialShader::SetMesh(RHICmdList, GetPixelShader(), VertexFactory, View, Proxy, BatchElement, DrawRenderState);
-	}
+	//void SetMesh(FRHICommandList& RHICmdList, const FVertexFactory* VertexFactory, const FSceneView& View, const FPrimitiveSceneProxy* Proxy, const FMeshBatchElement& BatchElement, const FDrawingPolicyRenderState& DrawRenderState)
+	//{
+	//	FMeshMaterialShader::SetMesh(RHICmdList, GetPixelShader(), VertexFactory, View, Proxy, BatchElement, DrawRenderState);
+	//}
 
-	void SetParameters(
-		FRHICommandList& RHICmdList,
-		const FMaterialRenderProxy* MaterialRenderProxy,
-		const FMaterial& MaterialResource,
-		const FSceneView& View,
-		const TUniformBufferRef<FViewUniformShaderParameters>& ViewUniformBuffer,
-		const bool bIsInstancedStereo,
-		const bool bIsInstancedStereoEmulated,
-		const FDrawingPolicyRenderState& DrawRenderState
-	)
+	//void SetParameters(
+	//	FRHICommandList& RHICmdList,
+	//	const FMaterialRenderProxy* MaterialRenderProxy,
+	//	const FMaterial& MaterialResource,
+	//	const FSceneView& View,
+	//	const TUniformBufferRef<FViewUniformShaderParameters>& ViewUniformBuffer,
+	//	const bool bIsInstancedStereo,
+	//	const bool bIsInstancedStereoEmulated,
+	//	const FMeshPassProcessorRenderState& DrawRenderState
+	//)
+	//{
+	//	FMeshMaterialShader::SetParameters(RHICmdList, GetPixelShader(), MaterialRenderProxy, MaterialResource, View, ViewUniformBuffer, DrawRenderState.GetPassUniformBuffer());
+	//	FIntRect ViewRect = View.UnscaledViewRect;
+	//	SetShaderValue(RHICmdList, GetPixelShader(), g_vViewport, FVector4(0, 0, ViewRect.Width(), ViewRect.Height()));
+	//}
+
+	GetShaderBindings(
+		const FScene* Scene,
+		ERHIFeatureLevel::Type FeatureLevel,
+		const FPrimitiveSceneProxy* PrimitiveSceneProxy,
+		const FMaterialRenderProxy& MaterialRenderProxy,
+		const FMaterial& Material,
+		const FMeshPassProcessorRenderState& DrawRenderState,
+		const FTressFX_VelocityDepthPSShaderElementData& ShaderElementData,
+		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
-		FMeshMaterialShader::SetParameters(RHICmdList, GetPixelShader(), MaterialRenderProxy, MaterialResource, View, ViewUniformBuffer, DrawRenderState.GetPassUniformBuffer());
-		FIntRect ViewRect = View.UnscaledViewRect;
-		SetShaderValue(RHICmdList, GetPixelShader(), g_vViewport, FVector4(0, 0, ViewRect.Width(), ViewRect.Height()));
+		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
+		ShaderBindings.Add(g_vViewport, FVector4(0, 0, ShaderElementData.ViewRect.Width(), ShaderElementData.ViewRect.Height()));
 	}
 
 public:
 
-	FRWShaderParameter RWFragmentDepthsTexture;
+//	FRWShaderParameter RWFragmentDepthsTexture;
 	FShaderParameter g_vViewport;
 
 };
