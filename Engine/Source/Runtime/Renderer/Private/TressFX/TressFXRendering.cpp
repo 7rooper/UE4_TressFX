@@ -18,7 +18,6 @@
 #include "MeshMaterialShader.h"
 #include "ShaderBaseClasses.h"
 #include "SceneRendering.h"
-//#include "StaticMeshDrawList.h"
 #include "DeferredShadingRenderer.h"
 #include "ScenePrivate.h"
 #include "OneColorShader.h"
@@ -34,7 +33,6 @@
 
 DEFINE_LOG_CATEGORY(TressFXRenderingLog);
 
-//extern TGlobalResource<FFilterVertexDeclaration> GFilterVertexDeclaration;
 extern TAutoConsoleVariable<int32> CVarTressFXKBufferSize;
 extern TAutoConsoleVariable<int32> CVarTressFXType;
 
@@ -936,6 +934,7 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 
 void FSceneRenderer::RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHICmdList)
 {
+	return;
 	if (!ShouldRenderTressFX())
 	{
 		return;
@@ -943,7 +942,7 @@ void FSceneRenderer::RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHIC
 
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
 
-	/*for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
+	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
 	{
 		FViewInfo& View = Views[ViewIndex];
 
@@ -966,9 +965,9 @@ void FSceneRenderer::RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHIC
 
 			FMeshPassProcessorRenderState DrawRenderState(View);
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
-			View.TressFXSet.DrawPrims(RHICmdList, View, DrawRenderState, false, ETressFXRenderUsage::TFXRU_DepthsVelocity);
+			View.ParallelMeshDrawCommandPasses[EMeshPass::TressFX_DepthsVelocity].DispatchDraw(nullptr, RHICmdList);
 		}
-	}*/
+	}
 }
 
 void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList)
