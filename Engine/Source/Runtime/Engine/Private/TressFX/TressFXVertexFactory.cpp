@@ -27,8 +27,6 @@ void FTressFXVertexFactoryShaderParameters::Bind(const FShaderParameterMap& Para
 
 void FTressFXVertexFactoryShaderParameters::Serialize(FArchive& Ar)
 {
-	//FVertexFactoryShaderParameters::Serialize(Ar);
-
 	Ar << tressfxShadeParameters
 		<< HairThicknessCoeffs
 		<< HairStrandTexCd
@@ -37,7 +35,6 @@ void FTressFXVertexFactoryShaderParameters::Serialize(FArchive& Ar)
 		<< g_GuideHairVertexPositions
 		<< g_GuideHairVertexTangents
 		<< g_HairVertexPositionsPrev;
-
 }
 
 void FTressFXVertexFactoryShaderParameters::GetElementShaderBindings(
@@ -52,6 +49,7 @@ void FTressFXVertexFactoryShaderParameters::GetElementShaderBindings(
 	FVertexInputStreamArray& VertexStreams
 ) const
 {
+	FTressFXVertexFactoryUserData* BatchData = (FTressFXVertexFactoryUserData*)BatchElement.VertexFactoryUserData;
 	const FTressFXVertexFactory* TFXVertexFactory = ((const FTressFXVertexFactory*)VertexFactory);
 	FRHIVertexShader* VertexShader = Shader->GetVertexShader();
 	if (TFXVertexFactory->TressFXHairObject)
@@ -67,34 +65,6 @@ void FTressFXVertexFactoryShaderParameters::GetElementShaderBindings(
 		ShaderBindings.Add(HairThicknessCoeffs, TFXVertexFactory->TressFXHairObject->HairThicknessCoeffs.SRV);
 	}
 }
-//
-//void FTressFXVertexFactoryShaderParameters::SetMesh(FRHICommandList& RHICmdList, FShader* Shader, const FVertexFactory* VertexFactory, const FSceneView& View, const FMeshBatchElement& BatchElement, uint32 DataFlags) const
-//{
-//	const FTressFXVertexFactory* TFXVertexFactory = ((const FTressFXVertexFactory*)VertexFactory);
-//	FRHIVertexShader* VertexShader = Shader->GetVertexShader();
-//
-//	if (TFXVertexFactory->TressFXHairObject)
-//	{
-//		FUnorderedAccessViewRHIParamRef UAVs[] = {
-//			TFXVertexFactory->TressFXHairObject->PosTanCollection.Positions.UAV
-//			,TFXVertexFactory->TressFXHairObject->PosTanCollection.Tangents.UAV
-//		};
-//
-//		RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EComputeToGfx, UAVs, ARRAY_COUNT(UAVs));
-//
-//		SetUniformBufferParameter(RHICmdList, VertexShader, Shader->GetUniformBufferParameter<FViewUniformShaderParameters>(), View.ViewUniformBuffer);
-//		SetShaderValue(RHICmdList, VertexShader, g_bThinTip, true); // just always use true for this, no ones wants hairs that are an inch thick
-//
-//		SetUniformBufferParameter(RHICmdList, VertexShader, tressfxShadeParameters, TFXVertexFactory->TressFXHairObject->ShadeParametersUniformBuffer);
-//		SetSRVParameter(RHICmdList, VertexShader, g_GuideHairVertexPositions, TFXVertexFactory->TressFXHairObject->PosTanCollection.Positions.SRV);
-//
-//		SetSRVParameter(RHICmdList, VertexShader, g_HairVertexPositionsPrev, TFXVertexFactory->TressFXHairObject->PosTanCollection.PositionsPrev.SRV);
-//
-//		SetSRVParameter(RHICmdList, VertexShader, g_GuideHairVertexTangents, TFXVertexFactory->TressFXHairObject->PosTanCollection.Tangents.SRV);
-//		SetSRVParameter(RHICmdList, VertexShader, HairStrandTexCd, TFXVertexFactory->TressFXHairObject->HairTexCoords.SRV);
-//		SetSRVParameter(RHICmdList, VertexShader, HairThicknessCoeffs, TFXVertexFactory->TressFXHairObject->HairThicknessCoeffs.SRV);
-//	}
-//}
 
 FVertexFactoryShaderParameters* FTressFXVertexFactory::ConstructShaderParameters(EShaderFrequency ShaderFrequency)
 {

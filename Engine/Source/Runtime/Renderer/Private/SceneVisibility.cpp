@@ -1983,7 +1983,6 @@ struct FRelevancePacket
 			if (ViewRelevance.bTressFX)
 			{
 				bHasTressFX = true;
-				//TressFXSet.AddPrim(PrimitiveSceneInfo);
 			}
 			/*@END Third party code TressFX*/
 
@@ -2673,6 +2672,9 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 	/*@BEGIN Third party code TressFX*/
 	if (ViewRelevance.bTressFX) 
 	{
+		PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
+		View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
+		
 		View.TressFXMeshBatches.AddUninitialized(1);
 		FTressFXMeshBatch& BatchAndProxy = View.TressFXMeshBatches.Last();
 		BatchAndProxy.Mesh = MeshBatch.Mesh;

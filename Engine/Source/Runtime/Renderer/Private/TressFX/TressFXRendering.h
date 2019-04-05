@@ -3,6 +3,9 @@
 #include "MeshMaterialShader.h"
 #include "ShaderBaseClasses.h"
 #include "GlobalShader.h"
+#include "RHIDefinitions.h"
+#include "HitProxies.h"
+#include "RHI.h"
 #include "MeshPassProcessor.h"
 #include "TressFXShaders.h"
 
@@ -26,13 +29,33 @@ class FPrimitiveSceneProxy;
 	#define SHORTCUT_INITIAL_DEPTH 0x0
 #endif
 
-enum class ETressFXRenderUsage : uint8
+class FTRessFXDepthsVelocityPassMeshProcessor : public FMeshPassProcessor
 {
-	TFXRU_PPLL,
-	TFXRU_DepthsAlpha,
-	TFXRU_DepthsVelocity,
-	TFXRU_FillColor,
-	TFXRU_MAX,
+public:
+
+	FTRessFXDepthsVelocityPassMeshProcessor(
+		const FScene* Scene,
+		const FSceneView* InViewIfDynamicMeshCommand,
+		const FMeshPassProcessorRenderState& InPassDrawRenderState,
+		FMeshPassDrawListContext* InDrawListContext
+	);
+
+	virtual void AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId = -1) override final;
+
+private:
+
+	void Process(
+		const FMeshBatch& RESTRICT MeshBatch,
+		uint64 BatchElementMask,
+		int32 StaticMeshId,
+		const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy,
+		const FMaterialRenderProxy& RESTRICT MaterialRenderProxy,
+		const FMaterial& RESTRICT MaterialResource,
+		ERasterizerFillMode MeshFillMode,
+		ERasterizerCullMode MeshCullMode);
+
+	FMeshPassProcessorRenderState PassDrawRenderState;
+
 };
 
 

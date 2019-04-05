@@ -36,7 +36,9 @@ namespace EMeshPass
 		HitProxyOpaqueOnly,
 		EditorSelection,
 #endif
-
+		/*@BEGIN Third party code TressFX*/
+		TressFX_DepthsVelocity,
+		/*@End Third party code TressFX*/
 		Num,
 		NumBits = 5,
 	};

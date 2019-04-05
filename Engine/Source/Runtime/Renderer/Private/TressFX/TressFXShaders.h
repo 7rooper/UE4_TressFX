@@ -5,6 +5,33 @@
 #include "ShaderBaseClasses.h"
 #include "GlobalShader.h"
 
+enum class ETressFXRenderUsage : uint8
+{
+	TFXRU_PPLL,
+	TFXRU_DepthsAlpha,
+	TFXRU_DepthsVelocity,
+	TFXRU_FillColor,
+	TFXRU_MAX,
+};
+
+class FTressFXShaderElementData : public FMeshMaterialShaderElementData
+{
+public:
+	FTressFXShaderElementData(ETressFXRenderUsage InTFXPass, const FSceneView* InViewIfDynamicMeshCommand) :
+		TFXPass(InTFXPass)
+	{
+		if (InViewIfDynamicMeshCommand)
+		{
+			auto ViewSize = InViewIfDynamicMeshCommand->UnscaledViewRect.Size();
+			FragmentBufferSize = FVector4(ViewSize.X, ViewSize.Y, ViewSize.X*ViewSize.Y, 0);
+			ViewRect = InViewIfDynamicMeshCommand->UnscaledViewRect;
+		}
+	}
+	ETressFXRenderUsage TFXPass;
+	FVector4 FragmentBufferSize;
+	FIntRect ViewRect;
+
+};
 
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXCopyOpaqueDepthPS
@@ -153,17 +180,6 @@ public:
 //  TTressFX_ShortCutVS - Vertex Shader for shortcut
 ////////////////////////////////////////////////////////////////////////////////
 
-class TTressFX_ShortCutVSShaderElementData : public FMeshMaterialShaderElementData
-{
-public:
-	TTressFX_ShortCutVSShaderElementData(FVector4 InFragmentBufferSize)
-		: FragmentBufferSize(InFragmentBufferSize)
-	{
-	}
-
-	FVector4 FragmentBufferSize;
-};
-
 
 template <bool bCalcVelocity>
 class TTressFX_ShortCutVS : public FMeshMaterialShader
@@ -234,7 +250,7 @@ public:
 		const FMaterialRenderProxy& MaterialRenderProxy,
 		const FMaterial& Material,
 		const FMeshPassProcessorRenderState& DrawRenderState,
-		const TTressFX_ShortCutVSShaderElementData& ShaderElementData,
+		const FTressFXShaderElementData& ShaderElementData,
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
@@ -252,17 +268,6 @@ private:
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFX_VelocityDepthPS
 ////////////////////////////////////////////////////////////////////////////////
-
-class FTressFX_VelocityDepthPSShaderElementData : public FMeshMaterialShaderElementData
-{
-public:
-	FTressFX_VelocityDepthPSShaderElementData(FIntRect InViewRect)
-		: ViewRect(InViewRect)
-	{
-	}
-
-	FIntRect ViewRect;
-};
 
 
 template <bool bCalcVelocity>
@@ -334,7 +339,7 @@ public:
 		const FMaterialRenderProxy& MaterialRenderProxy,
 		const FMaterial& Material,
 		const FMeshPassProcessorRenderState& DrawRenderState,
-		const FTressFX_VelocityDepthPSShaderElementData& ShaderElementData,
+		const FTressFXShaderElementData& ShaderElementData,
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
 		//JAKETODO, just use view from uniform buffer in shader, this isnt needed
@@ -350,18 +355,6 @@ public:
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFX_DepthsAlphaPS - Pixel shader for First pass of shortcut
 ////////////////////////////////////////////////////////////////////////////////
-
-
-class FTressFX_DepthsAlphaPSShaderElementData : public FMeshMaterialShaderElementData
-{
-public:
-	FTressFX_DepthsAlphaPSShaderElementData(FIntRect InViewRect)
-		: ViewRect(InViewRect)
-	{
-	}
-
-	FIntRect ViewRect;
-};
 
 
 template<bool bNeedsVelocity>
@@ -434,7 +427,7 @@ public:
 		const FMaterialRenderProxy& MaterialRenderProxy,
 		const FMaterial& Material,
 		const FMeshPassProcessorRenderState& DrawRenderState,
-		const FTressFX_VelocityDepthPSShaderElementData& ShaderElementData,
+		const FTressFXShaderElementData& ShaderElementData,
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
 		//JAKETODO, just use view from uniform buffer in shader, this isnt needed

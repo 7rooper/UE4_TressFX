@@ -7,6 +7,18 @@
 #include "VertexFactory.h"
 #include "TressFXTypes.h"
 
+struct FTressFXVertexFactoryUserData
+{
+	FTressFXHairObject* TressFXHairObject;
+};
+
+class FTressFXVertexFactoryUserDataWrapper : public FOneFrameResource
+{
+public:
+	FTressFXVertexFactoryUserData Data;
+};
+
+
 
 class ENGINE_API FTressFXVertexFactory : public FVertexFactory
 {

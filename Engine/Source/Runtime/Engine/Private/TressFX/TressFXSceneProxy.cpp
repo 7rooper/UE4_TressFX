@@ -247,6 +247,7 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 
 	Material = DynamicData.HairMaterial;
 
+	//JAKETOD, remove
 	VertexFactory.TressFXHairObject = TressFXHairObject;
 
 	if (!bInitialized)
@@ -326,7 +327,6 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 		{
 			if (VisibilityMap & (1 << ViewIndex))
 			{
-				//const FSceneView* View = Views[ViewIndex];
 				// Draw the mesh.
 				FMeshBatch& Mesh = Collector.AllocateMesh();
 				FMeshBatchElement& BatchElement = Mesh.Elements[0];
@@ -334,7 +334,15 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 				//Mesh.bWireframe = bWireframe;
 				Mesh.VertexFactory = &VertexFactory;
 				Mesh.MaterialRenderProxy = MaterialProxy;
-				BatchElement.PrimitiveUniformBuffer = CreatePrimitiveUniformBufferImmediate(GetLocalToWorld(), GetBounds(), GetLocalBounds(), true, UseEditorDepthTest());
+
+				//BatchElement.PrimitiveUniformBuffer = CreatePrimitiveUniformBufferImmediate(GetLocalToWorld(), GetBounds(), GetLocalBounds(), true, UseEditorDepthTest());
+				FTressFXVertexFactoryUserDataWrapper& UserDataWrapper = Collector.AllocateOneFrameResource<FTressFXVertexFactoryUserDataWrapper>();
+				UserDataWrapper.Data.TressFXHairObject = TressFXHairObject;
+				BatchElement.VertexFactoryUserData = &UserDataWrapper.Data;
+				FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = Collector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
+				DynamicPrimitiveUniformBuffer.Set(GetLocalToWorld(), GetLocalToWorld(), GetBounds(), GetLocalBounds(), true, false, UseEditorDepthTest());
+				BatchElement.PrimitiveUniformBuffer = DynamicPrimitiveUniformBuffer.UniformBuffer.GetUniformBufferRHI();
+
 				BatchElement.FirstIndex = 0;
 				BatchElement.NumIndices = TressFXHairObject->mtotalIndices;
 				//BatchElement.bDrawIndexedInstanced = true;
