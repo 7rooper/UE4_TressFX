@@ -1,4 +1,6 @@
 
+#pragma optimize("", off)
+
 #include "TressFX/TressFXVertexFactory.h"
 #include "SceneView.h"
 #include "MeshBatch.h"
@@ -55,9 +57,9 @@ void FTressFXVertexFactoryShaderParameters::GetElementShaderBindings(
 	if (TFXVertexFactory->TressFXHairObject)
 	{
 		// UAVS should already be transitioned to readable by the end of the simulation
-		ShaderBindings.Add(Shader->GetUniformBufferParameter<FViewUniformShaderParameters>(), View->ViewUniformBuffer);
+		//ShaderBindings.Add(Shader->GetUniformBufferParameter<FViewUniformShaderParameters>(), View->ViewUniformBuffer);
 		ShaderBindings.Add(tressfxShadeParameters, TFXVertexFactory->TressFXHairObject->ShadeParametersUniformBuffer);
-		ShaderBindings.Add(g_bThinTip, true); // just always use true for this, no ones wants hairs that are an inch thick
+		ShaderBindings.Add(g_bThinTip, 1); // just always use true for this, no ones wants hairs that are an inch thick
 		ShaderBindings.Add(g_GuideHairVertexPositions, TFXVertexFactory->TressFXHairObject->PosTanCollection.Positions.SRV);
 		ShaderBindings.Add(g_HairVertexPositionsPrev, TFXVertexFactory->TressFXHairObject->PosTanCollection.PositionsPrev.SRV);
 		ShaderBindings.Add(g_GuideHairVertexTangents, TFXVertexFactory->TressFXHairObject->PosTanCollection.Tangents.SRV);
@@ -123,3 +125,4 @@ void FTressFXVertexFactory::InitRHI()
 }
 
 IMPLEMENT_VERTEX_FACTORY_TYPE(FTressFXVertexFactory, "/Engine/Private/TressFXVertexFactory.ush", true, false, true, false, false);
+#pragma optimize("", on)

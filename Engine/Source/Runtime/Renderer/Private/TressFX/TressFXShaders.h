@@ -177,6 +177,7 @@ public:
 	TTressFX_ShortCutVS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
 	{
 		vFragmentBufferSize.Bind(Initializer.ParameterMap, TEXT("vFragmentBufferSize"));
+		PreviousLocalToWorldParameter.Bind(Initializer.ParameterMap, TEXT("PreviousLocalToWorld"));
 	}
 
 	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
@@ -226,7 +227,7 @@ public:
 	//	SetShaderValue(RHICmdList, GetVertexShader(), vFragmentBufferSize, FragmentBufferSize);
 	//}
 
-	GetShaderBindings(
+	void GetShaderBindings(
 		const FScene* Scene,
 		ERHIFeatureLevel::Type FeatureLevel,
 		const FPrimitiveSceneProxy* PrimitiveSceneProxy,
@@ -242,6 +243,7 @@ public:
 
 public:
 	FShaderParameter vFragmentBufferSize;
+	FShaderParameter PreviousLocalToWorldParameter;
 
 private:
 
@@ -325,7 +327,7 @@ public:
 	//	SetShaderValue(RHICmdList, GetPixelShader(), g_vViewport, FVector4(0, 0, ViewRect.Width(), ViewRect.Height()));
 	//}
 
-	GetShaderBindings(
+	void GetShaderBindings(
 		const FScene* Scene,
 		ERHIFeatureLevel::Type FeatureLevel,
 		const FPrimitiveSceneProxy* PrimitiveSceneProxy,
@@ -335,6 +337,7 @@ public:
 		const FTressFX_VelocityDepthPSShaderElementData& ShaderElementData,
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
+		//JAKETODO, just use view from uniform buffer in shader, this isnt needed
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
 		ShaderBindings.Add(g_vViewport, FVector4(0, 0, ShaderElementData.ViewRect.Width(), ShaderElementData.ViewRect.Height()));
 	}
@@ -424,7 +427,7 @@ public:
 	//	SetShaderValue(RHICmdList, GetPixelShader(), g_vViewport, FVector4(0, 0, ViewRect.Width(), ViewRect.Height()));
 	//}
 
-	GetShaderBindings(
+	void GetShaderBindings(
 		const FScene* Scene,
 		ERHIFeatureLevel::Type FeatureLevel,
 		const FPrimitiveSceneProxy* PrimitiveSceneProxy,
@@ -434,13 +437,14 @@ public:
 		const FTressFX_VelocityDepthPSShaderElementData& ShaderElementData,
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
+		//JAKETODO, just use view from uniform buffer in shader, this isnt needed
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
 		ShaderBindings.Add(g_vViewport, FVector4(0, 0, ShaderElementData.ViewRect.Width(), ShaderElementData.ViewRect.Height()));
 	}
 
 public:
 
-//	FRWShaderParameter RWFragmentDepthsTexture;
+	FRWShaderParameter RWFragmentDepthsTexture;
 	FShaderParameter g_vViewport;
 
 };

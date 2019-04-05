@@ -34,7 +34,7 @@
 
 DEFINE_LOG_CATEGORY(TressFXRenderingLog);
 
-extern TGlobalResource<FFilterVertexDeclaration> GFilterVertexDeclaration;
+//extern TGlobalResource<FFilterVertexDeclaration> GFilterVertexDeclaration;
 extern TAutoConsoleVariable<int32> CVarTressFXKBufferSize;
 extern TAutoConsoleVariable<int32> CVarTressFXType;
 

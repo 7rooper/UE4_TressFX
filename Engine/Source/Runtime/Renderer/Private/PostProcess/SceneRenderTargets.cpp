@@ -278,17 +278,6 @@ FSceneRenderTargets::FSceneRenderTargets(const FViewInfo& View, const FSceneRend
 	, DefaultDepthClear(SnapshotSource.DefaultDepthClear)
 	, QuadOverdrawIndex(SnapshotSource.QuadOverdrawIndex)
 	, bHMDAllocatedDepthTarget(SnapshotSource.bHMDAllocatedDepthTarget)
-	/*@BEGIN Third party code TressFX*/
-	, TressFXSceneDepth(GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXSceneDepth))
-	, TressFXStencilSRV(TressFXStencilSRV)
-	, TressFXVelocity(GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXVelocity))
-	, AccumInvAlpha(GRenderTargetPool.MakeSnapshot(SnapshotSource.AccumInvAlpha))
-	, FragmentDepthsTexture(GRenderTargetPool.MakeSnapshot(SnapshotSource.FragmentDepthsTexture))
-	, FragmentColorsTexture(GRenderTargetPool.MakeSnapshot(SnapshotSource.FragmentColorsTexture))
-	, PPLLHeads(GRenderTargetPool.MakeSnapshot(SnapshotSource.PPLLHeads))
-	, PPLLNodes(SnapshotSource.PPLLNodes)
-	, NodePoolSize(SnapshotSource.NodePoolSize)
-	/*@END Third party code TressFX*/
 {
 	FMemory::Memcpy(LargestDesiredSizes, SnapshotSource.LargestDesiredSizes);
 #if PREVENT_RENDERTARGET_SIZE_THRASHING
@@ -300,6 +289,18 @@ FSceneRenderTargets::FSceneRenderTargets(const FViewInfo& View, const FSceneRend
 	SnapshotArray(TranslucencyLightingVolumeAmbient, SnapshotSource.TranslucencyLightingVolumeAmbient);
 	SnapshotArray(TranslucencyLightingVolumeDirectional, SnapshotSource.TranslucencyLightingVolumeDirectional);
 	SnapshotArray(OptionalShadowDepthColor, SnapshotSource.OptionalShadowDepthColor);
+
+	/*@BEGIN Third party code TressFX*/
+	TressFXSceneDepth = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXSceneDepth);
+	TressFXStencilSRV = TressFXStencilSRV;
+	TressFXVelocity = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXVelocity);
+	AccumInvAlpha = GRenderTargetPool.MakeSnapshot(SnapshotSource.AccumInvAlpha);
+	FragmentDepthsTexture = GRenderTargetPool.MakeSnapshot(SnapshotSource.FragmentDepthsTexture);
+	FragmentColorsTexture = GRenderTargetPool.MakeSnapshot(SnapshotSource.FragmentColorsTexture);
+	PPLLHeads = GRenderTargetPool.MakeSnapshot(SnapshotSource.PPLLHeads);
+	PPLLNodes = SnapshotSource.PPLLNodes;
+	NodePoolSize = SnapshotSource.NodePoolSize;
+	/*@END Third party code TressFX*/
 }
 
 inline const TCHAR* GetSceneColorTargetName(EShadingPath ShadingPath)

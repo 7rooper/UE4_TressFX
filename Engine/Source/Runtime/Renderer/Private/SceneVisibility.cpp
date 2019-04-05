@@ -1855,10 +1855,10 @@ struct FRelevancePacket
 		, bUsesLightingChannels(false)
 		, bTranslucentSurfaceLighting(false)
 		, bUsesSceneDepth(false)
-		/*@BEGIN Third party code TressFX*/
-		, bHasTressFX(false)
-		/*@END Third party code TressFX*/
 	{
+		/*@BEGIN Third party code TressFX*/
+		bHasTressFX = false;
+		/*@END Third party code TressFX*/
 	}
 
 	void AnyThreadTask()

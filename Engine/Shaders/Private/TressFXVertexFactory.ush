@@ -62,11 +62,13 @@ half3x3 VertexFactoryGetTangentToLocal(FVertexFactoryInput Input, FVertexFactory
 // @return previous translated world position
 float4 VertexFactoryGetPreviousWorldPosition(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates)
 {
-	float4x4 PreviousLocalToWorldTranslated = PreviousLocalToWorld;
-    PreviousLocalToWorldTranslated[3][0] += ResolvedView.PrevPreViewTranslation.x;
-    PreviousLocalToWorldTranslated[3][1] += ResolvedView.PrevPreViewTranslation.y;
-    PreviousLocalToWorldTranslated[3][2] += ResolvedView.PrevPreViewTranslation.z;
-    return mul(Intermediates.tfxVer.Position, PreviousLocalToWorldTranslated);
+	//float4x4 PreviousLocalToWorldTranslated = PreviousLocalToWorld;
+ //   PreviousLocalToWorldTranslated[3][0] += ResolvedView.PrevPreViewTranslation.x;
+ //   PreviousLocalToWorldTranslated[3][1] += ResolvedView.PrevPreViewTranslation.y;
+ //   PreviousLocalToWorldTranslated[3][2] += ResolvedView.PrevPreViewTranslation.z;
+ //   return mul(Intermediates.tfxVer.Position, PreviousLocalToWorldTranslated);
+    return Intermediates.tfxVer.Position;
+
 }
 
 

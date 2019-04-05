@@ -9,6 +9,12 @@
 #include "Math/IntVector.h"
 #include "ShaderParameters.h"
 
+#pragma warning(push)
+//fuck this error
+#pragma warning( disable : 5038)
+
+
+
 #define TRESSFX_MAX_INFLUENTIAL_BONE_COUNT 4
 
 #define AMD_TRESSFX_VERSION_MAJOR                    4
@@ -38,7 +44,7 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXShadeParametersUni
 	SHADER_PARAMETER(float, g_FiberSpacing)
 	SHADER_PARAMETER(int32, g_NumVerticesPerStrand)
 	SHADER_PARAMETER(float, g_ratio)
-END_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXShadeParametersUniformBuffer)
+END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 //template<>
 //class TUniformBufferTypeInfo<FIntVector4, false>
@@ -76,12 +82,12 @@ SHADER_PARAMETER_ARRAY(FVector4, g_centerAndRadius1, [TRESSFX_MAX_NUM_COLLISION_
 SHADER_PARAMETER(FIntVector4, g_numCollisionCapsules)
 #endif
 
-END_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXSimParametersUniformBuffer)
+END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXBoneSkinningUniformBuffer, ENGINE_API)
 SHADER_PARAMETER_ARRAY(FMatrix, g_BoneSkinningMatrix, [AMD_TRESSFX_MAX_NUM_BONES])
 SHADER_PARAMETER(int32, g_NumMeshVertices)
-END_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXBoneSkinningUniformBuffer)
+END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXSDFUniformBuffer, ENGINE_API)
@@ -98,7 +104,7 @@ SHADER_PARAMETER(int32, g_NumTotalHairVertices)
 SHADER_PARAMETER(float, pad1)
 SHADER_PARAMETER(float, pad2)
 SHADER_PARAMETER(float, pad3)
-END_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXSDFUniformBuffer)
+END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 UENUM()
 enum ETressFXCollisionType
@@ -791,3 +797,4 @@ private:
 		m_Origin = BoxMin;
 	};
 };
+#pragma warning( pop ) 

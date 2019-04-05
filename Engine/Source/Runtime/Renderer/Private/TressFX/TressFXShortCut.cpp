@@ -6,11 +6,9 @@
 #include "GlobalShader.h"
 #include "StaticBoundShaderState.h"
 #include "SceneUtils.h"
-#include "PostProcess/RenderTargetPool.h"
 #include "PostProcess/SceneRenderTargets.h"
 #include "GlobalShader.h"
 #include "MaterialShaderType.h"
-#include "DrawingPolicy.h"
 #include "MeshMaterialShader.h"
 #include "ShaderBaseClasses.h"
 #include "SceneRendering.h"
@@ -173,7 +171,6 @@ bool FTressFXShortCut_ResolveDepthPS::Serialize(FArchive& Ar)
 IMPLEMENT_SHADER_TYPE(, FTressFXShortCut_ResolveDepthPS, TEXT("/Engine/Private/TressFXShortCut_ResolveDepthPS.usf"), TEXT("main"), SF_Pixel);
 
 
-extern TGlobalResource<FEmptyVertexDeclaration> GEmptyVertexDeclaration;
 
 extern void DrawRectangle(
 	FRHICommandList& RHICmdList,

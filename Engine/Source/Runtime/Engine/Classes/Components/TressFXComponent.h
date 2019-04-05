@@ -6,6 +6,10 @@
 #include "PrimitiveComponent.h"
 #include "TressFXComponent.generated.h"
 
+#pragma warning( push )
+//fuck this error
+#pragma warning( disable : 5038)
+
 DECLARE_LOG_CATEGORY_EXTERN(TressFXComponentLog, Log, All);
 
 USTRUCT(BlueprintType)
@@ -246,3 +250,4 @@ public:
 	class FTressFXMeshResources* SDFMeshResources;
 
 };
+#pragma warning( pop ) 
