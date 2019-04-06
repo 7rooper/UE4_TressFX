@@ -37,7 +37,7 @@ extern TAutoConsoleVariable<int32> CVarTressFXKBufferSize;
 extern TAutoConsoleVariable<int32> CVarTressFXType;
 
 
-//#pragma optimize("", off)
+#pragma optimize("", off)
 
 namespace TressFXRendering
 {
@@ -162,23 +162,24 @@ void FTRessFXDepthsVelocityPassMeshProcessor::Process(
 
 void FTRessFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId)
 {
-	const bool bDraw = true;
+
+	const FMaterialRenderProxy* FallbackMaterialRenderProxyPtr = nullptr;
+	const FMaterial& Material = MeshBatch.MaterialRenderProxy->GetMaterialWithFallback(FeatureLevel, FallbackMaterialRenderProxyPtr);
+	const bool bDraw = Material.IsUsedWithTressFX();
 
 	if (bDraw)
 	{
-		// Determine the mesh's material and blend mode.
-		const FMaterialRenderProxy* FallbackMaterialRenderProxyPtr = nullptr;
-		const FMaterial& Material = MeshBatch.MaterialRenderProxy->GetMaterialWithFallback(FeatureLevel, FallbackMaterialRenderProxyPtr);
-
 		const FMaterialRenderProxy& MaterialRenderProxy = FallbackMaterialRenderProxyPtr ? *FallbackMaterialRenderProxyPtr : *MeshBatch.MaterialRenderProxy;
 
 		const EBlendMode BlendMode = Material.GetBlendMode();
 		const ERasterizerFillMode MeshFillMode = ComputeMeshFillMode(MeshBatch, Material);
 		const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, Material);
-		const bool bIsTranslucent = IsTranslucentBlendMode(BlendMode);	
-		const FMaterialRenderProxy& DefaultProxy = *UMaterial::GetDefaultMaterial(MD_Surface)->GetRenderProxy();
-		const FMaterial& DefaultMaterial = *DefaultProxy.GetMaterial(FeatureLevel);
-		Process(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, DefaultProxy, DefaultMaterial, MeshFillMode, MeshCullMode);
+		const bool bIsTranslucent = IsTranslucentBlendMode(BlendMode);
+
+		//const FMaterialRenderProxy& DefaultProxy = *UMaterial::GetDefaultMaterial(MD_Surface)->GetRenderProxy();
+		//const FMaterial& DefaultMaterial = *DefaultProxy.GetMaterial(FeatureLevel);
+
+		Process(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, Material, MeshFillMode, MeshCullMode);
 	}
 }
 
@@ -1083,4 +1084,4 @@ void FSceneRenderer::RenderTressFXResolveVelocity(FRHICommandListImmediate& RHIC
 
 FRegisterPassProcessorCreateFunction RegisterTRessFXDepthsVelocityPass(&CreateTRessFXDepthsVelocityPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_DepthsVelocity, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
 
-//#pragma optimize("", on)
+#pragma optimize("", on)

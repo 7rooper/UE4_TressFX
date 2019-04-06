@@ -123,15 +123,24 @@ void UTressFXComponent::DestroyRenderState_Concurrent()
 {
 	if (HairObject)
 	{
-
-		ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER(
-			CleanupHairObject,
-			FTressFXHairObject*, Object, HairObject,
+		FTressFXHairObject* LocalHairObject = this->HairObject;
+		
+		ENQUEUE_RENDER_COMMAND(CleanupHairObject)(
+			[LocalHairObject](FRHICommandListImmediate& RHICmdList)
 			{
-				Object->ReleaseResource();
-				delete Object;
+				LocalHairObject->ReleaseResource();
+				delete LocalHairObject;
 			}
 		);
+		
+		//ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER(
+		//	CleanupHairObject,
+		//	FTressFXHairObject*, Object, HairObject,
+		//	{
+		//		Object->ReleaseResource();
+		//		delete Object;
+		//	}
+		//);
 
 		HairObject = nullptr;
 
