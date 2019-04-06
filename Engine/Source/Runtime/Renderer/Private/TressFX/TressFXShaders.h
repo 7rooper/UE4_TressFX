@@ -558,7 +558,6 @@ class FTressFXResolveVelocityPs : public FGlobalShader
 		: FGlobalShader(Initializer)
 	{
 		VelocityTexture.Bind(Initializer.ParameterMap, TEXT("VelocityTexture"));
-		//DepthTexture.Bind(Initializer.ParameterMap, TEXT("DepthTexture"));
 	}
 
 	virtual bool Serialize(FArchive& Ar)
@@ -573,11 +572,9 @@ class FTressFXResolveVelocityPs : public FGlobalShader
 	{
 		//FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, GetPixelShader(), View.ViewUniformBuffer);
 		SetTextureParameter(RHICmdList, GetPixelShader(), VelocityTexture, TressFXVelocityRT->GetRenderTargetItem().TargetableTexture);
-		//SetTextureParameter(RHICmdList, GetPixelShader(), DepthTexture, TressFXDepth->GetRenderTargetItem().TargetableTexture);
 	}
 
 	FShaderResourceParameter VelocityTexture;
-	FShaderResourceParameter DepthTexture;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////

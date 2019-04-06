@@ -230,7 +230,9 @@ void UTressFXComponent::SetUpMorphMapping()
 
 			auto* Archetype = GetArchetype();
 			if (Archetype == nullptr || Archetype->HasAllFlags(RF_ClassDefaultObject))
+			{
 				break;
+			}
 
 			TArray<UObject*> Instances;
 			Archetype->GetArchetypeInstances(Instances);

@@ -32,7 +32,7 @@ public:
 
 	};
 
-	FTressFXVertexFactory(ERHIFeatureLevel::Type InFeatureLevel) : FVertexFactory(InFeatureLevel), TressFXHairObject(nullptr) {}
+	FTressFXVertexFactory(ERHIFeatureLevel::Type InFeatureLevel) : FVertexFactory(InFeatureLevel) {}
 
 	static FVertexFactoryShaderParameters* ConstructShaderParameters(EShaderFrequency ShaderFrequency);
 	static bool SupportsTessellationShaders() { return false; }
@@ -43,8 +43,6 @@ public:
 	static bool ShouldCompilePermutation(EShaderPlatform Platform, const class FMaterial* Material, const class FShaderType* ShaderType);
 
 	static void ModifyCompilationEnvironment(const FVertexFactoryType* Type, EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment);
-
-	FTressFXHairObject* TressFXHairObject;
 
 	virtual void InitRHI() override;
 

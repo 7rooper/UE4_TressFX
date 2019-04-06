@@ -950,23 +950,24 @@ void FSceneRenderer::RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHIC
 		{
 			continue;
 		}
+		// shouldnt be needed since we are piggy-backing off of the depth pass
 		//Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 
 		RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
-
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, TressFXDepthsVelocity);
 
-			FRHIRenderTargetView ColorTargetsRTV[1];
-			ColorTargetsRTV[0] = FRHIRenderTargetView(SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture, ERenderTargetLoadAction::ELoad);
+			//Clear_Store to clear the TFX Velocity Target
+			FRHIRenderPassInfo RPInfo(SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture, ERenderTargetActions::Clear_Store);
+			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_Store, ERenderTargetActions::Load_Store);
+			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.GetSceneDepthSurface();
+			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
 
-			FRHIDepthRenderTargetView DepthRTV(SceneContext.GetSceneDepthSurface(), ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore);
-			RHICmdList.SetRenderTargets(1, ColorTargetsRTV, &DepthRTV, 0, nullptr);
-			DrawClearQuad(RHICmdList, true, FLinearColor::Transparent, false, 0, false,0);
-
-			FMeshPassProcessorRenderState DrawRenderState(View);
+			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXDepthsVelocity"));
+			RHICmdList.BindClearMRTValues(true, false, false);
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 			View.ParallelMeshDrawCommandPasses[EMeshPass::TressFX_DepthsVelocity].DispatchDraw(nullptr, RHICmdList);
+			RHICmdList.EndRenderPass();
 		}
 	}
 }

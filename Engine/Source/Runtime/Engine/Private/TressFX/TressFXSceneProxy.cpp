@@ -248,9 +248,6 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 
 	Material = DynamicData.HairMaterial;
 
-	//JAKETOD, remove
-	VertexFactory.TressFXHairObject = TressFXHairObject;
-
 	if (!bInitialized)
 	{
 		bInitialized = true;
@@ -313,7 +310,7 @@ bool FTressFXSceneProxy::WantsVelocityDraw()
 void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, class FMeshElementCollector& Collector) const
 {
 
-	if (!TressFXHairObject || !VertexFactory.TressFXHairObject || !TressFXHairObject->IndexBuffer.IsInitialized())
+	if (!TressFXHairObject || !TressFXHairObject->IndexBuffer.IsInitialized())
 	{
 		return;
 	}
