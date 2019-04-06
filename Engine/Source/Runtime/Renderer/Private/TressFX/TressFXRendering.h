@@ -43,7 +43,7 @@ public:
 	virtual void AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId = -1) override final;
 
 private:
-
+	template<bool bCalcVelocity>
 	void Process(
 		const FMeshBatch& RESTRICT MeshBatch,
 		uint64 BatchElementMask,
@@ -52,7 +52,9 @@ private:
 		const FMaterialRenderProxy& RESTRICT MaterialRenderProxy,
 		const FMaterial& RESTRICT MaterialResource,
 		ERasterizerFillMode MeshFillMode,
-		ERasterizerCullMode MeshCullMode);
+		ERasterizerCullMode MeshCullMode,
+		bool bNoDepth
+	);
 
 	FMeshPassProcessorRenderState PassDrawRenderState;
 

@@ -221,28 +221,6 @@ public:
 		return result;
 	}
 
-	//void SetMesh(FRHICommandList& RHICmdList, const FVertexFactory* VertexFactory, const FSceneView& View, const FPrimitiveSceneProxy* Proxy, const FMeshBatch& Mesh, const FMeshBatchElement& BatchElement, const FDrawingPolicyRenderState& DrawRenderState)
-	//{
-	//	FMeshMaterialShader::SetMesh(RHICmdList, GetVertexShader(), VertexFactory, View, Proxy, BatchElement, DrawRenderState);
-	//}
-
-	//void SetParameters(
-	//	FRHICommandList& RHICmdList,
-	//	const FMaterialRenderProxy* MaterialRenderProxy,
-	//	const FMaterial& MaterialResource,
-	//	const FSceneView& View,
-	//	const TUniformBufferRef<FViewUniformShaderParameters>& ViewUniformBuffer,
-	//	const bool bIsInstancedStereo,
-	//	const bool bIsInstancedStereoEmulated,
-	//	const FMeshPassProcessorRenderState& DrawRenderState
-	//)
-	//{
-	//	FMeshMaterialShader::SetParameters(RHICmdList, GetVertexShader(), MaterialRenderProxy, MaterialResource, View, ViewUniformBuffer, DrawRenderState.GetPassUniformBuffer());
-	//	auto ViewSize = View.UnscaledViewRect.Size();
-	//	FVector4 FragmentBufferSize(ViewSize.X, ViewSize.Y, ViewSize.X*ViewSize.Y, 0);
-	//	SetShaderValue(RHICmdList, GetVertexShader(), vFragmentBufferSize, FragmentBufferSize);
-	//}
-
 	void GetShaderBindings(
 		const FScene* Scene,
 		ERHIFeatureLevel::Type FeatureLevel,
@@ -311,26 +289,6 @@ public:
 		return result;
 	}
 
-	//void SetMesh(FRHICommandList& RHICmdList, const FVertexFactory* VertexFactory, const FSceneView& View, const FPrimitiveSceneProxy* Proxy, const FMeshBatchElement& BatchElement, const FDrawingPolicyRenderState& DrawRenderState)
-	//{
-	//	FMeshMaterialShader::SetMesh(RHICmdList, GetPixelShader(), VertexFactory, View, Proxy, BatchElement, DrawRenderState);
-	//}
-
-	//void SetParameters(
-	//	FRHICommandList& RHICmdList,
-	//	const FMaterialRenderProxy* MaterialRenderProxy,
-	//	const FMaterial& MaterialResource,
-	//	const FSceneView& View,
-	//	const TUniformBufferRef<FViewUniformShaderParameters>& ViewUniformBuffer,
-	//	const bool bIsInstancedStereo,
-	//	const bool bIsInstancedStereoEmulated,
-	//	const FMeshPassProcessorRenderState& DrawRenderState
-	//)
-	//{
-	//	FMeshMaterialShader::SetParameters(RHICmdList, GetPixelShader(), MaterialRenderProxy, MaterialResource, View, ViewUniformBuffer, DrawRenderState.GetPassUniformBuffer());
-	//	FIntRect ViewRect = View.UnscaledViewRect;
-	//	SetShaderValue(RHICmdList, GetPixelShader(), g_vViewport, FVector4(0, 0, ViewRect.Width(), ViewRect.Height()));
-	//}
 
 	void GetShaderBindings(
 		const FScene* Scene,

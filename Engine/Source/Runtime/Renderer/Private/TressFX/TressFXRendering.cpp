@@ -112,7 +112,7 @@ void TressFXCopySceneDepth(FRHICommandList& RHICmdList, const FViewInfo& View, F
 //////////////////////////////////////////////////////////////////////////
 //FTRessFXDepthsVelocityPassMeshProcessor
 /////////////////////////////////////////////////////////////////////////
-
+template<bool bCalcVelocity>
 void FTRessFXDepthsVelocityPassMeshProcessor::Process(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
@@ -121,7 +121,9 @@ void FTRessFXDepthsVelocityPassMeshProcessor::Process(
 	const FMaterialRenderProxy& RESTRICT MaterialRenderProxy,
 	const FMaterial& RESTRICT MaterialResource,
 	ERasterizerFillMode MeshFillMode,
-	ERasterizerCullMode MeshCullMode)
+	ERasterizerCullMode MeshCullMode,
+	bool bNoDepth
+)
 {
 	const FVertexFactory* VertexFactory = MeshBatch.VertexFactory;
 
@@ -129,18 +131,28 @@ void FTRessFXDepthsVelocityPassMeshProcessor::Process(
 
 	FMeshPassProcessorRenderState DrawRenderState(PassDrawRenderState);
 
+	if (bNoDepth)
+	{
+		DrawRenderState.SetDepthStencilState(TStaticDepthStencilState<false, CF_DepthNearOrEqual>::GetRHI());
+	}
+	else
+	{
+		DrawRenderState.SetDepthStencilState(TStaticDepthStencilState<true, CF_DepthNearOrEqual>::GetRHI());
+	}
+
 	//SetDepthPassDitheredLODTransitionState(ViewIfDynamicMeshCommand, MeshBatch, StaticMeshId, DrawRenderState);
 
 	FTressFXShaderElementData ShaderElementData(ETressFXRenderUsage::TFXRU_DepthsVelocity, ViewIfDynamicMeshCommand);
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
 
 	TMeshProcessorShaders<
-		TTressFX_ShortCutVS<true>,
+		TTressFX_ShortCutVS<bCalcVelocity>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
-		FTressFX_VelocityDepthPS<true>> TFXShaders;
-	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFX_VelocityDepthPS<true>>(VertexFactory->GetType());
-	TFXShaders.VertexShader = MaterialResource.GetShader<TTressFX_ShortCutVS<true>>(VertexFactory->GetType());
+		FTressFX_VelocityDepthPS<bCalcVelocity>> TFXShaders;
+
+	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFX_VelocityDepthPS<bCalcVelocity>>(VertexFactory->GetType());
+	TFXShaders.VertexShader = MaterialResource.GetShader<TTressFX_ShortCutVS<bCalcVelocity>>(VertexFactory->GetType());
 
 	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
 
@@ -164,22 +176,38 @@ void FTRessFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 {
 
 	const FMaterialRenderProxy* FallbackMaterialRenderProxyPtr = nullptr;
-	const FMaterial& MetshBatchMaterial = MeshBatch.MaterialRenderProxy->GetMaterialWithFallback(FeatureLevel, FallbackMaterialRenderProxyPtr);
+	const FMaterial& MeshBatchMaterial = MeshBatch.MaterialRenderProxy->GetMaterialWithFallback(FeatureLevel, FallbackMaterialRenderProxyPtr);
+
+	const FMaterialRenderProxy& MaterialRenderProxy = FallbackMaterialRenderProxyPtr ? *FallbackMaterialRenderProxyPtr : *MeshBatch.MaterialRenderProxy;
+
+	const EBlendMode BlendMode = MeshBatchMaterial.GetBlendMode();
+	const bool bWantsVelocity = MeshBatchMaterial.TressFXShouldRenderVelocity();
+	const bool bIsTranslucent = IsTranslucentBlendMode(BlendMode);
+	const bool bNoDepth = bIsTranslucent;
+
+	if (bWantsVelocity == false && bNoDepth == true)
+	{
+		//nothing to do
+		return;
+	}
 	
-	const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
-	
-	const bool bDraw = MetshBatchMaterial.IsUsedWithTressFX() && MeshBatch.bTressFX;
+	bool bDraw = MeshBatchMaterial.IsUsedWithTressFX() && MeshBatch.bTressFX;
 
 	if (bDraw)
 	{
-		const FMaterialRenderProxy& MaterialRenderProxy = FallbackMaterialRenderProxyPtr ? *FallbackMaterialRenderProxyPtr : *MeshBatch.MaterialRenderProxy;
+		//guess i dont really need the proxy for now
+		const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
+		const ERasterizerFillMode MeshFillMode = ComputeMeshFillMode(MeshBatch, MeshBatchMaterial);
+		const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, MeshBatchMaterial);
 
-		const EBlendMode BlendMode = MetshBatchMaterial.GetBlendMode();
-		const ERasterizerFillMode MeshFillMode = ComputeMeshFillMode(MeshBatch, MetshBatchMaterial);
-		const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, MetshBatchMaterial);
-		const bool bIsTranslucent = IsTranslucentBlendMode(BlendMode);
-
-		Process(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MetshBatchMaterial, MeshFillMode, MeshCullMode);
+		if(bWantsVelocity)
+		{
+			Process<true>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode, bNoDepth);
+		}
+		else 
+		{
+			Process<false>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode, bNoDepth);
+		}
 	}
 }
 
