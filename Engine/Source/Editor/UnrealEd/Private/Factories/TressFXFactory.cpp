@@ -202,7 +202,7 @@ UObject* UTressFXFactory::FactoryCreateBinary(UClass* InClass, UObject* InParent
 
 	Flags |= RF_Transactional;
 
-	FEditorDelegates::OnAssetPreImport.Broadcast(this, InClass, InParent, InName, Type);
+	GEditor->GetEditorSubsystem<UImportSubsystem>()->BroadcastAssetPreImport(this, InClass, InParent, InName, Type);
 	FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
 	FString CurrentSourcePath;
 	FString FilenameNoExtension;
@@ -343,7 +343,7 @@ bool UTressFXJSONFactory::FactoryCanImport(const FString& Filename)
 UObject* UTressFXJSONFactory::FactoryCreateText(UClass* InClass, UObject* InParent, FName InName, EObjectFlags Flags, UObject* Context, const TCHAR* Type, const TCHAR*& Buffer, const TCHAR* BufferEnd, FFeedbackContext* Warn)
 {
 	Flags |= RF_Transactional;
-	FEditorDelegates::OnAssetPreImport.Broadcast(this, InClass, InParent, InName, Type);
+	GEditor->GetEditorSubsystem<UImportSubsystem>()->BroadcastAssetPreImport(this, InClass, InParent, InName, Type);
 	const int32 BufferSize = BufferEnd - Buffer;
 
 	const FString FileContent(BufferEnd - Buffer, Buffer);
@@ -596,8 +596,7 @@ void UTressFXBoneSkinningFactory::PostInitProperties()
 UObject * UTressFXBoneSkinningFactory::FactoryCreateBinary(UClass * InClass, UObject * InParent, FName InName, EObjectFlags Flags, UObject * Context, const TCHAR * Type, const uint8 *& Buffer, const uint8 * BufferEnd, FFeedbackContext * Warn)
 {
 	Flags |= RF_Transactional;
-
-	FEditorDelegates::OnAssetPreImport.Broadcast(this, InClass, InParent, InName, Type);
+	GEditor->GetEditorSubsystem<UImportSubsystem>()->BroadcastAssetPreImport(this, InClass, InParent, InName, Type);
 
 	FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
 
@@ -671,7 +670,7 @@ UObject* UTressFXBoneSkinningJSONFactory::FactoryCreateText(UClass* InClass, UOb
 {
 
 	Flags |= RF_Transactional;
-	FEditorDelegates::OnAssetPreImport.Broadcast(this, InClass, InParent, InName, Type);
+	GEditor->GetEditorSubsystem<UImportSubsystem>()->BroadcastAssetPreImport(this, InClass, InParent, InName, Type);
 	const int32 BufferSize = BufferEnd - Buffer;
 	const FString FileContent(BufferEnd - Buffer, Buffer);
 
