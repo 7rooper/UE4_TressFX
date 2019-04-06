@@ -258,9 +258,8 @@ void UTressFXComponent::SetUpMorphMapping()
 			TFXSceneProxy.UpdateMorphIndices_RenderThread(LocalMorphIndices);
 		};
 
-		ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER(
-			HairUpdateMorphIndices,
-			decltype(UpdateMorphIndices), UpdateMorphIndices, UpdateMorphIndices,
+		ENQUEUE_RENDER_COMMAND(UpdateHairMorphs)(
+			[UpdateMorphIndices](FRHICommandListImmediate& RHICmdList)
 			{
 				UpdateMorphIndices();
 			}
@@ -413,14 +412,14 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 
 	DynamicRenderData->BoneSkinningData = Asset->ImportData->SkinningData;
 
-	ENQUEUE_UNIQUE_RENDER_COMMAND_TWOPARAMETER(
-		TressFXSimulationSettings,
-		FTressFXSceneProxy&, ThisProxy, static_cast<FTressFXSceneProxy&>(*SceneProxy),
-		TSharedRef<FTressFXSceneProxy::FDynamicRenderData>, DynamicData, DynamicRenderData,
+	FTressFXSceneProxy* LocalTFXProxy = static_cast<FTressFXSceneProxy*>(SceneProxy);
+
+	ENQUEUE_RENDER_COMMAND(TRessFXSimulateCommand)(
+		[LocalTFXProxy, DynamicRenderData](FRHICommandListImmediate& RHICmdList)
 		{
-			ThisProxy.UpdateDynamicData_RenderThread(*DynamicData);
-			ThisProxy.CopyMorphs(RHICmdList);
-			SimulateTressFX(RHICmdList, &ThisProxy, DynamicData->TressFXSimulationSettings.LengthConstraintsIterations);
+			LocalTFXProxy->UpdateDynamicData_RenderThread(*DynamicRenderData);
+			LocalTFXProxy->CopyMorphs(RHICmdList);
+			SimulateTressFX(RHICmdList, LocalTFXProxy, DynamicRenderData->TressFXSimulationSettings.LengthConstraintsIterations);
 		}
 	);
 }
