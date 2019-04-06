@@ -164,22 +164,22 @@ void FTRessFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 {
 
 	const FMaterialRenderProxy* FallbackMaterialRenderProxyPtr = nullptr;
-	const FMaterial& Material = MeshBatch.MaterialRenderProxy->GetMaterialWithFallback(FeatureLevel, FallbackMaterialRenderProxyPtr);
-	const bool bDraw = Material.IsUsedWithTressFX();
+	const FMaterial& MetshBatchMaterial = MeshBatch.MaterialRenderProxy->GetMaterialWithFallback(FeatureLevel, FallbackMaterialRenderProxyPtr);
+	
+	const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
+	
+	const bool bDraw = MetshBatchMaterial.IsUsedWithTressFX() && MeshBatch.bTressFX;
 
 	if (bDraw)
 	{
 		const FMaterialRenderProxy& MaterialRenderProxy = FallbackMaterialRenderProxyPtr ? *FallbackMaterialRenderProxyPtr : *MeshBatch.MaterialRenderProxy;
 
-		const EBlendMode BlendMode = Material.GetBlendMode();
-		const ERasterizerFillMode MeshFillMode = ComputeMeshFillMode(MeshBatch, Material);
-		const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, Material);
+		const EBlendMode BlendMode = MetshBatchMaterial.GetBlendMode();
+		const ERasterizerFillMode MeshFillMode = ComputeMeshFillMode(MeshBatch, MetshBatchMaterial);
+		const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, MetshBatchMaterial);
 		const bool bIsTranslucent = IsTranslucentBlendMode(BlendMode);
 
-		//const FMaterialRenderProxy& DefaultProxy = *UMaterial::GetDefaultMaterial(MD_Surface)->GetRenderProxy();
-		//const FMaterial& DefaultMaterial = *DefaultProxy.GetMaterial(FeatureLevel);
-
-		Process(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, Material, MeshFillMode, MeshCullMode);
+		Process(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MetshBatchMaterial, MeshFillMode, MeshCullMode);
 	}
 }
 
@@ -935,7 +935,6 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 
 void FSceneRenderer::RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHICmdList)
 {
-	return;
 	if (!ShouldRenderTressFX())
 	{
 		return;
@@ -951,6 +950,7 @@ void FSceneRenderer::RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHIC
 		{
 			continue;
 		}
+		//Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 
 		RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 

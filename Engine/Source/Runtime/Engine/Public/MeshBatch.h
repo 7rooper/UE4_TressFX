@@ -197,6 +197,10 @@ struct FMeshBatch
 	/** Whether the mesh batch should apply dithered LOD. */
 	uint32 bDitheredLODTransition : 1;
 
+	//@BEGIN third party code TressFX
+	uint32 bTressFX : 1;
+	//@END third party code TressFX
+
 	// can be NULL
 	const FLightCacheInterface* LCI;
 
@@ -295,6 +299,9 @@ struct FMeshBatch
 	,	bSelectable(true)
 	,	bRequiresPerElementVisibility(false)
 	,	bDitheredLODTransition(false)
+		//@BEGIN third party code TressFX
+	,	bTressFX(false)
+		//@END third party code TressFX
 	,	LCI(NULL)
 	,	VertexFactory(NULL)
 	,	MaterialRenderProxy(NULL)

@@ -67,6 +67,9 @@ inline const TCHAR* GetMeshPassName(EMeshPass::Type MeshPass)
 	case EMeshPass::HitProxyOpaqueOnly: return TEXT("HitProxyOpaqueOnly");
 	case EMeshPass::EditorSelection: return TEXT("EditorSelection");
 #endif
+	//@BEGIN third party code TressFX
+	case EMeshPass::TressFX_DepthsVelocity: return TEXT("TressFX_DepthsVelocity");
+	//@END third party code TressFX
 	}
 
 	checkf(0, TEXT("Missing case for EMeshPass %u"), (uint32)MeshPass);

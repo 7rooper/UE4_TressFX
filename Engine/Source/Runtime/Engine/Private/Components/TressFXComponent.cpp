@@ -132,15 +132,6 @@ void UTressFXComponent::DestroyRenderState_Concurrent()
 				delete LocalHairObject;
 			}
 		);
-		
-		//ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER(
-		//	CleanupHairObject,
-		//	FTressFXHairObject*, Object, HairObject,
-		//	{
-		//		Object->ReleaseResource();
-		//		delete Object;
-		//	}
-		//);
 
 		HairObject = nullptr;
 
@@ -148,12 +139,12 @@ void UTressFXComponent::DestroyRenderState_Concurrent()
 
 	if (SDFMeshResources)
 	{
-		ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER(
-			CleanupHSDFMesh,
-			FTressFXMeshResources*, MeshResources, SDFMeshResources,
+		FTressFXMeshResources* LocalSDFResources = this->SDFMeshResources;
+		ENQUEUE_RENDER_COMMAND(CleanUpTRessFXSDF)(
+			[LocalSDFResources](FRHICommandListImmediate& RHICmdList)
 			{
-				MeshResources->ReleaseResource();
-				delete MeshResources;
+				LocalSDFResources->ReleaseResource();
+				delete LocalSDFResources;
 			}
 		);
 

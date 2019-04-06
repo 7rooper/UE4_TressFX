@@ -2661,6 +2661,18 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 	}
 #endif
 
+	/*@BEGIN Third party code TressFX*/
+	if (ViewRelevance.bTressFX)
+	{
+		PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
+		View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
+		View.TressFXMeshBatches.AddUninitialized(1);
+		FTressFXMeshBatch& BatchAndProxy = View.TressFXMeshBatches.Last();
+		BatchAndProxy.Mesh = MeshBatch.Mesh;
+		BatchAndProxy.Proxy = MeshBatch.PrimitiveSceneProxy;
+	}
+	/*@END Third party code TressFX*/
+
 	if (ViewRelevance.bHasVolumeMaterialDomain)
 	{
 		View.VolumetricMeshBatches.AddUninitialized(1);
@@ -2668,19 +2680,6 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 		BatchAndProxy.Mesh = MeshBatch.Mesh;
 		BatchAndProxy.Proxy = MeshBatch.PrimitiveSceneProxy;
 	}
-
-	/*@BEGIN Third party code TressFX*/
-	if (ViewRelevance.bTressFX) 
-	{
-		PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
-		View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
-		
-		View.TressFXMeshBatches.AddUninitialized(1);
-		FTressFXMeshBatch& BatchAndProxy = View.TressFXMeshBatches.Last();
-		BatchAndProxy.Mesh = MeshBatch.Mesh;
-		BatchAndProxy.Proxy = MeshBatch.PrimitiveSceneProxy;
-	}
-	/*@END Third party code TressFX*/
 
 	if (ViewRelevance.bRenderInMainPass && ViewRelevance.bDecal)
 	{
