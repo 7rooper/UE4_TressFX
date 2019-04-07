@@ -46,19 +46,6 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXShadeParametersUni
 	SHADER_PARAMETER(float, g_ratio)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
-//template<>
-//class TUniformBufferTypeInfo<FIntVector4, false>
-//{
-//public:
-//	enum { BaseType = UBMT_FLOAT32 };
-//	enum { NumRows = 1 };
-//	enum { NumColumns = 4 };
-//	enum { NumElements = 0 };
-//	enum { Alignment = 16 };
-//	enum { IsResource = 0 };
-//	typedef TAlignedTypedef<FIntVector4, Alignment>::TAlignedType TAlignedType;
-//	static const FUniformBufferStruct* GetStruct() { return NULL; }
-//};
 
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXSimParametersUniformBuffer, ENGINE_API)
 SHADER_PARAMETER(FVector4, g_Wind)
@@ -112,6 +99,13 @@ enum ETressFXCollisionType
 	TFXCollsion_None UMETA(DisplayName = "No Collision"),
 	TFXCollsion_Capsule UMETA(DisplayName = "Capsule Collision"),
 	TFXCollsion_SDF UMETA(DisplayName = "Signed Distance Field Collision")
+};
+
+UENUM()
+enum ETressFXRenderType
+{
+	GBuffer,
+	ROV
 };
 
 
@@ -168,7 +162,7 @@ public:
 	TArray<FVector2D>	StrandUV;
 
 #if WITH_EDITORONLY_DATA
-	//NEVER edit these after the intial import!
+	//NEVER edit these after the intial import! They are needed for easy UV regeneration when changing number of followers.
 	TArray<FVector2D>	StrandUV_Original;
 #endif
 

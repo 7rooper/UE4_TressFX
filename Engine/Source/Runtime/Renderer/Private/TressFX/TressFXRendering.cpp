@@ -36,28 +36,7 @@ DEFINE_LOG_CATEGORY(TressFXRenderingLog);
 extern TAutoConsoleVariable<int32> CVarTressFXKBufferSize;
 extern TAutoConsoleVariable<int32> CVarTressFXType;
 
-
 #pragma optimize("", off)
-
-namespace TressFXRendering
-{
-	void TressFXSetupViews(TArray<FViewInfo>& Views)
-	{
-		//for (auto& View : Views)
-		//{
-		//	check(View.VisibleTressFX.Num() == 0);
-
-		//	for (auto* PrimitiveInfo : View.PrimitiveViewRelevanceMap)
-		//	{
-		//		auto& ViewRelevance = View.PrimitiveViewRelevanceMap[PrimitiveInfo->GetIndex()];
-		//		if (ViewRelevance.bTressFX)
-		//		{
-		//			View.VisibleTressFX.Add(PrimitiveInfo);
-		//		}
-		//	}
-		//}
-	}
-}
 
 void TressFXCopySceneDepth(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext, TRefCountPtr<IPooledRenderTarget> Destination)
 {
@@ -110,10 +89,11 @@ void TressFXCopySceneDepth(FRHICommandList& RHICmdList, const FViewInfo& View, F
 }
 
 //////////////////////////////////////////////////////////////////////////
-//FTRessFXDepthsVelocityPassMeshProcessor
+//FTressFXDepthsVelocityPassMeshProcessor
 /////////////////////////////////////////////////////////////////////////
+
 template<bool bCalcVelocity>
-void FTRessFXDepthsVelocityPassMeshProcessor::Process(
+void FTressFXDepthsVelocityPassMeshProcessor::Process(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
 	int32 StaticMeshId,
@@ -142,7 +122,7 @@ void FTRessFXDepthsVelocityPassMeshProcessor::Process(
 
 	//SetDepthPassDitheredLODTransitionState(ViewIfDynamicMeshCommand, MeshBatch, StaticMeshId, DrawRenderState);
 
-	FTressFXShaderElementData ShaderElementData(ETressFXRenderUsage::TFXRU_DepthsVelocity, ViewIfDynamicMeshCommand);
+	FTressFXShaderElementData ShaderElementData(ETressFXPass::TFXRU_DepthsVelocity, ViewIfDynamicMeshCommand);
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
 
 	TMeshProcessorShaders<
@@ -172,7 +152,7 @@ void FTRessFXDepthsVelocityPassMeshProcessor::Process(
 	);
 }
 
-void FTRessFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId)
+void FTressFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId)
 {
 
 	const FMaterialRenderProxy* FallbackMaterialRenderProxyPtr = nullptr;
@@ -195,7 +175,7 @@ void FTRessFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 
 	if (bDraw)
 	{
-		//guess i dont really need the proxy for now
+		//guess i dont really need the proxy for now, but i might add some more configurable render settings on it later
 		const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
 		const ERasterizerFillMode MeshFillMode = ComputeMeshFillMode(MeshBatch, MeshBatchMaterial);
 		const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, MeshBatchMaterial);
@@ -211,7 +191,7 @@ void FTRessFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 	}
 }
 
-FTRessFXDepthsVelocityPassMeshProcessor::FTRessFXDepthsVelocityPassMeshProcessor(
+FTressFXDepthsVelocityPassMeshProcessor::FTressFXDepthsVelocityPassMeshProcessor(
 	const FScene* Scene,
 	const FSceneView* InViewIfDynamicMeshCommand,
 	const FMeshPassProcessorRenderState& InPassDrawRenderState,
@@ -234,14 +214,122 @@ FMeshPassProcessor* CreateTRessFXDepthsVelocityPassProcessor(const FScene* Scene
 {
 	FMeshPassProcessorRenderState TRessFXDepthsVelocityPassState;
 	SetupDepthsVelocityPassState(TRessFXDepthsVelocityPassState);
-	return new(FMemStack::Get()) FTRessFXDepthsVelocityPassMeshProcessor(Scene, InViewIfDynamicMeshCommand, TRessFXDepthsVelocityPassState, InDrawListContext);
+	return new(FMemStack::Get()) FTressFXDepthsVelocityPassMeshProcessor(Scene, InViewIfDynamicMeshCommand, TRessFXDepthsVelocityPassState, InDrawListContext);
+}
+
+//////////////////////////////////////////////////////////////////////////
+//FTressFXROVPassMeshProcessor
+/////////////////////////////////////////////////////////////////////////
+
+
+template<bool bCalcVelocity>
+void FTressFXROVPassMeshProcessor::Process(
+	const FMeshBatch& RESTRICT MeshBatch,
+	uint64 BatchElementMask,
+	int32 StaticMeshId,
+	const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy,
+	const FMaterialRenderProxy& RESTRICT MaterialRenderProxy,
+	const FMaterial& RESTRICT MaterialResource,
+	ERasterizerFillMode MeshFillMode,
+	ERasterizerCullMode MeshCullMode,
+	bool bNoDepth
+)
+{
+	const FVertexFactory* VertexFactory = MeshBatch.VertexFactory;
+
+	FShaderPipeline* ShaderPipeline = nullptr;
+
+	FMeshPassProcessorRenderState DrawRenderState(PassDrawRenderState);
+	//TODO
+	//if (bNoDepth)
+	//{
+	//	DrawRenderState.SetDepthStencilState(TStaticDepthStencilState<false, CF_DepthNearOrEqual>::GetRHI());
+	//}
+	//else
+	//{
+	//	DrawRenderState.SetDepthStencilState(TStaticDepthStencilState<true, CF_DepthNearOrEqual>::GetRHI());
+	//}
+
+	////SetDepthPassDitheredLODTransitionState(ViewIfDynamicMeshCommand, MeshBatch, StaticMeshId, DrawRenderState);
+
+	//FTressFXShaderElementData ShaderElementData(ETressFXPass::TFXRU_DepthsVelocity, ViewIfDynamicMeshCommand);
+	//ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
+
+	//TMeshProcessorShaders<
+	//	TTressFX_ShortCutVS<bCalcVelocity>,
+	//	FMeshMaterialShader,
+	//	FMeshMaterialShader,
+	//	FTressFX_VelocityDepthPS<bCalcVelocity>> TFXShaders;
+
+	//TFXShaders.PixelShader = MaterialResource.GetShader<FTressFX_VelocityDepthPS<bCalcVelocity>>(VertexFactory->GetType());
+	//TFXShaders.VertexShader = MaterialResource.GetShader<TTressFX_ShortCutVS<bCalcVelocity>>(VertexFactory->GetType());
+
+	//const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
+
+	//BuildMeshDrawCommands(
+	//	MeshBatch,
+	//	BatchElementMask,
+	//	PrimitiveSceneProxy,
+	//	MaterialRenderProxy,
+	//	MaterialResource,
+	//	DrawRenderState,
+	//	TFXShaders,
+	//	MeshFillMode,
+	//	MeshCullMode,
+	//	SortKey,
+	//	EMeshPassFeatures::Default,
+	//	ShaderElementData
+	//);
+}
+
+void FTressFXROVPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId)
+{
+
+	const FMaterialRenderProxy* FallbackMaterialRenderProxyPtr = nullptr;
+	const FMaterial& MeshBatchMaterial = MeshBatch.MaterialRenderProxy->GetMaterialWithFallback(FeatureLevel, FallbackMaterialRenderProxyPtr);
+
+	const FMaterialRenderProxy& MaterialRenderProxy = FallbackMaterialRenderProxyPtr ? *FallbackMaterialRenderProxyPtr : *MeshBatch.MaterialRenderProxy;
+
+	const EBlendMode BlendMode = MeshBatchMaterial.GetBlendMode();
+	const bool bWantsVelocity = MeshBatchMaterial.TressFXShouldRenderVelocity();
+	const bool bIsTranslucent = IsTranslucentBlendMode(BlendMode);
+	const bool bNoDepth = bIsTranslucent;
+
+	//todo
+}
+
+FTressFXROVPassMeshProcessor::FTressFXROVPassMeshProcessor(
+	const FScene* Scene,
+	const FSceneView* InViewIfDynamicMeshCommand,
+	const FMeshPassProcessorRenderState& InPassDrawRenderState,
+	FMeshPassDrawListContext* InDrawListContext)
+	: FMeshPassProcessor(Scene, Scene->GetFeatureLevel(), InViewIfDynamicMeshCommand, InDrawListContext)
+{
+	PassDrawRenderState = InPassDrawRenderState;
+	PassDrawRenderState.SetViewUniformBuffer(Scene->UniformBuffers.ViewUniformBuffer);
+	PassDrawRenderState.SetInstancedViewUniformBuffer(Scene->UniformBuffers.InstancedViewUniformBuffer);
+	PassDrawRenderState.SetPassUniformBuffer(Scene->UniformBuffers.OpaqueBasePassUniformBuffer);
+}
+
+void SetupROVPassState(FMeshPassProcessorRenderState& DrawRenderState)
+{
+	//TODO
+	//DrawRenderState.SetBlendState(TStaticBlendState<CW_RGBA>::GetRHI());
+	//DrawRenderState.SetDepthStencilState(TStaticDepthStencilState<true, CF_DepthNearOrEqual>::GetRHI());
+}
+
+FMeshPassProcessor* CreateTRessFXROVPassProcessor(const FScene* Scene, const FSceneView* InViewIfDynamicMeshCommand, FMeshPassDrawListContext* InDrawListContext)
+{
+	FMeshPassProcessorRenderState PassDrawRenderState;
+	SetupROVPassState(PassDrawRenderState);
+	return new(FMemStack::Get()) FTressFXROVPassMeshProcessor(Scene, InViewIfDynamicMeshCommand, PassDrawRenderState, InDrawListContext);
 }
 
 /*-----------------------------------------------------------------------------
 FTressFXPrimSet
 -----------------------------------------------------------------------------*/
 
-//bool FTressFXPrimSet::DrawPrims(FRHICommandListImmediate& RHICmdList, const FViewInfo& View, FMeshPassProcessorRenderState& DrawRenderState, bool bWriteCustomStencilValues, ETressFXRenderUsage UsageType)
+//bool FTressFXPrimSet::DrawPrims(FRHICommandListImmediate& RHICmdList, const FViewInfo& View, FMeshPassProcessorRenderState& DrawRenderState, bool bWriteCustomStencilValues, ETressFXPass UsageType)
 //{
 
 	//bool bDirty = false;
@@ -273,16 +361,16 @@ FTressFXPrimSet
 
 	//					switch (UsageType)
 	//					{
-	//					case ETressFXRenderUsage::TFXRU_DepthsVelocity:
+	//					case ETressFXPass::TFXRU_DepthsVelocity:
 	//						FTressFXDepthsVelocityDrawingPolicyFactory::DrawDynamicMesh(RHICmdList, View, FTressFXDepthsVelocityDrawingPolicyFactory::ContextType(), MeshBatch, true, DrawRenderStateLocal, MeshBatchAndRelevance.PrimitiveSceneProxy, MeshBatch.BatchHitProxyId);
 	//						break;
-	//					case ETressFXRenderUsage::TFXRU_PPLL:
+	//					case ETressFXPass::TFXRU_PPLL:
 	//						//FTressFXPPLLDrawingPolicyFactory::DrawDynamicMesh(RHICmdList, View, FTressFXPPLLDrawingPolicyFactory::ContextType(), MeshBatch, true, DrawRenderStateLocal, MeshBatchAndRelevance.PrimitiveSceneProxy, MeshBatch.BatchHitProxyId);
 	//						break;
-	//					case ETressFXRenderUsage::TFXRU_DepthsAlpha:
+	//					case ETressFXPass::TFXRU_DepthsAlpha:
 	//						FTressFXDepthsAlphaDrawingPolicyFactory::DrawDynamicMesh(RHICmdList, View, FTressFXDepthsAlphaDrawingPolicyFactory::ContextType(), MeshBatch, true, DrawRenderStateLocal, MeshBatchAndRelevance.PrimitiveSceneProxy, MeshBatch.BatchHitProxyId);
 	//						break;
-	//					case ETressFXRenderUsage::TFXRU_FillColor:
+	//					case ETressFXPass::TFXRU_FillColor:
 	//						//FTressFXFillColorDrawingPolicyFactory::DrawDynamicMesh(RHICmdList, View, FTressFXFillColorDrawingPolicyFactory::ContextType(), MeshBatch, true, DrawRenderStateLocal, MeshBatchAndRelevance.PrimitiveSceneProxy, MeshBatch.BatchHitProxyId);
 	//						break;
 	//					default:
@@ -738,7 +826,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 	//		DrawClearQuadMRT( RHICmdList, true, 2, ClearColors, false, 0, false, 0);
 	//		FMeshPassProcessorRenderState DrawRenderState(View);
 	//		RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
-	//		View.TressFXSet.DrawPrims(RHICmdList, View, DrawRenderState, false, ETressFXRenderUsage::TFXRU_DepthsAlpha);
+	//		View.TressFXSet.DrawPrims(RHICmdList, View, DrawRenderState, false, ETressFXPass::TFXRU_DepthsAlpha);
 	//		RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, UAVs, 1);
 	//		RHICmdList.TransitionResource(EResourceTransitionAccess::EReadable, SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture);
 	//	}
@@ -834,6 +922,35 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 	//}
 }
 
+void FSceneRenderer::RenderTressFXROVPass(FRHICommandListImmediate& RHICmdList)
+{
+	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
+	{
+		FViewInfo& View = Views[ViewIndex];
+
+		if (View.TressFXMeshBatches.Num() < 1)
+		{
+			continue;
+		}
+
+		TUniformBufferRef<FOpaqueBasePassUniformParameters> BasePassUniformBuffer;
+		// this should include forward lighting buffer i think, if not will need to bind manually
+		CreateOpaqueBasePassUniformBuffer(RHICmdList, View, nullptr, BasePassUniformBuffer);
+		FMeshPassProcessorRenderState DrawRenderState(View, BasePassUniformBuffer);
+		
+		if (View.ShouldRenderView())
+		{
+			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
+
+			//do this type of thing.
+			//FMeshPassProcessorRenderState DrawRenderState(InDrawRenderState);
+			//SetupBasePassView(RHICmdList, View, this);
+			//View.ParallelMeshDrawCommandPasses[EMeshPass::BasePass].DispatchDraw(nullptr, RHICmdList);
+
+		}
+	}
+}
+
 void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views)
 {
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
@@ -883,7 +1000,7 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 	//			SetRenderTargets(RHICmdList, ARRAY_COUNT(RenderTargets), RenderTargets, SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, ESimpleRenderTargetMode::EExistingColorAndDepth, FExclusiveDepthStencil::DepthWrite_StencilWrite);
 	//		}
 	//		RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
-	//		View.TressFXSet.DrawPrims(RHICmdList, View, DrawRenderState, false, ETressFXRenderUsage::TFXRU_FillColor);
+	//		View.TressFXSet.DrawPrims(RHICmdList, View, DrawRenderState, false, ETressFXPass::TFXRU_FillColor);
 	//	}
 
 	//	{

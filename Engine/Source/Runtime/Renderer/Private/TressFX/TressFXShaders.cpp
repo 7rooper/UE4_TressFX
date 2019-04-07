@@ -98,66 +98,43 @@ IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFX_VelocityDepthPS<false>, TEXT
 ////////////////////////////////////////////////////////////////////////////////
 
 
-//FTressFX_FillColorPS::FTressFX_FillColorPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
-//{
-//	g_vViewport.Bind(Initializer.ParameterMap, TEXT("g_vViewport"));
-//	tressfxShadeParameters.Bind(Initializer.ParameterMap, TEXT("tressfxShadeParameters"));
-//	BindBasePassUniformBuffer(Initializer.ParameterMap, PassUniformBuffer);
-//}
-//
-//void FTressFX_FillColorPS::ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
-//{
-//	FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
-//	FForwardLightingParameters::ModifyCompilationEnvironment(Platform, OutEnvironment);
-//}
-//
-//bool FTressFX_FillColorPS::ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType)
-//{
-//	// Only the local vertex factory supports the position-only stream
-//	if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
-//	{
-//		return true;
-//	}
-//
-//	return false;
-//}
-//
-//
-//bool FTressFX_FillColorPS::Serialize(FArchive& Ar)
-//{
-//	const bool result = FMeshMaterialShader::Serialize(Ar);
-//	Ar << g_vViewport << tressfxShadeParameters;
-//	return result;
-//}
-//
-//void FTressFX_FillColorPS::SetMesh(FRHICommandList& RHICmdList, const FVertexFactory* VertexFactory, const FSceneView& View, const FPrimitiveSceneProxy* Proxy, const FMeshBatchElement& BatchElement, const FDrawingPolicyRenderState& DrawRenderState)
-//{
-//	FMeshMaterialShader::SetMesh(RHICmdList, GetPixelShader(), VertexFactory, View, Proxy, BatchElement, DrawRenderState);
-//	const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)Proxy;
-//
-//	SetUniformBufferParameter(RHICmdList, GetPixelShader(), tressfxShadeParameters, TFXProxy->TressFXHairObject->ShadeParametersUniformBuffer);
-//}
-//
-//void FTressFX_FillColorPS::SetParameters(
-//	FRHICommandList& RHICmdList,
-//	const FMaterialRenderProxy* MaterialRenderProxy,
-//	const FMaterial& MaterialResource,
-//	const FViewInfo& View,
-//	const TUniformBufferRef<FViewUniformShaderParameters>& ViewUniformBuffer,
-//	const bool bIsInstancedStereo,
-//	const bool bIsInstancedStereoEmulated,
-//	const FDrawingPolicyRenderState& DrawRenderState
-//)
-//{
-//	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
-//	FMeshMaterialShader::SetParameters(RHICmdList, GetPixelShader(), MaterialRenderProxy, MaterialResource, View, DrawRenderState.GetViewUniformBuffer(), DrawRenderState.GetPassUniformBuffer());
-//	SetUniformBufferParameter(RHICmdList, ShaderRHI, GetUniformBufferParameter<FForwardLightData>(), View.ForwardLightingResources->ForwardLightDataUniformBuffer);
-//	FIntRect ViewRect = View.UnscaledViewRect;
-//	SetShaderValue(RHICmdList, GetPixelShader(), g_vViewport, FVector4(0, 0, ViewRect.Width(), ViewRect.Height()));
-//}
-//
-////IMPLEMENT_MATERIAL_SHADER_TYPE(, FTressFX_FillColorPS, TEXT("/Engine/Private/TressFX_FillColorPS.usf"), TEXT("main"), SF_Pixel);
-//IMPLEMENT_MATERIAL_SHADER_TYPE(, FTressFX_FillColorPS, TEXT("/Engine/Private/TressFX_FillColorPS.usf"), TEXT("FillColors_Deferred"), SF_Pixel);
+FTressFX_FillColorPS::FTressFX_FillColorPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
+{
+	tressfxShadeParameters.Bind(Initializer.ParameterMap, TEXT("tressfxShadeParameters"));
+	BindBasePassUniformBuffer(Initializer.ParameterMap, PassUniformBuffer);
+}
+
+void FTressFX_FillColorPS::ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
+{
+	FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
+	FForwardLightingParameters::ModifyCompilationEnvironment(Platform, OutEnvironment);
+}
+
+void FTressFX_FillColorPS::GetShaderBindings(
+	const FScene* Scene,
+	ERHIFeatureLevel::Type FeatureLevel,
+	const FPrimitiveSceneProxy* PrimitiveSceneProxy,
+	const FMaterialRenderProxy& MaterialRenderProxy,
+	const FMaterial& Material,
+	const FMeshPassProcessorRenderState& DrawRenderState,
+	const FTressFXShaderElementData& ShaderElementData,
+	FMeshDrawSingleShaderBindings& ShaderBindings) const
+{
+
+	FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
+	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
+	const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)PrimitiveSceneProxy;
+	ShaderBindings.Add(tressfxShadeParameters, TFXProxy->TressFXHairObject->ShadeParametersUniformBuffer);
+
+	if (ShaderElementData.ForwardLightDataBuffer.IsValid() && ShaderElementData.ForwardLightDataBuffer->IsValid())
+	{
+		//not sure if this is needed, I THINK its included in the opaque bass pass buffer shared params...
+		ShaderBindings.Add(GetUniformBufferParameter<FForwardLightData>(), ShaderElementData.ForwardLightDataBuffer);
+	}
+}
+
+//IMPLEMENT_MATERIAL_SHADER_TYPE(, FTressFX_FillColorPS, TEXT("/Engine/Private/TressFX_FillColorPS.usf"), TEXT("main"), SF_Pixel);
+IMPLEMENT_MATERIAL_SHADER_TYPE(, FTressFX_FillColorPS, TEXT("/Engine/Private/TressFX_FillColorPS.usf"), TEXT("FillColors_Deferred"), SF_Pixel);
 
 /////////////////////////////////////////////////////////////////////////////////
 //  JAKETODO

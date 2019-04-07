@@ -4151,10 +4151,6 @@ void FDeferredShadingSceneRenderer::InitViewsPossiblyAfterPrepass(FRHICommandLis
 		UpdatePrimitiveIndirectLightingCacheBuffers();
 	}
 
-	/*@BEGIN Third party code TressFX*/
-	TressFXRendering::TressFXSetupViews(Views);
-	/*@End Third party code TressFX*/
-
 	UpdateTranslucencyTimersAndSeparateTranslucencyBufferSize(RHICmdList);
 
 	SetupSceneReflectionCaptureBuffer(RHICmdList);

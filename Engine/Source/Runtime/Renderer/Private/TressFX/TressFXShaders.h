@@ -2,10 +2,11 @@
 #include "CoreMinimal.h"
 #include "RendererInterface.h"
 #include "MeshMaterialShader.h"
+#include "TressFX/TressFXSceneProxy.h"
 #include "ShaderBaseClasses.h"
 #include "GlobalShader.h"
 
-enum class ETressFXRenderUsage : uint8
+enum class ETressFXPass : uint8
 {
 	TFXRU_PPLL,
 	TFXRU_DepthsAlpha,
@@ -14,24 +15,7 @@ enum class ETressFXRenderUsage : uint8
 	TFXRU_MAX,
 };
 
-class FTressFXShaderElementData : public FMeshMaterialShaderElementData
-{
-public:
-	FTressFXShaderElementData(ETressFXRenderUsage InTFXPass, const FSceneView* InViewIfDynamicMeshCommand) :
-		TFXPass(InTFXPass)
-	{
-		if (InViewIfDynamicMeshCommand)
-		{
-			auto ViewSize = InViewIfDynamicMeshCommand->UnscaledViewRect.Size();
-			FragmentBufferSize = FVector4(ViewSize.X, ViewSize.Y, ViewSize.X*ViewSize.Y, 0);
-			ViewRect = InViewIfDynamicMeshCommand->UnscaledViewRect;
-		}
-	}
-	ETressFXRenderUsage TFXPass;
-	FVector4 FragmentBufferSize;
-	FIntRect ViewRect;
-
-};
+class FTressFXShaderElementData;
 
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXCopyOpaqueDepthPS
@@ -258,7 +242,7 @@ public:
 
 	FTressFX_VelocityDepthPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
 	{
-		g_vViewport.Bind(Initializer.ParameterMap, TEXT("g_vViewport"));
+
 	}
 
 
@@ -272,7 +256,6 @@ public:
 
 	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType)
 	{
-		// Only the local vertex factory supports the position-only stream
 		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
 		{
 			return true;
@@ -285,7 +268,6 @@ public:
 	virtual bool Serialize(FArchive& Ar) override
 	{
 		const bool result = FMeshMaterialShader::Serialize(Ar);
-		Ar << g_vViewport;
 		return result;
 	}
 
@@ -300,13 +282,11 @@ public:
 		const FTressFXShaderElementData& ShaderElementData,
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
-		//JAKETODO, just use view from uniform buffer in shader, this isnt needed
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
-		ShaderBindings.Add(g_vViewport, FVector4(0, 0, ShaderElementData.ViewRect.Width(), ShaderElementData.ViewRect.Height()));
 	}
 
 public:
-	FShaderParameter g_vViewport;
+
 };
 
 
@@ -326,9 +306,7 @@ public:
 	FTressFX_DepthsAlphaPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
 	{
 		RWFragmentDepthsTexture.Bind(Initializer.ParameterMap, TEXT("RWFragmentDepthsTexture"));
-		g_vViewport.Bind(Initializer.ParameterMap, TEXT("g_vViewport"));
 	}
-
 
 	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
 	{
@@ -340,7 +318,6 @@ public:
 
 	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType)
 	{
-		// Only the local vertex factory supports the position-only stream
 		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
 		{
 			return true;
@@ -353,30 +330,9 @@ public:
 	virtual bool Serialize(FArchive& Ar) override
 	{
 		const bool result = FMeshMaterialShader::Serialize(Ar);
-		Ar << RWFragmentDepthsTexture << g_vViewport;
+		Ar << RWFragmentDepthsTexture;
 		return result;
 	}
-
-	//void SetMesh(FRHICommandList& RHICmdList, const FVertexFactory* VertexFactory, const FSceneView& View, const FPrimitiveSceneProxy* Proxy, const FMeshBatchElement& BatchElement, const FDrawingPolicyRenderState& DrawRenderState)
-	//{
-	//	FMeshMaterialShader::SetMesh(RHICmdList, GetPixelShader(), VertexFactory, View, Proxy, BatchElement, DrawRenderState);
-	//}
-
-	//void SetParameters(
-	//	FRHICommandList& RHICmdList,
-	//	const FMaterialRenderProxy* MaterialRenderProxy,
-	//	const FMaterial& MaterialResource,
-	//	const FSceneView& View,
-	//	const TUniformBufferRef<FViewUniformShaderParameters>& ViewUniformBuffer,
-	//	const bool bIsInstancedStereo,
-	//	const bool bIsInstancedStereoEmulated,
-	//	const FMeshPassProcessorRenderState& DrawRenderState
-	//)
-	//{
-	//	FMeshMaterialShader::SetParameters(RHICmdList, GetPixelShader(), MaterialRenderProxy, MaterialResource, View, ViewUniformBuffer, DrawRenderState.GetPassUniformBuffer());
-	//	FIntRect ViewRect = View.UnscaledViewRect;
-	//	SetShaderValue(RHICmdList, GetPixelShader(), g_vViewport, FVector4(0, 0, ViewRect.Width(), ViewRect.Height()));
-	//}
 
 	void GetShaderBindings(
 		const FScene* Scene,
@@ -388,102 +344,70 @@ public:
 		const FTressFXShaderElementData& ShaderElementData,
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
-		//JAKETODO, just use view from uniform buffer in shader, this isnt needed
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
-		ShaderBindings.Add(g_vViewport, FVector4(0, 0, ShaderElementData.ViewRect.Width(), ShaderElementData.ViewRect.Height()));
 	}
 
 public:
 
 	FRWShaderParameter RWFragmentDepthsTexture;
-	FShaderParameter g_vViewport;
 
 };
 
-/////////////////////////////////////////////////////////////////////////////////
-//  FTressFX_FillColorPS - Pixel shader for Third pass of shortcut, also will probably use for PPPL first pass
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//  FTressFX_FillColorPS 
+//////////////////////////////////////////////////////////////////////////////
+
+class FTressFX_FillColorPS : public FMeshMaterialShader
+{
+
+	DECLARE_SHADER_TYPE(FTressFX_FillColorPS, MeshMaterial)
+
+public:
+
+	FTressFX_FillColorPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer);
+
+	FTressFX_FillColorPS() {}
+
+	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment);
+
+	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType)
+	{
+		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
+		{
+			return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5);
+		}
+
+		return false;
+	}
 
 
-//class FTressFX_FillColorPS : public FMeshMaterialShader
-//{
-//
-//	DECLARE_SHADER_TYPE(FTressFX_FillColorPS, MeshMaterial)
-//
-//public:
-//
-//	FTressFX_FillColorPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer);
-//	FTressFX_FillColorPS() {}
-//
-//	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment);
-//
-//	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType);
-//
-//
-//	virtual bool Serialize(FArchive& Ar) override;
-//
-//	void SetMesh(FRHICommandList& RHICmdList, const FVertexFactory* VertexFactory, const FSceneView& View, const FPrimitiveSceneProxy* Proxy, const FMeshBatchElement& BatchElement, const FDrawingPolicyRenderState& DrawRenderState);
-//
-//	void SetParameters(
-//		FRHICommandList& RHICmdList,
-//		const FMaterialRenderProxy* MaterialRenderProxy,
-//		const FMaterial& MaterialResource,
-//		const FViewInfo& View,
-//		const TUniformBufferRef<FViewUniformShaderParameters>& ViewUniformBuffer,
-//		const bool bIsInstancedStereo,
-//		const bool bIsInstancedStereoEmulated,
-//		const FDrawingPolicyRenderState& DrawRenderState
-//	);
-//
-//public:
-//
-//	FShaderParameter g_vViewport;
-//	FShaderUniformBufferParameter tressfxShadeParameters;
-//};
+	virtual bool Serialize(FArchive& Ar) override
+	{
+		const bool result = FMeshMaterialShader::Serialize(Ar);
+		Ar << tressfxShadeParameters;
+		return result;
+	}
 
 
-/////////////////////////////////////////////////////////////////////////////////
-//  JAKETODO
-////////////////////////////////////////////////////////////////////////////////
+	void GetShaderBindings(
+		const FScene* Scene,
+		ERHIFeatureLevel::Type FeatureLevel,
+		const FPrimitiveSceneProxy* PrimitiveSceneProxy,
+		const FMaterialRenderProxy& MaterialRenderProxy,
+		const FMaterial& Material,
+		const FMeshPassProcessorRenderState& DrawRenderState,
+		const FTressFXShaderElementData& ShaderElementData,
+		FMeshDrawSingleShaderBindings& ShaderBindings) const;
 
-//class FTressFXPPLLGather2_PS : public FGlobalShader
-//{
-//
-//	DECLARE_SHADER_TYPE(FTressFXPPLLGather2_PS, Global);
-//
-//public:
-//
-//	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters);
-//	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
-//
-//	static const TCHAR* GetSourceFilename();
-//	static const TCHAR* GetFunctionName();
-//
-//	FTressFXPPLLGather2_PS(const ShaderMetaType::CompiledShaderInitializerType& Initializer);
-//
-//
-//	FTressFXPPLLGather2_PS() {}
-//
-//	virtual bool Serialize(FArchive& Ar) override;
-//
-//	void SetShaderParams(FRHICommandList& RHICmdList, const FViewInfo& view, FShaderResourceViewRHIParamRef ParamLinkedListSRV, FTextureRHIParamRef HeadListSRV);
-//
-//
-//public:
-//
-//	FShaderResourceParameter tFragmentListHead;
-//	FShaderResourceParameter LinkedListSRV;
-//
-//	FShaderParameter g_vViewport;
-//	FShaderParameter g_mInvViewProj;
-//	FShaderParameter g_vEye;
-//
-//};
-//
+public:
+
+	FShaderUniformBufferParameter tressfxShadeParameters;
+};
+
+
 ///////////////////////////////////////////////////////////////////////////////////
-////  Resolve velocity values from tressfx to ue4
+////  Resolve velocity values from tressfx intermediate target to ue4
 //////////////////////////////////////////////////////////////////////////////////
-
 
 class FTressFXResolveVelocityPs : public FGlobalShader
 {
@@ -534,83 +458,3 @@ class FTressFXResolveVelocityPs : public FGlobalShader
 
 	FShaderResourceParameter VelocityTexture;
 };
-
-///////////////////////////////////////////////////////////////////////////////////
-////  JAKETODO
-//////////////////////////////////////////////////////////////////////////////////
-//
-//class FTressFX_PPLLBuildVS : public FMeshMaterialShader
-//{
-//
-//	DECLARE_SHADER_TYPE(FTressFX_PPLLBuildVS, MeshMaterial)
-//
-//protected:
-//
-//	FTressFX_PPLLBuildVS() :FMeshMaterialShader() {}
-//
-//	FTressFX_PPLLBuildVS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer);
-//
-//public:
-//
-//	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType);
-//
-//	virtual bool Serialize(FArchive& Ar) override;
-//
-//	void SetMesh(FRHICommandList& RHICmdList, const FVertexFactory* VertexFactory, const FSceneView& View, const FPrimitiveSceneProxy* Proxy, const FMeshBatchElement& BatchElement, const FDrawingPolicyRenderState& DrawRenderState);
-//	void SetParameters(
-//		FRHICommandList& RHICmdList,
-//		const FMaterialRenderProxy* MaterialRenderProxy,
-//		const FMaterial& MaterialResource,
-//		const FSceneView& View,
-//		const TUniformBufferRef<FViewUniformShaderParameters>& ViewUniformBuffer,
-//		const bool bIsInstancedStereo,
-//		const bool bIsInstancedStereoEmulated,
-//		const FDrawingPolicyRenderState& DrawRenderState
-//	);
-//
-//};
-//
-///////////////////////////////////////////////////////////////////////////////////
-////  JAKETODO
-//////////////////////////////////////////////////////////////////////////////////
-//
-//class FTressFX_PPLLBuildPS : public FMeshMaterialShader
-//{
-//
-//	DECLARE_SHADER_TYPE(FTressFX_PPLLBuildPS, MeshMaterial)
-//
-//protected:
-//
-//	FTressFX_PPLLBuildPS() {}
-//	FTressFX_PPLLBuildPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer);
-//
-//public:
-//
-//	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType);
-//
-//	virtual bool Serialize(FArchive& Ar) override;
-//
-//	void SetMesh(FRHICommandList& RHICmdList, const FVertexFactory* VertexFactory, const FSceneView& View, const FPrimitiveSceneProxy* Proxy, const FMeshBatchElement& BatchElement, const FDrawingPolicyRenderState& DrawRenderState);
-//
-//	void SetParameters(
-//		FRHICommandList& RHICmdList,
-//		const FMaterialRenderProxy* MaterialRenderProxy,
-//		const FMaterial& MaterialResource,
-//		const FSceneView& View,
-//		const TUniformBufferRef<FViewUniformShaderParameters>& ViewUniformBuffer,
-//		const bool bIsInstancedStereo,
-//		const bool bIsInstancedStereoEmulated,
-//		const FDrawingPolicyRenderState& DrawRenderState
-//	);
-//
-//private:
-//
-//	FShaderParameter tRWFragmentListHead;
-//	FShaderParameter LinkedListUAV;
-//	FShaderParameter nNodePoolSize;
-//	FShaderUniformBufferParameter tressfxShadeParameters;
-//
-//
-//};
-
-
