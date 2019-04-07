@@ -359,8 +359,10 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 	}
 	DynamicRenderData->NumCollisionCapsules = FIntVector4(NumCapsules, NumCapsules, NumCapsules, NumCapsules);
 
+#if WITH_EDITOR
 	// for debugging
 	TArray<int32> UsedBoneIndexes;
+#endif
 
 	for (auto It = Asset->ImportData->BoneNameIndexMap.CreateIterator(); It; ++It)
 	{
@@ -395,7 +397,9 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 			if(SkelBoneIndex < AMD_TRESSFX_MAX_NUM_BONES)
 			{
 				DynamicRenderData->BoneTransforms[SkelBoneIndex] = Result;
+#if WITH_EDITOR
 				UsedBoneIndexes.Add(SkelBoneIndex);
+#endif
 			}		
 		}
 		else
@@ -404,6 +408,8 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 		}
 	}
 
+#if WITH_EDITOR
+	//useful for debugging
 	for(int32 i = 0; i < AMD_TRESSFX_MAX_NUM_BONES; i++)
 	{
 		if (!UsedBoneIndexes.Contains(i))
@@ -411,7 +417,7 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 			DynamicRenderData->BoneTransforms[i] = FMatrix(FPlane(0, 0, 0, 0), FPlane(0, 0, 0, 0), FPlane(0, 0, 0, 0), FPlane(0, 0, 0, 0));
 		}
 	}
-
+#endif
 	DynamicRenderData->BoneSkinningData = Asset->ImportData->SkinningData;
 
 	FTressFXSceneProxy* LocalTFXProxy = static_cast<FTressFXSceneProxy*>(SceneProxy);
