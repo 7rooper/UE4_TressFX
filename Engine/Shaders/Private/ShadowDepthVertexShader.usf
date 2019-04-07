@@ -25,7 +25,14 @@
 
 void SetShadowDepthOutputs(float4 WorldPosition, out float4 OutPosition, out float ShadowDepth)
 {
-	OutPosition = mul(WorldPosition, PassStruct.ProjectionMatrix);
+	/*@BEGIN Third party code TressFX*/
+	#if !USE_TRESSFX
+		OutPosition = mul(WorldPosition, PassStruct.ProjectionMatrix);
+	#else
+		OutPosition = mul(WorldPosition,View.ClipToTranslatedWorld);
+		OutPosition = mul(WorldPosition, PassStruct.ProjectionMatrix);
+	#endif
+	/*@END Third party code TressFX*/
 
 	// Clamp the vertex to the near plane if it is in front of the near plane
 	// This has problems if some vertices of a triangle get clamped and others do not, also causes artifacts with non-ortho projections

@@ -1,6 +1,4 @@
 
-#pragma optimize("", off)
-
 #include "TressFX/TressFXVertexFactory.h"
 #include "SceneView.h"
 #include "MeshBatch.h"
@@ -94,4 +92,3 @@ void FTressFXVertexFactory::InitRHI()
 }
 
 IMPLEMENT_VERTEX_FACTORY_TYPE(FTressFXVertexFactory, "/Engine/Private/TressFXVertexFactory.ush", true, false, true, false, false);
-#pragma optimize("", on)
