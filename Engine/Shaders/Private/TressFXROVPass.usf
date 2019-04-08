@@ -553,12 +553,21 @@ void ApplyBentNormal( in FMaterialPixelParameters MaterialParameters, in float R
 RasterizerOrderedTexture2D<float4> GbufferA;
 RasterizerOrderedTexture2D<float4> GbufferB;
 RasterizerOrderedTexture2D<float4> GbufferE;
-RasterizerOrderedTexture2D<float4> GbufferD;
 RasterizerOrderedTexture2D<float4> GbufferC;
 
-EARLYDEPTHSTENCIL
+RasterizerOrderedTexture2D<float4> SceneColor;
+
+//EARLYDEPTHSTENCIL
 void main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace)
 {
+    uint2 screenAddr = uint2(input.Position.xy);
+    float ExistingDepth = SceneTexturesStruct.SceneDepthTexture[screenAddr].r;
+
+    if (ExistingDepth >= input.Position.z)
+    {
+        return;
+    }
+
     float4 viewport = float4(View.ViewRectMin.xy, View.ViewSizeAndInvSize.xy);
     float3 vNDC = ScreenPosToNDC(input.Position.xyz, viewport);
     float coverage = ComputeCoverage(input.FactoryInterpolants.p0p1.xy, input.FactoryInterpolants.p0p1.zw, vNDC.xy, viewport.zw);
@@ -762,6 +771,18 @@ void main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace)
 		// -0.5 .. 0.5, could be optimzed as lower quality noise would be sufficient
     float QuantizationBias = PseudoRandom(MaterialParameters.SvPosition.xy) - 0.5f;
 
-	//TODO here, blend sorted g-buffer?
-    //EncodeGBuffer(GBuffer, Out.MRT[1], Out.MRT[2], Out.MRT[3], OutGBufferD, OutGBufferE, OutVelocity, QuantizationBias);
+    float4 OutGBufferA;
+    float4 OutGBufferB;
+    float4 OutGBufferC;
+    float4 OutGBufferDummy;
+    float4 OutGBufferE;
+    EncodeGBuffer(GBuffer, OutGBufferA, OutGBufferB, OutGBufferC, OutGBufferDummy, OutGBufferE, OutGBufferDummy, QuantizationBias);
+
+	//just add it over the top for now and see if this will even compile
+	//TODO here, BLEND IT WITH EXISTING depending on depth!
+    GbufferA[screenAddr] = OutGBufferA;
+    GbufferB[screenAddr] = OutGBufferB;
+    GbufferE[screenAddr]  = OutGBufferE;
+    GbufferC[screenAddr] = OutGBufferC;
+    SceneColor[screenAddr] = FinalColor;
 }
