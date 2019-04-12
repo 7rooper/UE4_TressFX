@@ -76,7 +76,7 @@ UObject* UTressFXMeshFactory::FactoryCreateText(UClass* InClass, UObject* InPare
 
 	const bool bCullEmptys = true;
 
-	FEditorDelegates::OnAssetPreImport.Broadcast(this, InClass, InParent, InName, Type);
+	GEditor->GetEditorSubsystem<UImportSubsystem>()->BroadcastAssetPreImport(this, InClass, InParent, InName, Type);
 
 	FString NewName = FString::Printf(TEXT("%s_TFXMesh"), *InName.ToString());
 	const int32 BufferSize = BufferEnd - Buffer;

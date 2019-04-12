@@ -6,13 +6,17 @@
 #include "ShaderBaseClasses.h"
 #include "GlobalShader.h"
 
-enum class ETressFXPass : uint8
+
+struct ETressFXPass
 {
-	TFXRU_PPLL,
-	TFXRU_DepthsAlpha,
-	TFXRU_DepthsVelocity,
-	TFXRU_FillColor,
-	TFXRU_MAX,
+	enum Type {
+		DepthsAlpha,
+		ResolveDepths,
+		DepthsVelocity,
+		ResolveVelocity,
+		FillColor,
+		Max = FillColor
+	};
 };
 
 class FTressFXShaderElementData;
@@ -446,13 +450,11 @@ class FTressFXResolveVelocityPs : public FGlobalShader
 	{
 		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
 		Ar << VelocityTexture;
-		//Ar << DepthTexture;
 		return bShaderHasOutdatedParameters;
 	}
 
 	void SetParameters(FRHICommandList& RHICmdList, TRefCountPtr<IPooledRenderTarget> TressFXVelocityRT, TRefCountPtr<IPooledRenderTarget> TressFXDepth)
 	{
-		//FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, GetPixelShader(), View.ViewUniformBuffer);
 		SetTextureParameter(RHICmdList, GetPixelShader(), VelocityTexture, TressFXVelocityRT->GetRenderTargetItem().TargetableTexture);
 	}
 

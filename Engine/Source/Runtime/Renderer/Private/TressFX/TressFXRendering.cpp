@@ -122,7 +122,7 @@ void FTressFXDepthsVelocityPassMeshProcessor::Process(
 
 	//SetDepthPassDitheredLODTransitionState(ViewIfDynamicMeshCommand, MeshBatch, StaticMeshId, DrawRenderState);
 
-	FTressFXShaderElementData ShaderElementData(ETressFXPass::TFXRU_DepthsVelocity, ViewIfDynamicMeshCommand);
+	FTressFXShaderElementData ShaderElementData(ETressFXPass::DepthsVelocity, ViewIfDynamicMeshCommand);
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
 
 	TMeshProcessorShaders<
@@ -218,12 +218,12 @@ FMeshPassProcessor* CreateTRessFXDepthsVelocityPassProcessor(const FScene* Scene
 }
 
 //////////////////////////////////////////////////////////////////////////
-//FTressFXROVPassMeshProcessor
+//TressFXDepthsAlphaPassMeshProcessor
 /////////////////////////////////////////////////////////////////////////
 
 
 template<bool bCalcVelocity>
-void FTressFXROVPassMeshProcessor::Process(
+void TressFXDepthsAlphaPassMeshProcessor::Process(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
 	int32 StaticMeshId,
@@ -282,7 +282,7 @@ void FTressFXROVPassMeshProcessor::Process(
 	//);
 }
 
-void FTressFXROVPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId)
+void TressFXDepthsAlphaPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId)
 {
 
 	const FMaterialRenderProxy* FallbackMaterialRenderProxyPtr = nullptr;
@@ -298,7 +298,7 @@ void FTressFXROVPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshB
 	//todo
 }
 
-FTressFXROVPassMeshProcessor::FTressFXROVPassMeshProcessor(
+TressFXDepthsAlphaPassMeshProcessor::TressFXDepthsAlphaPassMeshProcessor(
 	const FScene* Scene,
 	const FSceneView* InViewIfDynamicMeshCommand,
 	const FMeshPassProcessorRenderState& InPassDrawRenderState,
@@ -311,18 +311,18 @@ FTressFXROVPassMeshProcessor::FTressFXROVPassMeshProcessor(
 	PassDrawRenderState.SetPassUniformBuffer(Scene->UniformBuffers.OpaqueBasePassUniformBuffer);
 }
 
-void SetupROVPassState(FMeshPassProcessorRenderState& DrawRenderState)
+void SetupDepthsAlphaPassState(FMeshPassProcessorRenderState& DrawRenderState)
 {
 	//TODO
 	//DrawRenderState.SetBlendState(TStaticBlendState<CW_RGBA>::GetRHI());
 	//DrawRenderState.SetDepthStencilState(TStaticDepthStencilState<true, CF_DepthNearOrEqual>::GetRHI());
 }
 
-FMeshPassProcessor* CreateTRessFXROVPassProcessor(const FScene* Scene, const FSceneView* InViewIfDynamicMeshCommand, FMeshPassDrawListContext* InDrawListContext)
+FMeshPassProcessor* CreateTRessFXDepthsAlphaPassProcessor(const FScene* Scene, const FSceneView* InViewIfDynamicMeshCommand, FMeshPassDrawListContext* InDrawListContext)
 {
 	FMeshPassProcessorRenderState PassDrawRenderState;
-	SetupROVPassState(PassDrawRenderState);
-	return new(FMemStack::Get()) FTressFXROVPassMeshProcessor(Scene, InViewIfDynamicMeshCommand, PassDrawRenderState, InDrawListContext);
+	SetupDepthsAlphaPassState(PassDrawRenderState);
+	return new(FMemStack::Get()) TressFXDepthsAlphaPassMeshProcessor(Scene, InViewIfDynamicMeshCommand, PassDrawRenderState, InDrawListContext);
 }
 
 /*-----------------------------------------------------------------------------
@@ -762,14 +762,12 @@ extern void DrawRectangle(
 //
 //}
 
-bool FSceneRenderer::ShouldRenderTressFX()
+bool FSceneRenderer::ShouldRenderTressFX(int32 TressFXPass)
 {
-	int32 TressFXType = CVarTressFXType.GetValueOnAnyThread();
-	if (TressFXType <= 0)
+	if (TressFXPass < 0 || TressFXPass > ETressFXPass::Max)
 	{
 		return false;
 	}
-	TressFXType = TressFXType > 2 ? 2 : TressFXType;
 
 	if (!Scene->World || (Scene->World->WorldType != EWorldType::EditorPreview && Scene->World->WorldType != EWorldType::Inactive))
 	{
@@ -1080,7 +1078,7 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 
 void FSceneRenderer::RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHICmdList)
 {
-	if (!ShouldRenderTressFX())
+	if (!ShouldRenderTressFX((int32)ETressFXPass::DepthsVelocity))
 	{
 		return;
 	}
@@ -1119,24 +1117,20 @@ void FSceneRenderer::RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHIC
 
 void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList)
 {
-	if (!ShouldRenderTressFX())
-	{
-		return;
-	}
 
 	int32 TressFXType = CVarTressFXType.GetValueOnAnyThread();
-	TressFXType = TressFXType > 2 ? 2 : TressFXType;
+	TressFXType = FMath::Clamp(TressFXType, 0, (int32)ETressFXRenderType::Max);
 
 	SCOPED_DRAW_EVENT(RHICmdList, TressFXBasePass);
 
 	switch (TressFXType)
 	{
-		case 1:
+		case ETressFXRenderType::Opaque:
 		{
-			//todo
+			checkf(0, TEXT("RenderTressFXBasePass was callled, but render type is opaque! fix that"));
 			break;
 		}
-		case 2:
+		case ETressFXRenderType::ShortCut:
 		{
 			RenderShortcutBasePass(RHICmdList, Views);
 			break;
@@ -1145,30 +1139,25 @@ void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList)
 		{
 			check(0);
 		}
-
 	}
 }
 
 void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList)
 {
-	if(!ShouldRenderTressFX())
-	{
-		return;
-	}
 
 	int32 TressFXType = CVarTressFXType.GetValueOnAnyThread();
-	TressFXType = TressFXType > 2 ? 2 : TressFXType;
+	TressFXType = FMath::Clamp(TressFXType, 0, (int32)ETressFXRenderType::Max);
 
 	SCOPED_DRAW_EVENT(RHICmdList, TressFXResolvePass);
 
 	switch (TressFXType)
 	{
-		case 1:
+		case ETressFXRenderType::Opaque:
 		{
-			//todo
+			checkf(0, TEXT("RenderTressfXResolvePass was callled, but render type is opaque! fix that"));
 			break;
 		}
-		case 2:
+		case ETressFXRenderType::ShortCut:
 		{
 			RenderShortcutResolvePass(RHICmdList, Views);
 			break;
@@ -1183,12 +1172,13 @@ void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdLi
 
 void FSceneRenderer::RenderTressFXResolveVelocity(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& VelocityRT)
 {
-	if (!ShouldRenderTressFX())
+	if (!ShouldRenderTressFX(ETressFXPass::ResolveVelocity))
 	{
 		return;
 	}
 
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
+	
 	SCOPED_DRAW_EVENT(RHICmdList, TressFXVelocity);
 
 	FTextureRHIParamRef Resources[2] = {

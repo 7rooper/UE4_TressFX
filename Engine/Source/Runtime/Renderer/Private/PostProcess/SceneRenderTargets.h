@@ -579,18 +579,17 @@ public:
 
 	/*@BEGIN Third party code TressFX*/
 	TRefCountPtr<IPooledRenderTarget> TressFXSceneDepth;
-	TRefCountPtr<FRHIShaderResourceView> TressFXStencilSRV;
 	TRefCountPtr<IPooledRenderTarget> TressFXVelocity;
 
-	//shortcut
+	//shortcut specific
 	TRefCountPtr<IPooledRenderTarget> AccumInvAlpha;
 	TRefCountPtr<IPooledRenderTarget> FragmentDepthsTexture;
 	TRefCountPtr<IPooledRenderTarget> FragmentColorsTexture;
 
 	//k-buffer
-	TRefCountPtr<IPooledRenderTarget> PPLLHeads;
-	FRWBufferStructured PPLLNodes;
-	int32 NodePoolSize;
+	//TRefCountPtr<IPooledRenderTarget> PPLLHeads;
+	//FRWBufferStructured PPLLNodes;
+	//int32 NodePoolSize;
 	/*@END Third party code TressFX*/
 
 private:

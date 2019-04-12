@@ -803,7 +803,6 @@ public:
 	TArray<FVolumetricMeshBatch, SceneRenderingAllocator> VolumetricMeshBatches;
 
 	/*@BEGIN Third party code TressFX*/
-	//	FTressFXPrimSet TressFXSet;
 	TArray<FTressFXMeshBatch, SceneRenderingAllocator> TressFXMeshBatches;
 	bool bHasTressFX;
 	/*@END Third party code TressFX*/
@@ -1574,7 +1573,7 @@ protected:
 	void ResolveSceneColor(FRHICommandList& RHICmdList);
 
 	/*@BEGIN Third party code TressFX*/
-	bool ShouldRenderTressFX();
+	bool ShouldRenderTressFX(int32 TressFXPass);
 	void RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList);
 	void RenderTressFXROVPass(FRHICommandListImmediate& RHICmdList);
 	void RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHICmdList);
@@ -1797,7 +1796,7 @@ extern bool IsDynamicInstancingEnabled(ERHIFeatureLevel::Type FeatureLevel);
 class FTressFXShaderElementData : public FMeshMaterialShaderElementData
 {
 public:
-	FTressFXShaderElementData(ETressFXPass InTFXPass, const FSceneView* InViewIfDynamicMeshCommand) :
+	FTressFXShaderElementData(ETressFXPass::Type InTFXPass, const FSceneView* InViewIfDynamicMeshCommand) :
 		TFXPass(InTFXPass)
 	{
 		if (InViewIfDynamicMeshCommand)
@@ -1805,13 +1804,13 @@ public:
 			auto ViewSize = InViewIfDynamicMeshCommand->UnscaledViewRect.Size();
 			FragmentBufferSize = FVector4(ViewSize.X, ViewSize.Y, ViewSize.X*ViewSize.Y, 0);
 			ViewRect = InViewIfDynamicMeshCommand->UnscaledViewRect;
-			if (InTFXPass == ETressFXPass::TFXRU_FillColor)
+			if (InTFXPass == ETressFXPass::FillColor)
 			{
 				ForwardLightDataBuffer = InViewIfDynamicMeshCommand->ForwardLightingResources->ForwardLightDataUniformBuffer;
 			}
 		}
 	}
-	ETressFXPass TFXPass;
+	ETressFXPass::Type TFXPass;
 	FVector4 FragmentBufferSize;
 	FIntRect ViewRect;
 	TUniformBufferRef<FForwardLightData> ForwardLightDataBuffer;

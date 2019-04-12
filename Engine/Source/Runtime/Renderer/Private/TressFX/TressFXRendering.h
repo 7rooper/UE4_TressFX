@@ -60,14 +60,14 @@ private:
 
 
 //////////////////////////////////////////////////////////////////////////
-//FTressFXROVPassMeshProcessor
+//TressFXDepthsAlphaPassMeshProcessor
 /////////////////////////////////////////////////////////////////////////
 
-class FTressFXROVPassMeshProcessor : public FMeshPassProcessor
+class TressFXDepthsAlphaPassMeshProcessor : public FMeshPassProcessor
 {
 public:
 
-	FTressFXROVPassMeshProcessor(
+	TressFXDepthsAlphaPassMeshProcessor(
 		const FScene* Scene,
 		const FSceneView* InViewIfDynamicMeshCommand,
 		const FMeshPassProcessorRenderState& InPassDrawRenderState,

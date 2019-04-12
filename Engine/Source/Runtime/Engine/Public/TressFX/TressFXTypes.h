@@ -101,11 +101,17 @@ enum ETressFXCollisionType
 	TFXCollsion_SDF UMETA(DisplayName = "Signed Distance Field Collision")
 };
 
-UENUM()
-enum ETressFXRenderType
+
+struct ETressFXRenderType
 {
-	GBuffer,
-	ROV
+	enum Type
+	{
+		Opaque,
+		ShortCut,
+
+		Max = ShortCut
+	};
+
 };
 
 
