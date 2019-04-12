@@ -86,8 +86,7 @@ private:
 		const FMaterialRenderProxy& RESTRICT MaterialRenderProxy,
 		const FMaterial& RESTRICT MaterialResource,
 		ERasterizerFillMode MeshFillMode,
-		ERasterizerCullMode MeshCullMode,
-		bool bNoDepth
+		ERasterizerCullMode MeshCullMode
 	);
 
 	FMeshPassProcessorRenderState PassDrawRenderState;
