@@ -654,27 +654,45 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			ClearUAV(RHICmdList, SceneContext.FragmentDepthsTexture->GetRenderTargetItem(), ShortcutClearValue);
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 
-			FRHIRenderTargetView ColorTargetsRTV[2];
 
-			ColorTargetsRTV[0] = FRHIRenderTargetView(SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture, ERenderTargetLoadAction::ELoad);
-			ColorTargetsRTV[1] = FRHIRenderTargetView(SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture, ERenderTargetLoadAction::ELoad);
-			FRHIDepthRenderTargetView DepthRTV(SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore);
-			FUnorderedAccessViewRHIParamRef UAVs[8] = { SceneContext.FragmentDepthsTexture->GetRenderTargetItem().UAV,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr };
-			RHICmdList.SetRenderTargets(2, ColorTargetsRTV, &DepthRTV, 1, UAVs);
+			FUnorderedAccessViewRHIParamRef UAVs[] = { SceneContext.FragmentDepthsTexture->GetRenderTargetItem().UAV};
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EWritable, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
+			
+			FRHITexture* ColorTargets[] = {
+				SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture,
+				SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture
+			};
+
+			FRHIRenderPassInfo RPInfo(ARRAY_COUNT(ColorTargets), ColorTargets, ERenderTargetActions::Load_Store);
+			RPInfo.UAVIndex = 0;
+			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.FragmentDepthsTexture->GetRenderTargetItem().UAV;			
+			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_Store, ERenderTargetActions::Load_Store);
+			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture;
+			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
+
+			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXDepthsAlpha"));
+
 			FLinearColor ClearColors[] = { FLinearColor::White, FLinearColor::Transparent };
 			DrawClearQuadMRT( RHICmdList, true, 2, ClearColors, false, 0, false, 0);
 			FMeshPassProcessorRenderState DrawRenderState(View);
+
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 			View.ParallelMeshDrawCommandPasses[EMeshPass::TressFX_DepthsAlpha].DispatchDraw(nullptr, RHICmdList);
-			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, UAVs, 1);
+
+			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
 			RHICmdList.TransitionResource(EResourceTransitionAccess::EReadable, SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture);
+			RHICmdList.TransitionResource(EResourceTransitionAccess::EReadable, SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture);
+			RHICmdList.EndRenderPass();
 		}
 		// shortcut pass 2, depths resolve
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveDepths);
 
-			SetRenderTarget(RHICmdList, NULL, SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture);
+			FRHIRenderPassInfo RPInfo(
+				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, 
+				EDepthStencilTargetActions::ClearDepthStencil_DontStoreDepthStencil
+			);
+			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXResolveDepths"));
 
 			TShaderMapRef<FScreenVS>							VertexShader(View.ShaderMap);
 			TShaderMapRef<FTressFXShortCut_ResolveDepthPS>		PixelShader(View.ShaderMap);
@@ -710,13 +728,21 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 				EDRF_Default,
 				1
 			);
+			RHICmdList.EndRenderPass();
 		}
 
 		const bool CopyHairDepthToSceneDepth = true;
 		if(CopyHairDepthToSceneDepth)
 		{
-			SCOPED_DRAW_EVENT(RHICmdList, TressFXSCopyHairDepthToSceneDepth);
+			SCOPED_DRAW_EVENT(RHICmdList, TressFXCopyHairDepthToSceneDepth);
 
+			FRHIRenderPassInfo RPInfo(
+				SceneContext.GetSceneDepthSurface(),
+				EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
+			);
+
+			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXCopyHairDepthToSceneDepth"));
+			
 			FTextureRHIParamRef Resources[1] = {
 				SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture
 			};
@@ -725,7 +751,6 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			TShaderMapRef<FScreenVS>							VertexShader(View.ShaderMap);
 			TShaderMapRef<FTressFXCopyOpaqueDepthPS>			PixelShader(View.ShaderMap);
 
-			SetRenderTarget(RHICmdList, NULL, SceneContext.GetSceneDepthSurface());
 
 			FGraphicsPipelineStateInitializer GraphicsPSOInit;
 			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
@@ -758,35 +783,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 				EDRF_Default,
 				1
 			);
-		}
-	}
-}
-
-void FSceneRenderer::RenderTressFXROVPass(FRHICommandListImmediate& RHICmdList)
-{
-	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
-	{
-		FViewInfo& View = Views[ViewIndex];
-
-		if (View.TressFXMeshBatches.Num() < 1)
-		{
-			continue;
-		}
-
-		TUniformBufferRef<FOpaqueBasePassUniformParameters> BasePassUniformBuffer;
-		// this should include forward lighting buffer i think, if not will need to bind manually
-		CreateOpaqueBasePassUniformBuffer(RHICmdList, View, nullptr, BasePassUniformBuffer);
-		FMeshPassProcessorRenderState DrawRenderState(View, BasePassUniformBuffer);
-		
-		if (View.ShouldRenderView())
-		{
-			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
-
-			//do this type of thing.
-			//FMeshPassProcessorRenderState DrawRenderState(InDrawRenderState);
-			//SetupBasePassView(RHICmdList, View, this);
-			//View.ParallelMeshDrawCommandPasses[EMeshPass::BasePass].DispatchDraw(nullptr, RHICmdList);
-
+			RHICmdList.EndRenderPass();
 		}
 	}
 }

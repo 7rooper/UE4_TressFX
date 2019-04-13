@@ -33,8 +33,8 @@ float CopyHairDepthPs(FScreenVertexOutput Input) : SV_Depth
 
 Texture2D<float> tAccumInvAlpha;
 
-#ifndef TRESSFX_ALPHA_THRESHOLD_FOR_SCENE
-	#define TRESSFX_ALPHA_THRESHOLD_FOR_SCENE 0.7f
+#ifndef TRESSFX_MIN_ALPHA_FOR_SCENE_DEPTH
+	#define TRESSFX_MIN_ALPHA_FOR_SCENE_DEPTH 0.5f
 #endif
 
 void CopyOpaqueDepthPs(FScreenVertexOutput Input, out float Depth : SV_Depth)
@@ -44,7 +44,7 @@ void CopyOpaqueDepthPs(FScreenVertexOutput Input, out float Depth : SV_Depth)
 
 	float fAlpha = saturate(1.0 - fInvAlpha);
 
-    if (fAlpha < TRESSFX_ALPHA_THRESHOLD_FOR_SCENE)
+    if (fAlpha < TRESSFX_MIN_ALPHA_FOR_SCENE_DEPTH)
 	{
         Depth = 0;
 		discard;

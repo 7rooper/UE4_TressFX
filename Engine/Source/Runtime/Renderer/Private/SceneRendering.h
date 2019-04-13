@@ -1575,7 +1575,6 @@ protected:
 	/*@BEGIN Third party code TressFX*/
 	bool ShouldRenderTressFX(int32 TressFXPass);
 	void RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList);
-	void RenderTressFXROVPass(FRHICommandListImmediate& RHICmdList);
 	void RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHICmdList);
 	void RenderTressFXResolveVelocity(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& VelocityRT);
 	void RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList);
