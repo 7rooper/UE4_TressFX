@@ -88,47 +88,47 @@ IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFX_VelocityDepthPS<false>, TEXT
 
 
 /////////////////////////////////////////////////////////////////////////////////
-//  FTressFX_FillColorPS - Pixel shader for Third pass of shortcut, also will probably use for PPPL first pass
+//  FTressFX_FillColorPS - Pixel shader for Third pass of shortcut
 ////////////////////////////////////////////////////////////////////////////////
-//
-//
-//FTressFX_FillColorPS::FTressFX_FillColorPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
-//{
-//	tressfxShadeParameters.Bind(Initializer.ParameterMap, TEXT("tressfxShadeParameters"));
-//	BindBasePassUniformBuffer(Initializer.ParameterMap, PassUniformBuffer);
-//}
-//
-//void FTressFX_FillColorPS::ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
-//{
-//	FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
-//	FForwardLightingParameters::ModifyCompilationEnvironment(Platform, OutEnvironment);
-//}
-//
-//void FTressFX_FillColorPS::GetShaderBindings(
-//	const FScene* Scene,
-//	ERHIFeatureLevel::Type FeatureLevel,
-//	const FPrimitiveSceneProxy* PrimitiveSceneProxy,
-//	const FMaterialRenderProxy& MaterialRenderProxy,
-//	const FMaterial& Material,
-//	const FMeshPassProcessorRenderState& DrawRenderState,
-//	const FTressFXShaderElementData& ShaderElementData,
-//	FMeshDrawSingleShaderBindings& ShaderBindings) const
-//{
-//
-//	FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
-//	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
-//	const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)PrimitiveSceneProxy;
-//	ShaderBindings.Add(tressfxShadeParameters, TFXProxy->TressFXHairObject->ShadeParametersUniformBuffer);
-//
-//	if (ShaderElementData.ForwardLightDataBuffer.IsValid() && ShaderElementData.ForwardLightDataBuffer->IsValid())
-//	{
-//		//not sure if this is needed, I THINK its included in the opaque bass pass buffer shared params...
-//		ShaderBindings.Add(GetUniformBufferParameter<FForwardLightData>(), ShaderElementData.ForwardLightDataBuffer);
-//	}
-//}
-//
-////IMPLEMENT_MATERIAL_SHADER_TYPE(, FTressFX_FillColorPS, TEXT("/Engine/Private/TressFX_FillColorPS.usf"), TEXT("main"), SF_Pixel);
-//IMPLEMENT_MATERIAL_SHADER_TYPE(, FTressFX_FillColorPS, TEXT("/Engine/Private/TressFXROVPass.usf"), TEXT("main"), SF_Pixel);
+
+
+FTressFX_FillColorPS::FTressFX_FillColorPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
+{
+	tressfxShadeParameters.Bind(Initializer.ParameterMap, TEXT("tressfxShadeParameters"));
+	BindBasePassUniformBuffer(Initializer.ParameterMap, PassUniformBuffer);
+}
+
+void FTressFX_FillColorPS::ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
+{
+	FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
+	FForwardLightingParameters::ModifyCompilationEnvironment(Platform, OutEnvironment);
+}
+
+void FTressFX_FillColorPS::GetShaderBindings(
+	const FScene* Scene,
+	ERHIFeatureLevel::Type FeatureLevel,
+	const FPrimitiveSceneProxy* PrimitiveSceneProxy,
+	const FMaterialRenderProxy& MaterialRenderProxy,
+	const FMaterial& Material,
+	const FMeshPassProcessorRenderState& DrawRenderState,
+	const FTressFXShaderElementData& ShaderElementData,
+	FMeshDrawSingleShaderBindings& ShaderBindings) const
+{
+
+	FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
+	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
+	const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)PrimitiveSceneProxy;
+	ShaderBindings.Add(tressfxShadeParameters, TFXProxy->TressFXHairObject->ShadeParametersUniformBuffer);
+
+	if (ShaderElementData.ForwardLightDataBuffer.IsValid() && ShaderElementData.ForwardLightDataBuffer->IsValid())
+	{
+		//not sure if this is needed, I THINK its included in the opaque bass pass buffer shared params...
+		ShaderBindings.Add(GetUniformBufferParameter<FForwardLightData>(), ShaderElementData.ForwardLightDataBuffer);
+	}
+}
+
+IMPLEMENT_MATERIAL_SHADER_TYPE(, FTressFX_FillColorPS, TEXT("/Engine/Private/TressFX_FillColorPS.usf"), TEXT("main"), SF_Pixel);
+
 
 /////////////////////////////////////////////////////////////////////////////////
 //  JAKETODO

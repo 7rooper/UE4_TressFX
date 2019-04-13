@@ -309,52 +309,52 @@ public:
 //  FTressFX_FillColorPS 
 //////////////////////////////////////////////////////////////////////////////
 
-//class FTressFX_FillColorPS : public FMeshMaterialShader
-//{
-//
-//	DECLARE_SHADER_TYPE(FTressFX_FillColorPS, MeshMaterial)
-//
-//public:
-//
-//	FTressFX_FillColorPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer);
-//
-//	FTressFX_FillColorPS() {}
-//
-//	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment);
-//
-//	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType)
-//	{
-//		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
-//		{
-//			return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5);
-//		}
-//
-//		return false;
-//	}
-//
-//
-//	virtual bool Serialize(FArchive& Ar) override
-//	{
-//		const bool result = FMeshMaterialShader::Serialize(Ar);
-//		Ar << tressfxShadeParameters;
-//		return result;
-//	}
-//
-//
-//	void GetShaderBindings(
-//		const FScene* Scene,
-//		ERHIFeatureLevel::Type FeatureLevel,
-//		const FPrimitiveSceneProxy* PrimitiveSceneProxy,
-//		const FMaterialRenderProxy& MaterialRenderProxy,
-//		const FMaterial& Material,
-//		const FMeshPassProcessorRenderState& DrawRenderState,
-//		const FTressFXShaderElementData& ShaderElementData,
-//		FMeshDrawSingleShaderBindings& ShaderBindings) const;
-//
-//public:
-//
-//	FShaderUniformBufferParameter tressfxShadeParameters;
-//};
+class FTressFX_FillColorPS : public FMeshMaterialShader
+{
+
+	DECLARE_SHADER_TYPE(FTressFX_FillColorPS, MeshMaterial)
+
+public:
+
+	FTressFX_FillColorPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer);
+
+	FTressFX_FillColorPS() {}
+
+	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment);
+
+	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType)
+	{
+		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
+		{
+			return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5);
+		}
+
+		return false;
+	}
+
+
+	virtual bool Serialize(FArchive& Ar) override
+	{
+		const bool result = FMeshMaterialShader::Serialize(Ar);
+		Ar << tressfxShadeParameters;
+		return result;
+	}
+
+
+	void GetShaderBindings(
+		const FScene* Scene,
+		ERHIFeatureLevel::Type FeatureLevel,
+		const FPrimitiveSceneProxy* PrimitiveSceneProxy,
+		const FMaterialRenderProxy& MaterialRenderProxy,
+		const FMaterial& Material,
+		const FMeshPassProcessorRenderState& DrawRenderState,
+		const FTressFXShaderElementData& ShaderElementData,
+		FMeshDrawSingleShaderBindings& ShaderBindings) const;
+
+public:
+
+	FShaderUniformBufferParameter tressfxShadeParameters;
+};
 
 
 ///////////////////////////////////////////////////////////////////////////////////
