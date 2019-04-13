@@ -832,12 +832,6 @@ struct FDepthStencilStateInitializerRHI
 {
 	bool bEnableDepthWrite;
 	TEnumAsByte<ECompareFunction> DepthTest;
-
-	/*@BEGIN Third party code TressFX*/
-	TEnumAsByte<EDepthWriteMask> DepthWriteMask;
-	bool bForceDisableDepth;
-	/*@END Third party code TressFX*/
-
 	bool bEnableFrontFaceStencil;
 	TEnumAsByte<ECompareFunction> FrontFaceStencilTest;
 	TEnumAsByte<EStencilOp> FrontFaceStencilFailStencilOp;
@@ -850,6 +844,11 @@ struct FDepthStencilStateInitializerRHI
 	TEnumAsByte<EStencilOp> BackFacePassStencilOp;
 	uint8 StencilReadMask;
 	uint8 StencilWriteMask;
+
+	/*@BEGIN Third party code TressFX*/
+	TEnumAsByte<EDepthWriteMask> DepthWriteMask;
+	bool bForceDisableDepth;
+	/*@END Third party code TressFX*/
 
 	FDepthStencilStateInitializerRHI(
 		bool bInEnableDepthWrite = true,

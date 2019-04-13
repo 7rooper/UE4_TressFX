@@ -15,7 +15,10 @@ struct ETressFXPass
 		DepthsVelocity,
 		ResolveVelocity,
 		FillColor,
-		Max = FillColor
+
+		////
+		Num,
+		Max = (Num - 1)
 	};
 };
 
@@ -74,61 +77,6 @@ class FTressFXCopyOpaqueDepthPS : public FGlobalShader
 
 	FShaderResourceParameter DepthTexture;
 	FShaderResourceParameter tAccumInvAlpha;
-};
-
-/////////////////////////////////////////////////////////////////////////////////
-//  FTressFXCopyHairDepthPS
-////////////////////////////////////////////////////////////////////////////////
-
-class FTressFXCopyHairDepthPS : public FGlobalShader
-{
-	DECLARE_GLOBAL_SHADER(FTressFXCopyHairDepthPS);
-
-	FTressFXCopyHairDepthPS()
-	{}
-
-	FTressFXCopyHairDepthPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer): FGlobalShader(Initializer)
-	{
-		DepthTexture.Bind(Initializer.ParameterMap, TEXT("DepthTexture"));
-		StencilTexture.Bind(Initializer.ParameterMap, TEXT("StencilTexture"));
-	}
-
-	const TCHAR* GetSourceFilename()
-	{
-		return TEXT("/Engine/Private/TressFXCopyVelocityDepth.usf");
-	}
-
-	const TCHAR* GetFunctionName()
-	{
-		return TEXT("CopyHairDepthPs");
-	}
-
-	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
-	{
-		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
-	}
-
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
-	{
-		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-	}
-
-	virtual bool Serialize(FArchive& Ar)
-	{
-		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-		Ar << DepthTexture << StencilTexture;
-		return bShaderHasOutdatedParameters;
-	}
-
-	void SetParameters(FRHICommandList& RHICmdList, const FSceneView& View, FShaderResourceViewRHIRef StencilSRV, TRefCountPtr<IPooledRenderTarget> HairSceneDepth)
-	{
-		FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, GetPixelShader(), View.ViewUniformBuffer);
-		SetTextureParameter(RHICmdList, GetPixelShader(), DepthTexture, HairSceneDepth->GetRenderTargetItem().TargetableTexture);
-		SetSRVParameter(RHICmdList, GetPixelShader(), StencilTexture, StencilSRV);
-	}
-
-	FShaderResourceParameter DepthTexture;
-	FShaderResourceParameter StencilTexture;
 };
 
 
@@ -232,7 +180,7 @@ private:
 };
 
 /////////////////////////////////////////////////////////////////////////////////
-//  FTressFX_VelocityDepthPS
+//  FTressFX_VelocityDepthPS renders depths and velocity, optionaly
 ////////////////////////////////////////////////////////////////////////////////
 
 

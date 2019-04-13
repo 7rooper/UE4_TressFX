@@ -288,7 +288,7 @@ public:
 			StencilReadMask,
 			StencilWriteMask
 			/*@BEGIN Third party code TressFX*/
-			DepthWriteMask,
+			,DepthWriteMask,
 			bForceDisableDepth
 			/*@END Third party code TressFX*/
 		);

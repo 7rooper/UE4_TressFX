@@ -38,6 +38,7 @@ namespace EMeshPass
 #endif
 		/*@BEGIN Third party code TressFX*/
 		TressFX_DepthsVelocity,
+		TressFX_DepthsAlpha,
 		/*@End Third party code TressFX*/
 		Num,
 		NumBits = 5,
@@ -69,6 +70,7 @@ inline const TCHAR* GetMeshPassName(EMeshPass::Type MeshPass)
 #endif
 	//@BEGIN third party code TressFX
 	case EMeshPass::TressFX_DepthsVelocity: return TEXT("TressFX_DepthsVelocity");
+	case EMeshPass::TressFX_DepthsAlpha: return TEXT("TressFX_DepthsAlpha");
 	//@END third party code TressFX
 	}
 

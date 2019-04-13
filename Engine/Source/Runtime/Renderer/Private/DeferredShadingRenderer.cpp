@@ -1110,8 +1110,12 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	check(bDidAfterTaskWork);
 
 	/*@BEGIN Third party code TressFX*/
+	extern TAutoConsoleVariable<int32> CVarTressFXType;
+	int32 TFXRenderType = CVarTressFXType.GetValueOnRenderThread();
 	{
-		RenderTressFXVelocitiesDepth(RHICmdList);
+		if (TFXRenderType == ETressFXRenderType::Opaque) {
+			RenderTressFXVelocitiesDepth(RHICmdList);
+		}
 	}
 	/*@End Third party code TressFX*/
 
@@ -1411,6 +1415,13 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 		SceneContext.ResolveSceneDepthTexture(RHICmdList, FResolveRect(0, 0, FamilySize.X, FamilySize.Y));
 		SceneContext.ResolveSceneDepthToAuxiliaryTexture(RHICmdList);
 	}
+
+	//@BEGIN third party code TressFX
+	if (TFXRenderType == ETressFXRenderType::ShortCut) 
+	{
+		RenderTressFXBasePass(RHICmdList);
+	}
+	//@END third party code TressFX
 
 	// BASE PASS ENDS HERE.
 

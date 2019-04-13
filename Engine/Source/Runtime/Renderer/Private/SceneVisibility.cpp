@@ -2664,8 +2664,14 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 	/*@BEGIN Third party code TressFX*/
 	if (ViewRelevance.bTressFX)
 	{
+		//JAKETODO, only add to pass that are needed. Example: shortcut rendering does not need depths velocity
 		PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
 		View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
+		
+
+		PassMask.Set(EMeshPass::TressFX_DepthsAlpha);
+		View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsAlpha] += NumElements;
+		
 		View.TressFXMeshBatches.AddUninitialized(1);
 		FTressFXMeshBatch& BatchAndProxy = View.TressFXMeshBatches.Last();
 		BatchAndProxy.Mesh = MeshBatch.Mesh;

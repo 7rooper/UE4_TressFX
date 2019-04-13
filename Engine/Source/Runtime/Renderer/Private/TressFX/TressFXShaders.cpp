@@ -17,12 +17,6 @@ IMPLEMENT_GLOBAL_SHADER(FTressFXResolveVelocityPs, "/Engine/Private/TressFXCopyV
 IMPLEMENT_GLOBAL_SHADER(FTressFXCopyOpaqueDepthPS, "/Engine/Private/TressFXCopyVelocityDepth.usf", "CopyOpaqueDepthPs", SF_Pixel);
 
 /////////////////////////////////////////////////////////////////////////////////
-//  FTressFXCopyHairDepthPS - copies hair depth using stencil value
-////////////////////////////////////////////////////////////////////////////////
-
-IMPLEMENT_GLOBAL_SHADER(FTressFXCopyHairDepthPS, "/Engine/Private/TressFXCopyVelocityDepth.usf", "CopyHairDepthPs", SF_Pixel);
-
-/////////////////////////////////////////////////////////////////////////////////
 //  FTressFXCopyDepthPS - Simple Depth Copy Shader
 ////////////////////////////////////////////////////////////////////////////////
 
