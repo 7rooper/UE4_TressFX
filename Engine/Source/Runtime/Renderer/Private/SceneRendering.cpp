@@ -358,13 +358,6 @@ TAutoConsoleVariable<int32> CVarTressFXType(
 	TEXT("1: ShortCut"),
 	ECVF_RenderThreadSafe
 );
-
-TAutoConsoleVariable<int32> CVarTressFXKBufferSize(
-	TEXT("tfx.KBuffer.Size"),
-	8,
-	TEXT("Size of OIT K-Buffer"),
-	ECVF_RenderThreadSafe
-);
 /*@END Third party code TressFX*/
 
 static FParallelCommandListSet* GOutstandingParallelCommandListSet = nullptr;

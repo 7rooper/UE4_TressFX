@@ -373,7 +373,6 @@ void FTressFXSimParameters::UpdateSimulationParameters(const FTressFXSimulationS
 	SetTipSeperation(InSettings.TipSeparation);
 	SetTotalHairs(HairObject->NumTotalStrands);
 
-	//JAKETODO
 	SetTimeStep(1.f / 60.f);
 
 	//Note: this sets the z component of g_SimInts/m_SimInts but that flag seems to not be used anymore

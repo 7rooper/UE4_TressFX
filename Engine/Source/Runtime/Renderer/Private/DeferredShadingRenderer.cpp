@@ -37,11 +37,6 @@
 #include "RayTracingDefinitions.h"
 #include "RayTracingInstance.h"
 
-/*@BEGIN Third party code TressFX*/
-#include "TressFX/TressFXRenderer.h"
-#include "TressFX/TressFXShortCut.h"
-/*@END Third party code TressFX*/
-
 static TAutoConsoleVariable<int32> CVarStencilForLODDither(
 	TEXT("r.StencilForLODDither"),
 	0,

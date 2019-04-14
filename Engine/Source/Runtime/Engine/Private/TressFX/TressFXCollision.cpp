@@ -49,7 +49,7 @@ void UpdateSDF(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy)
 	if (CVarTFXSDFInitialize.GetValueOnRenderThread() == 1)
 	{
 		SCOPED_DRAW_EVENT(RHICmdList, InitializeSignedDistanceField);
-		//InitializeSignedDistanceField - JAKETODO: could probably just use clearUAV here with the default value.
+		//InitializeSignedDistanceField - could probably just use clearUAV here with the default value.
 		RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EComputeToCompute, Proxy->SDFMeshResources->SignedDistanceFieldBuffer.UAV);
 		auto Fence = RHICreateComputeFence(TEXT("InitializeSignedDistanceFieldFence"));
 		TShaderMapRef<FInitializeSignedDistanceFieldCS> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));

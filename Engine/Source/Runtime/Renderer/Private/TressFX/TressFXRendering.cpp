@@ -26,14 +26,12 @@
 #include "ScreenRendering.h"
 #include "PostProcess/SceneFilterRendering.h"
 #include "TressFX/TressFXSceneProxy.h"
-#include "TressFX/TressFXShortCut.h"
 #include "PostProcess/RenderingCompositionGraph.h"
 #include "PostProcess/PostProcessing.h"
 #include "PipelineStateCache.h"
 
 DEFINE_LOG_CATEGORY(TressFXRenderingLog);
 
-extern TAutoConsoleVariable<int32> CVarTressFXKBufferSize;
 extern TAutoConsoleVariable<int32> CVarTressFXType;
 
 #pragma optimize("", off)
@@ -120,13 +118,13 @@ void FTressFXDepthsVelocityPassMeshProcessor::Process(
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
 
 	TMeshProcessorShaders<
-		TTressFX_ShortCutVS<bCalcVelocity>,
+		FTressFX_VS<bCalcVelocity>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
 		FTressFX_VelocityDepthPS<bCalcVelocity>> TFXShaders;
 
 	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFX_VelocityDepthPS<bCalcVelocity>>(VertexFactory->GetType());
-	TFXShaders.VertexShader = MaterialResource.GetShader<TTressFX_ShortCutVS<bCalcVelocity>>(VertexFactory->GetType());
+	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFX_VS<bCalcVelocity>>(VertexFactory->GetType());
 
 	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
 
@@ -234,20 +232,17 @@ void TressFXDepthsAlphaPassMeshProcessor::Process(
 
 	FMeshPassProcessorRenderState DrawRenderState(PassDrawRenderState);
 
-	//JAKETODO?	
-	//SetDepthPassDitheredLODTransitionState(ViewIfDynamicMeshCommand, MeshBatch, StaticMeshId, DrawRenderState);
-
 	FTressFXShaderElementData ShaderElementData(ETressFXPass::DepthsAlpha, ViewIfDynamicMeshCommand);
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
 
 	TMeshProcessorShaders<
-		TTressFX_ShortCutVS<bCalcVelocity>,
+		FTressFX_VS<bCalcVelocity>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
 		FTressFX_DepthsAlphaPS<bCalcVelocity>> TFXShaders;
 
 	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFX_DepthsAlphaPS<bCalcVelocity>>(VertexFactory->GetType());
-	TFXShaders.VertexShader = MaterialResource.GetShader<TTressFX_ShortCutVS<bCalcVelocity>>(VertexFactory->GetType());
+	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFX_VS<bCalcVelocity>>(VertexFactory->GetType());
 
 	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
 
@@ -286,7 +281,6 @@ void TressFXDepthsAlphaPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRIC
 		const ERasterizerFillMode MeshFillMode = FM_Solid;// ComputeMeshFillMode(MeshBatch, MeshBatchMaterial);
 		const ERasterizerCullMode MeshCullMode = CM_CW; // ComputeMeshCullMode(MeshBatch, MeshBatchMaterial);
 		
-		//JAKETODO do i need to force Front ccW?
 		if (bWantsVelocity)
 		{
 			Process<true>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
@@ -373,13 +367,13 @@ void FTressFXFillColorPassMeshProcessor::Process(
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
 
 	TMeshProcessorShaders<
-		TTressFX_ShortCutVS<false>,
+		FTressFX_VS<false>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
 		FTressFX_FillColorPS> TFXShaders;
 
 	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFX_FillColorPS>(VertexFactory->GetType());
-	TFXShaders.VertexShader = MaterialResource.GetShader<TTressFX_ShortCutVS<false>>(VertexFactory->GetType());
+	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFX_VS<false>>(VertexFactory->GetType());
 
 	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
 

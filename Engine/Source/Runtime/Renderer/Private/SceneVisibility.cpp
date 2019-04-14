@@ -37,10 +37,6 @@
 #include "TranslucentRendering.h"
 #include "Async/ParallelFor.h"
 
-/*@BEGIN Third party code TressFX*/
-#include "TressFX/TressFXRenderer.h"
-/*@END Third party code TressFX*/
-
 /*------------------------------------------------------------------------------
 	Globals
 ------------------------------------------------------------------------------*/

@@ -113,20 +113,20 @@ public:
 
 
 /////////////////////////////////////////////////////////////////////////////////
-//  TTressFX_ShortCutVS - Vertex Shader for shortcut
+//  FTressFX_VS - Vertex Shader for shortcut
 ////////////////////////////////////////////////////////////////////////////////
 
 
 template <bool bCalcVelocity>
-class TTressFX_ShortCutVS : public FMeshMaterialShader
+class FTressFX_VS : public FMeshMaterialShader
 {
 
-	DECLARE_SHADER_TYPE(TTressFX_ShortCutVS, MeshMaterial)
+	DECLARE_SHADER_TYPE(FTressFX_VS, MeshMaterial)
 
 public:
-	TTressFX_ShortCutVS() {}
+	FTressFX_VS() {}
 
-	TTressFX_ShortCutVS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
+	FTressFX_VS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
 	{
 		vFragmentBufferSize.Bind(Initializer.ParameterMap, TEXT("vFragmentBufferSize"));
 		PreviousLocalToWorldParameter.Bind(Initializer.ParameterMap, TEXT("PreviousLocalToWorld"));
@@ -407,4 +407,121 @@ class FTressFXResolveVelocityPs : public FGlobalShader
 	}
 
 	FShaderResourceParameter VelocityTexture;
+};
+
+///////////////////////////////////////////////////////////////////////////////////
+////  FTressFXShortCut_ResolveDepthPS
+//////////////////////////////////////////////////////////////////////////////////
+
+class FTressFXShortCut_ResolveDepthPS : public FGlobalShader
+{
+
+	DECLARE_SHADER_TYPE(FTressFXShortCut_ResolveDepthPS, Global)
+
+public:
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+	}
+
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+	{
+		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+	}
+
+	static const TCHAR* GetSourceFilename()
+	{
+		return TEXT("/Engine/Private/TressFXShortCut_ResolveDepthPS.usf");
+	}
+
+	static const TCHAR* GetFunctionName()
+	{
+		return TEXT("main");
+	}
+
+
+	FTressFXShortCut_ResolveDepthPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	{
+		FragmentDepthsTexture.Bind(Initializer.ParameterMap, TEXT("FragmentDepthsTexture"));
+		SceneTextureShaderParameters.Bind(Initializer);
+	}
+
+	FTressFXShortCut_ResolveDepthPS() {}
+
+	void SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext);
+
+	// FShader interface.
+	virtual bool Serialize(FArchive& Ar) override
+	{
+		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
+		Ar << FragmentDepthsTexture << SceneTextureShaderParameters;
+		return bShaderHasOutdatedParameters;	
+	}
+
+public:
+
+	FShaderResourceParameter FragmentDepthsTexture;
+	FSceneTextureShaderParameters SceneTextureShaderParameters;
+
+};
+
+
+///////////////////////////////////////////////////////////////////////////////////
+////  FTressFXShortCut_ResolveColorPS
+//////////////////////////////////////////////////////////////////////////////////
+
+
+class FTressFXShortCut_ResolveColorPS : public FGlobalShader
+{
+
+	DECLARE_SHADER_TYPE(FTressFXShortCut_ResolveColorPS, Global)
+
+public:
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+	}
+
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters & Parameters, FShaderCompilerEnvironment & OutEnvironment)
+	{
+		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+	}
+
+	static const TCHAR* GetSourceFilename()
+	{
+		return TEXT("/Engine/Private/TressFXShortCut_ResolveColorPS.usf");
+	}
+
+	static const TCHAR* GetFunctionName()
+	{
+		return TEXT("main");
+	}
+
+	FTressFXShortCut_ResolveColorPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	{
+		FragmentColorsTexture.Bind(Initializer.ParameterMap, TEXT("FragmentColorsTexture"));
+		tAccumInvAlpha.Bind(Initializer.ParameterMap, TEXT("tAccumInvAlpha"));
+		vFragmentBufferSize.Bind(Initializer.ParameterMap, TEXT("vFragmentBufferSize"));
+	}
+
+	FTressFXShortCut_ResolveColorPS() {}
+
+
+	// FShader interface.
+	virtual bool Serialize(FArchive& Ar) override
+	{
+		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
+		Ar << FragmentColorsTexture << tAccumInvAlpha << vFragmentBufferSize;
+		return bShaderHasOutdatedParameters;
+	}
+
+	void SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext);
+
+public:
+
+	FShaderResourceParameter FragmentColorsTexture;
+	FShaderResourceParameter tAccumInvAlpha;
+	FShaderParameter vFragmentBufferSize;
 };
