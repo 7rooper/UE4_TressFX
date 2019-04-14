@@ -689,7 +689,6 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			TShaderMapRef<FScreenVS>							VertexShader(View.ShaderMap);
 			TShaderMapRef<FTressFXCopyOpaqueDepthPS>			PixelShader(View.ShaderMap);
 
-
 			FGraphicsPipelineStateInitializer GraphicsPSOInit;
 			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 
@@ -769,72 +768,72 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 			SetRenderTargets(RHICmdList, ARRAY_COUNT(RTVs), RTVs, nullptr, 2, UAVs);*/
 		}
 		// shortcut pass 4: resolve color
-		//{
-		//	SCOPED_DRAW_EVENT(RHICmdList, ResolveColors);
+		{
+			SCOPED_DRAW_EVENT(RHICmdList, ResolveColors);
 
-		//	FTextureRHIParamRef Resources[2] = {
-		//		SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture,
-		//		SceneContext.FragmentColorsTexture->GetRenderTargetItem().TargetableTexture
-		//	};
-		//	RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources,2);
+			FTextureRHIParamRef Resources[2] = {
+				SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture,
+				SceneContext.FragmentColorsTexture->GetRenderTargetItem().TargetableTexture
+			};
+			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources,2);
 
-		//	FRHIDepthRenderTargetView DepthRTV(
-		//		SceneContext.GetSceneDepthSurface(),
-		//		ERenderTargetLoadAction::ENoAction,
-		//		ERenderTargetStoreAction::ENoAction
-		//	);
-		//	FRHIRenderTargetView ColorRTV(
-		//		SceneContext.GBufferC->GetRenderTargetItem().TargetableTexture,
-		//		ERenderTargetLoadAction::ELoad
-		//	);
+			FRHIDepthRenderTargetView DepthRTV(
+				SceneContext.GetSceneDepthSurface(),
+				ERenderTargetLoadAction::ENoAction,
+				ERenderTargetStoreAction::ENoAction
+			);
+			FRHIRenderTargetView ColorRTV(
+				SceneContext.GetSceneColorSurface(),
+				ERenderTargetLoadAction::ELoad
+			);
 
-		//	RHICmdList.SetRenderTargets(1, &ColorRTV, &DepthRTV, 0, nullptr);
+			RHICmdList.SetRenderTargets(1, &ColorRTV, &DepthRTV, 0, nullptr);
 
-		//	TShaderMapRef<FPostProcessVS>						VertexShader(View.ShaderMap);
-		//	TShaderMapRef<FTressFXShortCut_ResolveColorPS>		PixelShader(View.ShaderMap);
+			TShaderMapRef<FScreenVS>						VertexShader(View.ShaderMap);
+			TShaderMapRef<FTressFXShortCut_ResolveColorPS>		PixelShader(View.ShaderMap);
 
-		//	FRenderingCompositePassContext Context(RHICmdList, View);
+			FRenderingCompositePassContext Context(RHICmdList, View);
 
-		//	Context.SetViewportAndCallRHI(View.ViewRect);
+			Context.SetViewportAndCallRHI(View.ViewRect);
 
-		//	FGraphicsPipelineStateInitializer GraphicsPSOInit;
-		//	RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+			FGraphicsPipelineStateInitializer GraphicsPSOInit;
+			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 
-		//	GraphicsPSOInit.BlendState = TStaticBlendState<
-		//		CW_RGBA
-		//		, BO_Add // color blend op
-		//		, BF_One // color source blend
-		//		, BF_SourceAlpha //color dest blend
-		//		, BO_Add //alpha blend op
-		//		, BF_Zero // alpha src blend
-		//		, BF_Zero //alpha dest blend
-		//	>::GetRHI();
-		//	GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
-		//	GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<
-		//		false, CF_Always
-		//	>::GetRHI();
+			GraphicsPSOInit.BlendState = TStaticBlendState<
+				CW_RGBA
+				, BO_Add // color blend op
+				, BF_One // color source blend
+				, BF_SourceAlpha //color dest blend
+				, BO_Add //alpha blend op
+				, BF_Zero // alpha src blend
+				, BF_Zero //alpha dest blend
+			>::GetRHI();
+			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
+			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<
+				false, CF_Always
+			>::GetRHI();
 
-		//	GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
-		//	GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
-		//	GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
-		//	GraphicsPSOInit.PrimitiveType = PT_TriangleList;
+			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
+			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
+			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
+			GraphicsPSOInit.PrimitiveType = PT_TriangleList;
 
-		//	SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
+			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
 
-		//	VertexShader->SetParameters(Context);
-		//	PixelShader->SetParameters(Context.RHICmdList, View, SceneContext);
+			VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
+			PixelShader->SetParameters(Context.RHICmdList, View, SceneContext);
 
-		//	DrawRectangle(
-		//		RHICmdList,
-		//		0, 0,
-		//		View.ViewRect.Width(), View.ViewRect.Height(),
-		//		View.ViewRect.Min.X, View.ViewRect.Min.Y,
-		//		View.ViewRect.Width(), View.ViewRect.Height(),
-		//		View.ViewRect.Size(),
-		//		SceneContext.GetBufferSizeXY(),
-		//		*VertexShader,
-		//		EDRF_UseTriangleOptimization);
-		//}
+			DrawRectangle(
+				RHICmdList,
+				0, 0,
+				View.ViewRect.Width(), View.ViewRect.Height(),
+				View.ViewRect.Min.X, View.ViewRect.Min.Y,
+				View.ViewRect.Width(), View.ViewRect.Height(),
+				View.ViewRect.Size(),
+				SceneContext.GetBufferSizeXY(),
+				*VertexShader,
+				EDRF_UseTriangleOptimization);
+		}
 	}
 }
 

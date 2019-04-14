@@ -1185,6 +1185,14 @@ void FBasePassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, 
 		else
 		{
 			bShouldDraw = !bIsTranslucent;
+			/*@BEGIN Third party code TressFX*/
+			extern TAutoConsoleVariable<int32> CVarTressFXType;
+			int32 TFXRenderType = CVarTressFXType.GetValueOnRenderThread();
+			if (MeshBatch.bTressFX) 
+			{
+				bShouldDraw = bShouldDraw && TFXRenderType == ETressFXRenderType::Opaque;
+			}
+			/*@END Third party code TressFX*/
 		}
 
 

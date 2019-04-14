@@ -1113,7 +1113,8 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	extern TAutoConsoleVariable<int32> CVarTressFXType;
 	int32 TFXRenderType = CVarTressFXType.GetValueOnRenderThread();
 	{
-		if (TFXRenderType == ETressFXRenderType::Opaque) {
+		if (TFXRenderType == ETressFXRenderType::Opaque) 
+		{
 			RenderTressFXVelocitiesDepth(RHICmdList);
 		}
 	}
