@@ -1803,16 +1803,11 @@ public:
 			auto ViewSize = InViewIfDynamicMeshCommand->UnscaledViewRect.Size();
 			FragmentBufferSize = FVector4(ViewSize.X, ViewSize.Y, ViewSize.X*ViewSize.Y, 0);
 			ViewRect = InViewIfDynamicMeshCommand->UnscaledViewRect;
-			if (InTFXPass == ETressFXPass::FillColor)
-			{
-				ForwardLightDataBuffer = InViewIfDynamicMeshCommand->ForwardLightingResources->ForwardLightDataUniformBuffer;
-			}
 		}
 	}
 	ETressFXPass::Type TFXPass;
 	FVector4 FragmentBufferSize;
 	FIntRect ViewRect;
-	TUniformBufferRef<FForwardLightData> ForwardLightDataBuffer;
 
 };
 //@END third party code TressFX

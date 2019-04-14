@@ -1191,12 +1191,6 @@ ERefractionMode FMaterialResource::GetRefractionMode() const
 
 EMaterialShadingModel FMaterialResource::GetShadingModel() const 
 {
-	/*@BEGIN Third party code TressFX*/
-	if (Material->bUsedWithTressFX)
-	{
-		return EMaterialShadingModel::MSM_Hair;
-	}
-	/*@END Third party code TressFX*/
 	return MaterialInstance ? MaterialInstance->GetShadingModel() : Material->GetShadingModel();
 }
 

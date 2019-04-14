@@ -3787,15 +3787,6 @@ void UMaterial::PostLoad()
 
 	SCOPED_LOADTIMER(MaterialPostLoad);
 
-	/*@BEGIN Third party code TressFX*/
-#if WITH_EDITOR
-	if (bUsedWithTressFX && ShadingModel != EMaterialShadingModel::MSM_Hair)
-	{
-		ShadingModel = EMaterialShadingModel::MSM_Hair;
-	}
-#endif
-	/*@End Third party code TressFX*/
-
 	Super::PostLoad();
 
 	if (FApp::CanEverRender())
@@ -4276,10 +4267,7 @@ bool UMaterial::CanEditChange(const UProperty* InProperty) const
 	
 		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, ShadingModel))
 		{
-			return 	/*@BEGIN Third party code TressFX*/
-				!bUsedWithTressFX &&
-				/*@END Third party code TressFX*/ 
-				(MaterialDomain == MD_Surface || (MaterialDomain == MD_DeferredDecal && DecalBlendMode == DBM_Volumetric_DistanceFunction));
+			return (MaterialDomain == MD_Surface || (MaterialDomain == MD_DeferredDecal && DecalBlendMode == DBM_Volumetric_DistanceFunction));
 		}
 
 		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, DecalBlendMode))

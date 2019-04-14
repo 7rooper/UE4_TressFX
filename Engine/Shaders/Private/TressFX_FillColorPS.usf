@@ -1,5 +1,6 @@
 
 #include "Common.ush"
+#include "SHCommon.ush"
 #include "/Engine/Generated/Material.ush"
 #include "BasePassCommon.ush"
 #include "/Engine/Generated/VertexFactory.ush"
@@ -71,6 +72,8 @@ float NormalCurvatureToRoughness(float3 WorldNormal)
 
 #include "ForwardLightingCommon.ush" 
 
+#if !FORWARD_SHADING
+
 void GetVolumeLightingNonDirectional(float4 AmbientLightingVector, float3 DiffuseColor, inout float3 InterpolatedLighting, out float4 VolumeLighting)
 {
 	// Normal is not taken into account with non directional lighting, and only the ambient term of the SH coefficients are needed
@@ -112,9 +115,9 @@ void GetVolumeLightingDirectional(float4 AmbientLightingVector, float3 Direction
 #endif
 
 #if SIMPLE_FORWARD_SHADING
-#define GetEffectiveSkySHDiffuse GetSkySHDiffuseSimple
+	#define GetEffectiveSkySHDiffuse GetSkySHDiffuseSimple
 #else
-#define GetEffectiveSkySHDiffuse GetSkySHDiffuse
+	#define GetEffectiveSkySHDiffuse GetSkySHDiffuse
 #endif
 
 /** Computes sky diffuse lighting, including precomputed shadowing. */
@@ -563,7 +566,8 @@ float3 AccumulateHairLight(
 	float2 ScreenUV,
 	uint EyeIndex,
 	FGBufferData GBufferData,
-	float Dither
+	float Dither,
+	uint PrimitiveId
 )
 {
 
@@ -576,53 +580,83 @@ float3 AccumulateHairLight(
     float3 T = normalize(vStrandTangent);
     float fLightScale = 1;
 
+    uint LightingChannelMask = GetPrimitiveData(PrimitiveId).LightingChannelMask;
+
     const FDirectionalLightData DirectionalLightData = GetDirectionalLightData(EyeIndex);
+    FRectTexture RectTexture = InitRectTexture(DeferredLightUniforms.SourceTexture);
 	// adapted from GetForwardDirectLighting in Forwardlightingcommon.ush
     BRANCH
     if (DirectionalLightData.HasDirectionalLight)
     {
-        FDeferredLightData LightData = (FDeferredLightData) 0;
-        LightData.LightColorAndFalloffExponent = float4(DirectionalLightData.DirectionalLightColor, 0);
-        LightData.LightDirection = DirectionalLightData.DirectionalLightDirection;
-        LightData.SpecularScale = SpecularScale;
-       
-        float3 NewLighting = 0;
-        float3 color = 0;
-        
-#if TRESSFX_UNREAL_HAIR_ONLY
-        LightData.DistanceFadeMAD = DirectionalLightData.DirectionalLightDistanceFadeMAD;
-        LightData.bRadialLight = false;
-        LightData.ShadowedBits = (DirectionalLightData.DirectionalLightShadowMapChannelMask & 0xFF) != 0 ? 1 : 0;
+		FDeferredLightData LightData = (FDeferredLightData)0;
+		LightData.Color = DirectionalLightData.DirectionalLightColor;
+		LightData.FalloffExponent = 0;
+		LightData.Direction = DirectionalLightData.DirectionalLightDirection;
+		LightData.DistanceFadeMAD = DirectionalLightData.DirectionalLightDistanceFadeMAD;
+		LightData.bRadialLight = false;
+		LightData.SpecularScale = SpecularScale;
+
+		LightData.ShadowedBits = (DirectionalLightData.DirectionalLightShadowMapChannelMask & 0xFF) != 0 ? 1 : 0;
 		// Static shadowing uses ShadowMapChannel, dynamic shadows are packed into light attenuation using PreviewShadowMapChannel
-        LightData.ShadowMapChannelMask = UnpackShadowMapChannelMask(DirectionalLightData.DirectionalLightShadowMapChannelMask);
-        float4 PreviewShadowMapChannelMask = UnpackShadowMapChannelMask(DirectionalLightData.DirectionalLightShadowMapChannelMask >> 4);
-        float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
-		// In the forward shading path we can't separate per-object shadows from CSM, since we only spend one light attenuation channel per light
-		// If CSM is enabled (distance fading to precomputed shadowing is active), treat all of our dynamic shadowing as whole scene shadows that will be faded out at the max CSM distance
-		// If CSM is not enabled, allow our dynamic shadowing to coexist with precomputed shadowing
-        float PerObjectShadowing = LightData.DistanceFadeMAD.y < 0.0f ? 1.0f : DynamicShadowing;
-        float WholeSceneShadowing = LightData.DistanceFadeMAD.y < 0.0f ? DynamicShadowing : 1.0f;
-        float4 LightAttenuation = float4(WholeSceneShadowing.xx, PerObjectShadowing.xx);
-        color = GetDynamicLighting(AbsoluteWorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0)).xyz;
-#else
-		// spec vs diffuse through the light.
-		float DynamicShadowTressFX = ComputeDirectionalLightDynamicShadowing_TressFX(AbsoluteWorldPosition, GBufferData.Depth, params);
-        float lightEmitsDiffuse = 1;
-        float lightEmitsSpecular = 1;
-        float3 cLightColor = LightData.LightColorAndFalloffExponent.rgb;
+		LightData.ShadowMapChannelMask = UnpackShadowMapChannelMask(DirectionalLightData.DirectionalLightShadowMapChannelMask);
+
+		#if MATERIALBLENDING_SOLID || MATERIALBLENDING_MASKED
+			float4 PreviewShadowMapChannelMask = UnpackShadowMapChannelMask(DirectionalLightData.DirectionalLightShadowMapChannelMask >> 4);
+			float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
+
+			// In the forward shading path we can't separate per-object shadows from CSM, since we only spend one light attenuation channel per light
+			// If CSM is enabled (distance fading to precomputed shadowing is active), treat all of our dynamic shadowing as whole scene shadows that will be faded out at the max CSM distance
+			// If CSM is not enabled, allow our dynamic shadowing to coexist with precomputed shadowing
+			float PerObjectShadowing = LightData.DistanceFadeMAD.y < 0.0f ? 1.0f : DynamicShadowing;
+			float WholeSceneShadowing = LightData.DistanceFadeMAD.y < 0.0f ? DynamicShadowing : 1.0f;
+		
+			float4 LightAttenuation = float4(WholeSceneShadowing.xx, PerObjectShadowing.xx);
+		#else
+			LightData.ShadowMapChannelMask.x = 1;
+			#if TRANSLUCENCY_LIGHTING_SURFACE_FORWARDSHADING
+				GBufferData.PrecomputedShadowFactors.x = ComputeDirectionalLightStaticShadowing(WorldPosition).x;
+			#else
+				GBufferData.PrecomputedShadowFactors.x = 1;
+			#endif
+			float DynamicShadowFactor = ComputeDirectionalLightDynamicShadowing(AbsoluteWorldPosition, GBufferData.Depth);
+			float4 LightAttenuation = float4(DynamicShadowFactor.x, DynamicShadowFactor.x, 1, 1);
+		#endif
+		
+        float3 NewLighting = GetDynamicLighting(AbsoluteWorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
         
-        if (DynamicShadowTressFX > 0.00001)
-        {
-            float3 L = normalize(LightData.LightDirection);
-            float3 reflection = TressFX_ComputeDiffuseSpecFactors(V, L, T);
-            float3 cReflectedLight = reflection.x * cLightColor * lightEmitsDiffuse * params.cColor;
-            cReflectedLight += reflection.y * cLightColor * lightEmitsSpecular;
-            cReflectedLight += reflection.z * cLightColor * lightEmitsSpecular * params.cColor;
-            cReflectedLight *= DynamicShadowTressFX * fLightScale;
-            color = max(float3(0, 0, 0), cReflectedLight);
-        }
-#endif
-        NewLighting += color;
+//#if TRESSFX_UNREAL_HAIR_ONLY
+  //      LightData.DistanceFadeMAD = DirectionalLightData.DirectionalLightDistanceFadeMAD;
+  //      LightData.bRadialLight = false;
+  //      LightData.ShadowedBits = (DirectionalLightData.DirectionalLightShadowMapChannelMask & 0xFF) != 0 ? 1 : 0;
+		//// Static shadowing uses ShadowMapChannel, dynamic shadows are packed into light attenuation using PreviewShadowMapChannel
+  //      LightData.ShadowMapChannelMask = UnpackShadowMapChannelMask(DirectionalLightData.DirectionalLightShadowMapChannelMask);
+  //      float4 PreviewShadowMapChannelMask = UnpackShadowMapChannelMask(DirectionalLightData.DirectionalLightShadowMapChannelMask >> 4);
+  //      float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
+		//// In the forward shading path we can't separate per-object shadows from CSM, since we only spend one light attenuation channel per light
+		//// If CSM is enabled (distance fading to precomputed shadowing is active), treat all of our dynamic shadowing as whole scene shadows that will be faded out at the max CSM distance
+		//// If CSM is not enabled, allow our dynamic shadowing to coexist with precomputed shadowing
+  //      float PerObjectShadowing = LightData.DistanceFadeMAD.y < 0.0f ? 1.0f : DynamicShadowing;
+  //      float WholeSceneShadowing = LightData.DistanceFadeMAD.y < 0.0f ? DynamicShadowing : 1.0f;
+  //      float4 LightAttenuation = float4(WholeSceneShadowing.xx, PerObjectShadowing.xx);
+  //      color = GetDynamicLighting(AbsoluteWorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0)).xyz;
+//#else
+//		// spec vs diffuse through the light.
+//		float DynamicShadowTressFX = ComputeDirectionalLightDynamicShadowing_TressFX(AbsoluteWorldPosition, GBufferData.Depth, params);
+//        float lightEmitsDiffuse = 1;
+//        float lightEmitsSpecular = 1;
+//        float3 cLightColor = LightData.LightColorAndFalloffExponent.rgb;
+        
+//        if (DynamicShadowTressFX > 0.00001)
+//        {
+//            float3 L = normalize(LightData.LightDirection);
+//            float3 reflection = TressFX_ComputeDiffuseSpecFactors(V, L, T);
+//            float3 cReflectedLight = reflection.x * cLightColor * lightEmitsDiffuse * params.cColor;
+//            cReflectedLight += reflection.y * cLightColor * lightEmitsSpecular;
+//            cReflectedLight += reflection.z * cLightColor * lightEmitsSpecular * params.cColor;
+//            cReflectedLight *= DynamicShadowTressFX * fLightScale;
+//            color = max(float3(0, 0, 0), cReflectedLight);
+//        }
+//#endif
         DirectLighting += NewLighting;
     }
 
@@ -630,41 +664,50 @@ float3 AccumulateHairLight(
 	// local lights eg point,rect etc...
     const FCulledLightsGridData CulledLightsGrid = GetCulledLightsGrid(GridIndex, EyeIndex);
 
-	LOOP
-	for (uint LocalLightListIndex = 0; LocalLightListIndex < CulledLightsGrid.NumLocalLights; LocalLightListIndex++)
-	{
-        const FLocalLightData LocalLight = GetLocalLightData(CulledLightsGrid.DataStartIndex + LocalLightListIndex, EyeIndex);
+	
+	// Limit max to ForwardLightData.NumLocalLights.
+	// This prevents GPU hangs when the PS tries to read from uninitialized NumCulledLightsGrid buffer
+    const uint NumLocalLights = min(CulledLightsGrid.NumLocalLights, GetNumLocalLights(EyeIndex));
 
-		FDeferredLightData LightData = (FDeferredLightData) 0;
-		LightData.LightPositionAndInvRadius = LocalLight.LightPositionAndInvRadius;
-		LightData.LightColorAndFalloffExponent = LocalLight.LightColorAndFalloffExponent;
-		LightData.LightDirection = LocalLight.LightDirectionAndShadowMask.xyz;
-        float SourceLength = f16tof32(asuint(LocalLight.SpotAnglesAndSourceRadiusPacked.w));
-        LightData.SpotAnglesAndSourceRadius = float4(LocalLight.SpotAnglesAndSourceRadiusPacked.xyz, SourceLength);
-        LightData.LightTangent = LocalLight.LightTangentAndSoftSourceRadius.xyz;
+    LOOP
+    for (uint LocalLightListIndex = 0; LocalLightListIndex < NumLocalLights; LocalLightListIndex++)
+    {
+        const FLocalLightData LocalLight = GetLocalLightData(CulledLightsGrid.DataStartIndex + LocalLightListIndex, EyeIndex);
+		 
+        FDeferredLightData LightData = (FDeferredLightData) 0;
+        LightData.Position = LocalLight.LightPositionAndInvRadius.xyz;
+        LightData.InvRadius = LocalLight.LightPositionAndInvRadius.w;
+        LightData.Color = LocalLight.LightColorAndFalloffExponent.xyz;
+        LightData.FalloffExponent = LocalLight.LightColorAndFalloffExponent.w;
+        LightData.Direction = LocalLight.LightDirectionAndShadowMask.xyz;
+        LightData.SpotAngles = LocalLight.SpotAnglesAndSourceRadiusPacked.xy;
+        LightData.SourceRadius = LocalLight.SpotAnglesAndSourceRadiusPacked.z;
+        LightData.SourceLength = f16tof32(asuint(LocalLight.SpotAnglesAndSourceRadiusPacked.w));
+        LightData.Tangent = LocalLight.LightTangentAndSoftSourceRadius.xyz;
         LightData.SoftSourceRadius = LocalLight.LightTangentAndSoftSourceRadius.w;
-		LightData.bInverseSquared = LightData.LightColorAndFalloffExponent.w == 0;
-		LightData.bRadialLight = true;
-		LightData.bSpotLight = LightData.SpotAnglesAndSourceRadius.x > -2.0f;
+        LightData.bInverseSquared = LightData.FalloffExponent == 0;
+        LightData.bRadialLight = true;
+        LightData.bSpotLight = LightData.SpotAngles.x > -2.0f;
         LightData.SpecularScale = SpecularScale;
 
-		uint PackedShadowMapChannelMask = asuint(LocalLight.LightDirectionAndShadowMask.w);
-		LightData.ShadowedBits = (PackedShadowMapChannelMask & 0xFF) != 0 ? 1 : 0;
-		//Static shadowing uses ShadowMapChannel, dynamic shadows are packed into light attenuation using PreviewShadowMapChannel
-		LightData.ShadowMapChannelMask = UnpackShadowMapChannelMask(PackedShadowMapChannelMask);
-		float4 PreviewShadowMapChannelMask = UnpackShadowMapChannelMask(PackedShadowMapChannelMask >> 4);
-		float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
-		float4 LightAttenuation = float4(1, 1, DynamicShadowing.x, DynamicShadowing.x);
-        float3 NewLighting = 0;
-        float3 DynamicLighting = GetDynamicLighting(AbsoluteWorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0)).xyz;
-        NewLighting += DynamicLighting;
+        uint PackedShadowMapChannelMask = asuint(LocalLight.LightDirectionAndShadowMask.w);
+        LightData.ShadowedBits = (PackedShadowMapChannelMask & 0xFF) != 0 ? 1 : 0;
+		// Static shadowing uses ShadowMapChannel, dynamic shadows are packed into light attenuation using PreviewShadowMapChannel
+        LightData.ShadowMapChannelMask = UnpackShadowMapChannelMask(PackedShadowMapChannelMask);
+        float4 PreviewShadowMapChannelMask = UnpackShadowMapChannelMask(PackedShadowMapChannelMask >> 4);
+        float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
+        float4 LightAttenuation = float4(1, 1, DynamicShadowing.x, DynamicShadowing.x);
+        float3 NewLighting = GetDynamicLighting(AbsoluteWorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
 
-		FLATTEN
-		if ((PackedShadowMapChannelMask >> 8) & Primitive.LightingChannelMask)
-		{
-			DirectLighting += NewLighting;
-		}
-	}
+        FLATTEN
+        if ((PackedShadowMapChannelMask >> 8) & LightingChannelMask)
+        {
+            DirectLighting += NewLighting;
+        }
+    }
+
+	// For debugging
+	//DirectLighting = CulledLightsGrid.NumLocalLights / (float)ForwardLightData.MaxCulledLightsPerCell;
 	#endif
     return DirectLighting;
 }
@@ -684,9 +727,19 @@ float4 main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace) : SV_Target0
 
     FMaterialPixelParameters MaterialParameters = GetMaterialPixelParameters(input.FactoryInterpolants, input.Position);
     FPixelMaterialInputs PixelMaterialInputs;
-    PixelMaterialInputs = (FPixelMaterialInputs) 0;
+	
+#if HQ_TEXTURE_LIGHTMAP && USES_AO_MATERIAL_MASK && !MATERIAL_SHADINGMODEL_UNLIT
+	{
+		float2 LightmapUV0, LightmapUV1;
+		uint LightmapDataIndex;
+		GetLightMapCoordinates(Interpolants, LightmapUV0, LightmapUV1, LightmapDataIndex);
+		// Must be computed before BaseColor, Normal, etc are evaluated
+		MaterialParameters.AOMaterialMask = GetAOMaterialMask(LightmapUV0 * float2(1, 2), In.SvPosition.xy);
+	}
+#endif
 
-		#if USE_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS
+	//TODO this path will never work because we dont have BasePassInterpolants.PixelPositionExcludingWPO
+	#if USE_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS
 		{
 			float4 ScreenPosition = SvPositionToResolvedScreenPosition(input.Position);
 			float3 TranslatedWorldPosition = SvPositionToResolvedTranslatedWorld(input.Position);
@@ -694,25 +747,25 @@ float4 main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace) : SV_Target0
 		}
 	#else
 		{
-			float4 ScreenPosition = SvPositionToResolvedScreenPosition(input.Position);
-			float3 TranslatedWorldPosition = SvPositionToResolvedTranslatedWorld(input.Position);
-			CalcMaterialParametersEx(MaterialParameters, PixelMaterialInputs, input.Position, ScreenPosition, bIsFrontFace, TranslatedWorldPosition, TranslatedWorldPosition);
-		}
+        float4 ScreenPosition = SvPositionToResolvedScreenPosition(input.Position);
+        float3 TranslatedWorldPosition = SvPositionToResolvedTranslatedWorld(input.Position);
+        CalcMaterialParametersEx(MaterialParameters, PixelMaterialInputs, input.Position, ScreenPosition, bIsFrontFace, TranslatedWorldPosition, TranslatedWorldPosition);
+    }
 	#endif
 
     half Opacity = GetMaterialOpacity(PixelMaterialInputs);
-    float alpha = coverage * Opacity;
+    float TFXAlpha = coverage * Opacity;
 	
-    if (alpha < SHORTCUT_MIN_ALPHA)
+    if (TFXAlpha < SHORTCUT_MIN_ALPHA)
     {
         return float4(0, 0, 0, 0);
     }
-
+	   
     half3 BaseColor = GetMaterialBaseColor(PixelMaterialInputs);
     half Metallic = GetMaterialMetallic(PixelMaterialInputs);
     half Specular = GetMaterialSpecular(PixelMaterialInputs);
     float MaterialAO = GetMaterialAmbientOcclusion(PixelMaterialInputs);
-    float Roughness = GetMaterialRoughness(PixelMaterialInputs);   
+    float Roughness = GetMaterialRoughness(PixelMaterialInputs);
     float SubsurfaceProfile = 0;
     float3 SubsurfaceColor = 0;
 
@@ -730,10 +783,11 @@ float4 main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace) : SV_Target0
 
     FGBufferData GBuffer = (FGBufferData) 0;
     GBuffer.GBufferAO = MaterialAO;
-    GBuffer.PerObjectGBufferData = Primitive.PerObjectGBufferData;
+    GBuffer.PerObjectGBufferData = GetPrimitiveData(MaterialParameters.PrimitiveId).PerObjectGBufferData;
     GBuffer.Depth = MaterialParameters.ScreenPosition.w;
-    GBuffer.PrecomputedShadowFactors = GetPrecomputedShadowMasks(input.FactoryInterpolants, MaterialParameters.AbsoluteWorldPosition, VolumetricLightmapBrickTextureUVs);
+    GBuffer.PrecomputedShadowFactors = GetPrecomputedShadowMasks(input.FactoryInterpolants, MaterialParameters.PrimitiveId, MaterialParameters.AbsoluteWorldPosition, VolumetricLightmapBrickTextureUVs);
 
+    const float GBufferDither = InterleavedGradientNoise(MaterialParameters.SvPosition.xy, View.StateFrameIndexMod8);
     SetGBufferForShadingModel(
 		GBuffer,
 		MaterialParameters,
@@ -743,9 +797,10 @@ float4 main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace) : SV_Target0
 		Specular,
 		Roughness,
 		SubsurfaceColor,
-		SubsurfaceProfile
-	);
+		SubsurfaceProfile,
+		GBufferDither);
 
+	// So that the following code can still use DiffuseColor and SpecularColor.
     GBuffer.SpecularColor = lerp(0.08 * Specular.xxx, BaseColor, Metallic.xxx);
     GBuffer.DiffuseColor = BaseColor - BaseColor * Metallic;
     float3 BentNormal = MaterialParameters.WorldNormal;
@@ -777,262 +832,7 @@ float4 main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace) : SV_Target0
 
     uint GridIndex = ComputeLightGridCellIndex((uint2) (input.Position.xy - ResolvedView.ViewRectMin.xy), input.Position.w, 0);
     const float Dither = InterleavedGradientNoise(MaterialParameters.SvPosition.xy, View.StateFrameIndexMod8);
-    const uint EyeIndex = 0; //idgaf about instanced stereo
-    Color += AccumulateHairLight(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, input.FactoryInterpolants.Tangent, params, vScreenAddress, EyeIndex, GBuffer, Dither);
-    return float4(Color * alpha, alpha);
-}
-
-#if SIMPLE_FORWARD_DIRECTIONAL_LIGHT
-
-float3 GetSimpleForwardLightingDirectionalLight(FGBufferData GBuffer, float3 DiffuseColor, float3 SpecularColor, float Roughness, float3 WorldNormal, float3 CameraVector)
-{
-	float3 V = -CameraVector;
-	float3 N = WorldNormal;
-	float3 L = ResolvedView.DirectionalLightDirection;
-	float NoL = saturate( dot( N, L ) );
-
-	float3 LightColor = ResolvedView.DirectionalLightColor.rgb * PI;
-	
-	FShadowTerms Shadow = { 1, 1, 1 };
-	FDirectLighting Lighting = EvaluateBxDF( GBuffer, N, V, L, NoL, Shadow );
-
-	// Not computing specular, material was forced fully rough
-	return LightColor * (Lighting.Diffuse + Lighting.Transmission);
-}
-
-#endif
-
-uint GetSelectiveOutputMask()
-{
-	uint Mask = 0;
-#if !WRITES_CUSTOMDATA_TO_GBUFFER
-	Mask |= SKIP_CUSTOMDATA_MASK;
-#endif
-#if !GBUFFER_HAS_PRECSHADOWFACTOR
-	Mask |= SKIP_PRECSHADOW_MASK;
-#endif
-#if (GBUFFER_HAS_PRECSHADOWFACTOR && WRITES_PRECSHADOWFACTOR_ZERO)
-	Mask |= ZERO_PRECSHADOW_MASK;
-#endif
-#if !WRITES_VELOCITY_TO_GBUFFER
-	Mask |= SKIP_VELOCITY_MASK;
-#endif
-	return Mask;
-}
-
-
-EARLYDEPTHSTENCIL
-void FillColors_Deferred(
-	PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace
-		, out float4 FragmentColors : SV_TARGET0
-		, out float4 OutGbufferA : SV_TARGET1
-		, out float4 OutGBufferB : SV_TARGET2
-		, out float4 OutGBufferE : SV_TARGET3
-		, out float4 OutGBufferD : SV_TARGET4
-		, out float4 OutGBufferC : SV_TARGET5
-		, out float4 OutSceneColor : SV_TARGET6
-	)
-{
-	
-	//this static variable in instanced stero.ush needs to be set 
-    ResolvedView = ResolveView();
-
-    FMaterialPixelParameters MaterialParameters = GetMaterialPixelParameters(input.FactoryInterpolants, input.Position);
-    FPixelMaterialInputs PixelMaterialInputs;
-    PixelMaterialInputs = (FPixelMaterialInputs) 0;
-
-		#if USE_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS
-		{
-			float4 ScreenPosition = SvPositionToResolvedScreenPosition(input.Position);
-			float3 TranslatedWorldPosition = SvPositionToResolvedTranslatedWorld(input.Position);
-			CalcMaterialParametersEx(MaterialParameters, PixelMaterialInputs, input.Position, ScreenPosition, bIsFrontFace, TranslatedWorldPosition, BasePassInterpolants.PixelPositionExcludingWPO);
-		}
-	#else
-		{
-			float4 ScreenPosition = SvPositionToResolvedScreenPosition(input.Position);
-			float3 TranslatedWorldPosition = SvPositionToResolvedTranslatedWorld(input.Position);
-			CalcMaterialParametersEx(MaterialParameters, PixelMaterialInputs, input.Position, ScreenPosition, bIsFrontFace, TranslatedWorldPosition, TranslatedWorldPosition);
-		}
-	#endif
-
-    float4 viewport = float4(View.ViewRectMin.xy, View.ViewSizeAndInvSize.xy);
-    float2 NDC = MaterialParameters.ScreenPosition.xy / MaterialParameters.ScreenPosition.w;
-    float coverage = ComputeCoverage(input.FactoryInterpolants.p0p1.xy, input.FactoryInterpolants.p0p1.zw, NDC, viewport.zw);
-
-    half Opacity = GetMaterialOpacity(PixelMaterialInputs);
-    float alpha = coverage * Opacity;
-
-	 if (alpha < SHORTCUT_MIN_ALPHA)
-    {
-        discard;
-        return;
-        //return float4(0, 0, 0, 0);
-		//TODO, maybe write all zeros? or discard?
-    }
-
-	//instead of using this here, just plug the node into world normal in the material editor, makes things easier. less code to modify
-	float4 StrandTangent = input.FactoryInterpolants.Tangent;
-
-    half3 BaseColor = GetMaterialBaseColor(PixelMaterialInputs);
-    half Metallic = GetMaterialMetallic(PixelMaterialInputs);
-    half Specular = GetMaterialSpecular(PixelMaterialInputs);
-
-    float MaterialAO = GetMaterialAmbientOcclusion(PixelMaterialInputs);
-    float Roughness = GetMaterialRoughness(PixelMaterialInputs);   
-    float SubsurfaceProfile = 0;
-    float3 SubsurfaceColor = 0;
-
-	float3 VolumetricLightmapBrickTextureUVs;
-		
-	#if PRECOMPUTED_IRRADIANCE_VOLUME_LIGHTING
-		VolumetricLightmapBrickTextureUVs = ComputeVolumetricLightmapBrickTextureUVs(MaterialParameters.AbsoluteWorldPosition);
-	#endif
-
-	FGBufferData GBuffer = (FGBufferData)0;
-
-	GBuffer.GBufferAO = MaterialAO;
-	GBuffer.PerObjectGBufferData = Primitive.PerObjectGBufferData;
-	GBuffer.Depth = MaterialParameters.ScreenPosition.w;
-    GBuffer.PrecomputedShadowFactors = GetPrecomputedShadowMasks(input.FactoryInterpolants, MaterialParameters.AbsoluteWorldPosition, VolumetricLightmapBrickTextureUVs);
-
-	SetGBufferForShadingModel(
-		GBuffer, 
-		MaterialParameters, 
-		Opacity, 
-		BaseColor, 
-		Metallic, 
-		Specular, 
-		Roughness, 
-		SubsurfaceColor,
-		SubsurfaceProfile
-	);
-
-	GBuffer.SelectiveOutputMask = GetSelectiveOutputMask();
-	GBuffer.Velocity = 0; //velocity written during depths alpha pass...for now
-	GBuffer.SpecularColor = lerp(0.08 * Specular.xxx, BaseColor, Metallic.xxx);
-	GBuffer.DiffuseColor = BaseColor - BaseColor * Metallic;
-
-	float3 BentNormal = MaterialParameters.WorldNormal;
-	float DiffOcclusion = MaterialAO;
-	float SpecOcclusion = MaterialAO;
-	//ApplyBentNormal( MaterialParameters, GBuffer.Roughness, BentNormal, DiffOcclusion, SpecOcclusion );
-	// FIXME: ALLOW_STATIC_LIGHTING == 0 expects this to be AO
-	GBuffer.GBufferAO = AOMultiBounce( Luminance( GBuffer.SpecularColor ), SpecOcclusion ).g;
-
-	half3 DiffuseColor = 0;
-	half3 Color = 0;
-	float IndirectIrradiance = 0;
-
-	#if !MATERIAL_SHADINGMODEL_UNLIT
-
-		float3 DiffuseDir = BentNormal;
-		float3 DiffuseColorForIndirect = GBuffer.DiffuseColor;
-
-		// #if MATERIAL_SHADINGMODEL_SUBSURFACE || MATERIAL_SHADINGMODEL_PREINTEGRATED_SKIN
-		// 	// Add subsurface energy to diffuse
-		// 	//@todo - better subsurface handling for these shading models with skylight and precomputed GI
-		// 	DiffuseColorForIndirect += SubsurfaceColor;
-		// #endif
-
-		// #if MATERIAL_SHADINGMODEL_CLOTH
-		// 	DiffuseColorForIndirect += SubsurfaceColor * saturate( GetMaterialCustomData0(MaterialParameters) );
-		// #endif
-
-		#if MATERIAL_SHADINGMODEL_HAIR
-		{
-			float3 N = MaterialParameters.WorldNormal;
-			float3 V = MaterialParameters.CameraVector;
-			float3 L = normalize( V - N * dot(V,N) );
-			DiffuseDir = L;
-			DiffuseColorForIndirect = 2*PI * HairShading( GBuffer, L, V, N, 1, 0, 0.2, uint2(0,0) );
-		}
-		#endif
-
-		float3 DiffuseIndirectLighting;
-		float3 SubsurfaceIndirectLighting;
-		GetPrecomputedIndirectLightingAndSkyLight(MaterialParameters, input.FactoryInterpolants, DiffuseDir, VolumetricLightmapBrickTextureUVs, DiffuseIndirectLighting, SubsurfaceIndirectLighting, IndirectIrradiance);
-		
-		float IndirectOcclusion = 1.0f;
-		float2 NearestResolvedDepthScreenUV = 0;
-
-		// #if FORWARD_SHADING && (MATERIALBLENDING_SOLID || MATERIALBLENDING_MASKED)
-		// 	float2 NDC = MaterialParameters.ScreenPosition.xy / MaterialParameters.ScreenPosition.w;
-		// 	float2 ScreenUV = NDC * ResolvedView.ScreenPositionScaleBias.xy + ResolvedView.ScreenPositionScaleBias.wz;
-		// 	NearestResolvedDepthScreenUV = CalculateNearestResolvedDepthScreenUV(ScreenUV, MaterialParameters.ScreenPosition.w);
-
-		// 	IndirectOcclusion = GetIndirectOcclusion(NearestResolvedDepthScreenUV, GBuffer);
-		// 	DiffuseIndirectLighting *= IndirectOcclusion;
-		// 	SubsurfaceIndirectLighting *= IndirectOcclusion;
-		// 	IndirectIrradiance *= IndirectOcclusion;
-		// #endif
-
-		DiffuseColor += (DiffuseIndirectLighting * DiffuseColorForIndirect + SubsurfaceIndirectLighting * SubsurfaceColor) * AOMultiBounce( GBuffer.BaseColor, DiffOcclusion );
-
-		#if TRANSLUCENCY_PERVERTEX_FORWARD_SHADING
-
-			//Color += BasePassInterpolants.VertexDiffuseLighting * GBuffer.DiffuseColor;
-
-		#elif FORWARD_SHADING || TRANSLUCENCY_LIGHTING_SURFACE_FORWARDSHADING || TRANSLUCENCY_LIGHTING_SURFACE_LIGHTINGVOLUME
-			uint GridIndex = 0;
-
-			//#if INSTANCED_STEREO
-			//	const uint EyeIndex = GetEyeIndex(Interpolants.PackedEyeIndex);
-			//#else
-				const uint EyeIndex = 0;
-			//#endif
-
-			#if FEATURE_LEVEL >= FEATURE_LEVEL_SM5
-				GridIndex = ComputeLightGridCellIndex((uint2)(MaterialParameters.SvPosition.xy - ResolvedView.ViewRectMin.xy), MaterialParameters.SvPosition.w, EyeIndex);
-
-				#if FORWARD_SHADING || TRANSLUCENCY_LIGHTING_SURFACE_FORWARDSHADING
-					const float Dither = InterleavedGradientNoise(MaterialParameters.SvPosition.xy, View.StateFrameIndexMod8);
-					Color += GetForwardDirectLighting(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, EyeIndex, Dither);
-				#endif
-			#endif
-            
-            #if !MATERIAL_SHADINGMODEL_HAIR
-			    Color += GetImageBasedReflectionLighting(MaterialParameters, GBuffer.Roughness, GBuffer.SpecularColor, IndirectIrradiance, GridIndex, EyeIndex) * IndirectOcclusion * AOMultiBounce( GBuffer.SpecularColor, SpecOcclusion );
-		    #endif
-        #endif
-
-		// #if SIMPLE_FORWARD_DIRECTIONAL_LIGHT
-
-		// 	float3 DirectionalLighting = GetSimpleForwardLightingDirectionalLight(
-		// 		GBuffer,
-		// 		DiffuseColorForIndirect,
-		// 		GBuffer.SpecularColor,
-		// 		GBuffer.Roughness,
-		// 		MaterialParameters.WorldNormal, 
-		// 		MaterialParameters.CameraVector);
-			
-		// 	#if STATICLIGHTING_SIGNEDDISTANCEFIELD
-		// 		DirectionalLighting *= GBuffer.PrecomputedShadowFactors.x;
-		// 	#elif PRECOMPUTED_IRRADIANCE_VOLUME_LIGHTING
-		// 		DirectionalLighting *= GetVolumetricLightmapDirectionalLightShadowing(VolumetricLightmapBrickTextureUVs);
-		// 	#elif CACHED_POINT_INDIRECT_LIGHTING
-		// 		DirectionalLighting *= PrecomputedLightingBuffer.DirectionalLightShadowing;
-		// 	#endif
-			
-		// 	Color += DirectionalLighting;
-
-		// #endif
-	#endif
-
-	half3 Emissive = GetMaterialEmissive(PixelMaterialInputs);
-	#if !POST_PROCESS_SUBSURFACE
- 	// For non-skin, we just add diffuse and non-diffuse color together, otherwise we need to keep them separate
-		Color += DiffuseColor;
-	#endif
-	Color += Emissive;
-
-	GBuffer.IndirectIrradiance = IndirectIrradiance;
-
-	// -0.5 .. 0.5, could be optimzed as lower quality noise would be sufficient
-	float QuantizationBias = PseudoRandom( MaterialParameters.SvPosition.xy ) - 0.5f;
-	float4 Dummy;
-    EncodeGBuffer(GBuffer, OutGbufferA, OutGBufferB, OutGBufferC, OutGBufferD, OutGBufferE, Dummy, QuantizationBias);
-    FragmentColors = float4(OutGBufferC.rgb * alpha, alpha);
-	OutGBufferC.rgb = float3(0,0,0); // dont write the color until the next pass
-    OutSceneColor = float4(Color.rgb, 0);
-	
+    const uint EyeIndex = 0;
+    Color += AccumulateHairLight(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, input.FactoryInterpolants.Tangent, params, vScreenAddress, EyeIndex, GBuffer, Dither, MaterialParameters.PrimitiveId);
+    return float4(Color * TFXAlpha, TFXAlpha);
 }

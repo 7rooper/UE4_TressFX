@@ -120,11 +120,11 @@ void FTressFX_FillColorPS::GetShaderBindings(
 	const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)PrimitiveSceneProxy;
 	ShaderBindings.Add(tressfxShadeParameters, TFXProxy->TressFXHairObject->ShadeParametersUniformBuffer);
 
-	if (ShaderElementData.ForwardLightDataBuffer.IsValid() && ShaderElementData.ForwardLightDataBuffer->IsValid())
-	{
-		//not sure if this is needed, I THINK its included in the opaque bass pass buffer shared params...
-		ShaderBindings.Add(GetUniformBufferParameter<FForwardLightData>(), ShaderElementData.ForwardLightDataBuffer);
-	}
+	//if (ShaderElementData.ForwardLightDataBuffer.IsValid() && ShaderElementData.ForwardLightDataBuffer->IsValid())
+	//{
+	//	//not sure if this is needed, I THINK its included in the opaque bass pass buffer shared params...
+	//	ShaderBindings.Add(GetUniformBufferParameter<FForwardLightData>(), ShaderElementData.ForwardLightDataBuffer);
+	//}
 }
 
 IMPLEMENT_MATERIAL_SHADER_TYPE(, FTressFX_FillColorPS, TEXT("/Engine/Private/TressFX_FillColorPS.usf"), TEXT("main"), SF_Pixel);

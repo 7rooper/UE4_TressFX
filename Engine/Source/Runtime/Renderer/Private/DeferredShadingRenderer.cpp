@@ -1962,6 +1962,13 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 		ServiceLocalQueue();
 	}
 
+	//@BEGIN third party code TressFX
+	if (TFXRenderType == ETressFXRenderType::ShortCut)
+	{
+		RenderTressfXResolvePass(RHICmdList);
+	}
+	//@END third party code TressFX
+
 	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ++ViewIndex)
 	{
 		const FViewInfo& View = Views[ViewIndex];
