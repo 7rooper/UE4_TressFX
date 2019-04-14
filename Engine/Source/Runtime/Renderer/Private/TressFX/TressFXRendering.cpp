@@ -744,29 +744,25 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, FillColors);
 
+			FRHIRenderPassInfo RPInfo(
+				SceneContext.FragmentColorsTexture->GetRenderTargetItem().TargetableTexture, ERenderTargetActions::Load_DontStore,
+				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
+			);
+			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXFillColor"));
+
 			TUniformBufferRef<FOpaqueBasePassUniformParameters> BasePassUniformBuffer;
 
 			//the basepass buffer on the scene gets updated inside CreateOpaqueBasePassUniformBuffer
 			CreateOpaqueBasePassUniformBuffer(RHICmdList, View, nullptr, BasePassUniformBuffer);  
 			FMeshPassProcessorRenderState DrawRenderState(View, BasePassUniformBuffer);// first arg is "PassUniformBuffer
 			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
-
-			SetRenderTarget(
-				RHICmdList, 
-				SceneContext.FragmentColorsTexture->GetRenderTargetItem().TargetableTexture,
-				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture
-			);
 			
 			DrawClearQuad(RHICmdList,true, FLinearColor::Transparent, false, 0, false, 0);		
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 			View.ParallelMeshDrawCommandPasses[EMeshPass::TressFX_FillColors].DispatchDraw(nullptr, RHICmdList);
+			RHICmdList.EndRenderPass();
 		}
 
-		{
-		/*	FTextureRHIParamRef RTVs[6] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
-			FUnorderedAccessViewRHIParamRef UAVs[2] = { nullptr,nullptr };
-			SetRenderTargets(RHICmdList, ARRAY_COUNT(RTVs), RTVs, nullptr, 2, UAVs);*/
-		}
 		// shortcut pass 4: resolve color
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveColors);
@@ -777,19 +773,15 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 			};
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources,2);
 
-			FRHIDepthRenderTargetView DepthRTV(
-				SceneContext.GetSceneDepthSurface(),
-				ERenderTargetLoadAction::ENoAction,
-				ERenderTargetStoreAction::ENoAction
-			);
-			FRHIRenderTargetView ColorRTV(
-				SceneContext.GetSceneColorSurface(),
-				ERenderTargetLoadAction::ELoad
+
+			FRHIRenderPassInfo RPInfo(
+				SceneContext.GetSceneColorSurface(), ERenderTargetActions::Load_DontStore,
+				SceneContext.GetSceneDepthSurface(), EDepthStencilTargetActions::DontLoad_DontStore
 			);
 
-			RHICmdList.SetRenderTargets(1, &ColorRTV, &DepthRTV, 0, nullptr);
+			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXResolveColor"));
 
-			TShaderMapRef<FScreenVS>						VertexShader(View.ShaderMap);
+			TShaderMapRef<FScreenVS>							VertexShader(View.ShaderMap);
 			TShaderMapRef<FTressFXShortCut_ResolveColorPS>		PixelShader(View.ShaderMap);
 
 			FRenderingCompositePassContext Context(RHICmdList, View);
@@ -833,6 +825,7 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 				SceneContext.GetBufferSizeXY(),
 				*VertexShader,
 				EDRF_UseTriangleOptimization);
+			RHICmdList.EndRenderPass();
 		}
 	}
 }

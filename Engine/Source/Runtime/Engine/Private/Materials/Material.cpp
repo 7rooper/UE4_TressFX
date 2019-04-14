@@ -152,7 +152,11 @@ int32 FMaterialResource::CompilePropertyAndSetMaterialProperty(EMaterialProperty
 		case MP_OpacityMask:
 			// Force basic opaque surfaces to skip masked/translucent-only attributes.
 			// Some features can force the material to create a masked variant which unintentionally runs this dormant code
-			if (GetMaterialDomain() != MD_Surface || GetBlendMode() != BLEND_Opaque || !(GetShadingModel() == MSM_Unlit || GetShadingModel() == MSM_DefaultLit))
+			if (GetMaterialDomain() != MD_Surface || GetBlendMode() != BLEND_Opaque || !(GetShadingModel() == MSM_Unlit || GetShadingModel() == MSM_DefaultLit)
+				//@BEGIN third party code TRessFX
+				|| IsUsedWithTressFX()
+				//@END third party code TRessFX
+				)
 			{
 				Ret = MaterialInterface->CompileProperty(Compiler, Property);
 			}
@@ -5873,7 +5877,11 @@ static bool IsPropertyActive_Internal(EMaterialProperty InProperty,
 	EDecalBlendMode DecalBlendMode,
 	bool bBlendableOutputAlpha,
 	bool bHasTessellation,
-	bool bHasRefraction )
+	bool bHasRefraction,
+	//@BEGIN third party code TressFX
+	bool bTressFX = false
+	//@END third party code TressFX
+	)
 {
 	if (Domain == MD_PostProcess)
 	{
@@ -6058,6 +6066,11 @@ static bool IsPropertyActive_Internal(EMaterialProperty InProperty,
 		{
 			Active = true;
 		}
+		//@BEGIN third party code TressFX
+		if (bTressFX) 
+		{
+			Active = true;
+		}
 		break;
 	case MP_OpacityMask:
 		Active = BlendMode == BLEND_Masked;
@@ -6126,7 +6139,11 @@ bool UMaterial::IsPropertyActiveInEditor(EMaterialProperty InProperty) const
 		DecalBlendMode,
 		BlendableOutputAlpha,
 		D3D11TessellationMode != MTM_NoTessellation,
-		Refraction.IsConnected());
+		Refraction.IsConnected(), 
+		//@BEGIN third party code TressFX
+		bUsedWithTressFX
+		//@END third party code TressFX
+	);
 }
 #endif // WITH_EDITOR
 
@@ -6140,7 +6157,10 @@ bool UMaterial::IsPropertyActiveInDerived(EMaterialProperty InProperty, const UM
 		DecalBlendMode,
 		BlendableOutputAlpha,
 		D3D11TessellationMode != MTM_NoTessellation,
-		Refraction.IsConnected());
+		Refraction.IsConnected(),
+		//@BEGIN third party code TressFX
+		DerivedMaterial->GetMaterial()->bUsedWithTressFX
+	);
 }
 
 #if WITH_EDITORONLY_DATA
