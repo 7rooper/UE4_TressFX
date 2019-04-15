@@ -1691,6 +1691,12 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 
 	checkSlow(RHICmdList.IsOutsideRenderPass());
 
+	//@BEGIN third party code TressFX
+	//using the passed in ref inside renderlights instead because tressFX need it later
+	TRefCountPtr<IPooledRenderTarget> ScreenShadowMaskTexture;
+	//@END third party code TressFX
+
+
 	// Render lighting.
 	if (bRenderDeferredLighting)
 	{
@@ -1719,7 +1725,11 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 		}
 
 		RHICmdList.SetCurrentStat(GET_STATID(STAT_CLM_Lighting));
-		RenderLights(RHICmdList);
+		RenderLights(RHICmdList,
+			//@BEGIN third party code TressFX
+			ScreenShadowMaskTexture
+			//@END third party code TressFX
+		);
 		RHICmdList.SetCurrentStat(GET_STATID(STAT_CLM_AfterLighting));
 		ServiceLocalQueue();
 
@@ -1961,7 +1971,7 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	//@BEGIN third party code TressFX
 	if (TFXRenderType == ETressFXRenderType::ShortCut)
 	{
-		RenderTressfXResolvePass(RHICmdList);
+		RenderTressfXResolvePass(RHICmdList, ScreenShadowMaskTexture);
 	}
 	//@END third party code TressFX
 

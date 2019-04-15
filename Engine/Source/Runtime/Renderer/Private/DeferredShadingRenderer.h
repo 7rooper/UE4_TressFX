@@ -228,7 +228,11 @@ private:
 	void RenderTiledDeferredLighting(FRHICommandListImmediate& RHICmdList, const TArray<FSortedLightSceneInfo, SceneRenderingAllocator>& SortedLights, int32 NumUnshadowedLights, const FSimpleLightArray& SimpleLights);
 
 	/** Renders the scene's lighting. */
-	void RenderLights(FRHICommandListImmediate& RHICmdList);
+	void RenderLights(FRHICommandListImmediate& RHICmdList, 
+		//@BEGIN third party code TressFX
+		TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture
+		//@END third party code TressFX
+	);
 
 	/** Renders an array of lights for the stationary light overlap viewmode. */
 	void RenderLightArrayForOverlapViewmode(FRHICommandListImmediate& RHICmdList, const TSparseArray<FLightSceneInfoCompact>& LightArray);

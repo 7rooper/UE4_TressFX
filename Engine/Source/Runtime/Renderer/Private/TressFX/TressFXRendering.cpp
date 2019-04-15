@@ -719,7 +719,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 	}
 }
 
-void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene)
+void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture)
 {
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
 	SCOPED_DRAW_EVENT(RHICmdList, TressFXShortcut_Resolve);
@@ -747,7 +747,7 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 			TUniformBufferRef<FOpaqueBasePassUniformParameters> BasePassUniformBuffer;
 
 			//the basepass buffer on the scene gets updated inside CreateOpaqueBasePassUniformBuffer
-			CreateOpaqueBasePassUniformBuffer(RHICmdList, View, nullptr, BasePassUniformBuffer);  
+			CreateOpaqueBasePassUniformBuffer(RHICmdList, View, ScreenShadowMaskTexture, BasePassUniformBuffer);
 			FMeshPassProcessorRenderState DrawRenderState(View, BasePassUniformBuffer);// first arg is "PassUniformBuffer
 			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 			
@@ -893,7 +893,7 @@ void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList)
 	}
 }
 
-void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList)
+void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture)
 {
 
 	int32 TressFXType = CVarTressFXType.GetValueOnAnyThread();
@@ -910,7 +910,7 @@ void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdLi
 		}
 		case ETressFXRenderType::ShortCut:
 		{
-			RenderShortcutResolvePass(RHICmdList, Views, Scene);
+			RenderShortcutResolvePass(RHICmdList, Views, Scene, ScreenShadowMaskTexture);
 			break;
 		}
 		default:

@@ -1577,7 +1577,7 @@ protected:
 	void RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList);
 	void RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHICmdList);
 	void RenderTressFXResolveVelocity(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& VelocityRT);
-	void RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList);
+	void RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture);
 	/*@END Third party code TressFX*/
 
 private:

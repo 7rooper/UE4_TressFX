@@ -601,11 +601,13 @@ float3 AccumulateHairLight(
 		LightData.SpecularScale = SpecularScale;
 
 		LightData.ShadowedBits = (DirectionalLightData.DirectionalLightShadowMapChannelMask & 0xFF) != 0 ? 1 : 0;
+        LightData.ShadowedBits = 1;
 		// Static shadowing uses ShadowMapChannel, dynamic shadows are packed into light attenuation using PreviewShadowMapChannel
 		LightData.ShadowMapChannelMask = UnpackShadowMapChannelMask(DirectionalLightData.DirectionalLightShadowMapChannelMask);
 
 		#if MATERIALBLENDING_SOLID || MATERIALBLENDING_MASKED
 			float4 PreviewShadowMapChannelMask = UnpackShadowMapChannelMask(DirectionalLightData.DirectionalLightShadowMapChannelMask >> 4);
+			PreviewShadowMapChannelMask = float4(1,0,0,0);
 			float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
 
 			// In the forward shading path we can't separate per-object shadows from CSM, since we only spend one light attenuation channel per light
@@ -779,30 +781,43 @@ float4 main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace) : SV_Target0
     GBuffer.GBufferAO = AOMultiBounce(Luminance(GBuffer.SpecularColor), SpecOcclusion).g;
     GBuffer.WorldNormal = MaterialParameters.WorldNormal;
 
-	#if TRESSFX_ALLOW_PRECOMPUTED_LIGHTING
-		float3 DiffuseDir = BentNormal;
-		float3 DiffuseColorForIndirect = GBuffer.DiffuseColor;
-		{
-			float3 N = MaterialParameters.WorldNormal;
-			float3 V = MaterialParameters.CameraVector;
-			float3 L = normalize( V - N * dot(V,N) );
-			DiffuseDir = L;
-			DiffuseColorForIndirect = 2*PI * HairShading( GBuffer, L, V, N, 1, 0, 0.2, uint2(0,0) );
-		}
-		float3 DiffuseIndirectLighting;
-		float3 SubsurfaceIndirectLighting;
-		half3 DiffuseColor = 0;
-		float IndirectIrradiance = 0;
-		GetPrecomputedIndirectLightingAndSkyLight(MaterialParameters, input.FactoryInterpolants, DiffuseDir, VolumetricLightmapBrickTextureUVs, DiffuseIndirectLighting, SubsurfaceIndirectLighting, IndirectIrradiance);
-		DiffuseColor += (DiffuseIndirectLighting * DiffuseColorForIndirect + SubsurfaceIndirectLighting * SubsurfaceColor) * AOMultiBounce(GBuffer.BaseColor, DiffOcclusion);
-		Color += DiffuseColor;
-	#endif
+
+	float3 DiffuseDir = BentNormal;
+	float3 DiffuseColorForIndirect = GBuffer.DiffuseColor;
+	{
+		float3 N = MaterialParameters.WorldNormal;
+		float3 V = MaterialParameters.CameraVector;
+		float3 L = normalize( V - N * dot(V,N) );
+		DiffuseDir = L;
+		DiffuseColorForIndirect = 2*PI * HairShading( GBuffer, L, V, N, 1, 0, 0.2, uint2(0,0) );
+	}
+	float3 DiffuseIndirectLighting;
+	float3 SubsurfaceIndirectLighting;
+	half3 DiffuseColor = 0;
+	float IndirectIrradiance = 0;
+	GetPrecomputedIndirectLightingAndSkyLight(MaterialParameters, input.FactoryInterpolants, DiffuseDir, VolumetricLightmapBrickTextureUVs, DiffuseIndirectLighting, SubsurfaceIndirectLighting, IndirectIrradiance);
+	DiffuseColor += (DiffuseIndirectLighting * DiffuseColorForIndirect + SubsurfaceIndirectLighting * SubsurfaceColor) * AOMultiBounce(GBuffer.BaseColor, DiffOcclusion);
+	Color += DiffuseColor;
+
+	float2 NDC = MaterialParameters.ScreenPosition.xy / MaterialParameters.ScreenPosition.w;
+	float2 ScreenUV = NDC * ResolvedView.ScreenPositionScaleBias.xy + ResolvedView.ScreenPositionScaleBias.wz;
+		
+	float IndirectOcclusion = 1.0f;
+	float2 NearestResolvedDepthScreenUV = 0;
+	NearestResolvedDepthScreenUV = CalculateNearestResolvedDepthScreenUV(ScreenUV, MaterialParameters.ScreenPosition.w);
+
+	IndirectOcclusion = GetIndirectOcclusion(NearestResolvedDepthScreenUV, GBuffer);
+	DiffuseIndirectLighting *= IndirectOcclusion;
+	SubsurfaceIndirectLighting *= IndirectOcclusion;
+	IndirectIrradiance *= IndirectOcclusion;
+
 
     int2 vScreenAddress = int2(input.Position.xy);
 
     uint GridIndex = ComputeLightGridCellIndex((uint2) (input.Position.xy - ResolvedView.ViewRectMin.xy), input.Position.w, 0);
     const float Dither = InterleavedGradientNoise(MaterialParameters.SvPosition.xy, View.StateFrameIndexMod8);
     const uint EyeIndex = 0;
-    Color += AccumulateHairLight(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, input.FactoryInterpolants.Tangent, params, vScreenAddress, EyeIndex, GBuffer, Dither, MaterialParameters.PrimitiveId);
+    //Color += GetForwardDirectLighting(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither);
+    Color += AccumulateHairLight(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, input.FactoryInterpolants.Tangent, params, NearestResolvedDepthScreenUV, EyeIndex, GBuffer, Dither, MaterialParameters.PrimitiveId);
     return float4(Color * TFXAlpha, TFXAlpha);
 }
