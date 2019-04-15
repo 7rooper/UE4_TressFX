@@ -48,9 +48,9 @@ FBoxSphereBounds UTressFXComponent::CalcBounds(const FTransform& LocalToWorld) c
 		//IDK why this keeps happening, this is just a bandaid...
 		if (!FMath::IsFinite(Asset->ImportData->Bounds.SphereRadius))
 		{
+			UE_LOG(TressFXComponentLog, Warning, TEXT("Asset bounds contained non-finite number. relcalculating."), *this->GetFName().ToString());
 			Asset->ImportData->Bounds = Asset->ImportData->CalcBounds();
 		}
-		//JAKETODO: bounds seem to get fucked randomly, see if it keeps happening
 		return Asset->ImportData->Bounds.TransformBy(LocalToWorld.ToMatrixWithScale());
 	}
 

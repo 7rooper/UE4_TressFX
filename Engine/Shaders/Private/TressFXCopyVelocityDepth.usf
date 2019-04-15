@@ -8,7 +8,7 @@ void CopyDepthPS(FScreenVertexOutput Input, out float Depth : SV_Depth)
 Texture2D<float> DepthTexture;
 Texture2D<uint2> StencilTexture;
 
-
+//unused
 float CopyHairDepthPs(FScreenVertexOutput Input) : SV_Depth
 {
     uint3 ScreenAddr = uint3(uint2(Input.Position.xy),0);

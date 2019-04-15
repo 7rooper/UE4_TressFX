@@ -124,7 +124,6 @@ FPrimitiveViewRelevance FTressFXSceneProxy::GetViewRelevance(const FSceneView * 
 	ViewRel.bDynamicRelevance = true;
 	ViewRel.bRenderInMainPass = true;
 	ViewRel.bTressFX = View->Family->EngineShowFlags.TressFX;
-	//ViewRel.bTressFX = View->Family->EngineShowFlags.TressFX && this->Material != nullptr && this->Material->GetMaterial()->bUsedWithTressFX;
 	return ViewRel;
 }
 

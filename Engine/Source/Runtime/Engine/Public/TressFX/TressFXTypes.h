@@ -21,7 +21,7 @@
 #define AMD_TRESSFX_VERSION_MINOR                    0
 #define AMD_TRESSFX_VERSION_PATCH                    0
 
-//for nvidia, might want to change these to 32 JAKETODO...
+//for nvidia, might want to change these to 32 ...
 #define TRESSFX_SIM_THREAD_GROUP_SIZE 64
 #define TRESSFX_MIN_VERTS_PER_STRAND_FOR_GPU_ITERATION 64
 

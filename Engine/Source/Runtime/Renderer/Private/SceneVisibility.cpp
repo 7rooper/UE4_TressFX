@@ -2660,15 +2660,23 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 	/*@BEGIN Third party code TressFX*/
 	if (ViewRelevance.bTressFX)
 	{
-		//JAKETODO, only add to pass that are needed. Example: shortcut rendering does not need depths velocity
-		PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
-		View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
-		
-		PassMask.Set(EMeshPass::TressFX_DepthsAlpha);
-		View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsAlpha] += NumElements;
+		extern TAutoConsoleVariable<int32> CVarTressFXType;
+		int32 TFXRenderType = CVarTressFXType.GetValueOnRenderThread();
+		if (TFXRenderType == ETressFXRenderType::Opaque) 
+		{
+			//opaque will get rendered by ue4s base pass shaders
+			PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
+			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
+		}
+		else if (TFXRenderType == ETressFXRenderType::ShortCut)
+		{
+			//velocity is rendered during depths alpha too
+			PassMask.Set(EMeshPass::TressFX_DepthsAlpha);
+			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsAlpha] += NumElements;
 
-		PassMask.Set(EMeshPass::TressFX_FillColors);
-		View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
+			PassMask.Set(EMeshPass::TressFX_FillColors);
+			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
+		}
 		
 		View.TressFXMeshBatches.AddUninitialized(1);
 		FTressFXMeshBatch& BatchAndProxy = View.TressFXMeshBatches.Last();
