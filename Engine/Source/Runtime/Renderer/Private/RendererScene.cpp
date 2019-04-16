@@ -1685,8 +1685,16 @@ void FScene::AddLightSceneInfo_RenderThread(FLightSceneInfo* LightSceneInfo)
 	}
 
 	const bool bForwardShading = IsForwardShadingEnabled(GetShaderPlatform());
-
-	if (bForwardShading && (LightSceneInfo->Proxy->CastsDynamicShadow() || LightSceneInfo->Proxy->GetLightFunctionMaterial()))
+	//@BEGIN third party code TressFX
+	//JAKETODO, find a better way than using this cvar here because this is dumb
+	extern TAutoConsoleVariable<int32> CVarTressFXType;
+	int32 TFXRenderType = CVarTressFXType.GetValueOnRenderThread();
+	//@END third party code TressFX
+	if (
+		//@BEGIN third party code TressFX
+		TFXRenderType == ETressFXRenderType::ShortCut
+		//@END third party code TressFX
+		|| bForwardShading && (LightSceneInfo->Proxy->CastsDynamicShadow() || LightSceneInfo->Proxy->GetLightFunctionMaterial()))
 	{
 		AssignAvailableShadowMapChannelForLight(LightSceneInfo);
 	}
