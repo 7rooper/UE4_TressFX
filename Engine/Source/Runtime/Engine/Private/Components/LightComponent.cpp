@@ -254,6 +254,9 @@ FLightSceneProxy::FLightSceneProxy(const ULightComponent* InLightComponent)
 	, bStaticLighting(InLightComponent->HasStaticLighting())
 	, bStaticShadowing(InLightComponent->HasStaticShadowing())
 	, bCastDynamicShadow(InLightComponent->CastShadows && InLightComponent->CastDynamicShadows)
+	//@BEGIN third party code TressFX
+	, bCastTressFXDynamicShadows(InLightComponent->CastShadows && InLightComponent->CastDynamicShadows && InLightComponent->CastShadows && InLightComponent->bCastTressFXDynamicShadows)
+	//@END third party code TressFX
 	, bCastStaticShadow(InLightComponent->CastShadows && InLightComponent->CastStaticShadows)
 	, bCastTranslucentShadows(InLightComponent->CastTranslucentShadows)
 	, bTransmission(InLightComponent->bTransmission && bCastDynamicShadow && !bStaticShadowing)
@@ -370,6 +373,9 @@ ULightComponentBase::ULightComponentBase(const FObjectInitializer& ObjectInitial
 	CastShadows = true;
 	CastStaticShadows = true;
 	CastDynamicShadows = true;
+	//@BEGIN third party code TressFX
+	bCastTressFXDynamicShadows = true;
+	//@END third party code TressFX
 	bCastRaytracedShadow = true;
 	bAffectReflection = true;
 #if WITH_EDITORONLY_DATA
@@ -541,6 +547,13 @@ bool ULightComponent::CanEditChange(const UProperty* InProperty) const
 	if (InProperty)
 	{
 		FString PropertyName = InProperty->GetName();
+
+		//@BEGIN third party code TressFX
+		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULightComponent, bCastTressFXDynamicShadows))
+		{
+			return CastShadows && CastDynamicShadows;
+		}
+		//@END third party code TressFX
 
 		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULightComponent, bCastShadowsFromCinematicObjectsOnly))
 		{

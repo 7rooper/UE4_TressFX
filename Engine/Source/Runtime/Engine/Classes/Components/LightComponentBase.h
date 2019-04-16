@@ -65,6 +65,16 @@ class ENGINE_API ULightComponentBase : public USceneComponent
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Light, AdvancedDisplay)
 	uint32 CastDynamicShadows:1;
 
+	//@BEGIN third party code TressFX
+
+	/**
+	 * Whether the light should cast dynamic shadows on TressFX objects.  Also requires Cast Shadows, and Cast Dynamic Shadows to be set to True.
+	 **/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Light, AdvancedDisplay)
+	uint32 bCastTressFXDynamicShadows : 1;
+
+	//@END third party code TressFX
+
 	/** Whether the light affects translucency or not.  Disabling this can save GPU time when there are many small lights. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Light, AdvancedDisplay)
 	uint32 bAffectTranslucentLighting:1;

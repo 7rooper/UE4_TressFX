@@ -1685,14 +1685,20 @@ void FScene::AddLightSceneInfo_RenderThread(FLightSceneInfo* LightSceneInfo)
 	}
 
 	const bool bForwardShading = IsForwardShadingEnabled(GetShaderPlatform());
-	//@BEGIN third party code TressFX
-	//JAKETODO, find a better way than using this cvar here because this is dumb
+	// @BEGIN third party code TressFX
+	// JAKETODO, find a better way than using this cvar here because this is dumb
+	// NOTE: 
+	// forcing an assignment here even though we are using the deferred render could cause issues
+	// in place check to see if a shadow is visiible by this for example: ProjectedShadowInfo->GetLightSceneInfo().GetDynamicShadowMapChannel() == -1
+	// see shadowsetup.cpp line 3520
+	// investigate to make sure that wont cause problems
 	extern TAutoConsoleVariable<int32> CVarTressFXType;
 	int32 TFXRenderType = CVarTressFXType.GetValueOnRenderThread();
 	//@END third party code TressFX
 	if (
 		//@BEGIN third party code TressFX
-		TFXRenderType == ETressFXRenderType::ShortCut
+		//TFXRenderType == ETressFXRenderType::ShortCut
+		LightSceneInfo->Proxy->bCastTressFXDynamicShadows
 		//@END third party code TressFX
 		|| bForwardShading && (LightSceneInfo->Proxy->CastsDynamicShadow() || LightSceneInfo->Proxy->GetLightFunctionMaterial()))
 	{

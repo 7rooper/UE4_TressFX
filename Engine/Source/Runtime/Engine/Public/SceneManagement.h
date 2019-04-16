@@ -1381,6 +1381,10 @@ protected:
 	/** True if the light casts dynamic shadows. */
 	const uint8 bCastDynamicShadow : 1;
 
+	//@BEGIN third party code TressFX
+	const uint8 bCastTressFXDynamicShadows : 1;
+	//@END third party code TressFX
+
 	/** True if the light casts static shadows. */
 	const uint8 bCastStaticShadow : 1;
 

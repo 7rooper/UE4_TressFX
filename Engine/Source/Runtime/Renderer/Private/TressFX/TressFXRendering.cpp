@@ -533,6 +533,19 @@ extern void DrawRectangle(
 	uint32 InstanceCount
 );
 
+bool FSceneRenderer::GetAnyViewHasTressFX()
+{
+	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ++ViewIndex)
+	{
+		const FViewInfo& View = Views[ViewIndex];
+		if (View.TressFXMeshBatches.Num() > 0)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 bool FSceneRenderer::ShouldRenderTressFX(int32 TressFXPass)
 {
 	if (TressFXPass < 0 || TressFXPass > ETressFXPass::Max)
@@ -542,14 +555,7 @@ bool FSceneRenderer::ShouldRenderTressFX(int32 TressFXPass)
 
 	if (!Scene->World || (Scene->World->WorldType != EWorldType::EditorPreview && Scene->World->WorldType != EWorldType::Inactive))
 	{
-		for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ++ViewIndex)
-		{
-			const FViewInfo& View = Views[ViewIndex];
-			if (View.TressFXMeshBatches.Num() > 0)
-			{
-				return true;
-			}
-		}
+		return true;
 	}
 	return false;
 }
