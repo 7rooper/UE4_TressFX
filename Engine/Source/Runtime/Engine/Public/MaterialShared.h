@@ -1276,9 +1276,6 @@ public:
 	virtual bool ShouldApplyFogging() const { return false; }
 
 	/*@BEGIN Third party code TressFX*/
-	virtual bool TressFXAllowPrecomputedLighting() const { return true; }
-	virtual bool TressFXUseUnrealHairShadingModel() const { return false; }
-	virtual bool TressFXDirectionalLightingOnly() const { return false; }
 	virtual bool TressFXShouldRenderVelocity() const { return true; }
 	/*@End Third party code TressFX*/
 
@@ -1974,9 +1971,6 @@ public:
 	ENGINE_API virtual bool ShouldApplyFogging() const override;
 
 	/*@BEGIN Third party code TressFX*/
-	ENGINE_API virtual bool TressFXAllowPrecomputedLighting() const override;
-	ENGINE_API virtual bool TressFXUseUnrealHairShadingModel() const override;
-	ENGINE_API virtual bool TressFXDirectionalLightingOnly() const override;
 	ENGINE_API virtual bool TressFXShouldRenderVelocity() const override;
 	/*@End Third party code TressFX*/
 

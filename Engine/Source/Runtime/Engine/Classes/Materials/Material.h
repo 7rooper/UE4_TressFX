@@ -831,18 +831,6 @@ public:
 
 	/*@BEGIN Third party code TressFX*/
 
-	/** When true, allows skylighting and indirect lighting for hair */
-	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Allow Precomputed Lighting"))
-		uint32 bTressFXAllowPrecomputedLighting : 1;
-
-	/** by default, directional lights will use tressfx hair shading for light. But if this is true, they will use the UE4 hair shader instead. Non-directional lights will always use UE4 hair shading if they are enabled. */
-	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Use unreal hair shading model only"))
-		uint32 bTressFXUseUnrealHairShadingModel : 1;
-
-	/** Only light hair with directional lights. This can save on performance but will disable all but directional lights. */
-	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Directional Lighting Only"))
-		uint32 bTressFXDirectionalLightingOnly : 1;
-
 	/** Render Hair velocity into UE4's Velocity buffer. This is requried for temporal AA, motion blur etc. But could save on performance if disabled for greater lods. */
 	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Render Hair Velocity"))
 		uint32 bTressFXRenderVelocity : 1;

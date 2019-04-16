@@ -899,9 +899,6 @@ UMaterial::UMaterial(const FObjectInitializer& ObjectInitializer)
 	bIsFunctionPreviewMaterial = false;
 
 	/*@BEGIN Third party code TressFX*/
-	bTressFXAllowPrecomputedLighting = true;
-	bTressFXUseUnrealHairShadingModel = false;
-	bTressFXDirectionalLightingOnly = false;
 	bTressFXRenderVelocity = true;
 	/*@End Third party code TressFX*/
 }
@@ -4173,12 +4170,7 @@ bool UMaterial::CanEditChange(const UProperty* InProperty) const
 		FString PropertyName = InProperty->GetName();
 
 		/*@BEGIN Third party code TressFX*/
-		if (
-			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXAllowPrecomputedLighting)
-			|| PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXDirectionalLightingOnly)
-			|| PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXUseUnrealHairShadingModel)
-			|| PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXRenderVelocity)
-			)
+		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXRenderVelocity))
 		{
 			return bUsedWithTressFX;
 		}
@@ -4266,6 +4258,12 @@ bool UMaterial::CanEditChange(const UProperty* InProperty) const
 
 		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, BlendMode))
 		{
+			/*@BEGIN Third party code TressFX*/
+			if (bUsedWithTressFX) 
+			{
+				return false;
+			}
+			/*@END Third party code TressFX*/
 			return MaterialDomain == MD_DeferredDecal || MaterialDomain == MD_Surface || MaterialDomain == MD_Volume || MaterialDomain == MD_UI;
 		}
 	
@@ -5804,6 +5802,12 @@ bool UMaterial::GetCastDynamicShadowAsMasked() const
 
 EBlendMode UMaterial::GetBlendMode() const
 {
+	/*@BEGIN Third party code TressFX*/
+	if (bUsedWithTressFX)
+	{
+		return EBlendMode::BLEND_Opaque;
+	}
+	/*@END Third party code TressFX*/
 	if (EBlendMode(BlendMode) == BLEND_Masked)
 	{
 		if (bCanMaskedBeAssumedOpaque)
@@ -6071,6 +6075,7 @@ static bool IsPropertyActive_Internal(EMaterialProperty InProperty,
 		{
 			Active = true;
 		}
+		//@END third party code TressFX
 		break;
 	case MP_OpacityMask:
 		Active = BlendMode == BLEND_Masked;
@@ -6160,6 +6165,7 @@ bool UMaterial::IsPropertyActiveInDerived(EMaterialProperty InProperty, const UM
 		Refraction.IsConnected(),
 		//@BEGIN third party code TressFX
 		DerivedMaterial->GetMaterial()->bUsedWithTressFX
+		//@END third party code TressFX
 	);
 }
 

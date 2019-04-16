@@ -4000,6 +4000,12 @@ float UMaterialInstance::GetOpacityMaskClipValue() const
 
 EBlendMode UMaterialInstance::GetBlendMode() const
 {
+	/*@BEGIN Third party code TressFX*/
+	if (GetMaterial()->bUsedWithTressFX)
+	{
+		return EBlendMode::BLEND_Opaque;
+	}
+	/*@END Third party code TressFX*/
 	return BlendMode;
 }
 

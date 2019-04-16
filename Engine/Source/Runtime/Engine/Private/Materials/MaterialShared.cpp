@@ -1181,6 +1181,12 @@ bool FMaterialResource::GetCastDynamicShadowAsMasked() const
 
 EBlendMode FMaterialResource::GetBlendMode() const 
 {
+	/*@BEGIN Third party code TressFX*/
+	if (IsUsedWithTressFX())
+	{
+		return EBlendMode::BLEND_Opaque;
+	}
+	/*@END Third party code TressFX*/
 	return MaterialInstance ? MaterialInstance->GetBlendMode() : Material->GetBlendMode();
 }
 
@@ -1243,9 +1249,6 @@ float FMaterialResource::GetMaxDisplacement() const { return Material->MaxDispla
 bool FMaterialResource::ShouldApplyFogging() const {return Material->bUseTranslucencyVertexFog;}
 
 /*@BEGIN Third party code TressFX*/
-bool FMaterialResource::TressFXAllowPrecomputedLighting() const { return Material->bTressFXAllowPrecomputedLighting; }
-bool FMaterialResource::TressFXUseUnrealHairShadingModel() const { return Material->bTressFXUseUnrealHairShadingModel; }
-bool FMaterialResource::TressFXDirectionalLightingOnly() const { return Material->bTressFXDirectionalLightingOnly; }
 bool FMaterialResource::TressFXShouldRenderVelocity() const { return Material->bTressFXRenderVelocity; }
 /*@End Third party code TressFX*/
 
@@ -1602,15 +1605,6 @@ void FMaterial::SetupMaterialEnvironment(
 			case MD_UI:				OutEnvironment.SetDefine(TEXT("MATERIALDOMAIN_UI"), 1u); break;
 		}
 	}
-
-	/*@BEGIN Third party code TressFX*/
-	if (IsUsedWithTressFX())
-	{
-		OutEnvironment.SetDefine(TEXT("TRESSFX_ALLOW_PRECOMPUTED_LIGHTING"), TressFXAllowPrecomputedLighting() ? TEXT("1") : TEXT("0"));
-		OutEnvironment.SetDefine(TEXT("TRESSFX_UNREAL_HAIR_ONLY"), TressFXUseUnrealHairShadingModel() ? TEXT("1") : TEXT("0"));
-		OutEnvironment.SetDefine(TEXT("TRESSFX_DIRECTIONAL_LIGHT_ONLY"), TressFXDirectionalLightingOnly() ? TEXT("1") : TEXT("0"));
-	}
-	/*@END Third party code TressFX*/
 }
 
 /**
