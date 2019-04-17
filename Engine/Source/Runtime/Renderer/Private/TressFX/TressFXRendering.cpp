@@ -543,21 +543,21 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			SCOPED_DRAW_EVENT(RHICmdList, DepthsAlpha);
 
 			static const uint32 ShortcutClearValue[4] = { SHORTCUT_INITIAL_DEPTH ,SHORTCUT_INITIAL_DEPTH,SHORTCUT_INITIAL_DEPTH,SHORTCUT_INITIAL_DEPTH };
-			ClearUAV(RHICmdList, SceneContext.FragmentDepthsTexture->GetRenderTargetItem(), ShortcutClearValue);
+			ClearUAV(RHICmdList, SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem(), ShortcutClearValue);
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 
 
-			FUnorderedAccessViewRHIParamRef UAVs[] = { SceneContext.FragmentDepthsTexture->GetRenderTargetItem().UAV};
+			FUnorderedAccessViewRHIParamRef UAVs[] = { SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().UAV};
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EWritable, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
 			
 			FRHITexture* ColorTargets[] = {
-				SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture,
+				SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().TargetableTexture,
 				SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture
 			};
 
 			FRHIRenderPassInfo RPInfo(ARRAY_COUNT(ColorTargets), ColorTargets, ERenderTargetActions::Load_Store);
 			RPInfo.UAVIndex = 0;
-			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.FragmentDepthsTexture->GetRenderTargetItem().UAV;			
+			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().UAV;			
 			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_Store, ERenderTargetActions::Load_Store);
 			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture;
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
@@ -572,7 +572,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			View.ParallelMeshDrawCommandPasses[EMeshPass::TressFX_DepthsAlpha].DispatchDraw(nullptr, RHICmdList);
 
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
-			RHICmdList.TransitionResource(EResourceTransitionAccess::EReadable, SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture);
+			RHICmdList.TransitionResource(EResourceTransitionAccess::EReadable, SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().TargetableTexture);
 			RHICmdList.TransitionResource(EResourceTransitionAccess::EReadable, SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture);
 			RHICmdList.EndRenderPass();
 		}
@@ -637,7 +637,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXCopyHairDepthToSceneDepth"));
 			
 			FTextureRHIParamRef Resources[1] = {
-				SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture
+				SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().TargetableTexture
 			};
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources, 1);
 
@@ -659,7 +659,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
 
 			VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
-			PixelShader->SetParameters(RHICmdList, View, SceneContext.AccumInvAlpha, SceneContext.TressFXSceneDepth);
+			PixelShader->SetParameters(RHICmdList, View, SceneContext.TressFXAccumInvAlpha, SceneContext.TressFXSceneDepth);
 
 			const FIntPoint Size = View.ViewRect.Size();
 			RHICmdList.SetViewport(0, 0, 0, Size.X, Size.Y, 1);
@@ -700,7 +700,7 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 			SCOPED_DRAW_EVENT(RHICmdList, FillColors);
 
 			FRHIRenderPassInfo RPInfo(
-				SceneContext.FragmentColorsTexture->GetRenderTargetItem().TargetableTexture, ERenderTargetActions::Load_DontStore,
+				SceneContext.TressFXFragmentColorsTexture->GetRenderTargetItem().TargetableTexture, ERenderTargetActions::Load_DontStore,
 				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
 			);
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXFillColor"));
@@ -723,8 +723,8 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveColors);
 
 			FTextureRHIParamRef Resources[2] = {
-				SceneContext.AccumInvAlpha->GetRenderTargetItem().TargetableTexture,
-				SceneContext.FragmentColorsTexture->GetRenderTargetItem().TargetableTexture
+				SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().TargetableTexture,
+				SceneContext.TressFXFragmentColorsTexture->GetRenderTargetItem().TargetableTexture
 			};
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources,2);
 

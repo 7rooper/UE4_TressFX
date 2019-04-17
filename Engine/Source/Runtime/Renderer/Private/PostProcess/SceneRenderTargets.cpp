@@ -293,12 +293,12 @@ FSceneRenderTargets::FSceneRenderTargets(const FViewInfo& View, const FSceneRend
 	/*@BEGIN Third party code TressFX*/
 	TressFXSceneDepth = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXSceneDepth);
 	TressFXVelocity = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXVelocity);
-	AccumInvAlpha = GRenderTargetPool.MakeSnapshot(SnapshotSource.AccumInvAlpha);
-	FragmentDepthsTexture = GRenderTargetPool.MakeSnapshot(SnapshotSource.FragmentDepthsTexture);
-	FragmentColorsTexture = GRenderTargetPool.MakeSnapshot(SnapshotSource.FragmentColorsTexture);
-	PPLLHeads = GRenderTargetPool.MakeSnapshot(SnapshotSource.PPLLHeads);
-	NodePoolSize = SnapshotSource.NodePoolSize;
-	PPLLNodes = PPLLNodes;
+	TressFXAccumInvAlpha = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXAccumInvAlpha);
+	TressFXFragmentDepthsTexture = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXFragmentDepthsTexture);
+	TressFXFragmentColorsTexture = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXFragmentColorsTexture);
+	TressFXKBufferListHeads = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXKBufferListHeads);
+	TressFXKBufferNodePoolSize = SnapshotSource.TressFXKBufferNodePoolSize;
+	TressFXKBufferNodes = TressFXKBufferNodes;
 	/*@END Third party code TressFX*/
 }
 
@@ -1336,20 +1336,20 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 			{
 				FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(BufferSize, PF_R16F, FClearValueBinding(FLinearColor(1, 1, 1, 1)), TexCreate_None, TexCreate_ShaderResource | TexCreate_RenderTargetable, false));
 				Desc.NumSamples = SampleCount;
-				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, AccumInvAlpha, TEXT("TressFX_AccumInvAlpha"), false);
+				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXAccumInvAlpha, TEXT("TressFX_AccumInvAlpha"), false);
 			}
 
 			{
 				FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(BufferSize, PF_R32_UINT, FClearValueBinding::Transparent, TexCreate_None, TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false));
 				Desc.bIsArray = true;
 				Desc.ArraySize = 3;
-				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, FragmentDepthsTexture, TEXT("TressFX_FragmentDepthsTexture"));
+				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXFragmentDepthsTexture, TEXT("TressFX_FragmentDepthsTexture"));
 			}
 
 			{
 				FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(BufferSize, PF_FloatRGBA, FClearValueBinding::Transparent, TexCreate_None, TexCreate_ShaderResource | TexCreate_RenderTargetable, false));
 				Desc.NumSamples = SampleCount;
-				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, FragmentColorsTexture, TEXT("TressFX_FragmentColorsTexture"), false);
+				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXFragmentColorsTexture, TEXT("TressFX_FragmentColorsTexture"), false);
 			}
 		}
 		else if (TFXRenderType == ETressFXRenderType::KBuffer) 
@@ -1361,15 +1361,15 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 
 			FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(BufferSize, PF_R32_UINT, FClearValueBinding::Transparent, TexCreate_None, TexCreate_RenderTargetable | TexCreate_UAV, false));
 			Desc.NumSamples = 1;
-			GRenderTargetPool.FindFreeElement(RHICmdList, Desc, PPLLHeads, TEXT("PPLLHeads"));
+			GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXKBufferListHeads, TEXT("PPLLHeads"));
 
-			if (PPLLNodes.NumBytes != sizeof(FPPLL_Struct) *BufferSize.X*BufferSize.Y * KBufferSize)
+			if (TressFXKBufferNodes.NumBytes != sizeof(FPPLL_Struct) *BufferSize.X*BufferSize.Y * KBufferSize)
 			{
-				PPLLNodes.Release();
-				PPLLNodes.Initialize(sizeof(FPPLL_Struct), BufferSize.X*BufferSize.Y * KBufferSize, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("TressFXKBuffer"), true);
+				TressFXKBufferNodes.Release();
+				TressFXKBufferNodes.Initialize(sizeof(FPPLL_Struct), BufferSize.X*BufferSize.Y * KBufferSize, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("TressFXKBuffer"), true);
 			}
 
-			NodePoolSize = BufferSize.X * BufferSize.Y * KBufferSize;
+			TressFXKBufferNodePoolSize = BufferSize.X * BufferSize.Y * KBufferSize;
 		}
 	}
 }
@@ -2693,12 +2693,12 @@ void FSceneRenderTargets::ReleaseAllTargets()
 	/*@BEGIN Third party code TressFX*/
 	TressFXSceneDepth.SafeRelease();
 	TressFXVelocity.SafeRelease();
-	AccumInvAlpha.SafeRelease();
-	FragmentColorsTexture.SafeRelease();
-	FragmentDepthsTexture.SafeRelease();
-	PPLLHeads.SafeRelease();
-	NodePoolSize = 0;
-	PPLLNodes.Release();
+	TressFXAccumInvAlpha.SafeRelease();
+	TressFXFragmentColorsTexture.SafeRelease();
+	TressFXFragmentDepthsTexture.SafeRelease();
+	TressFXKBufferListHeads.SafeRelease();
+	TressFXKBufferNodePoolSize = 0;
+	TressFXKBufferNodes.Release();
 	/*@END Third party code TressFX*/
 }
 

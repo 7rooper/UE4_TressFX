@@ -166,7 +166,7 @@ void FTressFXShortCut_ResolveDepthPS::SetParameters(FRHICommandList& RHICmdList,
 	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
 
 	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);
-	SetTextureParameter(RHICmdList, ShaderRHI, FragmentDepthsTexture, SceneContext.FragmentDepthsTexture->GetRenderTargetItem().ShaderResourceTexture);
+	SetTextureParameter(RHICmdList, ShaderRHI, FragmentDepthsTexture, SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().ShaderResourceTexture);
 	SceneTextureShaderParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, ESceneTextureSetupMode::All);
 }
 
@@ -180,8 +180,8 @@ void FTressFXShortCut_ResolveColorPS::SetParameters(FRHICommandList& RHICmdList,
 {
 	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, GetPixelShader(), View.ViewUniformBuffer);
 
-	SetTextureParameter(RHICmdList, GetPixelShader(), FragmentColorsTexture, SceneContext.FragmentColorsTexture->GetRenderTargetItem().ShaderResourceTexture);
-	SetTextureParameter(RHICmdList, GetPixelShader(), tAccumInvAlpha, SceneContext.AccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture);
+	SetTextureParameter(RHICmdList, GetPixelShader(), FragmentColorsTexture, SceneContext.TressFXFragmentColorsTexture->GetRenderTargetItem().ShaderResourceTexture);
+	SetTextureParameter(RHICmdList, GetPixelShader(), tAccumInvAlpha, SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture);
 
 	FIntPoint BufferSize = View.ViewRect.Size();
 	SetShaderValue(RHICmdList, GetPixelShader(), vFragmentBufferSize, FVector4(BufferSize.X, BufferSize.Y, 0, 0));

@@ -578,18 +578,19 @@ public:
 	bool bCustomDepthIsValid;
 
 	/*@BEGIN Third party code TressFX*/
+	/** common targets */
 	TRefCountPtr<IPooledRenderTarget> TressFXSceneDepth;
 	TRefCountPtr<IPooledRenderTarget> TressFXVelocity;
 
-	//shortcut specific
-	TRefCountPtr<IPooledRenderTarget> AccumInvAlpha;
-	TRefCountPtr<IPooledRenderTarget> FragmentDepthsTexture;
-	TRefCountPtr<IPooledRenderTarget> FragmentColorsTexture;
+	/** shortcut specific */
+	TRefCountPtr<IPooledRenderTarget> TressFXAccumInvAlpha;
+	TRefCountPtr<IPooledRenderTarget> TressFXFragmentDepthsTexture;
+	TRefCountPtr<IPooledRenderTarget> TressFXFragmentColorsTexture;
 
-	//k-buffer specific
-	TRefCountPtr<IPooledRenderTarget> PPLLHeads;
-	FRWBufferStructured PPLLNodes;
-	int32 NodePoolSize;
+	/** k-buffer specific */
+	TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
+	FRWBufferStructured TressFXKBufferNodes;
+	int32 TressFXKBufferNodePoolSize;
 	/*@END Third party code TressFX*/
 
 private:
