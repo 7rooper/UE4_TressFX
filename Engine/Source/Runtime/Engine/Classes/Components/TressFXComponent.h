@@ -7,7 +7,7 @@
 #include "TressFXComponent.generated.h"
 
 #pragma warning( push )
-//fuck this error
+//no
 #pragma warning( disable : 5038)
 
 DECLARE_LOG_CATEGORY_EXTERN(TressFXComponentLog, Log, All);
@@ -111,7 +111,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 	float WindMagnitude;
 
-	//Derp
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 	FVector WindDirection;
 
@@ -142,6 +141,7 @@ public:
 
 	FTressFXShadeSettings()
 	{
+		//sensible defaults
 		HairShadowAlpha = 0.004;
 		FiberRadius = 0.25;
 		FiberSpacing = 0.1;
@@ -165,14 +165,14 @@ public:
 	UPROPERTY()
 	TArray<int32> MorphIndices;
 
-	/** Usually we do remapping for morph target only when parent skeletal mesh is changed. */
+	/** do remapping for morph target only when parent skeletal mesh is changed. */
 	UPROPERTY()
 	USkeletalMesh* CachedSkeletalMeshForMorph;
 
 	UPROPERTY(EditDefaultsOnly, Category = "TressFX")
 		bool bEnableMorphTargets = false;
 
-	/** It requires a remapping progress to support morph target of skeletal mesh. This progress would be slow when vertex number is very large, and cause long halt in editor. If this option is on, remapping happens when any edit occurs. If this option is off, remapping happens only when the parent skeletal mesh of a HairWorks component changers. If you want to do remapping once when you need, just turn it on and then off. */
+	/** Morphs require a remapping process to support morph target of skeletal mesh. This progress would be slow when vertex number is very large, and cause long halt in editor. If this option is on, remapping happens when any edit occurs. If this option is off, remapping happens only when the parent skeletal mesh of this component changes. If you want to do remapping once when you need, just turn it on and then off. */
 	UPROPERTY(EditDefaultsOnly, Category = "TressFX")
 		bool bAutoRemapMorphTarget = false;
 
@@ -221,8 +221,6 @@ public:
 	friend class FTressFXSceneProxy;
 
 	TSharedPtr<class FTressFXRuntimeData> TressFXRuntimeData;
-
-	FRenderCommandFence Fence;
 
 public:
 

@@ -70,7 +70,7 @@ class ENGINE_API ULightComponentBase : public USceneComponent
 	/**
 	 * Whether the light should cast dynamic shadows on TressFX objects.  Also requires Cast Shadows, and Cast Dynamic Shadows to be set to True.
 	 **/
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Light, AdvancedDisplay)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Light, AdvancedDisplay, meta = (DisplayName = "Cast TressFX Dynamic Shadows"))
 	uint32 bCastTressFXDynamicShadows : 1;
 
 	//@END third party code TressFX

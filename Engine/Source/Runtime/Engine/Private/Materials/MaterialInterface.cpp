@@ -50,6 +50,9 @@ void FMaterialRelevance::SetPrimitiveViewRelevance(FPrimitiveViewRelevance& OutV
 	OutViewRelevance.bTranslucentSurfaceLighting = bTranslucentSurfaceLighting;
 	OutViewRelevance.bUsesSceneDepth = bUsesSceneDepth;
 	OutViewRelevance.bHasVolumeMaterialDomain = bHasVolumeMaterialDomain;
+	/*@BEGIN Third party code TressFX*/
+	OutViewRelevance.bTressFX = bTressFX;
+	/*@END Third party code TressFX*/
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -156,6 +159,9 @@ FMaterialRelevance UMaterialInterface::GetRelevance_Internal(const UMaterial* Ma
 			MaterialRelevance.bUsesSceneDepth = MaterialResource->MaterialUsesSceneDepthLookup_GameThread();
 			MaterialRelevance.bHasVolumeMaterialDomain = MaterialResource->IsVolumetricPrimitive();
 			MaterialRelevance.bUsesDistanceCullFade = MaterialResource->MaterialUsesDistanceCullFade_GameThread();
+			/*@BEGIN Third party code TressFX*/
+			MaterialRelevance.bTressFX = MaterialResource->IsUsedWithTressFX();
+			/*@END Third party code TressFX*/
 		}
 		return MaterialRelevance;
 	}

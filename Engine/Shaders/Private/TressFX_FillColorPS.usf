@@ -44,7 +44,6 @@ float NormalCurvatureToRoughness(float3 WorldNormal)
     return saturate(CurvatureApprox * View.NormalCurvatureToRoughnessScaleBias.x + View.NormalCurvatureToRoughnessScaleBias.y);
 }
 
-//JAKETODO
 #if TRANSLUCENT_SELF_SHADOWING
 	#include "ShadowProjectionCommon.ush"	 
 #endif
@@ -389,19 +388,15 @@ float3 AOMultiBounce(float3 BaseColor, float AO)
 }
 
 EARLYDEPTHSTENCIL
-float4 main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace) : SV_Target0
+float4 main(PS_INPUT_HAIR_AA In OPTIONAL_IsFrontFace) : SV_Target0
 {
-	float4 viewport = float4(View.ViewRectMin.xy, View.ViewSizeAndInvSize.xy);
-	float3 vNDC = ScreenPosToNDC(input.Position.xyz, viewport);
-	float coverage = ComputeCoverage(input.FactoryInterpolants.p0p1.xy, input.FactoryInterpolants.p0p1.zw, vNDC.xy, viewport.zw);
-
 	//final color
 	float3 Color = 0; 
 
 	//this static variable in instanced stero.ush needs to be set 
     ResolvedView = ResolveView();
 
-    FMaterialPixelParameters MaterialParameters = GetMaterialPixelParameters(input.FactoryInterpolants, input.Position);
+    FMaterialPixelParameters MaterialParameters = GetMaterialPixelParameters(In.FactoryInterpolants, In.Position);
     FPixelMaterialInputs PixelMaterialInputs;
 	
 #if HQ_TEXTURE_LIGHTMAP && USES_AO_MATERIAL_MASK && !MATERIAL_SHADINGMODEL_UNLIT
@@ -414,23 +409,26 @@ float4 main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace) : SV_Target0
 	}
 #endif
 
-	//TODO this path will never work because we dont have BasePassInterpolants.PixelPositionExcludingWPO
-	#if USE_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS
+	//this path will never work because we dont have BasePassInterpolants.PixelPositionExcludingWPO
+	#if USE_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS && 0
 		{
-			float4 ScreenPosition = SvPositionToResolvedScreenPosition(input.Position);
-			float3 TranslatedWorldPosition = SvPositionToResolvedTranslatedWorld(input.Position);
-			CalcMaterialParametersEx(MaterialParameters, PixelMaterialInputs, input.Position, ScreenPosition, bIsFrontFace, TranslatedWorldPosition, BasePassInterpolants.PixelPositionExcludingWPO);
+			float4 ScreenPosition = SvPositionToResolvedScreenPosition(In.Position);
+			float3 TranslatedWorldPosition = SvPositionToResolvedTranslatedWorld(In.Position);
+			CalcMaterialParametersEx(MaterialParameters, PixelMaterialInputs, In.Position, ScreenPosition, bIsFrontFace, TranslatedWorldPosition, BasePassInterpolants.PixelPositionExcludingWPO);
 		}
 	#else
 		{
-        float4 ScreenPosition = SvPositionToResolvedScreenPosition(input.Position);
-        float3 TranslatedWorldPosition = SvPositionToResolvedTranslatedWorld(input.Position);
-        CalcMaterialParametersEx(MaterialParameters, PixelMaterialInputs, input.Position, ScreenPosition, bIsFrontFace, TranslatedWorldPosition, TranslatedWorldPosition);
+        float4 ScreenPosition = SvPositionToResolvedScreenPosition(In.Position);
+        float3 TranslatedWorldPosition = SvPositionToResolvedTranslatedWorld(In.Position);
+        CalcMaterialParametersEx(MaterialParameters, PixelMaterialInputs, In.Position, ScreenPosition, bIsFrontFace, TranslatedWorldPosition, TranslatedWorldPosition);
     }
 	#endif
 
+    float4 viewport = float4(View.ViewRectMin.xy, View.ViewSizeAndInvSize.xy);
+    float3 vNDC = ScreenPosToNDC(In.Position.xyz, viewport);
+    float TFXCoverage = ComputeCoverage(In.FactoryInterpolants.p0p1.xy, In.FactoryInterpolants.p0p1.zw, vNDC.xy, viewport.zw);
     half Opacity = GetMaterialOpacity(PixelMaterialInputs);
-    float TFXAlpha = coverage * Opacity;
+    float TFXAlpha = TFXCoverage * Opacity;
 	
     if (TFXAlpha < SHORTCUT_MIN_ALPHA)
     {
@@ -442,14 +440,23 @@ float4 main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace) : SV_Target0
     half Specular = GetMaterialSpecular(PixelMaterialInputs);
     float MaterialAO = GetMaterialAmbientOcclusion(PixelMaterialInputs);
     float Roughness = GetMaterialRoughness(PixelMaterialInputs);
+	// 0..1, SubsurfaceProfileId = int(x * 255)
     float SubsurfaceProfile = 0;
-    float3 SubsurfaceColor = 0;
 
-    HairShadeParams params = (HairShadeParams) 0;
-    params.cColor = BaseColor;
-    params.fRadius = g_FiberRadius;
-    params.fSpacing = g_FiberSpacing;
-    params.fAlpha = g_HairShadowAlpha;
+	// If we don't use this shading model the color should be black (don't generate shader code for unused data, don't do indirectlighting cache lighting with this color).
+    float3 SubsurfaceColor = 0;
+	#if MATERIAL_SHADINGMODEL_SUBSURFACE || MATERIAL_SHADINGMODEL_PREINTEGRATED_SKIN || MATERIAL_SHADINGMODEL_SUBSURFACE_PROFILE || MATERIAL_SHADINGMODEL_TWOSIDED_FOLIAGE || MATERIAL_SHADINGMODEL_CLOTH || MATERIAL_SHADINGMODEL_EYE
+	{
+		float4 SubsurfaceData = GetMaterialSubsurfaceData(PixelMaterialInputs);
+
+	#if MATERIAL_SHADINGMODEL_SUBSURFACE || MATERIAL_SHADINGMODEL_PREINTEGRATED_SKIN || MATERIAL_SHADINGMODEL_TWOSIDED_FOLIAGE
+		SubsurfaceColor = SubsurfaceData.rgb * View.DiffuseOverrideParameter.w + View.DiffuseOverrideParameter.xyz;
+	#elif MATERIAL_SHADINGMODEL_CLOTH
+		SubsurfaceColor = SubsurfaceData.rgb;
+	#endif
+		SubsurfaceProfile = SubsurfaceData.a;
+	}
+	#endif
 
     float3 VolumetricLightmapBrickTextureUVs;
 		
@@ -461,7 +468,7 @@ float4 main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace) : SV_Target0
     GBuffer.GBufferAO = MaterialAO;
     GBuffer.PerObjectGBufferData = GetPrimitiveData(MaterialParameters.PrimitiveId).PerObjectGBufferData;
     GBuffer.Depth = MaterialParameters.ScreenPosition.w;
-    GBuffer.PrecomputedShadowFactors = GetPrecomputedShadowMasks(input.FactoryInterpolants, MaterialParameters.PrimitiveId, MaterialParameters.AbsoluteWorldPosition, VolumetricLightmapBrickTextureUVs);
+    GBuffer.PrecomputedShadowFactors = GetPrecomputedShadowMasks(In.FactoryInterpolants, MaterialParameters.PrimitiveId, MaterialParameters.AbsoluteWorldPosition, VolumetricLightmapBrickTextureUVs);
 
     const float GBufferDither = InterleavedGradientNoise(MaterialParameters.SvPosition.xy, View.StateFrameIndexMod8);
     SetGBufferForShadingModel(
@@ -477,7 +484,7 @@ float4 main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace) : SV_Target0
 		GBufferDither);
 
 	// So that the following code can still use DiffuseColor and SpecularColor.
-    GBuffer.SpecularColor = lerp(0.08 * Specular.xxx, BaseColor, Metallic.xxx);
+    GBuffer.SpecularColor = ComputeF0(Specular, BaseColor, Metallic);
     GBuffer.DiffuseColor = BaseColor - BaseColor * Metallic;
     float3 BentNormal = MaterialParameters.WorldNormal;
     float DiffOcclusion = MaterialAO;
@@ -495,11 +502,12 @@ float4 main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace) : SV_Target0
 		DiffuseDir = L;
 		DiffuseColorForIndirect = 2*PI * HairShading( GBuffer, L, V, N, 1, 0, 0.2, uint2(0,0) );
 	}
+
 	float3 DiffuseIndirectLighting;
 	float3 SubsurfaceIndirectLighting;
 	half3 DiffuseColor = 0;
 	float IndirectIrradiance = 0;
-	GetPrecomputedIndirectLightingAndSkyLight(MaterialParameters, input.FactoryInterpolants, DiffuseDir, VolumetricLightmapBrickTextureUVs, DiffuseIndirectLighting, SubsurfaceIndirectLighting, IndirectIrradiance);
+	GetPrecomputedIndirectLightingAndSkyLight(MaterialParameters, In.FactoryInterpolants, DiffuseDir, VolumetricLightmapBrickTextureUVs, DiffuseIndirectLighting, SubsurfaceIndirectLighting, IndirectIrradiance);
 	DiffuseColor += (DiffuseIndirectLighting * DiffuseColorForIndirect + SubsurfaceIndirectLighting * SubsurfaceColor) * AOMultiBounce(GBuffer.BaseColor, DiffOcclusion);
 	Color += DiffuseColor;
 
@@ -515,10 +523,7 @@ float4 main(PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace) : SV_Target0
 	SubsurfaceIndirectLighting *= IndirectOcclusion;
 	IndirectIrradiance *= IndirectOcclusion;
 
-
-    int2 vScreenAddress = int2(input.Position.xy);
-
-    uint GridIndex = ComputeLightGridCellIndex((uint2) (input.Position.xy - ResolvedView.ViewRectMin.xy), input.Position.w, 0);
+    uint GridIndex = ComputeLightGridCellIndex((uint2) (In.Position.xy - ResolvedView.ViewRectMin.xy), In.Position.w, 0);
     const float Dither = InterleavedGradientNoise(MaterialParameters.SvPosition.xy, View.StateFrameIndexMod8);
     const uint EyeIndex = 0;
     Color += GetForwardDirectLighting(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither);
