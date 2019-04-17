@@ -88,19 +88,40 @@ IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFX_VelocityDepthPS<false>, TEXT
 //  FTressFX_FillColorPS - Pixel shader for Third pass of shortcut
 ////////////////////////////////////////////////////////////////////////////////
 
-FTressFX_FillColorPS::FTressFX_FillColorPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
+void TFXFillColorModifyEnvironmentCommon(bool bIsShortcut, EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
+{
+	FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
+	FForwardLightingParameters::ModifyCompilationEnvironment(Platform, OutEnvironment);
+	OutEnvironment.SetDefine(TEXT("TFX_SHORTCUT"), bIsShortcut ? TEXT("1") : TEXT("0"));
+	OutEnvironment.SetDefine(TEXT("TFX_PPLL"), bIsShortcut ? TEXT("0") : TEXT("1"));
+}
+
+FTressFX_FillColorPS<true>::FTressFX_FillColorPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
 {
 	tressfxShadeParameters.Bind(Initializer.ParameterMap, TEXT("tressfxShadeParameters"));
 	BindBasePassUniformBuffer(Initializer.ParameterMap, PassUniformBuffer);
 }
 
-void FTressFX_FillColorPS::ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
+//PPLL
+FTressFX_FillColorPS<false>::FTressFX_FillColorPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
 {
-	FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
-	FForwardLightingParameters::ModifyCompilationEnvironment(Platform, OutEnvironment);
+	tressfxShadeParameters.Bind(Initializer.ParameterMap, TEXT("tressfxShadeParameters"));
+	BindBasePassUniformBuffer(Initializer.ParameterMap, PassUniformBuffer);
+	//JAKETODO
 }
 
-void FTressFX_FillColorPS::GetShaderBindings(
+void FTressFX_FillColorPS<true>::ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
+{
+	TFXFillColorModifyEnvironmentCommon(true, Platform, Material, OutEnvironment);
+}
+
+//PPLL
+void FTressFX_FillColorPS<false>::ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
+{
+	TFXFillColorModifyEnvironmentCommon(false, Platform, Material, OutEnvironment);
+}
+
+void FTressFX_FillColorPS<true>::GetShaderBindings(
 	const FScene* Scene,
 	ERHIFeatureLevel::Type FeatureLevel,
 	const FPrimitiveSceneProxy* PrimitiveSceneProxy,
@@ -110,14 +131,31 @@ void FTressFX_FillColorPS::GetShaderBindings(
 	const FTressFXShaderElementData& ShaderElementData,
 	FMeshDrawSingleShaderBindings& ShaderBindings) const
 {
-
 	FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
 	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
 	const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)PrimitiveSceneProxy;
 	ShaderBindings.Add(tressfxShadeParameters, TFXProxy->TressFXHairObject->ShadeParametersUniformBuffer);
 }
+//PPLL
+void FTressFX_FillColorPS<false>::GetShaderBindings(
+	const FScene* Scene,
+	ERHIFeatureLevel::Type FeatureLevel,
+	const FPrimitiveSceneProxy* PrimitiveSceneProxy,
+	const FMaterialRenderProxy& MaterialRenderProxy,
+	const FMaterial& Material,
+	const FMeshPassProcessorRenderState& DrawRenderState,
+	const FTressFXShaderElementData& ShaderElementData,
+	FMeshDrawSingleShaderBindings& ShaderBindings) const
+{
+	FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
+	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
+	const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)PrimitiveSceneProxy;
+	ShaderBindings.Add(tressfxShadeParameters, TFXProxy->TressFXHairObject->ShadeParametersUniformBuffer);
+	//JAKETODO
+}
 
-IMPLEMENT_MATERIAL_SHADER_TYPE(, FTressFX_FillColorPS, TEXT("/Engine/Private/TressFX_FillColorPS.usf"), TEXT("main"), SF_Pixel);
+IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFX_FillColorPS<true>, TEXT("/Engine/Private/TressFX_FillColorPS.usf"), TEXT("main"), SF_Pixel);
+IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFX_FillColorPS<false>, TEXT("/Engine/Private/TressFX_FillColorPS.usf"), TEXT("main"), SF_Pixel);
 
 ///////////////////////////////////////////////////////////////////////////////////
 ////  FTressFXShortCut_ResolveDepthPS - pixel shader for 2nd pass of shortcut

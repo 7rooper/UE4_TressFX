@@ -2660,8 +2660,9 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 	/*@BEGIN Third party code TressFX*/
 	if (ViewRelevance.bTressFX)
 	{
-		extern TAutoConsoleVariable<int32> CVarTressFXType;
-		int32 TFXRenderType = CVarTressFXType.GetValueOnRenderThread();
+		extern int32 GTressFXRenderType;
+		int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
+		TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
 		if (TFXRenderType == ETressFXRenderType::Opaque) 
 		{
 			//opaque will get rendered by ue4s base pass shaders
@@ -2673,6 +2674,15 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 			//velocity is rendered during depths alpha too
 			PassMask.Set(EMeshPass::TressFX_DepthsAlpha);
 			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsAlpha] += NumElements;
+
+			PassMask.Set(EMeshPass::TressFX_FillColors);
+			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
+		}
+		else if (TFXRenderType == ETressFXRenderType::KBuffer) 
+		{
+			//need to write velocity, but no depth
+			PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
+			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
 
 			PassMask.Set(EMeshPass::TressFX_FillColors);
 			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;

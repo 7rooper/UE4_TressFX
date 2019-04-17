@@ -10,7 +10,7 @@
 #include "ShaderParameters.h"
 
 #pragma warning(push)
-//fuck this error
+//no
 #pragma warning( disable : 5038)
 
 
@@ -108,8 +108,10 @@ struct ETressFXRenderType
 	{
 		Opaque,
 		ShortCut,
-
-		Max = ShortCut
+		KBuffer,
+		///////
+		Num,
+		Max = (Num - 1)
 	};
 
 };

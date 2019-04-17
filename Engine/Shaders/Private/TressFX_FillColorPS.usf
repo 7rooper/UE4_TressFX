@@ -27,6 +27,14 @@
 	#define OPTIONAL_IsFrontFace
 #endif
 
+#ifndef TFX_SHORTCUT
+	#define TFX_SHORTCUT 1
+#endif
+
+#ifndef TFX_PPLL
+	#define TFX_PPLL 0
+#endif
+
 struct PS_INPUT_HAIR_AA
 {
     float4 Position : SV_POSITION;
@@ -387,8 +395,15 @@ float3 AOMultiBounce(float3 BaseColor, float AO)
     return max(AO, ((AO * a + b) * AO + c) * AO);
 }
 
+#if TFX_PPLL
+	#include "TressFX_PPLL.ush"
+#endif
+
 EARLYDEPTHSTENCIL
-float4 main(PS_INPUT_HAIR_AA In OPTIONAL_IsFrontFace) : SV_Target0
+void main(
+	PS_INPUT_HAIR_AA In OPTIONAL_IsFrontFace,
+	out float4 OutColor : SV_Target0
+)
 {
 	//final color
 	float3 Color = 0; 
@@ -430,9 +445,16 @@ float4 main(PS_INPUT_HAIR_AA In OPTIONAL_IsFrontFace) : SV_Target0
     half Opacity = GetMaterialOpacity(PixelMaterialInputs);
     float TFXAlpha = TFXCoverage * Opacity;
 	
+	BRANCH
     if (TFXAlpha < SHORTCUT_MIN_ALPHA)
     {
-        return float4(0, 0, 0, 0);
+		#if TFX_PPLL
+			OutColor = float4(0, 0, 0, 0);
+			discard;
+		#elif TFX_SHORTCUT
+			OutColor = float4(0, 0, 0, 0);
+		#endif
+        return;
     }
 	   
     half3 BaseColor = GetMaterialBaseColor(PixelMaterialInputs);
@@ -527,5 +549,13 @@ float4 main(PS_INPUT_HAIR_AA In OPTIONAL_IsFrontFace) : SV_Target0
     const float Dither = InterleavedGradientNoise(MaterialParameters.SvPosition.xy, View.StateFrameIndexMod8);
     const uint EyeIndex = 0;
     Color += GetForwardDirectLighting(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither);
-    return float4(Color * TFXAlpha, TFXAlpha);
+    
+	#if TFX_PPLL
+		//just use a dummy RT
+		OutColor = float4(0, 0, 0, 0);
+		//JAKETODO, make the linked list
+	#elif TFX_SHORTCUT		
+		OutColor = float4(Color * TFXAlpha, TFXAlpha);
+	#endif
+		return;
 }

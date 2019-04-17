@@ -15,6 +15,17 @@ DECLARE_LOG_CATEGORY_EXTERN(TressFXRenderingLog, Log, All);
 	#define SHORTCUT_INITIAL_DEPTH 0x0
 #endif
 
+#define MAX_TFX_KBUFFER_SIZE 16
+#define MIN_TFX_KBUFFER_SIZE 2
+
+struct FPPLL_Struct
+{
+	uint32 depth;
+	uint32 colorRG;
+	uint32 colorBA;
+	uint32 uNext;
+};
+
 struct FTressFXMeshBatch
 {
 	const FMeshBatch* Mesh;
@@ -112,6 +123,7 @@ public:
 
 private:
 
+	template<bool bIsShortcut>
 	void Process(
 		const FMeshBatch& RESTRICT MeshBatch,
 		uint64 BatchElementMask,

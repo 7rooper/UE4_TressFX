@@ -351,11 +351,21 @@ static TAutoConsoleVariable<int32> CVarTestSecondaryUpscaleOverride(
 #endif
 
 /*@BEGIN Third party code TressFX*/
-TAutoConsoleVariable<int32> CVarTressFXType(
+int32 GTressFXRenderType = 0;
+FAutoConsoleVariableRef CVarTressFXType(
 	TEXT("tfx.type"),
-	0,
+	GTressFXRenderType,
 	TEXT("0: Opaque")
-	TEXT("1: ShortCut"),
+	TEXT("1: ShortCut")
+	TEXT("2: KBuffer"),
+	ECVF_RenderThreadSafe
+);
+
+int32 GTressFXKBufferSize = 8;
+FAutoConsoleVariableRef CVarTressFXKBufferSize(
+	TEXT("tfx.KBuffer.Size"),
+	GTressFXKBufferSize,
+	TEXT("Size of OIT K-Buffer"),
 	ECVF_RenderThreadSafe
 );
 /*@END Third party code TressFX*/

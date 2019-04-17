@@ -586,10 +586,10 @@ public:
 	TRefCountPtr<IPooledRenderTarget> FragmentDepthsTexture;
 	TRefCountPtr<IPooledRenderTarget> FragmentColorsTexture;
 
-	//k-buffer
-	//TRefCountPtr<IPooledRenderTarget> PPLLHeads;
-	//FRWBufferStructured PPLLNodes;
-	//int32 NodePoolSize;
+	//k-buffer specific
+	TRefCountPtr<IPooledRenderTarget> PPLLHeads;
+	FRWBufferStructured PPLLNodes;
+	int32 NodePoolSize;
 	/*@END Third party code TressFX*/
 
 private:

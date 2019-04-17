@@ -441,9 +441,10 @@ void FDeferredShadingSceneRenderer::ComputeLightGrid(FRHICommandListImmediate& R
 			//@BEGIN third party code TRESSFX
 			if (View.bHasTressFX || View.TressFXMeshBatches.Num() > 0)
 			{
-				extern TAutoConsoleVariable<int32> CVarTressFXType;
-				int32 TFXRenderType = CVarTressFXType.GetValueOnRenderThread();
-				bAnyViewUsesForwardLighting |= TFXRenderType == ETressFXRenderType::ShortCut;
+				extern int32 GTressFXRenderType;
+				int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
+				TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
+				bAnyViewUsesForwardLighting |= (TFXRenderType == ETressFXRenderType::ShortCut || TFXRenderType == ETressFXRenderType::KBuffer);
 			}
 			//@END third party code TRESSFX
 		}

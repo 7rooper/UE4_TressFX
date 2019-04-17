@@ -1575,10 +1575,10 @@ protected:
 	/*@BEGIN Third party code TressFX*/
 	/* assumes that AnyViewHasTressFX() has been called and returned true */
 	bool ShouldRenderTressFX(int32 TressFXPass);
-	void RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList);
+	void RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList, int32 TFXRenderType);
 	void RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHICmdList);
 	void RenderTressFXResolveVelocity(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& VelocityRT);
-	void RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture);
+	void RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture, int32 TFXRenderType);
 	bool GetAnyViewHasTressFX();
 	/*@END Third party code TressFX*/
 

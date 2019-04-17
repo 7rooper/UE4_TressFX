@@ -32,13 +32,12 @@
 
 DEFINE_LOG_CATEGORY(TressFXRenderingLog);
 
-extern TAutoConsoleVariable<int32> CVarTressFXType;
+extern int32 GTressFXRenderType;
 
 #pragma optimize("", off)
 
 void TressFXCopySceneDepth(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext, TRefCountPtr<IPooledRenderTarget> Destination)
 {
-
 	RHICmdList.TransitionResource(EResourceTransitionAccess::EWritable, Destination->GetRenderTargetItem().TargetableTexture);
 
 	FRHIRenderPassInfo RPInfo(Destination->GetRenderTargetItem().TargetableTexture, EDepthStencilTargetActions::ClearDepthStencil_DontStoreDepthStencil);
@@ -155,7 +154,9 @@ void FTressFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 	const EBlendMode BlendMode = MeshBatchMaterial.GetBlendMode();
 	const bool bWantsVelocity = MeshBatchMaterial.TressFXShouldRenderVelocity();
 	const bool bIsTranslucent = IsTranslucentBlendMode(BlendMode);
-	const bool bNoDepth = bIsTranslucent;
+	int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
+	TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
+	const bool bNoDepth = bIsTranslucent || TFXRenderType == ETressFXRenderType::KBuffer;
 
 	if (bWantsVelocity == false && bNoDepth == true)
 	{
@@ -345,7 +346,7 @@ FMeshPassProcessor* CreateTRessFXDepthsAlphaPassProcessor(const FScene* Scene, c
 //FTressFXFillColorPassMeshProcessor
 /////////////////////////////////////////////////////////////////////////
 
-
+template<bool bIsShortcut>
 void FTressFXFillColorPassMeshProcessor::Process(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
@@ -370,7 +371,7 @@ void FTressFXFillColorPassMeshProcessor::Process(
 		FTressFX_VS<false>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
-		FTressFX_FillColorPS> TFXShaders;
+		FTressFX_FillColorPS<bIsShortcut>> TFXShaders;
 
 	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFX_FillColorPS>(VertexFactory->GetType());
 	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFX_VS<false>>(VertexFactory->GetType());
@@ -413,8 +414,17 @@ void FTressFXFillColorPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT
 		const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
 		const ERasterizerFillMode MeshFillMode = ComputeMeshFillMode(MeshBatch, MeshBatchMaterial);
 		const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, MeshBatchMaterial);
+		int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
+		TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
+		if (TFXRenderType == ETressFXRenderType::KBuffer) 
+		{
+			Process<false>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
+		}
+		else 
+		{
+			Process<true>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
+		}
 
-		Process(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
 
 	}
 }
@@ -444,14 +454,14 @@ void SetupFillColorPassState(FMeshPassProcessorRenderState& DrawRenderState)
 		BO_Add, 
 		BF_One, 
 		BF_One
-		>::GetRHI()/* , FLinearColor::Transparent, 0x000000ff*/);
+		>::GetRHI());
 	DrawRenderState.SetDepthStencilState(
 		TStaticDepthStencilState<
 		true, CF_GreaterEqual,
 		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
 		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
 		0xff, 0xff, DWM_Zero
-		>::GetRHI()/*, 0x00*/);
+		>::GetRHI());
 }
 
 FMeshPassProcessor* CreateTRessFXFillColorPassProcessor(const FScene* Scene, const FSceneView* InViewIfDynamicMeshCommand, FMeshPassDrawListContext* InDrawListContext)
@@ -460,61 +470,6 @@ FMeshPassProcessor* CreateTRessFXFillColorPassProcessor(const FScene* Scene, con
 	SetupFillColorPassState(PassDrawRenderState);
 	return new(FMemStack::Get()) FTressFXFillColorPassMeshProcessor(Scene, InViewIfDynamicMeshCommand, PassDrawRenderState, InDrawListContext);
 }
-
-
-
-
-//////////////////////////////////////////////////////////////////////////
-// FillColor
-//////////////////////////////////////////////////////////////////////////
-
-//
-//void FTressFXFillColorDrawingPolicy::SetupPipelineState(FDrawingPolicyRenderState& DrawRenderState, const FSceneView& View)
-//{
-//
-//	DrawRenderState.SetBlendState(
-//		TStaticBlendState<
-//		CW_RGBA, BO_Add, BF_One, BF_One, BO_Add, BF_One, BF_One>::GetRHI(), FLinearColor::Transparent, 0x000000ff);
-//
-//	DrawRenderState.SetDepthStencilState(
-//		TStaticDepthStencilState<
-//		true, CF_GreaterEqual,
-//		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
-//		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
-//		0xff, 0xff, DWM_Zero
-//		>::GetRHI(), 0x00);
-//}
-
-//FRasterizerStateRHIParamRef FTressFXFillColorDrawingPolicy::ComputeRasterizerState(EDrawingPolicyOverrideFlags InOverrideFlags) const
-//{
-//	return TStaticRasterizerState<FM_Solid, CM_CW, false, true, true>::GetRHI();
-//}
-//
-//bool FTressFXFillColorDrawingPolicyFactory::DrawDynamicMesh(FRHICommandList& RHICmdList, const FViewInfo& View, ContextType DrawingContext, const FMeshBatch& Mesh, bool bPreFog, const FDrawingPolicyRenderState& DrawRenderState, const FPrimitiveSceneProxy* PrimitiveSceneProxy, FHitProxyId HitProxyId)
-//{
-//	if (PrimitiveSceneProxy)
-//	{
-//		SCOPED_DRAW_EVENT(RHICmdList, TressFXShortCutFillColor);
-//		const FMaterialRenderProxy* MaterialRenderProxy = Mesh.MaterialRenderProxy;
-//		const FMaterial* Material = MaterialRenderProxy->GetMaterial(View.GetFeatureLevel());
-//		FTressFXFillColorDrawingPolicy DrawingPolicy(Mesh.VertexFactory, MaterialRenderProxy, *MaterialRenderProxy->GetMaterial(View.GetFeatureLevel()), ComputeMeshOverrideSettings(Mesh), View.GetFeatureLevel());
-//
-//		FDrawingPolicyRenderState DrawRenderStateLocal(DrawRenderState);
-//		DrawRenderStateLocal.SetDitheredLODTransitionAlpha(Mesh.DitheredLODTransitionAlpha);
-//		DrawingPolicy.SetupPipelineState(DrawRenderStateLocal, View);
-//		CommitGraphicsPipelineState(RHICmdList, DrawingPolicy, DrawRenderStateLocal, DrawingPolicy.GetBoundShaderStateInput(View.GetFeatureLevel()));
-//		DrawingPolicy.SetSharedState(RHICmdList, &View, FTressFXFillColorDrawingPolicy::ContextDataType(), DrawRenderStateLocal);
-//
-//		for (int32 BatchElementIndex = 0; BatchElementIndex < Mesh.Elements.Num(); BatchElementIndex++)
-//		{
-//			DrawingPolicy.SetMeshRenderState(RHICmdList, View, PrimitiveSceneProxy, Mesh, BatchElementIndex, DrawRenderStateLocal);
-//			SCOPED_DRAW_EVENTF(RHICmdList, TressFXDrawMeshFillColor, TEXT("Asset  %s"), PrimitiveSceneProxy->GetOwnerName());
-//			DrawingPolicy.DrawMesh(RHICmdList, View, Mesh, BatchElementIndex);
-//		}
-//		return true;
-//	}
-//	return false;
-//}
 
 extern void DrawRectangle(
 	FRHICommandList& RHICmdList,
@@ -869,19 +824,15 @@ void FSceneRenderer::RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHIC
 	}
 }
 
-void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList)
+void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList, int32 TFXRenderType)
 {
-
-	int32 TressFXType = CVarTressFXType.GetValueOnAnyThread();
-	TressFXType = FMath::Clamp(TressFXType, 0, (int32)ETressFXRenderType::Max);
 
 	SCOPED_DRAW_EVENT(RHICmdList, TressFXBasePass);
 
-	switch (TressFXType)
+	switch (TFXRenderType)
 	{
 		case ETressFXRenderType::Opaque:
 		{
-			checkf(0, TEXT("RenderTressFXBasePass was callled, but render type is opaque! fix that"));
 			break;
 		}
 		case ETressFXRenderType::ShortCut:
@@ -899,19 +850,15 @@ void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList)
 	}
 }
 
-void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture)
+void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture, int32 TFXRenderType)
 {
-
-	int32 TressFXType = CVarTressFXType.GetValueOnAnyThread();
-	TressFXType = FMath::Clamp(TressFXType, 0, (int32)ETressFXRenderType::Max);
 
 	SCOPED_DRAW_EVENT(RHICmdList, TressFXResolvePass);
 
-	switch (TressFXType)
+	switch (TFXRenderType)
 	{
 		case ETressFXRenderType::Opaque:
 		{
-			checkf(0, TEXT("RenderTressfXResolvePass was callled, but render type is opaque! fix that"));
 			break;
 		}
 		case ETressFXRenderType::ShortCut:
@@ -923,7 +870,6 @@ void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdLi
 		{
 			check(0);
 		}
-
 	}
 }
 
