@@ -1,6 +1,4 @@
 
-
-
 #ifndef FRAGMENT_LIST_REGISTER
 	#define FRAGMENT_LIST_REGISTER u1
 #endif
@@ -8,6 +6,11 @@
 #ifndef LINKED_LIST_REGISTER
 	#define LINKED_LIST_REGISTER u2
 #endif
+
+#ifndef COUNTER_BUFFER_REGISTER
+	#define COUNTER_BUFFER_REGISTER u3
+#endif
+
 
 #ifndef KBUFFER_SIZE
 	#define KBUFFER_SIZE 8
@@ -17,14 +20,17 @@
 	#define FRAGMENT_LIST_NULL 0xffffffff
 #endif
 
+
 struct FPPLL_Struct
 {
-    uint depth;
-    uint colorRG;
-    uint colorBA;
-    uint uNext;
+    uint Depth;
+    uint Color;
+    uint Data;
+    uint Next;
 };
 
 int nNodePoolSize;
 RWTexture2D<int> RWFragmentListHead : register(FRAGMENT_LIST_REGISTER);
 RWStructuredBuffer<FPPLL_Struct> RWLinkedListUAV : register(LINKED_LIST_REGISTER);
+//using this instead of the uav counter so i dont have to modify UE4's RHI any more
+RWBuffer<uint> RWCounterBuffer : register(COUNTER_BUFFER_REGISTER);

@@ -14,7 +14,8 @@ struct ETressFXPass
 		ResolveDepths,
 		DepthsVelocity,
 		ResolveVelocity,
-		FillColor,
+		FillColor_Shortcut,
+		FillColor_KBuffer,
 
 		////
 		Num,
@@ -87,7 +88,7 @@ class FTressFXCopyOpaqueDepthPS : public FGlobalShader
 class FTressFXCopyDepthPS : public FGlobalShader
 {
 
-	DECLARE_SHADER_TYPE(FTressFXCopyDepthPS, Global)
+	DECLARE_GLOBAL_SHADER(FTressFXCopyDepthPS)
 
 public:
 
@@ -113,20 +114,20 @@ public:
 
 
 /////////////////////////////////////////////////////////////////////////////////
-//  FTressFX_VS - Vertex Shader for shortcut
+//  FTressFXVS - Vertex Shader for shortcut
 ////////////////////////////////////////////////////////////////////////////////
 
 
 template <bool bCalcVelocity>
-class FTressFX_VS : public FMeshMaterialShader
+class FTressFXVS : public FMeshMaterialShader
 {
 
-	DECLARE_SHADER_TYPE(FTressFX_VS, MeshMaterial)
+	DECLARE_SHADER_TYPE(FTressFXVS, MeshMaterial)
 
 public:
-	FTressFX_VS() {}
+	FTressFXVS() {}
 
-	FTressFX_VS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
+	FTressFXVS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
 	{
 		vFragmentBufferSize.Bind(Initializer.ParameterMap, TEXT("vFragmentBufferSize"));
 		PreviousLocalToWorldParameter.Bind(Initializer.ParameterMap, TEXT("PreviousLocalToWorld"));
@@ -180,19 +181,19 @@ private:
 };
 
 /////////////////////////////////////////////////////////////////////////////////
-//  FTressFX_VelocityDepthPS renders depths and velocity, optionaly
+//  FTressFXVelocityDepthPS renders depths and velocity, optionaly
 ////////////////////////////////////////////////////////////////////////////////
 
 
 template <bool bCalcVelocity>
-class FTressFX_VelocityDepthPS : public FMeshMaterialShader
+class FTressFXVelocityDepthPS : public FMeshMaterialShader
 {
 
-	DECLARE_SHADER_TYPE(FTressFX_VelocityDepthPS, MeshMaterial)
+	DECLARE_SHADER_TYPE(FTressFXVelocityDepthPS, MeshMaterial)
 
 public:
 
-	FTressFX_VelocityDepthPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
+	FTressFXVelocityDepthPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
 	{
 
 	}
@@ -204,7 +205,7 @@ public:
 		FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
 	}
 
-	FTressFX_VelocityDepthPS() {}
+	FTressFXVelocityDepthPS() {}
 
 	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType)
 	{
@@ -243,19 +244,19 @@ public:
 
 
 /////////////////////////////////////////////////////////////////////////////////
-//  FTressFX_DepthsAlphaPS - Pixel shader for First pass of shortcut
+//  FTressFXDepthsAlphaPS - Pixel shader for First pass of shortcut
 ////////////////////////////////////////////////////////////////////////////////
 
 
 template<bool bNeedsVelocity>
-class FTressFX_DepthsAlphaPS : public FMeshMaterialShader
+class FTressFXDepthsAlphaPS : public FMeshMaterialShader
 {
 
-	DECLARE_SHADER_TYPE(FTressFX_DepthsAlphaPS, MeshMaterial)
+	DECLARE_SHADER_TYPE(FTressFXDepthsAlphaPS, MeshMaterial)
 
 public:
 
-	FTressFX_DepthsAlphaPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
+	FTressFXDepthsAlphaPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
 	{
 		RWFragmentDepthsTexture.Bind(Initializer.ParameterMap, TEXT("RWFragmentDepthsTexture"));
 	}
@@ -266,7 +267,7 @@ public:
 		FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
 	}
 
-	FTressFX_DepthsAlphaPS() {}
+	FTressFXDepthsAlphaPS() {}
 
 	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType)
 	{
@@ -303,57 +304,6 @@ public:
 
 	FRWShaderParameter RWFragmentDepthsTexture;
 
-};
-
-///////////////////////////////////////////////////////////////////////////////
-//  FTressFX_FillColorPS 
-//////////////////////////////////////////////////////////////////////////////
-template <bool bIsShortCut>
-class FTressFX_FillColorPS : public FMeshMaterialShader
-{
-
-	DECLARE_SHADER_TYPE(FTressFX_FillColorPS, MeshMaterial)
-
-public:
-
-	FTressFX_FillColorPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer);
-
-	FTressFX_FillColorPS() {}
-
-	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment);
-
-	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType)
-	{
-		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
-		{
-			return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5);
-		}
-
-		return false;
-	}
-
-
-	virtual bool Serialize(FArchive& Ar) override
-	{
-		const bool result = FMeshMaterialShader::Serialize(Ar);
-		Ar << tressfxShadeParameters;
-		return result;
-	}
-
-
-	void GetShaderBindings(
-		const FScene* Scene,
-		ERHIFeatureLevel::Type FeatureLevel,
-		const FPrimitiveSceneProxy* PrimitiveSceneProxy,
-		const FMaterialRenderProxy& MaterialRenderProxy,
-		const FMaterial& Material,
-		const FMeshPassProcessorRenderState& DrawRenderState,
-		const FTressFXShaderElementData& ShaderElementData,
-		FMeshDrawSingleShaderBindings& ShaderBindings) const;
-
-public:
-
-	FShaderUniformBufferParameter tressfxShadeParameters;
 };
 
 
@@ -410,13 +360,13 @@ class FTressFXResolveVelocityPs : public FGlobalShader
 };
 
 ///////////////////////////////////////////////////////////////////////////////////
-////  FTressFXShortCut_ResolveDepthPS
+////  FTressFXShortCutResolveDepthPS
 //////////////////////////////////////////////////////////////////////////////////
 
-class FTressFXShortCut_ResolveDepthPS : public FGlobalShader
+class FTressFXShortCutResolveDepthPS : public FGlobalShader
 {
 
-	DECLARE_SHADER_TYPE(FTressFXShortCut_ResolveDepthPS, Global)
+	DECLARE_GLOBAL_SHADER(FTressFXShortCutResolveDepthPS)
 
 public:
 
@@ -432,7 +382,7 @@ public:
 
 	static const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFXShortCut_ResolveDepthPS.usf");
+		return TEXT("/Engine/Private/TressFXShortCutResolveDepthPS.usf");
 	}
 
 	static const TCHAR* GetFunctionName()
@@ -441,13 +391,13 @@ public:
 	}
 
 
-	FTressFXShortCut_ResolveDepthPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	FTressFXShortCutResolveDepthPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 	{
 		FragmentDepthsTexture.Bind(Initializer.ParameterMap, TEXT("FragmentDepthsTexture"));
 		SceneTextureShaderParameters.Bind(Initializer);
 	}
 
-	FTressFXShortCut_ResolveDepthPS() {}
+	FTressFXShortCutResolveDepthPS() {}
 
 	void SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext);
 
@@ -468,14 +418,14 @@ public:
 
 
 ///////////////////////////////////////////////////////////////////////////////////
-////  FTressFXShortCut_ResolveColorPS
+////  FTressFXShortCutResolveColorPS
 //////////////////////////////////////////////////////////////////////////////////
 
 
-class FTressFXShortCut_ResolveColorPS : public FGlobalShader
+class FTressFXShortCutResolveColorPS : public FGlobalShader
 {
 
-	DECLARE_SHADER_TYPE(FTressFXShortCut_ResolveColorPS, Global)
+	DECLARE_GLOBAL_SHADER(FTressFXShortCutResolveColorPS)
 
 public:
 
@@ -491,7 +441,7 @@ public:
 
 	static const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFXShortCut_ResolveColorPS.usf");
+		return TEXT("/Engine/Private/TressFXShortCutResolveColorPS.usf");
 	}
 
 	static const TCHAR* GetFunctionName()
@@ -499,14 +449,14 @@ public:
 		return TEXT("main");
 	}
 
-	FTressFXShortCut_ResolveColorPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	FTressFXShortCutResolveColorPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 	{
 		FragmentColorsTexture.Bind(Initializer.ParameterMap, TEXT("FragmentColorsTexture"));
 		tAccumInvAlpha.Bind(Initializer.ParameterMap, TEXT("tAccumInvAlpha"));
 		vFragmentBufferSize.Bind(Initializer.ParameterMap, TEXT("vFragmentBufferSize"));
 	}
 
-	FTressFXShortCut_ResolveColorPS() {}
+	FTressFXShortCutResolveColorPS() {}
 
 
 	// FShader interface.

@@ -20,10 +20,10 @@ DECLARE_LOG_CATEGORY_EXTERN(TressFXRenderingLog, Log, All);
 
 struct FPPLL_Struct
 {
-	uint32 depth;
-	uint32 colorRG;
-	uint32 colorBA;
-	uint32 uNext;
+	uint32 Depth;
+	uint32 Color;
+	uint32 Data;
+	uint32 Next;
 };
 
 struct FTressFXMeshBatch
@@ -123,8 +123,31 @@ public:
 
 private:
 
-	template<bool bIsShortcut>
+	template<ETressFXRenderType::Type RenderType>
 	void Process(
+		const FMeshBatch& RESTRICT MeshBatch,
+		uint64 BatchElementMask,
+		int32 StaticMeshId,
+		const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy,
+		const FMaterialRenderProxy& RESTRICT MaterialRenderProxy,
+		const FMaterial& RESTRICT MaterialResource,
+		ERasterizerFillMode MeshFillMode,
+		ERasterizerCullMode MeshCullMode
+	);
+
+	template<bool bWantsVelocity>
+	void ProcessKBuffer(
+		const FMeshBatch& RESTRICT MeshBatch,
+		uint64 BatchElementMask,
+		int32 StaticMeshId,
+		const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy,
+		const FMaterialRenderProxy& RESTRICT MaterialRenderProxy,
+		const FMaterial& RESTRICT MaterialResource,
+		ERasterizerFillMode MeshFillMode,
+		ERasterizerCullMode MeshCullMode
+	);
+
+	void ProcessShortcut(
 		const FMeshBatch& RESTRICT MeshBatch,
 		uint64 BatchElementMask,
 		int32 StaticMeshId,

@@ -38,4 +38,5 @@ void main(FScreenVertexOutput input, out float OutDepth : SV_DEPTH)
     float HairDepth = asfloat(FragmentDepthsTexture[uint3(vScreenAddress, 2)]);
     float SceneDepth = SceneTexturesStruct.SceneDepthTexture[uint2(vScreenAddress)].r;
     OutDepth = max(HairDepth, SceneDepth);
+
 }

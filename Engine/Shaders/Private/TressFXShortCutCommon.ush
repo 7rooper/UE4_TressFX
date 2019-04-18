@@ -29,8 +29,6 @@
 
 #define SHORTCUT_MIN_ALPHA 0.02
 
-// Constants must match in TressFXShortCut.h
-
 float4 vFragmentBufferSize;
 
 // Convert 1D address to 2D address

@@ -396,13 +396,17 @@ float3 AOMultiBounce(float3 BaseColor, float AO)
 }
 
 #if TFX_PPLL
-	#include "TressFX_PPLL.ush"
+	#include "TressFXPPLL.ush"
 #endif
 
 EARLYDEPTHSTENCIL
 void main(
 	PS_INPUT_HAIR_AA In OPTIONAL_IsFrontFace,
+#if TFX_SHORTCUT
 	out float4 OutColor : SV_Target0
+#elif TFX_PPLL
+	out float4 OutVelocity : SV_Target0
+#endif
 )
 {
 	//final color
@@ -449,7 +453,7 @@ void main(
     if (TFXAlpha < SHORTCUT_MIN_ALPHA)
     {
 		#if TFX_PPLL
-			OutColor = float4(0, 0, 0, 0);
+			OutVelocity = float4(0, 0, 0, 0);
 			discard;
 		#elif TFX_SHORTCUT
 			OutColor = float4(0, 0, 0, 0);
@@ -552,7 +556,7 @@ void main(
     
 	#if TFX_PPLL
 		//just use a dummy RT
-		OutColor = float4(0, 0, 0, 0);
+		OutVelocity = float4(0, 0, 0, 0); //TODO
 		//JAKETODO, make the linked list
 	#elif TFX_SHORTCUT		
 		OutColor = float4(Color * TFXAlpha, TFXAlpha);
