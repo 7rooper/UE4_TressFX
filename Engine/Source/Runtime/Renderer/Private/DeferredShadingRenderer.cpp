@@ -1895,6 +1895,13 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 		ServiceLocalQueue();
 	}
 
+	//@BEGIN third party code TressFX
+	if (bSceneHasTressFX)
+	{
+		RenderTressfXResolvePass(RHICmdList, ScreenShadowMaskTexture, TFXRenderType);
+	}
+	//@END third party code TressFX
+
 	// No longer needed, release
 	LightShaftOutput.LightShaftOcclusion = NULL;
 
@@ -1969,13 +1976,6 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 		RenderLightShaftBloom(RHICmdList);
 		ServiceLocalQueue();
 	}
-
-	//@BEGIN third party code TressFX
-	if (bSceneHasTressFX)
-	{
-		RenderTressfXResolvePass(RHICmdList, ScreenShadowMaskTexture, TFXRenderType);
-	}
-	//@END third party code TressFX
 
 	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ++ViewIndex)
 	{
