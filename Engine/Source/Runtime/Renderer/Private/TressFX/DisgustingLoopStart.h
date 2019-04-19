@@ -1,3 +1,7 @@
+
+#ifdef LOOP_START
+#undef LOOP_START
+#endif
 #define LOOP_START 4
 #define LOOP_MAX 32
 
@@ -5,6 +9,6 @@
 #undef LOOP_END
 #endif
 
-#ifdef MACRO
-#undef MACRO
+#ifdef GROSSLOOP
+#undef GROSSLOOP
 #endif

@@ -4,7 +4,7 @@
 #error Loop Counter Too Big
 #endif
 
-MACRO(LOOP_START)
+GROSSLOOP(LOOP_START)
 
 #if(LOOP_START == 0)
 #undef LOOP_START

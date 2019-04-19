@@ -155,12 +155,11 @@ IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_Shortcut, TEXT("/
 	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_KBuffer##KBufferSize, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel)
 
 
-// I am so sorry for this.
+// I am so sorry for this...
 #include "DisgustingLoopStart.h"
 #define LOOP_END 32
-#define MACRO(x) IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(x);
+#define GROSSLOOP(x) IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(x);
 #include "DisgustingLoop.h"
-
 
 #pragma optimize("", off)
 
@@ -492,12 +491,11 @@ void FTressFXFillColorPassMeshProcessor::ProcessKBuffer(
 
 	FTressFXShaderElementData ShaderElementData(ETressFXPass::FillColor_KBuffer, ViewIfDynamicMeshCommand);
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
-	//TODO
-	//TMeshProcessorShaders<
-	//	FTressFXVS<bWantsVelocity>,
-	//	FMeshMaterialShader,
-	//	FMeshMaterialShader,
-	//	FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer>> TFXShaders;
+	TMeshProcessorShaders<
+		FTressFXVS<bWantsVelocity>,
+		FMeshMaterialShader,
+		FMeshMaterialShader,
+		FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, 17>> TFXShaders;
 
 	//TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer>>(VertexFactory->GetType());
 	//TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<bWantsVelocity>>(VertexFactory->GetType());
