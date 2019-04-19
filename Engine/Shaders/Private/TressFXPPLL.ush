@@ -29,7 +29,7 @@ struct FPPLL_Struct
     uint Next;
 };
 
-int nNodePoolSize;
+int NodePoolSize;
 RWTexture2D<int> RWFragmentListHead : register(FRAGMENT_LIST_REGISTER);
 RWStructuredBuffer<FPPLL_Struct> RWLinkedListUAV : register(LINKED_LIST_REGISTER);
 //using this instead of the uav counter so i dont have to modify UE4's RHI any more

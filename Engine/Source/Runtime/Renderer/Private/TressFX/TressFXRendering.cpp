@@ -33,12 +33,13 @@
 DEFINE_LOG_CATEGORY(TressFXRenderingLog);
 
 extern int32 GTressFXRenderType;
+extern int32 GTressFXKBufferSize;
 
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXFillColorPS - Pixel shader for Third pass of shortcut, and PPLL build of kbuffer
 ////////////////////////////////////////////////////////////////////////////////
 
-template <ETressFXPass::Type ColorPassType>
+template <ETressFXPass::Type ColorPassType, int32 KBufferSize>
 class FTressFXFillColorPS : public FMeshMaterialShader
 {
 	DECLARE_SHADER_TYPE(FTressFXFillColorPS, MeshMaterial)
@@ -49,6 +50,14 @@ public:
 	{
 		tressfxShadeParameters.Bind(Initializer.ParameterMap, TEXT("tressfxShadeParameters"));
 		BindBasePassUniformBuffer(Initializer.ParameterMap, PassUniformBuffer);
+
+		if (ColorPassType == ETressFXPass::FillColor_KBuffer)
+		{
+			RWFragmentListHead.Bind(Initializer.ParameterMap, TEXT("RWFragmentListHead"));
+			RWLinkedListUAV.Bind(Initializer.ParameterMap, TEXT("RWLinkedListUAV"));
+			NodePoolSize.Bind(Initializer.ParameterMap, TEXT("NodePoolSize"));
+			RWCounterBuffer.Bind(Initializer.ParameterMap, TEXT("RWCounterBuffer"));
+		}
 	}
 
 	FTressFXFillColorPS() {}
@@ -62,6 +71,12 @@ public:
 
 		const bool bNeedsVelocity = ColorPassType == ETressFXPass::FillColor_KBuffer && Material->TressFXShouldRenderVelocity();
 		OutEnvironment.SetDefine(TEXT("NEEDS_VELOCITY"), bNeedsVelocity ? TEXT("1") : TEXT("0"));
+
+		if (ColorPassType == ETressFXPass::FillColor_KBuffer)
+		{
+			OutEnvironment.SetDefine(TEXT("KBUFFER_SIZE"), KBufferSize);
+		}
+
 	}
 
 
@@ -80,6 +95,13 @@ public:
 	{
 		const bool result = FMeshMaterialShader::Serialize(Ar);
 		Ar << tressfxShadeParameters;
+		if (ColorPassType == ETressFXPass::FillColor_KBuffer)
+		{
+			Ar << RWFragmentListHead;
+			Ar << RWLinkedListUAV;
+			Ar << NodePoolSize;
+			Ar << RWCounterBuffer;
+		}
 		return result;
 	}
 
@@ -94,20 +116,51 @@ public:
 		const FTressFXShaderElementData& ShaderElementData,
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
+		check(ColorPassType == ETressFXPass::FillColor_KBuffer || ColorPassType == ETressFXPass::FillColor_Shortcut)
+
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
 		const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
 		const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)PrimitiveSceneProxy;
 		ShaderBindings.Add(tressfxShadeParameters, TFXProxy->TressFXHairObject->ShadeParametersUniformBuffer);
+
+		if (ColorPassType == ETressFXPass::FillColor_KBuffer) 
+		{
+			//todo
+			//FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
+			//FIntPoint BufferSize = SceneRenderTargets.GetBufferSizeXY();
+			//int32 KBufferSize = CVarOITKBufferSize.GetValueOnAnyThread();
+			//KBufferSize = KBufferSize <= MAX_KBUFFER_SIZE ? KBufferSize : MAX_KBUFFER_SIZE;
+			//KBufferSize = KBufferSize >= MIN_KBUFFER_SIZE ? KBufferSize : MIN_KBUFFER_SIZE;
+			//SetShaderValue(RHICmdList, ShaderRHI, nNodePoolSize, BufferSize.X * BufferSize.Y * KBufferSize);
+		}
 	}
 
 public:
 
 	FShaderUniformBufferParameter tressfxShadeParameters;
+
+	//Kbuffer
+	FRWShaderParameter RWFragmentListHead;
+	FRWShaderParameter RWLinkedListUAV;
+	FRWShaderParameter RWCounterBuffer;
+	FShaderParameter NodePoolSize;
 };
 
+typedef FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut, 0> FTressFXFillColorPS_Shortcut;
+IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_Shortcut, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
 
-IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut>, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
-IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer>, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
+
+#define IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(KBufferSize) \
+	typedef FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize> FTressFXFillColorPS_KBuffer##KBufferSize; \
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_KBuffer##KBufferSize, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel)
+
+
+// I am so sorry for this.
+#include "DisgustingLoopStart.h"
+#define LOOP_END 32
+#define MACRO(x) IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(x);
+#include "DisgustingLoop.h"
+
 
 #pragma optimize("", off)
 
@@ -439,30 +492,31 @@ void FTressFXFillColorPassMeshProcessor::ProcessKBuffer(
 
 	FTressFXShaderElementData ShaderElementData(ETressFXPass::FillColor_KBuffer, ViewIfDynamicMeshCommand);
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
-	TMeshProcessorShaders<
-		FTressFXVS<bWantsVelocity>,
-		FMeshMaterialShader,
-		FMeshMaterialShader,
-		FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer>> TFXShaders;
+	//TODO
+	//TMeshProcessorShaders<
+	//	FTressFXVS<bWantsVelocity>,
+	//	FMeshMaterialShader,
+	//	FMeshMaterialShader,
+	//	FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer>> TFXShaders;
 
-	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer>>(VertexFactory->GetType());
-	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<bWantsVelocity>>(VertexFactory->GetType());
+	//TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer>>(VertexFactory->GetType());
+	//TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<bWantsVelocity>>(VertexFactory->GetType());
 
-	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
-	BuildMeshDrawCommands(
-		MeshBatch,
-		BatchElementMask,
-		PrimitiveSceneProxy,
-		MaterialRenderProxy,
-		MaterialResource,
-		DrawRenderState,
-		TFXShaders,
-		MeshFillMode,
-		MeshCullMode,
-		SortKey,
-		EMeshPassFeatures::Default,
-		ShaderElementData
-	);
+	//const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
+	//BuildMeshDrawCommands(
+	//	MeshBatch,
+	//	BatchElementMask,
+	//	PrimitiveSceneProxy,
+	//	MaterialRenderProxy,
+	//	MaterialResource,
+	//	DrawRenderState,
+	//	TFXShaders,
+	//	MeshFillMode,
+	//	MeshCullMode,
+	//	SortKey,
+	//	EMeshPassFeatures::Default,
+	//	ShaderElementData
+	//);
 }
 
 void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
@@ -486,9 +540,9 @@ void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 		FTressFXVS<false>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
-		FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut>> TFXShaders;
+		FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut,0>> TFXShaders;
 
-	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut>>(VertexFactory->GetType());
+	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut,0>>(VertexFactory->GetType());
 	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<false>>(VertexFactory->GetType());
 
 	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);

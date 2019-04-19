@@ -590,6 +590,7 @@ public:
 	/** k-buffer specific */
 	TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
 	FRWBufferStructured TressFXKBufferNodes;
+	FRWBuffer TressFXKBufferCounter;
 	int32 TressFXKBufferNodePoolSize;
 	/*@END Third party code TressFX*/
 

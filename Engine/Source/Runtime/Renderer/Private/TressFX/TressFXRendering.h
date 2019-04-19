@@ -16,7 +16,7 @@ DECLARE_LOG_CATEGORY_EXTERN(TressFXRenderingLog, Log, All);
 #endif
 
 #define MAX_TFX_KBUFFER_SIZE 16
-#define MIN_TFX_KBUFFER_SIZE 2
+#define MIN_TFX_KBUFFER_SIZE 4
 
 struct FPPLL_Struct
 {
