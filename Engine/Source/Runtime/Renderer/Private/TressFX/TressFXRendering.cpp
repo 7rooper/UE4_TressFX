@@ -473,7 +473,7 @@ FMeshPassProcessor* CreateTRessFXDepthsAlphaPassProcessor(const FScene* Scene, c
 //FTressFXFillColorPassMeshProcessor
 /////////////////////////////////////////////////////////////////////////
 
-template<bool bWantsVelocity>
+template<bool bWantsVelocity, int32 KBufferSize>
 void FTressFXFillColorPassMeshProcessor::ProcessKBuffer(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
@@ -495,26 +495,26 @@ void FTressFXFillColorPassMeshProcessor::ProcessKBuffer(
 		FTressFXVS<bWantsVelocity>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
-		FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, 17>> TFXShaders;
+		FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize>> TFXShaders;
 
-	//TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer>>(VertexFactory->GetType());
-	//TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<bWantsVelocity>>(VertexFactory->GetType());
+	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize>>(VertexFactory->GetType());
+	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<bWantsVelocity>>(VertexFactory->GetType());
 
-	//const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
-	//BuildMeshDrawCommands(
-	//	MeshBatch,
-	//	BatchElementMask,
-	//	PrimitiveSceneProxy,
-	//	MaterialRenderProxy,
-	//	MaterialResource,
-	//	DrawRenderState,
-	//	TFXShaders,
-	//	MeshFillMode,
-	//	MeshCullMode,
-	//	SortKey,
-	//	EMeshPassFeatures::Default,
-	//	ShaderElementData
-	//);
+	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
+	BuildMeshDrawCommands(
+		MeshBatch,
+		BatchElementMask,
+		PrimitiveSceneProxy,
+		MaterialRenderProxy,
+		MaterialResource,
+		DrawRenderState,
+		TFXShaders,
+		MeshFillMode,
+		MeshCullMode,
+		SortKey,
+		EMeshPassFeatures::Default,
+		ShaderElementData
+	);
 }
 
 void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
@@ -560,6 +560,8 @@ void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 	);
 }
 
+
+
 template<ETressFXRenderType::Type RenderType>
 void FTressFXFillColorPassMeshProcessor::Process(
 	const FMeshBatch& RESTRICT MeshBatch,
@@ -571,8 +573,7 @@ void FTressFXFillColorPassMeshProcessor::Process(
 	ERasterizerFillMode MeshFillMode,
 	ERasterizerCullMode MeshCullMode
 )
-{
-	   
+{	   
 	switch(RenderType)
 	{
 		case ETressFXRenderType::KBuffer: 
@@ -580,22 +581,17 @@ void FTressFXFillColorPassMeshProcessor::Process(
 			const FMaterialRenderProxy* FallbackMaterialRenderProxyPtr = nullptr;
 			const FMaterial& MeshBatchMaterial = MeshBatch.MaterialRenderProxy->GetMaterialWithFallback(FeatureLevel, FallbackMaterialRenderProxyPtr);
 			const bool bWantsVelocity = MeshBatchMaterial.TressFXShouldRenderVelocity();
+			
+#define PROCESS_KBUFFER(bNeedsVelocity, KBufferSize, MeshBatch, BatchElementMask,StaticMeshId,PrimitiveSceneProxy,MaterialRenderProxy,MaterialResource,MeshFillMode,MeshCullMode) \
+				ProcessKBuffer< bNeedsVelocity, KBufferSize >( MeshBatch, BatchElementMask,StaticMeshId,PrimitiveSceneProxy,MaterialRenderProxy,MaterialResource,MeshFillMode,MeshCullMode);
+
 			if(bWantsVelocity)
 			{
-				ProcessKBuffer<true>(
-					MeshBatch,
-					BatchElementMask,
-					StaticMeshId,
-					PrimitiveSceneProxy,
-					MaterialRenderProxy,
-					MaterialResource,
-					MeshFillMode,
-					MeshCullMode
-				);
+				PROCESS_KBUFFER(bWantsVelocity, 8, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode)
 			}
 			else 
 			{
-				ProcessKBuffer<false>(
+	/*			ProcessKBuffer<false>(
 					MeshBatch,
 					BatchElementMask,
 					StaticMeshId,
@@ -604,7 +600,7 @@ void FTressFXFillColorPassMeshProcessor::Process(
 					MaterialResource,
 					MeshFillMode,
 					MeshCullMode
-					);
+					);*/
 			}
 			break;
 		}

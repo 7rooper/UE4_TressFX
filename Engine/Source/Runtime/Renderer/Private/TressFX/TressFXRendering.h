@@ -135,7 +135,7 @@ private:
 		ERasterizerCullMode MeshCullMode
 	);
 
-	template<bool bWantsVelocity>
+	template<bool bWantsVelocity, int32 KBufferSize>
 	void ProcessKBuffer(
 		const FMeshBatch& RESTRICT MeshBatch,
 		uint64 BatchElementMask,
