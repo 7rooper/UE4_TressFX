@@ -1311,7 +1311,6 @@ void FSceneRenderTargets::AdjustGBufferRefCount(FRHICommandList& RHICmdList, int
 
 extern int32 GTressFXRenderType;
 extern int32 GTressFXKBufferSize;
-
 template <typename TRHICmdList>
 void FSceneRenderTargets::InitializeTressFXKBufferResources(TRHICmdList& RHICmdList, bool bForceReinit /*= false*/)
 {
@@ -1334,7 +1333,7 @@ void FSceneRenderTargets::InitializeTressFXKBufferResources(TRHICmdList& RHICmdL
 	if (bForceReinit || TressFXKBufferNodes.NumBytes != sizeof(FPPLL_Struct) * TressFXKBufferNodePoolSize)
 	{
 		TressFXKBufferNodes.Release();
-		TressFXKBufferNodes.Initialize(sizeof(FPPLL_Struct), BufferSize.X*BufferSize.Y * KBufferSize, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("TressFXKBuffer"));
+		TressFXKBufferNodes.Initialize(sizeof(FPPLL_Struct), RequiredPoolSize, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("TressFXKBuffer"));
 	}
 
 	if (bForceReinit || TressFXKBufferCounter.NumBytes != sizeof(uint32))
@@ -1357,8 +1356,8 @@ template <typename TRHICmdList>
 void FSceneRenderTargets::GetTressFXKBufferResources(
 	TRHICmdList& RHICmdList,
 	TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,
-	FRWBufferStructured* OutTTressFXKBufferNodes,
-	FRWBuffer* OutTTressFXKBufferCounter,
+	FRWBufferStructured*& OutTTressFXKBufferNodes,
+	FRWBuffer*& OutTTressFXKBufferCounter,
 	int32& OutTTressFXKBufferNodePoolSize
 )
 {
@@ -1373,8 +1372,8 @@ void FSceneRenderTargets::GetTressFXKBufferResources(
 	template void FSceneRenderTargets::GetTressFXKBufferResources< TRHICmdList >(			\
 		TRHICmdList& RHICmdList,															\
 		TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,						\
-		FRWBufferStructured* OutTTressFXKBufferNodes,										\
-		FRWBuffer* OutTTressFXKBufferCounter,												\
+		FRWBufferStructured*& OutTTressFXKBufferNodes,										\
+		FRWBuffer*& OutTTressFXKBufferCounter,												\
 		int32& OutTTressFXKBufferNodePoolSize												\
 	);
 
@@ -1425,11 +1424,10 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 		}
 		else if (TFXRenderType == ETressFXRenderType::KBuffer) 
 		{
-			InitializeTressFXKBufferResources(RHICmdList, true);
+			InitializeTressFXKBufferResources(RHICmdList);
 		}
 	}
 }
-
 /*@END Third party code TressFX*/
 
 bool FSceneRenderTargets::BeginRenderingCustomDepth(FRHICommandListImmediate& RHICmdList, bool bPrimitives)

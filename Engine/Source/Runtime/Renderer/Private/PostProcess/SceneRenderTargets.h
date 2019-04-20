@@ -592,8 +592,8 @@ public:
 	void GetTressFXKBufferResources(
 		TRHICmdList& RHICmdList,
 		TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,
-		FRWBufferStructured* OutTTressFXKBufferNodes,
-		FRWBuffer* OutTTressFXKBufferCounter,
+		FRWBufferStructured*& OutTTressFXKBufferNodes,
+		FRWBuffer*& OutTTressFXKBufferCounter,
 		int32& OutTTressFXKBufferNodePoolSize
 	);
 private:

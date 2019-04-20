@@ -513,24 +513,17 @@ void FTressFXFillColorPassMeshProcessor::ProcessKBuffer(
 	const FVertexFactory* VertexFactory = MeshBatch.VertexFactory;
 	FShaderPipeline* ShaderPipeline = nullptr;
 	FMeshPassProcessorRenderState DrawRenderState(PassDrawRenderState);
-	//JAKETODO
-	//DrawRenderState.SetBlendState(
-	//	TStaticBlendState<
-	//	CW_RGBA,
-	//	BO_Add,
-	//	BF_One,
-	//	BF_One,
-	//	BO_Add,
-	//	BF_One,
-	//	BF_One
-	//	>::GetRHI());
-	//DrawRenderState.SetDepthStencilState(
-	//	TStaticDepthStencilState<
-	//	true, CF_GreaterEqual,
-	//	true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
-	//	true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
-	//	0xff, 0xff, DWM_Zero
-	//	>::GetRHI());
+	DrawRenderState.SetBlendState(
+		TStaticBlendState<
+		EColorWriteMask::CW_NONE
+		>::GetRHI());
+	DrawRenderState.SetDepthStencilState(
+		TStaticDepthStencilState<
+		true, CF_GreaterEqual,
+		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
+		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
+		0xff, 0xff, DWM_Zero
+		>::GetRHI());
 
 	FTressFXShaderElementData ShaderElementData(ETressFXPass::FillColor_KBuffer, ViewIfDynamicMeshCommand);
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
@@ -768,23 +761,6 @@ FMeshPassProcessor* CreateTRessFXFillColorPassProcessor(const FScene* Scene, con
 	SetupFillColorPassState(PassDrawRenderState);
 	return new(FMemStack::Get()) FTressFXFillColorPassMeshProcessor(Scene, InViewIfDynamicMeshCommand, PassDrawRenderState, InDrawListContext);
 }
-
-extern void DrawRectangle(
-	FRHICommandList& RHICmdList,
-	float X,
-	float Y,
-	float SizeX,
-	float SizeY,
-	float U,
-	float V,
-	float SizeU,
-	float SizeV,
-	FIntPoint TargetSize,
-	FIntPoint TextureSize,
-	FShader* VertexShader,
-	EDrawRectangleFlags Flags,
-	uint32 InstanceCount
-);
 
 bool FSceneRenderer::GetAnyViewHasTressFX()
 {
@@ -1124,9 +1100,10 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 			const uint32 FragmentListClearValue[4] = { TFX_PPLL_NULL, TFX_PPLL_NULL, TFX_PPLL_NULL, TFX_PPLL_NULL };
 			ClearUAV(RHICmdList, TressFXKBufferListHeads->GetRenderTargetItem(), FragmentListClearValue);
 			TressFXKBufferNodes->AcquireTransientResource();
+			TressFXKBufferCounter->AcquireTransientResource();	
 			ClearUAV(RHICmdList, *TressFXKBufferNodes, 0);
-			TressFXKBufferCounter->AcquireTransientResource();
-			static const uint32 Values[4] = { TFX_PPLL_NULL, TFX_PPLL_NULL, TFX_PPLL_NULL, TFX_PPLL_NULL };
+			
+			static const uint32 Values[4] = { 0, 0, 0, 0 };
 			RHICmdList.ClearTinyUAV(TressFXKBufferCounter->UAV, Values);
 
 			FUnorderedAccessViewRHIParamRef UAVS[] = {
@@ -1142,7 +1119,7 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 
 			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_DontStore, ERenderTargetActions::Load_DontStore);
 			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture;
-			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthNop_StencilNop;
+			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXFillKBuffer"));
 
 			TUniformBufferRef<FOpaqueBasePassUniformParameters> BasePassUniformBuffer;
