@@ -586,8 +586,20 @@ public:
 	TRefCountPtr<IPooledRenderTarget> TressFXAccumInvAlpha;
 	TRefCountPtr<IPooledRenderTarget> TressFXFragmentDepthsTexture;
 	TRefCountPtr<IPooledRenderTarget> TressFXFragmentColorsTexture;
-
+	
 	/** k-buffer specific */
+	template <typename TRHICmdList>
+	void GetTressFXKBufferResources(
+		TRHICmdList& RHICmdList,
+		TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,
+		FRWBufferStructured* OutTTressFXKBufferNodes,
+		FRWBuffer* OutTTressFXKBufferCounter,
+		int32& OutTTressFXKBufferNodePoolSize
+	);
+private:
+	template <typename TRHICmdList>
+	void InitializeTressFXKBufferResources(TRHICmdList& RHICmdList, bool bForceReinit = false);
+
 	TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
 	FRWBufferStructured TressFXKBufferNodes;
 	FRWBuffer TressFXKBufferCounter;

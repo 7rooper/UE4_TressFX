@@ -17,6 +17,7 @@ DECLARE_LOG_CATEGORY_EXTERN(TressFXRenderingLog, Log, All);
 
 #define MAX_TFX_KBUFFER_SIZE 32
 #define MIN_TFX_KBUFFER_SIZE 4
+#define TFX_PPLL_NULL 0xffffffff
 
 struct FPPLL_Struct
 {
@@ -135,7 +136,7 @@ private:
 		ERasterizerCullMode MeshCullMode
 	);
 
-	template<bool bWantsVelocity, int32 KBufferSize>
+	template<int32 KBufferSize>
 	void ProcessKBuffer(
 		const FMeshBatch& RESTRICT MeshBatch,
 		uint64 BatchElementMask,

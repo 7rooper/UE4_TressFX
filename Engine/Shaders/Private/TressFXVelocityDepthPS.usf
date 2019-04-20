@@ -54,7 +54,7 @@ void TRessFXVelocityDepthPS(
 {
 
 	#if NEEDS_VELOCITY
-		  float4 position = input.Position;
+		float4 position = input.Position;
 		ResolvedView = ResolveView();
 
 		float4 p0p1 = input.FactoryInterpolants.p0p1;

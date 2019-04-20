@@ -401,11 +401,9 @@ float3 AOMultiBounce(float3 BaseColor, float AO)
 
 EARLYDEPTHSTENCIL
 void main(
-	PS_INPUT_HAIR_AA In OPTIONAL_IsFrontFace,
+	PS_INPUT_HAIR_AA In OPTIONAL_IsFrontFace
 #if TFX_SHORTCUT
-	out float4 OutColor : SV_Target0
-#elif TFX_PPLL
-	out float4 OutVelocity : SV_Target0
+	,out float4 OutColor : SV_Target0
 #endif
 )
 {
@@ -453,8 +451,7 @@ void main(
     if (TFXAlpha < SHORTCUT_MIN_ALPHA)
     {
 		#if TFX_PPLL
-			OutVelocity = float4(0, 0, 0, 0);
-			discard;
+			//discard;
 		#elif TFX_SHORTCUT
 			OutColor = float4(0, 0, 0, 0);
 		#endif
@@ -555,8 +552,6 @@ void main(
     Color += GetForwardDirectLighting(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither);
     
 	#if TFX_PPLL
-		//just use a dummy RT
-		OutVelocity = float4(0, 0, 0, 0); //TODO
 		//JAKETODO, make the linked list
 	#elif TFX_SHORTCUT		
 		OutColor = float4(Color * TFXAlpha, TFXAlpha);

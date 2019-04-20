@@ -125,7 +125,7 @@ public:
 
 		if (ColorPassType == ETressFXPass::FillColor_KBuffer) 
 		{
-			//todo
+			//JAKETODO
 			//FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
 			//FIntPoint BufferSize = SceneRenderTargets.GetBufferSizeXY();
 			//int32 KBufferSize = CVarOITKBufferSize.GetValueOnAnyThread();
@@ -307,6 +307,7 @@ void FTressFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 	const bool bIsTranslucent = IsTranslucentBlendMode(BlendMode);
 	int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
 	TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
+
 	const bool bNoDepth = bIsTranslucent || TFXRenderType == ETressFXRenderType::KBuffer;
 
 	if (bWantsVelocity == false && bNoDepth == true)
@@ -497,7 +498,7 @@ FMeshPassProcessor* CreateTRessFXDepthsAlphaPassProcessor(const FScene* Scene, c
 //FTressFXFillColorPassMeshProcessor
 /////////////////////////////////////////////////////////////////////////
 
-template<bool bWantsVelocity, int32 KBufferSize>
+template<int32 KBufferSize>
 void FTressFXFillColorPassMeshProcessor::ProcessKBuffer(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
@@ -512,17 +513,35 @@ void FTressFXFillColorPassMeshProcessor::ProcessKBuffer(
 	const FVertexFactory* VertexFactory = MeshBatch.VertexFactory;
 	FShaderPipeline* ShaderPipeline = nullptr;
 	FMeshPassProcessorRenderState DrawRenderState(PassDrawRenderState);
+	//JAKETODO
+	//DrawRenderState.SetBlendState(
+	//	TStaticBlendState<
+	//	CW_RGBA,
+	//	BO_Add,
+	//	BF_One,
+	//	BF_One,
+	//	BO_Add,
+	//	BF_One,
+	//	BF_One
+	//	>::GetRHI());
+	//DrawRenderState.SetDepthStencilState(
+	//	TStaticDepthStencilState<
+	//	true, CF_GreaterEqual,
+	//	true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
+	//	true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
+	//	0xff, 0xff, DWM_Zero
+	//	>::GetRHI());
 
 	FTressFXShaderElementData ShaderElementData(ETressFXPass::FillColor_KBuffer, ViewIfDynamicMeshCommand);
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
 	TMeshProcessorShaders<
-		FTressFXVS<bWantsVelocity>,
+		FTressFXVS<false>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
 		FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize>> TFXShaders;
 
 	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize>>(VertexFactory->GetType());
-	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<bWantsVelocity>>(VertexFactory->GetType());
+	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<false>>(VertexFactory->GetType());
 
 	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
 	BuildMeshDrawCommands(
@@ -556,6 +575,24 @@ void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 	FShaderPipeline* ShaderPipeline = nullptr;
 	FMeshPassProcessorRenderState DrawRenderState(PassDrawRenderState);
 
+	DrawRenderState.SetBlendState(
+		TStaticBlendState<
+		CW_RGBA,
+		BO_Add,
+		BF_One,
+		BF_One,
+		BO_Add,
+		BF_One,
+		BF_One
+		>::GetRHI());
+	DrawRenderState.SetDepthStencilState(
+		TStaticDepthStencilState<
+		true, CF_GreaterEqual,
+		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
+		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
+		0xff, 0xff, DWM_Zero
+		>::GetRHI());
+
 	FTressFXShaderElementData ShaderElementData(ETressFXPass::FillColor_Shortcut, ViewIfDynamicMeshCommand);
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
 	TMeshProcessorShaders<
@@ -586,50 +623,44 @@ void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 
 
 
-#define PROCESS_KBUFFER(bNeedsVelocity, KBufferSize, ...)					\
-if( bNeedsVelocity )														\
-{																			\
-	ProcessKBuffer< true, KBufferSize >(__VA_ARGS__);						\
-}																			\
-else																		\
-{																			\
-	ProcessKBuffer< false, KBufferSize >(__VA_ARGS__);						\
-}	
+#define PROCESS_KBUFFER(KBufferSize, ...)	\
+ProcessKBuffer<KBufferSize>(__VA_ARGS__);									
+
 //there has to be a better way to do this, but im not clever enough
 
-#define PROCESS_KBUFFER2(bWantsVelocity, KBufferSize, ...)					\
-switch (KBufferSize)														\
-{																			\
-	case 4: PROCESS_KBUFFER(bWantsVelocity, 4, __VA_ARGS__) break;			\
-	case 5: PROCESS_KBUFFER(bWantsVelocity, 5, __VA_ARGS__) break;			\
-	case 6: PROCESS_KBUFFER(bWantsVelocity, 6, __VA_ARGS__) break;			\
-	case 7: PROCESS_KBUFFER(bWantsVelocity, 7, __VA_ARGS__) break;			\
-	case 8: PROCESS_KBUFFER(bWantsVelocity, 8, __VA_ARGS__) break;			\
-	case 9: PROCESS_KBUFFER(bWantsVelocity, 9, __VA_ARGS__) break;			\
-	case 10: PROCESS_KBUFFER(bWantsVelocity, 10, __VA_ARGS__) break;		\
-	case 11: PROCESS_KBUFFER(bWantsVelocity, 11, __VA_ARGS__) break;		\
-	case 12: PROCESS_KBUFFER(bWantsVelocity, 12, __VA_ARGS__) break;		\
-	case 13: PROCESS_KBUFFER(bWantsVelocity, 13, __VA_ARGS__) break;		\
-	case 14: PROCESS_KBUFFER(bWantsVelocity, 14, __VA_ARGS__) break;		\
-	case 15: PROCESS_KBUFFER(bWantsVelocity, 15, __VA_ARGS__) break;		\
-	case 16: PROCESS_KBUFFER(bWantsVelocity, 16, __VA_ARGS__) break;		\
-	case 17: PROCESS_KBUFFER(bWantsVelocity, 17, __VA_ARGS__) break;		\
-	case 18: PROCESS_KBUFFER(bWantsVelocity, 18, __VA_ARGS__) break;		\
-	case 19: PROCESS_KBUFFER(bWantsVelocity, 19, __VA_ARGS__) break;		\
-	case 20: PROCESS_KBUFFER(bWantsVelocity, 20, __VA_ARGS__) break;		\
-	case 21: PROCESS_KBUFFER(bWantsVelocity, 21, __VA_ARGS__) break;		\
-	case 22: PROCESS_KBUFFER(bWantsVelocity, 22, __VA_ARGS__) break;		\
-	case 23: PROCESS_KBUFFER(bWantsVelocity, 23, __VA_ARGS__) break;		\
-	case 24: PROCESS_KBUFFER(bWantsVelocity, 24, __VA_ARGS__) break;		\
-	case 25: PROCESS_KBUFFER(bWantsVelocity, 25, __VA_ARGS__) break;		\
-	case 26: PROCESS_KBUFFER(bWantsVelocity, 26, __VA_ARGS__) break;		\
-	case 27: PROCESS_KBUFFER(bWantsVelocity, 28, __VA_ARGS__) break;		\
-	case 28: PROCESS_KBUFFER(bWantsVelocity, 28, __VA_ARGS__) break;		\
-	case 29: PROCESS_KBUFFER(bWantsVelocity, 29, __VA_ARGS__) break;		\
-	case 30: PROCESS_KBUFFER(bWantsVelocity, 30, __VA_ARGS__) break;		\
-	case 31: PROCESS_KBUFFER(bWantsVelocity, 31, __VA_ARGS__) break;		\
-	case 32: PROCESS_KBUFFER(bWantsVelocity, 32, __VA_ARGS__) break;		\
-	default: check(0);														\
+#define PROCESS_KBUFFER2(KBufferSize, ...)					\
+switch (KBufferSize)										\
+{															\
+	case 4:  PROCESS_KBUFFER(4, __VA_ARGS__) break;			\
+	case 5:  PROCESS_KBUFFER(5, __VA_ARGS__) break;			\
+	case 6:  PROCESS_KBUFFER(6, __VA_ARGS__) break;			\
+	case 7:  PROCESS_KBUFFER(7, __VA_ARGS__) break;			\
+	case 8:  PROCESS_KBUFFER(8, __VA_ARGS__) break;			\
+	case 9:  PROCESS_KBUFFER(9, __VA_ARGS__) break;			\
+	case 10: PROCESS_KBUFFER(10, __VA_ARGS__) break;		\
+	case 11: PROCESS_KBUFFER(11, __VA_ARGS__) break;		\
+	case 12: PROCESS_KBUFFER(12, __VA_ARGS__) break;		\
+	case 13: PROCESS_KBUFFER(13, __VA_ARGS__) break;		\
+	case 14: PROCESS_KBUFFER(14, __VA_ARGS__) break;		\
+	case 15: PROCESS_KBUFFER(15, __VA_ARGS__) break;		\
+	case 16: PROCESS_KBUFFER(16, __VA_ARGS__) break;		\
+	case 17: PROCESS_KBUFFER(17, __VA_ARGS__) break;		\
+	case 18: PROCESS_KBUFFER(18, __VA_ARGS__) break;		\
+	case 19: PROCESS_KBUFFER(19, __VA_ARGS__) break;		\
+	case 20: PROCESS_KBUFFER(20, __VA_ARGS__) break;		\
+	case 21: PROCESS_KBUFFER(21, __VA_ARGS__) break;		\
+	case 22: PROCESS_KBUFFER(22, __VA_ARGS__) break;		\
+	case 23: PROCESS_KBUFFER(23, __VA_ARGS__) break;		\
+	case 24: PROCESS_KBUFFER(24, __VA_ARGS__) break;		\
+	case 25: PROCESS_KBUFFER(25, __VA_ARGS__) break;		\
+	case 26: PROCESS_KBUFFER(26, __VA_ARGS__) break;		\
+	case 27: PROCESS_KBUFFER(28, __VA_ARGS__) break;		\
+	case 28: PROCESS_KBUFFER(28, __VA_ARGS__) break;		\
+	case 29: PROCESS_KBUFFER(29, __VA_ARGS__) break;		\
+	case 30: PROCESS_KBUFFER(30, __VA_ARGS__) break;		\
+	case 31: PROCESS_KBUFFER(31, __VA_ARGS__) break;		\
+	case 32: PROCESS_KBUFFER(32, __VA_ARGS__) break;		\
+	default: check(0);										\
 }
 
 
@@ -651,10 +682,9 @@ void FTressFXFillColorPassMeshProcessor::Process(
 		{
 			const FMaterialRenderProxy* FallbackMaterialRenderProxyPtr = nullptr;
 			const FMaterial& MeshBatchMaterial = MeshBatch.MaterialRenderProxy->GetMaterialWithFallback(FeatureLevel, FallbackMaterialRenderProxyPtr);
-			const bool bWantsVelocity = MeshBatchMaterial.TressFXShouldRenderVelocity();
 
 			int32 KBufferSize = FMath::Clamp(static_cast<int32>(GTressFXKBufferSize), MIN_TFX_KBUFFER_SIZE, MAX_TFX_KBUFFER_SIZE);
-			PROCESS_KBUFFER2(bWantsVelocity, KBufferSize, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode)			
+			PROCESS_KBUFFER2(KBufferSize, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode)			
 			break;
 		}
 		case ETressFXRenderType::ShortCut:
@@ -683,7 +713,6 @@ void FTressFXFillColorPassMeshProcessor::Process(
 
 void FTressFXFillColorPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId)
 {
-
 	const FMaterialRenderProxy* FallbackMaterialRenderProxyPtr = nullptr;
 	const FMaterial& MeshBatchMaterial = MeshBatch.MaterialRenderProxy->GetMaterialWithFallback(FeatureLevel, FallbackMaterialRenderProxyPtr);
 
@@ -730,24 +759,7 @@ FTressFXFillColorPassMeshProcessor::FTressFXFillColorPassMeshProcessor(
 
 void SetupFillColorPassState(FMeshPassProcessorRenderState& DrawRenderState)
 {
-
-	DrawRenderState.SetBlendState(
-		TStaticBlendState<
-		CW_RGBA, 
-		BO_Add,
-		BF_One, 
-		BF_One, 
-		BO_Add, 
-		BF_One, 
-		BF_One
-		>::GetRHI());
-	DrawRenderState.SetDepthStencilState(
-		TStaticDepthStencilState<
-		true, CF_GreaterEqual,
-		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
-		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
-		0xff, 0xff, DWM_Zero
-		>::GetRHI());
+	//set up is done during Process()
 }
 
 FMeshPassProcessor* CreateTRessFXFillColorPassProcessor(const FScene* Scene, const FSceneView* InViewIfDynamicMeshCommand, FMeshPassDrawListContext* InDrawListContext)
@@ -801,10 +813,13 @@ bool FSceneRenderer::ShouldRenderTressFX(int32 TressFXPass)
 	return false;
 }
 
+//////////////////////////////////////////////////////////////////////////
+//Shortcut Passes
+/////////////////////////////////////////////////////////////////////////
+
 void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views)
 {
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
-
 
 	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
 	{
@@ -1071,7 +1086,82 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 	}
 }
 
-void FSceneRenderer::RenderTressFXVelocitiesDepth(FRHICommandListImmediate& RHICmdList)
+//////////////////////////////////////////////////////////////////////////
+//K-Buffer Passes
+/////////////////////////////////////////////////////////////////////////
+
+void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture)
+{
+	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
+
+	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
+	{
+		FViewInfo& View = Views[ViewIndex];
+
+		if (View.TressFXMeshBatches.Num() < 1 || !View.ShouldRenderView())
+		{
+			continue;
+		}
+
+		SCOPED_DRAW_EVENT(RHICmdList, TressFXKBuffer_BasePass);
+
+		{
+			// Make a copy of scene depth for us to use, do i need this for this pass?
+			SCOPED_DRAW_EVENT(RHICmdList, CopySceneDepth);
+			TressFXCopySceneDepth(RHICmdList, View, SceneContext, SceneContext.TressFXSceneDepth);
+		}
+
+		TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
+		FRWBufferStructured* TressFXKBufferNodes = nullptr;
+		FRWBuffer* TressFXKBufferCounter = nullptr;
+		int32 TressFXKBufferNodePoolSize;
+		SceneContext.GetTressFXKBufferResources(RHICmdList, TressFXKBufferListHeads, TressFXKBufferNodes, TressFXKBufferCounter, TressFXKBufferNodePoolSize);
+
+		// Fill k-buffer
+		{
+			SCOPED_DRAW_EVENT(RHICmdList, FillColors);
+			
+			const uint32 FragmentListClearValue[4] = { TFX_PPLL_NULL, TFX_PPLL_NULL, TFX_PPLL_NULL, TFX_PPLL_NULL };
+			ClearUAV(RHICmdList, TressFXKBufferListHeads->GetRenderTargetItem(), FragmentListClearValue);
+			TressFXKBufferNodes->AcquireTransientResource();
+			ClearUAV(RHICmdList, *TressFXKBufferNodes, 0);
+			TressFXKBufferCounter->AcquireTransientResource();
+			static const uint32 Values[4] = { TFX_PPLL_NULL, TFX_PPLL_NULL, TFX_PPLL_NULL, TFX_PPLL_NULL };
+			RHICmdList.ClearTinyUAV(TressFXKBufferCounter->UAV, Values);
+
+			FUnorderedAccessViewRHIParamRef UAVS[] = {
+				TressFXKBufferListHeads->GetRenderTargetItem().UAV,
+				TressFXKBufferNodes->UAV,
+				TressFXKBufferCounter->UAV
+			};
+			RHICmdList.TransitionResources(EResourceTransitionAccess::EWritable, EResourceTransitionPipeline::EGfxToGfx, UAVS, ARRAY_COUNT(UAVS));
+
+			FRHIRenderPassInfo RPInfo(
+				ARRAY_COUNT(UAVS), UAVS
+			);
+
+			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_DontStore, ERenderTargetActions::Load_DontStore);
+			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture;
+			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthNop_StencilNop;
+			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXFillKBuffer"));
+
+			TUniformBufferRef<FOpaqueBasePassUniformParameters> BasePassUniformBuffer;
+
+			//the basepass buffer on the scene gets updated inside CreateOpaqueBasePassUniformBuffer
+			CreateOpaqueBasePassUniformBuffer(RHICmdList, View, ScreenShadowMaskTexture, BasePassUniformBuffer);
+			FMeshPassProcessorRenderState DrawRenderState(View, BasePassUniformBuffer);
+			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
+			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
+			View.ParallelMeshDrawCommandPasses[EMeshPass::TressFX_FillColors].DispatchDraw(nullptr, RHICmdList);
+			RHICmdList.EndRenderPass();
+		}
+		//resolve
+		//TODO
+	}
+}
+
+
+void FSceneRenderer::RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList)
 {
 	if (!ShouldRenderTressFX((int32)ETressFXPass::DepthsVelocity))
 	{
@@ -1129,6 +1219,10 @@ void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList,
 			}
 			break;
 		}
+		case ETressFXRenderType::KBuffer:
+		{
+			break;
+		}
 		default:
 		{
 			check(0);
@@ -1150,6 +1244,11 @@ void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdLi
 		case ETressFXRenderType::ShortCut:
 		{
 			RenderShortcutResolvePass(RHICmdList, Views, Scene, ScreenShadowMaskTexture);
+			break;
+		}
+		case ETressFXRenderType::KBuffer:
+		{
+			RenderKBufferPasses(RHICmdList, Views, Scene, ScreenShadowMaskTexture);
 			break;
 		}
 		default:

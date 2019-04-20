@@ -1110,9 +1110,9 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
 	TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
 	{
-		if (bSceneHasTressFX && TFXRenderType == ETressFXRenderType::Opaque)
+		if (bSceneHasTressFX && (TFXRenderType == ETressFXRenderType::Opaque || TFXRenderType == ETressFXRenderType::KBuffer))
 		{
-			RenderTressFXVelocitiesDepth(RHICmdList);
+			RenderTressFXDepthsAndVelocity(RHICmdList);
 		}
 	}
 	/*@End Third party code TressFX*/
@@ -1694,7 +1694,7 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	checkSlow(RHICmdList.IsOutsideRenderPass());
 
 	//@BEGIN third party code TressFX
-	//using this passed in ref inside renderlights instead because tressFX needs it later during the fill colors pass for dynamic shadows
+	//using this passed in ref inside RenderLights() instead because tressFX needs it later during the fill colors pass for dynamic shadows
 	TRefCountPtr<IPooledRenderTarget> ScreenShadowMaskTexture;
 	//@END third party code TressFX
 
