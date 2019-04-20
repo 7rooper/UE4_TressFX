@@ -584,15 +584,53 @@ void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 	);
 }
 
-#define PROCESS_KBUFFER(bNeedsVelocity, KBufferSize, MeshBatch, BatchElementMask,StaticMeshId,PrimitiveSceneProxy,MaterialRenderProxy,MaterialResource,MeshFillMode,MeshCullMode)	\
-if( bNeedsVelocity )																																								\
-{																																													\
-	ProcessKBuffer< true, KBufferSize >(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode);			\
-}																																													\
-else																																												\
-{																																													\
-	ProcessKBuffer< false, KBufferSize >(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode);		\
+
+
+#define PROCESS_KBUFFER(bNeedsVelocity, KBufferSize, ...)					\
+if( bNeedsVelocity )														\
+{																			\
+	ProcessKBuffer< true, KBufferSize >(__VA_ARGS__);						\
+}																			\
+else																		\
+{																			\
+	ProcessKBuffer< false, KBufferSize >(__VA_ARGS__);						\
 }	
+//there has to be a better way to do this, but im not clever enough
+
+#define PROCESS_KBUFFER2(bWantsVelocity, KBufferSize, ...)					\
+switch (KBufferSize)														\
+{																			\
+	case 4: PROCESS_KBUFFER(bWantsVelocity, 4, __VA_ARGS__) break;			\
+	case 5: PROCESS_KBUFFER(bWantsVelocity, 5, __VA_ARGS__) break;			\
+	case 6: PROCESS_KBUFFER(bWantsVelocity, 6, __VA_ARGS__) break;			\
+	case 7: PROCESS_KBUFFER(bWantsVelocity, 7, __VA_ARGS__) break;			\
+	case 8: PROCESS_KBUFFER(bWantsVelocity, 8, __VA_ARGS__) break;			\
+	case 9: PROCESS_KBUFFER(bWantsVelocity, 9, __VA_ARGS__) break;			\
+	case 10: PROCESS_KBUFFER(bWantsVelocity, 10, __VA_ARGS__) break;		\
+	case 11: PROCESS_KBUFFER(bWantsVelocity, 11, __VA_ARGS__) break;		\
+	case 12: PROCESS_KBUFFER(bWantsVelocity, 12, __VA_ARGS__) break;		\
+	case 13: PROCESS_KBUFFER(bWantsVelocity, 13, __VA_ARGS__) break;		\
+	case 14: PROCESS_KBUFFER(bWantsVelocity, 14, __VA_ARGS__) break;		\
+	case 15: PROCESS_KBUFFER(bWantsVelocity, 15, __VA_ARGS__) break;		\
+	case 16: PROCESS_KBUFFER(bWantsVelocity, 16, __VA_ARGS__) break;		\
+	case 17: PROCESS_KBUFFER(bWantsVelocity, 17, __VA_ARGS__) break;		\
+	case 18: PROCESS_KBUFFER(bWantsVelocity, 18, __VA_ARGS__) break;		\
+	case 19: PROCESS_KBUFFER(bWantsVelocity, 19, __VA_ARGS__) break;		\
+	case 20: PROCESS_KBUFFER(bWantsVelocity, 20, __VA_ARGS__) break;		\
+	case 21: PROCESS_KBUFFER(bWantsVelocity, 21, __VA_ARGS__) break;		\
+	case 22: PROCESS_KBUFFER(bWantsVelocity, 22, __VA_ARGS__) break;		\
+	case 23: PROCESS_KBUFFER(bWantsVelocity, 23, __VA_ARGS__) break;		\
+	case 24: PROCESS_KBUFFER(bWantsVelocity, 24, __VA_ARGS__) break;		\
+	case 25: PROCESS_KBUFFER(bWantsVelocity, 25, __VA_ARGS__) break;		\
+	case 26: PROCESS_KBUFFER(bWantsVelocity, 26, __VA_ARGS__) break;		\
+	case 27: PROCESS_KBUFFER(bWantsVelocity, 28, __VA_ARGS__) break;		\
+	case 28: PROCESS_KBUFFER(bWantsVelocity, 28, __VA_ARGS__) break;		\
+	case 29: PROCESS_KBUFFER(bWantsVelocity, 29, __VA_ARGS__) break;		\
+	case 30: PROCESS_KBUFFER(bWantsVelocity, 30, __VA_ARGS__) break;		\
+	case 31: PROCESS_KBUFFER(bWantsVelocity, 31, __VA_ARGS__) break;		\
+	case 32: PROCESS_KBUFFER(bWantsVelocity, 32, __VA_ARGS__) break;		\
+	default: check(0);														\
+}
 
 
 template<ETressFXRenderType::Type RenderType>
@@ -615,41 +653,8 @@ void FTressFXFillColorPassMeshProcessor::Process(
 			const FMaterial& MeshBatchMaterial = MeshBatch.MaterialRenderProxy->GetMaterialWithFallback(FeatureLevel, FallbackMaterialRenderProxyPtr);
 			const bool bWantsVelocity = MeshBatchMaterial.TressFXShouldRenderVelocity();
 
-			//there has to be a better way to do this, but im not clever enough
 			int32 KBufferSize = FMath::Clamp(static_cast<int32>(GTressFXKBufferSize), MIN_TFX_KBUFFER_SIZE, MAX_TFX_KBUFFER_SIZE);
-			switch (KBufferSize)
-			{
-				case 4 : PROCESS_KBUFFER(bWantsVelocity, 4, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 5 : PROCESS_KBUFFER(bWantsVelocity, 5, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 6 : PROCESS_KBUFFER(bWantsVelocity, 6, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 7 : PROCESS_KBUFFER(bWantsVelocity, 7, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 8 : PROCESS_KBUFFER(bWantsVelocity, 8, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 9 : PROCESS_KBUFFER(bWantsVelocity, 9, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 10 : PROCESS_KBUFFER(bWantsVelocity, 10, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 11 : PROCESS_KBUFFER(bWantsVelocity, 11, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 12 : PROCESS_KBUFFER(bWantsVelocity, 12, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 13 : PROCESS_KBUFFER(bWantsVelocity, 13, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 14 : PROCESS_KBUFFER(bWantsVelocity, 14, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 15 : PROCESS_KBUFFER(bWantsVelocity, 15, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 16 : PROCESS_KBUFFER(bWantsVelocity, 16, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 17 : PROCESS_KBUFFER(bWantsVelocity, 17, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 18 : PROCESS_KBUFFER(bWantsVelocity, 18, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 19 : PROCESS_KBUFFER(bWantsVelocity, 19, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 20 : PROCESS_KBUFFER(bWantsVelocity, 20, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 21 : PROCESS_KBUFFER(bWantsVelocity, 21, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 22 : PROCESS_KBUFFER(bWantsVelocity, 22, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 23 : PROCESS_KBUFFER(bWantsVelocity, 23, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 24 : PROCESS_KBUFFER(bWantsVelocity, 24, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 25 : PROCESS_KBUFFER(bWantsVelocity, 25, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 26 : PROCESS_KBUFFER(bWantsVelocity, 26, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 27 : PROCESS_KBUFFER(bWantsVelocity, 28, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 28 : PROCESS_KBUFFER(bWantsVelocity, 28, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 29 : PROCESS_KBUFFER(bWantsVelocity, 29, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 30 : PROCESS_KBUFFER(bWantsVelocity, 30, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 31 : PROCESS_KBUFFER(bWantsVelocity, 31, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				case 32 : PROCESS_KBUFFER(bWantsVelocity, 32, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode) break;
-				default: check(0);
-			}
+			PROCESS_KBUFFER2(bWantsVelocity, KBufferSize, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MaterialResource, MeshFillMode, MeshCullMode)			
 			break;
 		}
 		case ETressFXRenderType::ShortCut:
@@ -674,6 +679,7 @@ void FTressFXFillColorPassMeshProcessor::Process(
 }
 
 #undef PROCESS_KBUFFER
+#undef PROCESS_KBUFFER2
 
 void FTressFXFillColorPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId)
 {
