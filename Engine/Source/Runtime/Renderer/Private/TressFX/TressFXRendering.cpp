@@ -55,8 +55,8 @@ public:
 		{
 			RWFragmentListHead.Bind(Initializer.ParameterMap, TEXT("RWFragmentListHead"));
 			RWLinkedListUAV.Bind(Initializer.ParameterMap, TEXT("RWLinkedListUAV"));
-			NodePoolSize.Bind(Initializer.ParameterMap, TEXT("NodePoolSize"));
 			RWCounterBuffer.Bind(Initializer.ParameterMap, TEXT("RWCounterBuffer"));
+			KBufferUniformBuffer.Bind(Initializer.ParameterMap, FTressFXKBufferFillPassUniformParameters::StaticStructMetadata.GetShaderVariableName());
 		}
 	}
 
@@ -74,9 +74,14 @@ public:
 
 		if (ColorPassType == ETressFXPass::FillColor_KBuffer)
 		{
-			OutEnvironment.SetDefine(TEXT("KBUFFER_SIZE"), KBufferSize);
+			OutEnvironment.SetDefine(TEXT("KBUFFER_SIZE"), KBufferSize);			
+			FShaderUniformBufferParameter::ModifyCompilationEnvironment(
+				FTressFXKBufferFillPassUniformParameters::StaticStructMetadata.GetShaderVariableName(),
+				FTressFXKBufferFillPassUniformParameters::StaticStructMetadata,
+				Platform,
+				OutEnvironment
+			);
 		}
-
 	}
 
 
@@ -99,8 +104,8 @@ public:
 		{
 			Ar << RWFragmentListHead;
 			Ar << RWLinkedListUAV;
-			Ar << NodePoolSize;
 			Ar << RWCounterBuffer;
+			Ar << KBufferUniformBuffer;
 		}
 		return result;
 	}
@@ -125,25 +130,19 @@ public:
 
 		if (ColorPassType == ETressFXPass::FillColor_KBuffer) 
 		{
-			//JAKETODO
-			//FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
-			//FIntPoint BufferSize = SceneRenderTargets.GetBufferSizeXY();
-			//int32 KBufferSize = CVarOITKBufferSize.GetValueOnAnyThread();
-			//KBufferSize = KBufferSize <= MAX_KBUFFER_SIZE ? KBufferSize : MAX_KBUFFER_SIZE;
-			//KBufferSize = KBufferSize >= MIN_KBUFFER_SIZE ? KBufferSize : MIN_KBUFFER_SIZE;
-			//SetShaderValue(RHICmdList, ShaderRHI, nNodePoolSize, BufferSize.X * BufferSize.Y * KBufferSize);
+			//kbuffer unform buff is set as pass uniform buffer
+			ShaderBindings.Add(KBufferUniformBuffer, DrawRenderState.GetPassUniformBuffer());
 		}
 	}
 
 public:
 
 	FShaderUniformBufferParameter tressfxShadeParameters;
-
 	//Kbuffer
 	FRWShaderParameter RWFragmentListHead;
+	FShaderUniformBufferParameter KBufferUniformBuffer;
 	FRWShaderParameter RWLinkedListUAV;
 	FRWShaderParameter RWCounterBuffer;
-	FShaderParameter NodePoolSize;
 };
 
 typedef FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut, 0> FTressFXFillColorPS_Shortcut;
@@ -726,14 +725,14 @@ void FTressFXFillColorPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT
 		TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
 		if (TFXRenderType == ETressFXRenderType::KBuffer) 
 		{
+			PassDrawRenderState.SetPassUniformBuffer(Scene->UniformBuffers.TressFXKBufferPassUniformBuffer);
 			Process<ETressFXRenderType::KBuffer>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
 		}
 		else 
 		{
+			PassDrawRenderState.SetPassUniformBuffer(Scene->UniformBuffers.OpaqueBasePassUniformBuffer);
 			Process<ETressFXRenderType::ShortCut>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
 		}
-
-
 	}
 }
 
@@ -747,7 +746,7 @@ FTressFXFillColorPassMeshProcessor::FTressFXFillColorPassMeshProcessor(
 	PassDrawRenderState = InPassDrawRenderState;
 	PassDrawRenderState.SetViewUniformBuffer(Scene->UniformBuffers.ViewUniformBuffer);
 	PassDrawRenderState.SetInstancedViewUniformBuffer(Scene->UniformBuffers.InstancedViewUniformBuffer);
-	PassDrawRenderState.SetPassUniformBuffer(Scene->UniformBuffers.OpaqueBasePassUniformBuffer);
+	//pass unfiform buffer is set during process
 }
 
 void SetupFillColorPassState(FMeshPassProcessorRenderState& DrawRenderState)
@@ -1103,7 +1102,8 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 			TressFXKBufferCounter->AcquireTransientResource();	
 			ClearUAV(RHICmdList, *TressFXKBufferNodes, 0);
 			
-			static const uint32 Values[4] = { 0, 0, 0, 0 };
+			//starts at one so if it rolls over to 0 after max uint it wont try to add more
+			static const uint32 Values[4] = { 1, 1, 1, 1 };
 			RHICmdList.ClearTinyUAV(TressFXKBufferCounter->UAV, Values);
 
 			FUnorderedAccessViewRHIParamRef UAVS[] = {
@@ -1122,11 +1122,11 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXFillKBuffer"));
 
-			TUniformBufferRef<FOpaqueBasePassUniformParameters> BasePassUniformBuffer;
+			TUniformBufferRef<FTressFXKBufferFillPassUniformParameters> TFXKBufferUniformBuffer;
 
 			//the basepass buffer on the scene gets updated inside CreateOpaqueBasePassUniformBuffer
-			CreateOpaqueBasePassUniformBuffer(RHICmdList, View, ScreenShadowMaskTexture, BasePassUniformBuffer);
-			FMeshPassProcessorRenderState DrawRenderState(View, BasePassUniformBuffer);
+			CreateTressFXKBufferPassUniformBuffer(RHICmdList, View, ScreenShadowMaskTexture, TFXKBufferUniformBuffer, TressFXKBufferNodePoolSize);
+			FMeshPassProcessorRenderState DrawRenderState(View, TFXKBufferUniformBuffer);
 			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 			View.ParallelMeshDrawCommandPasses[EMeshPass::TressFX_FillColors].DispatchDraw(nullptr, RHICmdList);
@@ -1134,6 +1134,13 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 		}
 		//resolve
 		//TODO
+
+
+		if (IsTransientResourceBufferAliasingEnabled()) 
+		{
+			TressFXKBufferNodes->DiscardTransientResource();
+			TressFXKBufferCounter->DiscardTransientResource();
+		}
 	}
 }
 

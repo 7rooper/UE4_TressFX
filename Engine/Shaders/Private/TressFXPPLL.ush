@@ -20,17 +20,96 @@
 	#define FRAGMENT_LIST_NULL 0xffffffff
 #endif
 
+#ifndef KBUFFER_RESOLVE_PASS
+	#define KBUFFER_RESOLVE_PASS 0
+#endif
+
+#if !KBUFFER_RESOLVE_PASS
+	#define NodePoolSize OpaqueBasePass.NodePoolSize
+#else
+	uint NodePoolSize;
+#endif
 
 struct FPPLL_Struct
 {
     uint Depth;
     uint Color;
-    uint Data;
     uint Next;
+    uint DummyPad; //room for more stuff later if we need...
 };
 
-int NodePoolSize;
 RWTexture2D<int> RWFragmentListHead : register(FRAGMENT_LIST_REGISTER);
 RWStructuredBuffer<FPPLL_Struct> RWLinkedListUAV : register(LINKED_LIST_REGISTER);
 //using this instead of the uav counter so i dont have to modify UE4's RHI any more
 RWBuffer<uint> RWCounterBuffer : register(COUNTER_BUFFER_REGISTER);
+
+#define BITMASK8 0xFF
+float4 UnpackUintIntoFloat4(uint PackedValue)
+{
+    float r = ((PackedValue & 0xFF000000) >> 24) / 255.0;
+    float g = ((PackedValue & 0x00FF0000) >> 16) / 255.0;
+    float b = ((PackedValue & 0x0000FF00) >> 8) / 255.0;
+    float a = ((PackedValue & 0x000000FF)) / 255.0;
+    return float4(r, g, b, a);
+}
+
+uint PackFloat4IntoUint(float4 vValue)
+{
+    uint r = ((uint) (vValue.r * 255) & BITMASK8) << 24;
+    uint g = ((uint) (vValue.g * 255) & BITMASK8) << 16;
+    uint b = ((uint) (vValue.b * 255) & BITMASK8) << 8;
+    uint a = ((uint) (vValue.a * 255) & BITMASK8);
+    return r | g | b | a;
+}
+
+//uint PackFloat4IntoUint(float4 vValue)
+//{
+//    return (((uint) (vValue.x * 255)) << 24) | (((uint) (vValue.y * 255)) << 16) | (((uint) (vValue.z * 255)) << 8) | (uint) (vValue.w * 255);
+//}
+
+//float4 UnpackUintIntoFloat4(uint uValue)
+//{
+//    return float4(((uValue & 0xFF000000) >> 24) / 255.0, ((uValue & 0x00FF0000) >> 16) / 255.0, ((uValue & 0x0000FF00) >> 8) / 255.0, ((uValue & 0x000000FF)) / 255.0);
+//}
+
+
+// Allocate a new fragment location in fragment color, depth, and link buffers
+int AllocateFragment(int2 vScreenAddress)
+{
+	//using this instead of the uav IncrementCounter so i dont have to modify UE4's RHI any more
+    int newAddress;
+    InterlockedAdd(RWCounterBuffer[0], 1, newAddress);
+    if (newAddress <= 0 || newAddress > NodePoolSize)
+    {
+        newAddress = FRAGMENT_LIST_NULL;
+    }
+    return newAddress;
+}
+
+// Insert a new fragment at the head of the list. The old list head becomes the
+// the second fragment in the list and so on. Return the address of the *old* head.
+int MakeFragmentLink(int2 vScreenAddress, int nNewHeadAddress)
+{
+    int nOldHeadAddress;
+    InterlockedExchange(RWFragmentListHead[vScreenAddress], nNewHeadAddress, nOldHeadAddress);
+    return nOldHeadAddress;
+}
+
+// Write fragment attributes to list location. 
+void WriteFragmentAttributes(int nAddress, int nPreviousLink, float4 Color, float fDepth)
+{
+    FPPLL_Struct element = (FPPLL_Struct) 0;
+    element.Color = PackFloat4IntoUint(Color);
+    element.Depth = asuint(fDepth);
+    element.Next = nPreviousLink;
+    element.DummyPad = 1;
+    RWLinkedListUAV[nAddress] = element;
+}
+
+void BuildPPLL(float4 Color, int2 vScreenAddress, float Depth)
+{
+	const uint DepthAsUint = asuint(Depth);       
+    int nNewFragmentAddress = AllocateFragment(vScreenAddress);
+    int nOldFragmentAddress = MakeFragmentLink(vScreenAddress, nNewFragmentAddress);
+    WriteFragmentAttributes(nNewFragmentAddress, nOldFragmentAddress, Color, Depth );
+}

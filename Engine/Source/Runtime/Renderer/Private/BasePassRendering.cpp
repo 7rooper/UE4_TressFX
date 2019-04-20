@@ -81,6 +81,10 @@ IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FSharedBasePassUniformParameters, "Base
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FOpaqueBasePassUniformParameters, "OpaqueBasePass");
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTranslucentBasePassUniformParameters, "TranslucentBasePass");
 
+/*  @BEGIN third party code TressFX */
+IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXKBufferFillPassUniformParameters, "TressFXKBufferFillPass");
+/*  @END third party code TressFX */
+
 // Typedef is necessary because the C preprocessor thinks the comma in the template parameter list is a comma in the macro parameter list.
 // BasePass Vertex Shader needs to include hull and domain shaders for tessellation, these only compile for D3D11
 #define IMPLEMENT_BASEPASS_VERTEXSHADER_TYPE(LightMapPolicyType,LightMapPolicyName) \
@@ -518,6 +522,87 @@ void SetupSharedBasePassParameters(
 	const FSceneRenderTargetItem& Item = PooledRT->GetRenderTargetItem();
 	SharedParameters.SSProfilesTexture = Item.ShaderResourceTexture;
 }
+
+/*  @BEGIN third party code TressFX */
+// very similar to opaque bass pass buffer
+void CreateTressFXKBufferPassUniformBuffer(
+	FRHICommandListImmediate& RHICmdList,
+	const FViewInfo& View,
+	IPooledRenderTarget* ForwardScreenSpaceShadowMask,
+	TUniformBufferRef<FTressFXKBufferFillPassUniformParameters>& KBufferPassUniformBuffer,
+	int32 NodePoolSize
+)
+{
+	checkf(ForwardScreenSpaceShadowMask && ForwardScreenSpaceShadowMask->GetRenderTargetItem().IsValid(), TEXT("ForwardScreenSpaceShadowMask was invalid in CreateTressFXKBufferPassUniformBuffer!"));
+	FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
+
+	FTressFXKBufferFillPassUniformParameters KBufferPassParams;
+	SetupSharedBasePassParameters(RHICmdList, View, SceneRenderTargets, KBufferPassParams.Shared);
+	KBufferPassParams.NodePoolSize = NodePoolSize;
+	// Forward shading	
+	KBufferPassParams.UseForwardScreenSpaceShadowMask = 1;
+	KBufferPassParams.ForwardScreenSpaceShadowMaskTexture = ForwardScreenSpaceShadowMask->GetRenderTargetItem().ShaderResourceTexture;
+
+	IPooledRenderTarget* IndirectOcclusion = SceneRenderTargets.ScreenSpaceAO;
+
+	if (!SceneRenderTargets.bScreenSpaceAOIsValid)
+	{
+		IndirectOcclusion = GSystemTextures.WhiteDummy;
+	}
+
+	KBufferPassParams.IndirectOcclusionTexture = IndirectOcclusion->GetRenderTargetItem().ShaderResourceTexture;
+
+	FTextureRHIParamRef ResolvedSceneDepthTextureValue = GSystemTextures.WhiteDummy->GetRenderTargetItem().ShaderResourceTexture;
+
+	if (SceneRenderTargets.GetMSAACount() > 1)
+	{
+		ResolvedSceneDepthTextureValue = SceneRenderTargets.SceneDepthZ->GetRenderTargetItem().ShaderResourceTexture;
+	}
+
+	KBufferPassParams.ResolvedSceneDepthTexture = ResolvedSceneDepthTextureValue;
+	
+
+	// DBuffer Decals - JAKETODO remove
+	{
+		const bool bIsDBufferEnabled = IsUsingDBuffers(View.GetShaderPlatform());
+		IPooledRenderTarget* DBufferA = bIsDBufferEnabled && SceneRenderTargets.DBufferA ? SceneRenderTargets.DBufferA : GSystemTextures.BlackAlphaOneDummy;
+		IPooledRenderTarget* DBufferB = bIsDBufferEnabled && SceneRenderTargets.DBufferB ? SceneRenderTargets.DBufferB : GSystemTextures.DefaultNormal8Bit;
+		IPooledRenderTarget* DBufferC = bIsDBufferEnabled && SceneRenderTargets.DBufferC ? SceneRenderTargets.DBufferC : GSystemTextures.BlackAlphaOneDummy;
+
+		KBufferPassParams.DBufferATexture = DBufferA->GetRenderTargetItem().ShaderResourceTexture;
+		KBufferPassParams.DBufferBTexture = DBufferB->GetRenderTargetItem().ShaderResourceTexture;
+		KBufferPassParams.DBufferCTexture = DBufferC->GetRenderTargetItem().ShaderResourceTexture;
+		KBufferPassParams.DBufferATextureSampler = TStaticSamplerState<>::GetRHI();
+		KBufferPassParams.DBufferBTextureSampler = TStaticSamplerState<>::GetRHI();
+		KBufferPassParams.DBufferCTextureSampler = TStaticSamplerState<>::GetRHI();
+
+		if ((GSupportsRenderTargetWriteMask || IsUsingPerPixelDBufferMask(View.GetShaderPlatform())) && SceneRenderTargets.DBufferMask)
+		{
+			KBufferPassParams.DBufferRenderMask = SceneRenderTargets.DBufferMask->GetRenderTargetItem().TargetableTexture;
+		}
+		else
+		{
+			KBufferPassParams.DBufferRenderMask = GSystemTextures.WhiteDummy->GetRenderTargetItem().TargetableTexture;
+		}
+	}
+
+	// Misc
+	KBufferPassParams.EyeAdaptation = GetEyeAdaptation(View);
+
+	FScene* Scene = View.Family->Scene ? View.Family->Scene->GetRenderScene() : nullptr;
+
+	if (Scene)
+	{
+		Scene->UniformBuffers.TressFXKBufferPassUniformBuffer.UpdateUniformBufferImmediate(KBufferPassParams);
+		KBufferPassUniformBuffer = Scene->UniformBuffers.TressFXKBufferPassUniformBuffer;
+	}
+	else
+	{
+		KBufferPassUniformBuffer = TUniformBufferRef<FTressFXKBufferFillPassUniformParameters>::CreateUniformBufferImmediate(KBufferPassParams, UniformBuffer_SingleFrame);
+	}
+}
+
+/*  @END third party code TressFX */
 
 void CreateOpaqueBasePassUniformBuffer(
 	FRHICommandListImmediate& RHICmdList, 

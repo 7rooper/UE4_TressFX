@@ -1,4 +1,17 @@
 
+#ifndef TFX_SHORTCUT
+	#define TFX_SHORTCUT 1
+#endif
+
+#ifndef TFX_PPLL
+	#define TFX_PPLL 0
+#endif
+
+#if TFX_PPLL 
+	#define OpaqueBasePass TressFXKBufferFillPass
+#endif
+
+
 #include "Common.ush"
 #include "SHCommon.ush"
 #include "/Engine/Generated/Material.ush"
@@ -27,13 +40,6 @@
 	#define OPTIONAL_IsFrontFace
 #endif
 
-#ifndef TFX_SHORTCUT
-	#define TFX_SHORTCUT 1
-#endif
-
-#ifndef TFX_PPLL
-	#define TFX_PPLL 0
-#endif
 
 struct PS_INPUT_HAIR_AA
 {
@@ -552,9 +558,10 @@ void main(
     Color += GetForwardDirectLighting(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither);
     
 	#if TFX_PPLL
-		//JAKETODO, make the linked list
+		//color will be multipled be TFXAlpha during resolve pass
+		BuildPPLL(float4(Color, TFXAlpha), int2(In.Position.xy), GBuffer.Depth);
 	#elif TFX_SHORTCUT		
 		OutColor = float4(Color * TFXAlpha, TFXAlpha);
 	#endif
-		return;
+	return;
 }

@@ -46,16 +46,6 @@ uint GetAddress(int2 vAddress)
     return nAddress;
 }
 
-uint PackFloat4IntoUint(float4 vValue)
-{
-    return (((uint) (vValue.x * 255)) << 24) | (((uint) (vValue.y * 255)) << 16) | (((uint) (vValue.z * 255)) << 8) | (uint) (vValue.w * 255);
-}
-
-float4 UnpackUintIntoFloat4(uint uValue)
-{
-    return float4(((uValue & 0xFF000000) >> 24) / 255.0, ((uValue & 0x00FF0000) >> 16) / 255.0, ((uValue & 0x0000FF00) >> 8) / 255.0, ((uValue & 0x000000FF)) / 255.0);
-}
-
 float3 ScreenPosToNDC2(float4 SvPosition)
 {
     float2 PixelPos = SvPosition.xy - ResolvedView.ViewRectMin.xy;

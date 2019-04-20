@@ -98,6 +98,36 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTranslucentBasePassUniformParameters,)
 	SHADER_PARAMETER_SAMPLER(SamplerState, TranslucencyLightingVolumeDirectionalOuterSampler)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
+/*  @BEGIN third party code TressFX */
+BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXKBufferFillPassUniformParameters, )
+	SHADER_PARAMETER_STRUCT(FSharedBasePassUniformParameters, Shared)
+	SHADER_PARAMETER(uint32, NodePoolSize)
+	// Forward shading 
+	SHADER_PARAMETER(int32, UseForwardScreenSpaceShadowMask)
+	SHADER_PARAMETER_TEXTURE(Texture2D, ForwardScreenSpaceShadowMaskTexture)
+	SHADER_PARAMETER_TEXTURE(Texture2D, IndirectOcclusionTexture)
+	SHADER_PARAMETER_TEXTURE(Texture2D, ResolvedSceneDepthTexture)
+	// DBuffer decals -JAKETODO remove
+	SHADER_PARAMETER_TEXTURE(Texture2D, DBufferATexture)
+	SHADER_PARAMETER_SAMPLER(SamplerState, DBufferATextureSampler)
+	SHADER_PARAMETER_TEXTURE(Texture2D, DBufferBTexture)
+	SHADER_PARAMETER_SAMPLER(SamplerState, DBufferBTextureSampler)
+	SHADER_PARAMETER_TEXTURE(Texture2D, DBufferCTexture)
+	SHADER_PARAMETER_SAMPLER(SamplerState, DBufferCTextureSampler)
+	SHADER_PARAMETER_TEXTURE(Texture2D<uint>, DBufferRenderMask)
+	// Misc
+	SHADER_PARAMETER_TEXTURE(Texture2D, EyeAdaptation)
+END_GLOBAL_SHADER_PARAMETER_STRUCT()
+
+
+extern void CreateTressFXKBufferPassUniformBuffer(
+	FRHICommandListImmediate& RHICmdList,
+	const FViewInfo& View,
+	IPooledRenderTarget* ForwardScreenSpaceShadowMask,
+	TUniformBufferRef<FTressFXKBufferFillPassUniformParameters>& KBufferPassUniformBuffer,
+	int32 NodePoolSize);
+/*  @END third party code TressFX */
+
 extern FTextureRHIRef& GetEyeAdaptation(const FViewInfo& View);
 
 extern void SetupSharedBasePassParameters(

@@ -23,8 +23,8 @@ struct FPPLL_Struct
 {
 	uint32 Depth;
 	uint32 Color;
-	uint32 Data;
 	uint32 Next;
+	uint32 DummyPad;
 };
 
 struct FTressFXMeshBatch

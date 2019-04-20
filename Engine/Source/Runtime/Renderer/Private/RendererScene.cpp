@@ -968,6 +968,11 @@ void FPersistentUniformBuffers::Initialize()
 	FSceneTexturesUniformParameters EditorSelectionPassParameters;
 	EditorSelectionPassUniformBuffer = TUniformBufferRef<FSceneTexturesUniformParameters>::CreateUniformBufferImmediate(EditorSelectionPassParameters, UniformBuffer_MultiFrame, EUniformBufferValidation::None);
 #endif
+
+	/*  @BEGIN third party code TressFX */
+	FTressFXKBufferFillPassUniformParameters TressFXKBufferPassUniformBufferParams;
+	TressFXKBufferPassUniformBuffer = TUniformBufferRef<FTressFXKBufferFillPassUniformParameters>::CreateUniformBufferImmediate(TressFXKBufferPassUniformBufferParams, UniformBuffer_MultiFrame, EUniformBufferValidation::None);
+	/*  @END third party code TressFX */
 }
 
 bool FPersistentUniformBuffers::UpdateViewUniformBuffer(const FViewInfo& View)
