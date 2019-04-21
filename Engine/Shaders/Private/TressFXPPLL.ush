@@ -38,17 +38,6 @@ struct FPPLL_Struct
     uint DummyPad; //room for more stuff later if we need...
 };
 
-
-#if KBUFFER_RESOLVE_PASS
-	Texture2D<uint> FragmentListHead;
-	StructuredBuffer<FPPLL_Struct> LinkedListSRV;
-#else	
-	RWTexture2D<int> RWFragmentListHead : register(FRAGMENT_LIST_REGISTER);
-	RWStructuredBuffer<FPPLL_Struct> RWLinkedListUAV : register(LINKED_LIST_REGISTER);
-	//using this instead of the uav counter so i dont have to modify UE4's RHI any more
-	RWBuffer<uint> RWCounterBuffer : register(COUNTER_BUFFER_REGISTER);
-#endif
-
 #define BITMASK8 0xFF
 float4 UnpackUintIntoFloat4(uint PackedValue)
 {
@@ -78,6 +67,16 @@ uint PackFloat4IntoUint(float4 vValue)
 //    return float4(((uValue & 0xFF000000) >> 24) / 255.0, ((uValue & 0x00FF0000) >> 16) / 255.0, ((uValue & 0x0000FF00) >> 8) / 255.0, ((uValue & 0x000000FF)) / 255.0);
 //}
 
+
+
+#if KBUFFER_RESOLVE_PASS
+Texture2D<uint> FragmentListHead;
+StructuredBuffer<FPPLL_Struct> LinkedListSRV;
+#else	
+RWTexture2D<int> RWFragmentListHead : register(FRAGMENT_LIST_REGISTER);
+RWStructuredBuffer<FPPLL_Struct> RWLinkedListUAV : register(LINKED_LIST_REGISTER);
+//using this instead of the uav counter so i dont have to modify UE4's RHI any more
+RWBuffer<uint> RWCounterBuffer : register(COUNTER_BUFFER_REGISTER);
 
 // Allocate a new fragment location in fragment color, depth, and link buffers
 int AllocateFragment(int2 vScreenAddress)
@@ -119,3 +118,7 @@ void BuildPPLL(float4 Color, int2 vScreenAddress, float Depth)
     int nOldFragmentAddress = MakeFragmentLink(vScreenAddress, nNewFragmentAddress);
     WriteFragmentAttributes(nNewFragmentAddress, nOldFragmentAddress, Color, Depth );
 }
+#endif //KBUFFER_RESOLVE_PASS
+
+
+

@@ -1118,12 +1118,12 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 
 			GraphicsPSOInit.BlendState = TStaticBlendState<
 				EColorWriteMask::CW_RGBA,
-				EBlendOperation::BO_Add,
-				EBlendFactor::BF_One,
-				EBlendFactor::BF_SourceAlpha,
-				EBlendOperation::BO_Add, 
-				EBlendFactor::BF_Zero, 
-				EBlendFactor::BF_Zero
+				EBlendOperation::BO_Add,  // color blend op
+				EBlendFactor::BF_One,  // color source blend
+				EBlendFactor::BF_SourceAlpha, //color dest blend
+				EBlendOperation::BO_Add,   //alpha blend op
+				EBlendFactor::BF_Zero, // alpha src blend
+				EBlendFactor::BF_Zero //alpha dest blend
 			>::GetRHI();
 
 			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();

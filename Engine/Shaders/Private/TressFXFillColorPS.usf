@@ -404,8 +404,9 @@ float3 AOMultiBounce(float3 BaseColor, float AO)
 #if TFX_PPLL
 	#include "TressFXPPLL.ush"
 #endif
-
+#if TFX_SHORTCUT
 EARLYDEPTHSTENCIL
+#endif
 void main(
 	PS_INPUT_HAIR_AA In OPTIONAL_IsFrontFace
 #if TFX_SHORTCUT

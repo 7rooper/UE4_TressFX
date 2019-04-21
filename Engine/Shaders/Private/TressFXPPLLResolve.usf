@@ -87,9 +87,8 @@ void StoreUintAtIndex_Size16(inout uint4 V03, inout uint4 V47, inout uint4 V811,
 #define NODE_DEPTH(x) LinkedListSRV[x].Depth
 #define NODE_COLOR(x) LinkedListSRV[x].Color
 
-bool GatherLinkedList(float2 vfScreenAddress, out float4 FinalColor)
+bool GatherLinkedList(uint2 vScreenAddress, out float4 FinalColor)
 {
-    uint2 vScreenAddress = uint2(vfScreenAddress);
     uint pointer = FragmentListHead[vScreenAddress];
 
     float4 outColor = float4(0, 0, 0, 1);
@@ -244,7 +243,7 @@ bool GatherLinkedList(float2 vfScreenAddress, out float4 FinalColor)
     return true;
 }
 
-EARLYDEPTHSTENCIL
+
 void ResolvePPLL(FScreenVertexOutput Input, out float4 OutColor : SV_Target0)
 {
     GatherLinkedList(uint2(Input.Position.xy), OutColor);
