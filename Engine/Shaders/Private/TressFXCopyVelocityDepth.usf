@@ -36,7 +36,7 @@ Texture2D<float> tAccumInvAlpha;
 #ifndef TRESSFX_MIN_ALPHA_FOR_SCENE_DEPTH
 	#define TRESSFX_MIN_ALPHA_FOR_SCENE_DEPTH 0.5f
 #endif
-
+//for copying shortcut depth to scene depth
 void CopyOpaqueDepthPs(FScreenVertexOutput Input, out float Depth : SV_Depth)
 {
     uint3 ScreenAddr = uint3(uint2(Input.Position.xy), 0);
@@ -54,6 +54,7 @@ void CopyOpaqueDepthPs(FScreenVertexOutput Input, out float Depth : SV_Depth)
         Depth = DepthTexture.Load(ScreenAddr);
     }
 }
+
 
 Texture2D<float4> VelocityTexture;
 

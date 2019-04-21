@@ -293,7 +293,7 @@ void FTressFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 	int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
 	TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
 
-	const bool bNoDepth = bIsTranslucent || TFXRenderType == ETressFXRenderType::KBuffer;
+	const bool bNoDepth = bIsTranslucent;
 
 	if (bWantsVelocity == false && bNoDepth == true)
 	{
@@ -1131,7 +1131,7 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 				true, CF_Greater,
 				false, CF_Equal, SO_Keep, SO_Keep, SO_Keep,
 				false, CF_Always, SO_Keep, SO_Keep, SO_Keep,
-				0xff, 0x00, EDepthWriteMask::DWM_All, true>::GetRHI();
+				0xff, 0x00, EDepthWriteMask::DWM_Zero, true>::GetRHI();
 
 			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
 			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
@@ -1172,7 +1172,7 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 }
 
 
-void FSceneRenderer::RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList)
+void FSceneRenderer::RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, int32 TFXRenderType)
 {
 	if (!ShouldRenderTressFX((int32)ETressFXPass::DepthsVelocity))
 	{
@@ -1192,6 +1192,25 @@ void FSceneRenderer::RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RH
 		// shouldnt be needed since we are piggy-backing off of the depth pass
 		//Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 
+		FRHITexture* DepthTarget = nullptr;
+
+		if (TFXRenderType == ETressFXRenderType::KBuffer)
+		{
+			// k-buffer needs to render depth in a special path to its own depth buffer.
+			// this buffer is a copy of scene depth
+			// we will use this seperate depth buffer for rendering lights and AO instead of normal scene depth
+			// but everything else will use normal scene depth so that the stuff behind hair doesnt get culled
+			// thus "real" OIT, instead of shortcut which is "fake" OIT
+			SCOPED_DRAW_EVENT(RHICmdList, TressFXCopySceneDepth);
+			TressFXCopySceneDepth(RHICmdList, View, SceneContext, SceneContext.TressFXSceneDepth);
+			DepthTarget = SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture;
+		}
+		else
+		{
+			DepthTarget  = SceneContext.GetSceneDepthSurface();
+		}
+
+
 		RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, TressFXDepthsVelocity);
@@ -1199,7 +1218,7 @@ void FSceneRenderer::RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RH
 			//Clear_Store to clear the TFX Velocity Target
 			FRHIRenderPassInfo RPInfo(SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture, ERenderTargetActions::Clear_Store);
 			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_Store, ERenderTargetActions::Load_Store);
-			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.GetSceneDepthSurface();
+			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = DepthTarget;
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
 
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXDepthsVelocity"));
@@ -1232,6 +1251,10 @@ void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList,
 		}
 		case ETressFXRenderType::KBuffer:
 		{
+			if (ShouldRenderTressFX(ETressFXPass::DepthsVelocity))
+			{
+				RenderTressFXDepthsAndVelocity(RHICmdList, TFXRenderType);
+			}
 			break;
 		}
 		default:
