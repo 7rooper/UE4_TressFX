@@ -153,6 +153,8 @@ IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_Shortcut, TEXT("/
 	typedef FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize> FTressFXFillColorPS_KBuffer##KBufferSize; \
 	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_KBuffer##KBufferSize, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
 
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(2)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(3)
 IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(4)
 IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(5)
 IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(6)
@@ -166,22 +168,6 @@ IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(13)
 IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(14)
 IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(15)
 IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(16)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(17)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(18)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(19)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(20)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(21)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(22)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(23)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(24)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(25)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(26)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(27)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(28)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(29)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(30)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(31)
-IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(32)
 
 #undef IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS
 
@@ -636,22 +622,6 @@ switch (KBufferSize)										\
 	case 14: PROCESS_KBUFFER(14, __VA_ARGS__) break;		\
 	case 15: PROCESS_KBUFFER(15, __VA_ARGS__) break;		\
 	case 16: PROCESS_KBUFFER(16, __VA_ARGS__) break;		\
-	case 17: PROCESS_KBUFFER(17, __VA_ARGS__) break;		\
-	case 18: PROCESS_KBUFFER(18, __VA_ARGS__) break;		\
-	case 19: PROCESS_KBUFFER(19, __VA_ARGS__) break;		\
-	case 20: PROCESS_KBUFFER(20, __VA_ARGS__) break;		\
-	case 21: PROCESS_KBUFFER(21, __VA_ARGS__) break;		\
-	case 22: PROCESS_KBUFFER(22, __VA_ARGS__) break;		\
-	case 23: PROCESS_KBUFFER(23, __VA_ARGS__) break;		\
-	case 24: PROCESS_KBUFFER(24, __VA_ARGS__) break;		\
-	case 25: PROCESS_KBUFFER(25, __VA_ARGS__) break;		\
-	case 26: PROCESS_KBUFFER(26, __VA_ARGS__) break;		\
-	case 27: PROCESS_KBUFFER(28, __VA_ARGS__) break;		\
-	case 28: PROCESS_KBUFFER(28, __VA_ARGS__) break;		\
-	case 29: PROCESS_KBUFFER(29, __VA_ARGS__) break;		\
-	case 30: PROCESS_KBUFFER(30, __VA_ARGS__) break;		\
-	case 31: PROCESS_KBUFFER(31, __VA_ARGS__) break;		\
-	case 32: PROCESS_KBUFFER(32, __VA_ARGS__) break;		\
 	default: check(0);										\
 }
 
@@ -1078,13 +1048,7 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 			continue;
 		}
 
-		SCOPED_DRAW_EVENT(RHICmdList, TressFXKBuffer_BasePass);
-
-		{
-			// Make a copy of scene depth for us to use, do i need this for this pass?
-			SCOPED_DRAW_EVENT(RHICmdList, CopySceneDepth);
-			TressFXCopySceneDepth(RHICmdList, View, SceneContext, SceneContext.TressFXSceneDepth);
-		}
+		SCOPED_DRAW_EVENT(RHICmdList, TressFXKBufferPasses);
 
 		TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
 		FRWBufferStructured* TressFXKBufferNodes = nullptr;
@@ -1094,7 +1058,7 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 
 		// Fill k-buffer
 		{
-			SCOPED_DRAW_EVENT(RHICmdList, FillColors);
+			SCOPED_DRAW_EVENT(RHICmdList, FillKbuffer);
 			
 			const uint32 FragmentListClearValue[4] = { TFX_PPLL_NULL, TFX_PPLL_NULL, TFX_PPLL_NULL, TFX_PPLL_NULL };
 			ClearUAV(RHICmdList, TressFXKBufferListHeads->GetRenderTargetItem(), FragmentListClearValue);
@@ -1118,7 +1082,7 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 			);
 
 			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_DontStore, ERenderTargetActions::Load_DontStore);
-			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture;
+			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.GetSceneDepthSurface();
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXFillKBuffer"));
 
@@ -1132,8 +1096,71 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 			View.ParallelMeshDrawCommandPasses[EMeshPass::TressFX_FillColors].DispatchDraw(nullptr, RHICmdList);
 			RHICmdList.EndRenderPass();
 		}
-		//resolve
-		//TODO
+
+		{
+			SCOPED_DRAW_EVENT(RHICmdList, ResolveKbuffer);
+
+			FRHIRenderPassInfo RPInfo(
+				SceneContext.GetSceneColorSurface(), ERenderTargetActions::Load_Store,
+				SceneContext.GetSceneDepthSurface(), EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
+			);
+
+			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXResolveKbuffer"));
+
+			TShaderMapRef<FScreenVS>							VertexShader(View.ShaderMap);
+			TShaderMapRef<FTressFXFKBufferResolvePS>			PixelShader(View.ShaderMap);
+
+			FRenderingCompositePassContext Context(RHICmdList, View);
+			Context.SetViewportAndCallRHI(View.ViewRect);
+
+			FGraphicsPipelineStateInitializer GraphicsPSOInit;
+			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+
+			GraphicsPSOInit.BlendState = TStaticBlendState<
+				EColorWriteMask::CW_RGBA,
+				EBlendOperation::BO_Add,
+				EBlendFactor::BF_One,
+				EBlendFactor::BF_SourceAlpha,
+				EBlendOperation::BO_Add, 
+				EBlendFactor::BF_Zero, 
+				EBlendFactor::BF_Zero
+			>::GetRHI();
+
+			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
+			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<
+				true, CF_Greater,
+				false, CF_Equal, SO_Keep, SO_Keep, SO_Keep,
+				false, CF_Always, SO_Keep, SO_Keep, SO_Keep,
+				0xff, 0x00, EDepthWriteMask::DWM_All, true>::GetRHI();
+
+			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
+			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
+			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
+			GraphicsPSOInit.PrimitiveType = PT_TriangleList;
+			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
+
+			FUnorderedAccessViewRHIParamRef Uavs[2] = { 
+				TressFXKBufferListHeads->GetRenderTargetItem().UAV,
+				TressFXKBufferNodes->UAV
+			};
+			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, Uavs, 2);
+
+			VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
+			PixelShader->SetParameters(Context.RHICmdList, View, TressFXKBufferNodes->SRV, TressFXKBufferListHeads->GetRenderTargetItem().ShaderResourceTexture);
+
+			DrawRectangle(
+				RHICmdList,
+				0, 0,
+				View.ViewRect.Width(), View.ViewRect.Height(),
+				View.ViewRect.Min.X, View.ViewRect.Min.Y,
+				View.ViewRect.Width(), View.ViewRect.Height(),
+				View.ViewRect.Size(),
+				SceneContext.GetBufferSizeXY(),
+				*VertexShader,
+				EDRF_UseTriangleOptimization);
+
+			RHICmdList.EndRenderPass();
+		}
 
 
 		if (IsTransientResourceBufferAliasingEnabled()) 

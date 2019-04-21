@@ -115,3 +115,26 @@ void FTressFXShortCutResolveColorPS::SetParameters(FRHICommandList& RHICmdList, 
 
 IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveColorPS, "/Engine/Private/TressFXShortCutResolveColorPS.usf", "main", SF_Pixel);
 
+///////////////////////////////////////////////////////////////////////////////
+// TressFXFKBufferResolvePS
+//////////////////////////////////////////////////////////////////////////////
+
+extern int32 GTressFXKBufferSize;
+
+void FTressFXFKBufferResolvePS::ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+{
+	FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+	int32 KBufferSize = FMath::Clamp(static_cast<int32>(GTressFXKBufferSize), MIN_TFX_KBUFFER_SIZE, MAX_TFX_KBUFFER_SIZE);
+	OutEnvironment.SetDefine(TEXT("KBUFFER_SIZE"), KBufferSize);
+}
+
+void FTressFXFKBufferResolvePS::SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FShaderResourceViewRHIParamRef InLinkedListSRV, FTextureRHIParamRef InHeadListSRV)
+{
+	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
+	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);
+
+	SetSRVParameter(RHICmdList, ShaderRHI, LinkedListSRV, InLinkedListSRV);
+	SetTextureParameter(RHICmdList, ShaderRHI, FragmentListHead, InHeadListSRV);
+}
+
+IMPLEMENT_GLOBAL_SHADER(FTressFXFKBufferResolvePS, "/Engine/Private/TressFXPPLLResolve.usf", "ResolvePPLL", SF_Pixel);

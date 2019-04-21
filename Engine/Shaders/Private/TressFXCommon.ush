@@ -20,7 +20,8 @@
 // THE SOFTWARE.
 //
 
-//Unreal Engin 4 integration written by Leon Rosengarten 2017
+//Unreal Engine 4 integration written by Leon Rosengarten and Jacob Kostenick 2019
+
 #pragma once
 
 cbuffer tressfxShadeParameters
@@ -31,9 +32,3 @@ cbuffer tressfxShadeParameters
     int g_NumVerticesPerStrand;
     float g_ratio;
 };
-
-
-float4x4 g_mVP;
-float4 g_vViewport;
-float3 g_vEye;
-float4x4 g_mInvViewProj;

@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-//Unreal Engin 4 integration written by Leon Rosengarten 2017
+//Unreal Engine 4 integration written by Leon Rosengarten and Jacob Kostenick 2019
 
 #include "TressFXShortCutCommon.ush"
 

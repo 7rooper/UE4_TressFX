@@ -475,3 +475,59 @@ public:
 	FShaderResourceParameter tAccumInvAlpha;
 	FShaderParameter vFragmentBufferSize;
 };
+
+
+///////////////////////////////////////////////////////////////////////////////
+// TressFXFKBufferResolvePS
+//////////////////////////////////////////////////////////////////////////////
+
+class FTressFXFKBufferResolvePS : public FGlobalShader
+{
+	DECLARE_GLOBAL_SHADER(FTressFXFKBufferResolvePS);
+
+public:
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+	}
+
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
+
+	static const TCHAR* GetSourceFilename()
+	{
+		return TEXT("/Engine/Private/TressFXPPLLResolve.usf");
+	}
+
+	static const TCHAR* GetFunctionName()
+	{
+		return TEXT("ResolvePPLL");
+	}
+
+	FTressFXFKBufferResolvePS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FGlobalShader(Initializer)
+	{
+		FragmentListHead.Bind(Initializer.ParameterMap, TEXT("FragmentListHead"));
+		LinkedListSRV.Bind(Initializer.ParameterMap, TEXT("LinkedListSRV"));
+	}
+
+
+	FTressFXFKBufferResolvePS() {}
+
+	virtual bool Serialize(FArchive& Ar) override
+	{
+		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
+		Ar << FragmentListHead;
+		Ar << LinkedListSRV;
+		return bShaderHasOutdatedParameters;
+	}
+
+
+	void SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FShaderResourceViewRHIParamRef InLinkedListSRV, FTextureRHIParamRef InHeadListSRV);
+
+
+public:
+	FShaderResourceParameter FragmentListHead;
+	FShaderResourceParameter LinkedListSRV;
+
+};

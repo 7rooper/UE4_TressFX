@@ -24,10 +24,10 @@
 	#define KBUFFER_RESOLVE_PASS 0
 #endif
 
-#if !KBUFFER_RESOLVE_PASS
-	#define NodePoolSize OpaqueBasePass.NodePoolSize
-#else
+#if KBUFFER_RESOLVE_PASS
 	uint NodePoolSize;
+#else
+	#define NodePoolSize OpaqueBasePass.NodePoolSize
 #endif
 
 struct FPPLL_Struct
@@ -38,10 +38,16 @@ struct FPPLL_Struct
     uint DummyPad; //room for more stuff later if we need...
 };
 
-RWTexture2D<int> RWFragmentListHead : register(FRAGMENT_LIST_REGISTER);
-RWStructuredBuffer<FPPLL_Struct> RWLinkedListUAV : register(LINKED_LIST_REGISTER);
-//using this instead of the uav counter so i dont have to modify UE4's RHI any more
-RWBuffer<uint> RWCounterBuffer : register(COUNTER_BUFFER_REGISTER);
+
+#if KBUFFER_RESOLVE_PASS
+	Texture2D<uint> FragmentListHead;
+	StructuredBuffer<FPPLL_Struct> LinkedListSRV;
+#else	
+	RWTexture2D<int> RWFragmentListHead : register(FRAGMENT_LIST_REGISTER);
+	RWStructuredBuffer<FPPLL_Struct> RWLinkedListUAV : register(LINKED_LIST_REGISTER);
+	//using this instead of the uav counter so i dont have to modify UE4's RHI any more
+	RWBuffer<uint> RWCounterBuffer : register(COUNTER_BUFFER_REGISTER);
+#endif
 
 #define BITMASK8 0xFF
 float4 UnpackUintIntoFloat4(uint PackedValue)
