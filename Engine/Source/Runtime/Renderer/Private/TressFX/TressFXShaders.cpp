@@ -80,8 +80,16 @@ IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXDepthsAlphaPS<false>, TEXT("/
 //  FTressFX_VelocityDepthPS
 ////////////////////////////////////////////////////////////////////////////////
 
-IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS<true>, TEXT("/Engine/Private/TressFXVelocityDepthPS.usf"), TEXT("TRessFXVelocityDepthPS"), SF_Pixel);
-IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS<false>, TEXT("/Engine/Private/TressFXVelocityDepthPS.usf"), TEXT("TRessFXVelocityDepthPS"), SF_Pixel);
+#define IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(TFXRenderType) \
+	typedef FTressFXVelocityDepthPS<true, TFXRenderType> FTressFXVelocityDepthPS##WithVelocity##TFXRenderType; \
+	typedef FTressFXVelocityDepthPS<false, TFXRenderType> FTressFXVelocityDepthPS##NoVelocity##TFXRenderType; \
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS##WithVelocity##TFXRenderType, TEXT("/Engine/Private/TressFXVelocityDepthPS.usf"), TEXT("TRessFXVelocityDepthPS"), SF_Pixel); \
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS##NoVelocity##TFXRenderType, TEXT("/Engine/Private/TressFXVelocityDepthPS.usf"), TEXT("TRessFXVelocityDepthPS"), SF_Pixel);
+
+IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(0); //opaque
+IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(1); //shortcut
+IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(2); //kbuffer
+#undef IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER
 
 ///////////////////////////////////////////////////////////////////////////////////
 ////  FTressFXShortCutResolveDepthPS - pixel shader for 2nd pass of shortcut

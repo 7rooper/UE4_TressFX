@@ -28,6 +28,7 @@
 #include "TressFXCommon.ush"
 
 #define SHORTCUT_MIN_ALPHA 0.02
+#define TRESSFX_MIN_ALPHA_FOR_SCENE_DEPTH 0.5f
 
 float4 vFragmentBufferSize;
 

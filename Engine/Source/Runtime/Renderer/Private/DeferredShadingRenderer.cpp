@@ -1698,11 +1698,6 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	//using this passed in ref inside RenderLights() instead because tressFX needs it later during the fill colors pass for dynamic shadows
 	TRefCountPtr<IPooledRenderTarget> ScreenShadowMaskTexture;
 	TRefCountPtr<IPooledRenderTarget> SceneDepthTemp;
-	if(TFXRenderType == ETressFXRenderType::KBuffer)
-	{
-		SceneDepthTemp = SceneContext.SceneDepthZ;
-		SceneContext.SceneDepthZ = SceneContext.TressFXSceneDepth;
-	}
 	//@END third party code TressFX
 
 
@@ -1887,8 +1882,8 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	//@BEGIN third party code TressFX
 	if (TFXRenderType == ETressFXRenderType::KBuffer)
 	{
-		SceneContext.SceneDepthZ = SceneDepthTemp;
-		SceneDepthTemp = nullptr;
+		//SceneContext.SceneDepthZ = SceneDepthTemp;
+		//SceneDepthTemp = nullptr;
 	}
 	//@END third party code TressFX
 

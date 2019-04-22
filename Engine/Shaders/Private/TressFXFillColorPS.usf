@@ -456,7 +456,7 @@ void main(
     if (TFXAlpha < SHORTCUT_MIN_ALPHA)
     {
 		#if TFX_PPLL
-			//discard;
+
 		#elif TFX_SHORTCUT
 			OutColor = float4(0, 0, 0, 0);
 		#endif

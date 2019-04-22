@@ -219,7 +219,26 @@ void TressFXCopySceneDepth(FRHICommandList& RHICmdList, const FViewInfo& View, F
 //FTressFXDepthsVelocityPassMeshProcessor
 /////////////////////////////////////////////////////////////////////////
 
-template<bool bCalcVelocity>
+#define PROCESS_DEPTHSVELOCITY(bCalcVelocity,TFXRenderType, ...)			\
+	if(bCalcVelocity)														\
+	{																		\
+		Process<true, TFXRenderType>(__VA_ARGS__);							\
+	}																		\
+	else																	\
+	{																		\
+		Process<false, TFXRenderType>(__VA_ARGS__);							\
+	}
+
+#define PROCESS_DEPTHSVELOCITY2(bCalcVelocity,TFXRenderType, ...)																		\
+switch (TFXRenderType)																													\
+{																																		\
+	case ETressFXRenderType::KBuffer:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXRenderType::KBuffer, __VA_ARGS__) break;			\
+	case ETressFXRenderType::Opaque:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXRenderType::Opaque, __VA_ARGS__) break;				\
+	case ETressFXRenderType::ShortCut:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXRenderType::ShortCut, __VA_ARGS__) break;			\
+	default: check(0);																													\
+}
+
+template<bool bCalcVelocity, ETressFXRenderType::Type TFXRenderType>
 void FTressFXDepthsVelocityPassMeshProcessor::Process(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
@@ -256,9 +275,9 @@ void FTressFXDepthsVelocityPassMeshProcessor::Process(
 		FTressFXVS<bCalcVelocity>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
-		FTressFXVelocityDepthPS<bCalcVelocity>> TFXShaders;
+		FTressFXVelocityDepthPS<bCalcVelocity, TFXRenderType>> TFXShaders;
 
-	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXVelocityDepthPS<bCalcVelocity>>(VertexFactory->GetType());
+	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXVelocityDepthPS<bCalcVelocity, TFXRenderType>>(VertexFactory->GetType());
 	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<bCalcVelocity>>(VertexFactory->GetType());
 
 	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
@@ -309,15 +328,7 @@ void FTressFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 		const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
 		const ERasterizerFillMode MeshFillMode = ComputeMeshFillMode(MeshBatch, MeshBatchMaterial);
 		const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, MeshBatchMaterial);
-
-		if(bWantsVelocity)
-		{
-			Process<true>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode, bNoDepth);
-		}
-		else 
-		{
-			Process<false>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode, bNoDepth);
-		}
+		PROCESS_DEPTHSVELOCITY2(bWantsVelocity, TFXRenderType, MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode, bNoDepth);
 	}
 }
 
@@ -346,6 +357,9 @@ FMeshPassProcessor* CreateTRessFXDepthsVelocityPassProcessor(const FScene* Scene
 	SetupDepthsVelocityPassState(TRessFXDepthsVelocityPassState);
 	return new(FMemStack::Get()) FTressFXDepthsVelocityPassMeshProcessor(Scene, InViewIfDynamicMeshCommand, TRessFXDepthsVelocityPassState, InDrawListContext);
 }
+
+#undef PROCESS_DEPTHSVELOCITY
+#undef PROCESS_DEPTHSVELOCITY2
 
 //////////////////////////////////////////////////////////////////////////
 //TressFXDepthsAlphaPassMeshProcessor
@@ -758,6 +772,52 @@ bool FSceneRenderer::ShouldRenderTressFX(int32 TressFXPass)
 	return false;
 }
 
+
+void RenderDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene, int32 TFXRenderType)
+{
+	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
+
+	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
+	{
+		FViewInfo& View = Views[ViewIndex];
+
+		if (View.TressFXMeshBatches.Num() < 1 || !View.ShouldRenderView())
+		{
+			continue;
+		}
+
+		Scene->UniformBuffers.UpdateViewUniformBuffer(View);
+
+
+
+		if (TFXRenderType == ETressFXRenderType::KBuffer)
+		{
+			//copy scene depth, so we have a copy that doesnt have hair depths in it
+			SCOPED_DRAW_EVENT(RHICmdList, TressFXCopySceneDepth);
+			TressFXCopySceneDepth(RHICmdList, View, SceneContext, SceneContext.TressFXSceneDepth);
+		}
+
+
+		RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
+		{
+			SCOPED_DRAW_EVENT(RHICmdList, TressFXDepthsVelocity);
+
+			//Clear_Store to clear the TFX Velocity Target
+			FRHIRenderPassInfo RPInfo(SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture, ERenderTargetActions::Clear_Store);
+			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_Store, ERenderTargetActions::Load_Store);
+			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.GetSceneDepthSurface();;
+			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
+
+			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXDepthsVelocity"));
+			RHICmdList.BindClearMRTValues(true, false, false);
+			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
+			View.ParallelMeshDrawCommandPasses[EMeshPass::TressFX_DepthsVelocity].DispatchDraw(nullptr, RHICmdList);
+			RHICmdList.EndRenderPass();
+		}
+	}
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //Shortcut Passes
 /////////////////////////////////////////////////////////////////////////
@@ -1035,7 +1095,17 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 //K-Buffer Passes
 /////////////////////////////////////////////////////////////////////////
 
-void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture)
+
+void RenderKbufferBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene)
+{
+	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
+
+	RenderDepthsAndVelocity(RHICmdList, Views, Scene, ETressFXRenderType::KBuffer);
+
+
+}
+
+void RenderKBufferResolvePasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture)
 {
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
 
@@ -1082,7 +1152,8 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 			);
 
 			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_DontStore, ERenderTargetActions::Load_DontStore);
-			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.GetSceneDepthSurface();
+			// in k-buffer path, tressfx scene depth is the original scene depth without hair depth
+			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture;
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXFillKBuffer"));
 
@@ -1102,7 +1173,7 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 
 			FRHIRenderPassInfo RPInfo(
 				SceneContext.GetSceneColorSurface(), ERenderTargetActions::Load_Store,
-				SceneContext.GetSceneDepthSurface(), EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
+				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
 			);
 
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXResolveKbuffer"));
@@ -1171,63 +1242,13 @@ void RenderKBufferPasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>
 	}
 }
 
-
 void FSceneRenderer::RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, int32 TFXRenderType)
 {
 	if (!ShouldRenderTressFX((int32)ETressFXPass::DepthsVelocity))
 	{
 		return;
 	}
-
-	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
-
-	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
-	{
-		FViewInfo& View = Views[ViewIndex];
-
-		if (View.TressFXMeshBatches.Num() < 1 || !View.ShouldRenderView())
-		{
-			continue;
-		}
-		// shouldnt be needed since we are piggy-backing off of the depth pass
-		//Scene->UniformBuffers.UpdateViewUniformBuffer(View);
-
-		FRHITexture* DepthTarget = nullptr;
-
-		if (TFXRenderType == ETressFXRenderType::KBuffer)
-		{
-			// k-buffer needs to render depth in a special path to its own depth buffer.
-			// this buffer is a copy of scene depth
-			// we will use this seperate depth buffer for rendering lights and AO instead of normal scene depth
-			// but everything else will use normal scene depth so that the stuff behind hair doesnt get culled
-			// thus "real" OIT, instead of shortcut which is "fake" OIT
-			SCOPED_DRAW_EVENT(RHICmdList, TressFXCopySceneDepth);
-			TressFXCopySceneDepth(RHICmdList, View, SceneContext, SceneContext.TressFXSceneDepth);
-			DepthTarget = SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture;
-		}
-		else
-		{
-			DepthTarget  = SceneContext.GetSceneDepthSurface();
-		}
-
-
-		RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
-		{
-			SCOPED_DRAW_EVENT(RHICmdList, TressFXDepthsVelocity);
-
-			//Clear_Store to clear the TFX Velocity Target
-			FRHIRenderPassInfo RPInfo(SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture, ERenderTargetActions::Clear_Store);
-			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_Store, ERenderTargetActions::Load_Store);
-			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = DepthTarget;
-			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
-
-			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXDepthsVelocity"));
-			RHICmdList.BindClearMRTValues(true, false, false);
-			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
-			View.ParallelMeshDrawCommandPasses[EMeshPass::TressFX_DepthsVelocity].DispatchDraw(nullptr, RHICmdList);
-			RHICmdList.EndRenderPass();
-		}
-	}
+	RenderDepthsAndVelocity(RHICmdList, Views, Scene, TFXRenderType);	
 }
 
 void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList, int32 TFXRenderType)
@@ -1253,7 +1274,7 @@ void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList,
 		{
 			if (ShouldRenderTressFX(ETressFXPass::DepthsVelocity))
 			{
-				RenderTressFXDepthsAndVelocity(RHICmdList, TFXRenderType);
+				RenderKbufferBasePass(RHICmdList, Views, Scene);
 			}
 			break;
 		}
@@ -1282,7 +1303,7 @@ void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdLi
 		}
 		case ETressFXRenderType::KBuffer:
 		{
-			RenderKBufferPasses(RHICmdList, Views, Scene, ScreenShadowMaskTexture);
+			RenderKBufferResolvePasses(RHICmdList, Views, Scene, ScreenShadowMaskTexture);
 			break;
 		}
 		default:

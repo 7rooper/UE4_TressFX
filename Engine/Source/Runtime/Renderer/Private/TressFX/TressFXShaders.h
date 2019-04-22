@@ -181,11 +181,11 @@ private:
 };
 
 /////////////////////////////////////////////////////////////////////////////////
-//  FTressFXVelocityDepthPS renders depths and velocity, optionaly
+//  FTressFXVelocityDepthPS renders depths and velocity, optionally
 ////////////////////////////////////////////////////////////////////////////////
 
 
-template <bool bCalcVelocity>
+template <bool bCalcVelocity, int32 TFXRenderType>
 class FTressFXVelocityDepthPS : public FMeshMaterialShader
 {
 
@@ -202,6 +202,7 @@ public:
 	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		OutEnvironment.SetDefine(TEXT("NEEDS_VELOCITY"), bCalcVelocity ? 1 : 0 );
+		OutEnvironment.SetDefine(TEXT("TFX_PPLL"), TFXRenderType == ETressFXRenderType::KBuffer ? 1 : 0);
 		FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
 	}
 
