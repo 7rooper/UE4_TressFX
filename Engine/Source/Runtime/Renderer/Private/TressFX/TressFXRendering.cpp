@@ -822,10 +822,10 @@ void RenderDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, TArray<FViewI
 //Shortcut Passes
 /////////////////////////////////////////////////////////////////////////
 template<bool bWriteClosestDepth>
-void ShortcutDepthsResolve_Impl(FRHICommandListImmediate& RHICmdList, FSceneRenderTargets& SceneContext, FViewInfo& View, FRHITexture* DepthTarget, const TCHAR *Name)
+void ShortcutDepthsResolve_Impl(FRHICommandListImmediate& RHICmdList, FSceneRenderTargets& SceneContext, FViewInfo& View, TRefCountPtr<IPooledRenderTarget>& DepthTarget, const TCHAR *Name)
 {
 	FRHIRenderPassInfo RPInfo(
-		DepthTarget,
+		DepthTarget->GetRenderTargetItem().TargetableTexture,
 		EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
 	);
 	RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXResolveDepthsToTressFXDepth"));
@@ -849,21 +849,37 @@ void ShortcutDepthsResolve_Impl(FRHICommandListImmediate& RHICmdList, FSceneRend
 
 	VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
 	PixelShader->SetParameters(RHICmdList, View, SceneContext);
-
-	const FIntPoint Size = View.ViewRect.Size();
-	RHICmdList.SetViewport(0, 0, 0, Size.X, Size.Y, 1);
+	
+	const FIntRect ViewRect = View.ViewRect;
+	const FIntPoint BufferSize = SceneContext.GetBufferSizeXY();
+	const FIntPoint DepthTargetSize = DepthTarget->GetDesc().Extent;
+	RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 0.0f);
+	//try this first
 	DrawRectangle(
-		RHICmdList,
-		0, 0,
-		Size.X, Size.Y,
-		0, 0,
-		Size.X, Size.Y,
-		Size,
-		Size,
-		*VertexShader,
-		EDRF_Default,
-		1
-	);
+			RHICmdList,
+			0, 0,
+			ViewRect.Width(), ViewRect.Height(),
+			ViewRect.Min.X, ViewRect.Min.Y,
+			ViewRect.Width(), ViewRect.Height(),
+			ViewRect.Size(),
+			Size, //texture size, might need to use SceneContext.GetBufferSizeXY(), or 	DepthTarget->GetDesc().Extent
+			*VertexShader,
+			EDRF_Default,
+			1
+		);
+
+	//DrawRectangle(
+	//	RHICmdList,
+	//	0, 0,
+	//	ViewRect.Width(), ViewRect.Height(),
+	//	ViewRect.Min.X, ViewRect.Min.Y,
+	//	ViewRect.Width(), ViewRect.Height(),
+	//	ViewRect.Size(),
+	//	ViewRect.Size(), //SrcSize, //TODO, i think
+	//	*VertexShader,
+	//	EDRF_UseTriangleOptimization
+	//);
+
 	RHICmdList.EndRenderPass();
 }
 
@@ -934,19 +950,20 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 				RHICmdList, 
 				SceneContext, 
 				View,
-				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, 
+				SceneContext.TressFXSceneDepth, 
 				TEXT("TressFXResolveDepthsToTressFXDepth")
 			);
 		}
 
 		// shortcut pass 2.5, depths resolve 2, resolve depths closer to the camera to ue4 scene depth, mainly for shadows and lighting
+		// this wont be perfect but looks better than using the far depths from the above pass
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveCloserDepthsToSceneDepth);
 			ShortcutDepthsResolve_Impl<true>(
 				RHICmdList,
 				SceneContext,
 				View,
-				SceneContext.GetSceneDepthSurface(),
+				SceneContext.SceneDepthZ,
 				TEXT("TressFXResolveCloserDepthsToSceneDepth")
 			);
 		}
