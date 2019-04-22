@@ -363,7 +363,7 @@ class FTressFXResolveVelocityPs : public FGlobalShader
 ///////////////////////////////////////////////////////////////////////////////////
 ////  FTressFXShortCutResolveDepthPS
 //////////////////////////////////////////////////////////////////////////////////
-
+template<bool bWriteClosestDepth = false>
 class FTressFXShortCutResolveDepthPS : public FGlobalShader
 {
 
@@ -378,6 +378,7 @@ public:
 
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
+		OutEnvironment.SetDefine(TEXT("WRITE_CLOSEST_DEPTH"), bWriteClosestDepth ? TEXT("1") : TEXT("0"));
 		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 
@@ -396,6 +397,10 @@ public:
 	{
 		FragmentDepthsTexture.Bind(Initializer.ParameterMap, TEXT("FragmentDepthsTexture"));
 		SceneTextureShaderParameters.Bind(Initializer);
+		if(bWriteClosestDepth)
+		{
+			tAccumInvAlpha.Bind(Initializer.ParameterMap, TEXT("tAccumInvAlpha"));
+		}
 	}
 
 	FTressFXShortCutResolveDepthPS() {}
@@ -407,6 +412,10 @@ public:
 	{
 		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
 		Ar << FragmentDepthsTexture << SceneTextureShaderParameters;
+		if (bWriteClosestDepth) 
+		{
+			Ar << tAccumInvAlpha;
+		}
 		return bShaderHasOutdatedParameters;	
 	}
 
@@ -414,6 +423,7 @@ public:
 
 	FShaderResourceParameter FragmentDepthsTexture;
 	FSceneTextureShaderParameters SceneTextureShaderParameters;
+	FShaderResourceParameter tAccumInvAlpha;
 
 };
 

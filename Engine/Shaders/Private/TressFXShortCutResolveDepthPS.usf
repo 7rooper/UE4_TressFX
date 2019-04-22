@@ -26,16 +26,37 @@
 
 Texture2DArray<uint> FragmentDepthsTexture;
 
+
+#ifndef WRITE_CLOSEST_DEPTH
+	#define WRITE_CLOSEST_DEPTH 0
+#endif
+
+#if WRITE_CLOSEST_DEPTH
+	Texture2D<float> tAccumInvAlpha;
+#endif
+
 // Second pass of ShortCut.
 // Full-screen pass that writes the farthest of the near depths for depth culling.
 void main(FScreenVertexOutput input, out float OutDepth : SV_DEPTH)
 {
-	// Blend the layers of fragments from back to front
     const int2 vScreenAddress = int2(input.Position.xy);
 
-	// Write farthest depth value for culling in the next pass.
-	// It may be the initial value of 1.0 if there were not enough fragments to write all depths, but then culling not important.
-    float HairDepth = asfloat(FragmentDepthsTexture[uint3(vScreenAddress, 2)]);
+	#if WRITE_CLOSEST_DEPTH
+		float fInvAlpha = tAccumInvAlpha[uint2(input.Position.xy)];
+		float fAlpha = saturate(1.0 - fInvAlpha);
+
+		if (fAlpha < TRESSFX_MIN_ALPHA_FOR_SCENE_DEPTH)
+		{
+			OutDepth = 0;
+			discard;
+			return;
+		}
+		float HairDepth = asfloat(FragmentDepthsTexture[uint3(vScreenAddress, 0)]);
+	#else
+		// Write farthest depth value for culling in the next pass.
+		float HairDepth = asfloat(FragmentDepthsTexture[uint3(vScreenAddress, 2)]);
+	#endif
+
     float SceneDepth = SceneTexturesStruct.SceneDepthTexture[uint2(vScreenAddress)].r;
     OutDepth = max(HairDepth, SceneDepth);
 

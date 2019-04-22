@@ -95,7 +95,7 @@ IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(2); //kbuffer
 ////  FTressFXShortCutResolveDepthPS - pixel shader for 2nd pass of shortcut
 //////////////////////////////////////////////////////////////////////////////////
 
-void FTressFXShortCutResolveDepthPS::SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext)
+void FTressFXShortCutResolveDepthPS<false>::SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext)
 {
 	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
 
@@ -104,7 +104,19 @@ void FTressFXShortCutResolveDepthPS::SetParameters(FRHICommandList& RHICmdList, 
 	SceneTextureShaderParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, ESceneTextureSetupMode::All);
 }
 
-IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveDepthPS, "/Engine/Private/TressFXShortCutResolveDepthPS.usf", "main", SF_Pixel);
+void FTressFXShortCutResolveDepthPS<true>::SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext)
+{
+	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
+
+	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);
+	SetTextureParameter(RHICmdList, ShaderRHI, FragmentDepthsTexture, SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().ShaderResourceTexture);
+	SceneTextureShaderParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, ESceneTextureSetupMode::All);
+	SetTextureParameter(RHICmdList, ShaderRHI, tAccumInvAlpha, SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture);
+}
+
+
+IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveDepthPS<true>, "/Engine/Private/TressFXShortCutResolveDepthPS.usf", "main", SF_Pixel);
+IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveDepthPS<false>, "/Engine/Private/TressFXShortCutResolveDepthPS.usf", "main", SF_Pixel);
 
 ///////////////////////////////////////////////////////////////////////////////////
 ////  FTressFXShortCutResolveColorPS - pixel shader for final pass of shortcut
