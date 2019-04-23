@@ -7,10 +7,7 @@
 	#define TFX_PPLL 0
 #endif
 
-#if TFX_PPLL 
-	#define OpaqueBasePass TressFXKBufferFillPass
-#endif
-
+#define OpaqueBasePass TressFXColorFillPass
 
 #include "Common.ush"
 #include "SHCommon.ush"
@@ -25,7 +22,6 @@
 #include "DeferredShadingCommon.ush"
 #include "VelocityCommon.ush"
 #include "SphericalGaussian.ush"
-#include "DBufferDecalShared.ush"
 #include "TressFXCommon.ush"
 #include "TressFXShortCutCommon.ush"
 #include "TressFXRendering.ush"

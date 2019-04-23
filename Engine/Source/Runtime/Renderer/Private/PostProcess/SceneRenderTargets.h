@@ -488,6 +488,7 @@ public:
 
 	/*@BEGIN Third party code TressFX*/
 	void AllocatTressFXTargets(FRHICommandList& RHICmdList, const FSceneViewFamily& ViewFamily);
+	void ReleaseTressFXResources(int32 TypeToRelease);
 	/*@END Third party code TressFX*/
 
 private: // Get...() methods instead of direct access
