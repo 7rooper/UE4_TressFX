@@ -822,13 +822,20 @@ void RenderDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, TArray<FViewI
 //Shortcut Passes
 /////////////////////////////////////////////////////////////////////////
 template<bool bWriteClosestDepth>
-void ShortcutDepthsResolve_Impl(FRHICommandListImmediate& RHICmdList, FSceneRenderTargets& SceneContext, FViewInfo& View, TRefCountPtr<IPooledRenderTarget>& DepthTarget, const TCHAR *Name)
+void ShortcutDepthsResolve_Impl(
+	FRHICommandListImmediate& RHICmdList, 
+	FSceneRenderTargets& SceneContext, 
+	FViewInfo& View, 
+	FRHITexture* DepthTarget, 
+	const FPooledRenderTargetDesc DepthTargetDesc, 
+	const TCHAR *PassName
+)
 {
 	FRHIRenderPassInfo RPInfo(
-		DepthTarget->GetRenderTargetItem().TargetableTexture,
+		DepthTarget,
 		EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
 	);
-	RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXResolveDepthsToTressFXDepth"));
+	RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXshortcutResolveDepth"));
 
 	TShaderMapRef<FScreenVS>											VertexShader(View.ShaderMap);
 	TShaderMapRef<FTressFXShortCutResolveDepthPS<bWriteClosestDepth>>	PixelShader(View.ShaderMap);
@@ -849,36 +856,21 @@ void ShortcutDepthsResolve_Impl(FRHICommandListImmediate& RHICmdList, FSceneRend
 
 	VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
 	PixelShader->SetParameters(RHICmdList, View, SceneContext);
-	
-	const FIntRect ViewRect = View.ViewRect;
-	const FIntPoint BufferSize = SceneContext.GetBufferSizeXY();
-	const FIntPoint DepthTargetSize = DepthTarget->GetDesc().Extent;
-	RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 0.0f);
-	//try this first
-	DrawRectangle(
-			RHICmdList,
-			0, 0,
-			ViewRect.Width(), ViewRect.Height(),
-			ViewRect.Min.X, ViewRect.Min.Y,
-			ViewRect.Width(), ViewRect.Height(),
-			ViewRect.Size(),
-			Size, //texture size, might need to use SceneContext.GetBufferSizeXY(), or 	DepthTarget->GetDesc().Extent
-			*VertexShader,
-			EDRF_Default,
-			1
-		);
 
-	//DrawRectangle(
-	//	RHICmdList,
-	//	0, 0,
-	//	ViewRect.Width(), ViewRect.Height(),
-	//	ViewRect.Min.X, ViewRect.Min.Y,
-	//	ViewRect.Width(), ViewRect.Height(),
-	//	ViewRect.Size(),
-	//	ViewRect.Size(), //SrcSize, //TODO, i think
-	//	*VertexShader,
-	//	EDRF_UseTriangleOptimization
-	//);
+	const FIntPoint BufferSize = SceneContext.GetBufferSizeXY();
+	const FIntPoint DepthTargetSize = DepthTargetDesc.Extent;
+	RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
+	const FIntPoint Size = SceneContext.GetBufferSizeXY();
+	DrawRectangle(
+		RHICmdList,
+		0, 0,
+		Size.X, Size.Y,
+		0, 0,
+		Size.X, Size.Y,
+		Size,
+		Size,
+		*VertexShader
+	);
 
 	RHICmdList.EndRenderPass();
 }
@@ -950,7 +942,8 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 				RHICmdList, 
 				SceneContext, 
 				View,
-				SceneContext.TressFXSceneDepth, 
+				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, 
+				SceneContext.TressFXSceneDepth->GetDesc(),
 				TEXT("TressFXResolveDepthsToTressFXDepth")
 			);
 		}
@@ -963,7 +956,8 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 				RHICmdList,
 				SceneContext,
 				View,
-				SceneContext.SceneDepthZ,
+				SceneContext.GetSceneDepthSurface(),
+				SceneContext.SceneDepthZ->GetDesc(),
 				TEXT("TressFXResolveCloserDepthsToSceneDepth")
 			);
 		}
@@ -1012,16 +1006,9 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveColors);
 
-			FTextureRHIParamRef Resources[2] = {
-				SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().TargetableTexture,
-				SceneContext.TressFXFragmentColorsTexture->GetRenderTargetItem().TargetableTexture
-			};
-			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources,2);
-
-
 			FRHIRenderPassInfo RPInfo(
-				SceneContext.GetSceneColorSurface(), ERenderTargetActions::Load_DontStore,
-				SceneContext.GetSceneDepthSurface(), EDepthStencilTargetActions::DontLoad_DontStore
+				SceneContext.GetSceneColorSurface(), ERenderTargetActions::Load_Store,
+				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
 			);
 
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXResolveColor"));
@@ -1030,7 +1017,6 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 			TShaderMapRef<FTressFXShortCutResolveColorPS>		PixelShader(View.ShaderMap);
 
 			FRenderingCompositePassContext Context(RHICmdList, View);
-
 			Context.SetViewportAndCallRHI(View.ViewRect);
 
 			FGraphicsPipelineStateInitializer GraphicsPSOInit;
@@ -1045,6 +1031,7 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 				, BF_Zero // alpha src blend
 				, BF_Zero //alpha dest blend
 			>::GetRHI();
+
 			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
 			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<
 				false, CF_Always
@@ -1054,8 +1041,13 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
 			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
 			GraphicsPSOInit.PrimitiveType = PT_TriangleList;
-
 			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
+
+			FTextureRHIParamRef Resources[2] = {
+				SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().TargetableTexture,
+				SceneContext.TressFXFragmentColorsTexture->GetRenderTargetItem().TargetableTexture
+			};
+			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources,2);
 
 			VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
 			PixelShader->SetParameters(Context.RHICmdList, View, SceneContext);
@@ -1282,12 +1274,18 @@ void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdLi
 		}
 		case ETressFXRenderType::ShortCut:
 		{
-			RenderShortcutResolvePass(RHICmdList, Views, Scene, ScreenShadowMaskTexture);
+			if (ShouldRenderTressFX(ETressFXPass::FillColor_Shortcut)) 
+			{
+				RenderShortcutResolvePass(RHICmdList, Views, Scene, ScreenShadowMaskTexture);
+			}
 			break;
 		}
 		case ETressFXRenderType::KBuffer:
 		{
-			RenderKBufferResolvePasses(RHICmdList, Views, Scene, ScreenShadowMaskTexture);
+			if (ShouldRenderTressFX(ETressFXPass::FillColor_KBuffer)) 
+			{
+				RenderKBufferResolvePasses(RHICmdList, Views, Scene, ScreenShadowMaskTexture);	
+			}
 			break;
 		}
 		default:
@@ -1304,45 +1302,47 @@ void FSceneRenderer::RenderTressFXResolveVelocity(FRHICommandListImmediate& RHIC
 		return;
 	}
 
+	SCOPED_DRAW_EVENT(RHICmdList, TressFXVelocity);
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
 	
-	SCOPED_DRAW_EVENT(RHICmdList, TressFXVelocity);
+	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
+	{
+		const FViewInfo& View = Views[ViewIndex];
 
-	FTextureRHIParamRef Resources[2] = {
-		SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture,
-		SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture
-	};
-	RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources, 2);
+		FTextureRHIParamRef Resources[2] = {
+			SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture,
+			SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture
+		};
+		RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources, 2);
 
-	FGraphicsPipelineStateInitializer GraphicsPSOInit;
-	GraphicsPSOInit.RasterizerState = GetStaticRasterizerState<false>(FM_Solid, CM_None);
-	GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
-	GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
+		FGraphicsPipelineStateInitializer GraphicsPSOInit;
+		GraphicsPSOInit.RasterizerState = GetStaticRasterizerState<false>(FM_Solid, CM_None);
+		GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
+		GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
 
-	TShaderMapRef<FScreenVS> VertexShader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
-	TShaderMapRef<FTressFXResolveVelocityPs> PixelShader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
+		TShaderMapRef<FScreenVS>					VertexShader(View.ShaderMap);
+		TShaderMapRef<FTressFXResolveVelocityPs>	PixelShader(View.ShaderMap);
 
-	GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
-	GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
-	GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
-	GraphicsPSOInit.PrimitiveType = PT_TriangleList;
-	SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, EApplyRendertargetOption::ForceApply);
+		GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
+		GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
+		GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
+		GraphicsPSOInit.PrimitiveType = PT_TriangleList;
+		SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, EApplyRendertargetOption::ForceApply);
 
-	PixelShader->SetParameters(RHICmdList, SceneContext.TressFXVelocity, SceneContext.TressFXSceneDepth);
+		VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
+		PixelShader->SetParameters(RHICmdList, SceneContext.TressFXVelocity, SceneContext.TressFXSceneDepth);
 
-	const FIntPoint Size = FSceneRenderTargets::Get(RHICmdList).GetBufferSizeXY();
-	RHICmdList.SetViewport(0, 0, 0, Size.X, Size.Y, 1);
-
-	DrawRectangle(
-		RHICmdList,
-		0, 0,
-		Size.X, Size.Y,
-		0, 0,
-		Size.X, Size.Y,
-		Size,
-		Size,
-		*VertexShader
-	);
+		DrawRectangle(
+			RHICmdList,
+			0, 0,
+			View.ViewRect.Width(), View.ViewRect.Height(),
+			View.ViewRect.Min.X, View.ViewRect.Min.Y,
+			View.ViewRect.Width(), View.ViewRect.Height(),
+			View.ViewRect.Size(),
+			SceneContext.GetBufferSizeXY(),
+			*VertexShader,
+			EDRF_UseTriangleOptimization);
+	}
 }
 
 
