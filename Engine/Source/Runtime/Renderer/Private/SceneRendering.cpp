@@ -368,6 +368,15 @@ FAutoConsoleVariableRef CVarTressFXKBufferSize(
 	TEXT("Size of OIT K-Buffer"),
 	ECVF_RenderThreadSafe
 );
+
+int32 GBTressFXUseCompute = 0;
+FAutoConsoleVariableRef CVarTressFXKBufferSize(
+	TEXT("tfx.UseCompute"),
+	GBTressFXUseCompute,
+	TEXT("Use compute shaders for resolve passes."),
+	ECVF_RenderThreadSafe
+);
+
 /*@END Third party code TressFX*/
 
 static FParallelCommandListSet* GOutstandingParallelCommandListSet = nullptr;

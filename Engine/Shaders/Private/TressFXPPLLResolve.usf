@@ -253,22 +253,34 @@ void ResolvePPLL(FScreenVertexOutput Input, out float4 OutColor : SV_Target0)
 // compute resolve version, not used currently because the tex would need a uav flag, and that might end up making everything slower
 
 RWTexture2D<float4> SceneColorTex;
+float4 TextureSize; //size of the SceneColorTex
 
 #ifndef THREADGROUP_SIZEX
-#define THREADGROUP_SIZEX 16
+	#define THREADGROUP_SIZEX 32
 #endif
 
 #ifndef THREADGROUP_SIZEY
-#define THREADGROUP_SIZEY 16
+	#define THREADGROUP_SIZEY 32
 #endif
 
 [numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
-void PPLLResolveMainCS(uint2 DispatchThreadId : SV_DispatchThreadID)
+void ResolvePPLL_CS(uint2 DispatchThreadId : SV_DispatchThreadID)
 {
     uint2 pixelID = uint2(DispatchThreadId.x, DispatchThreadId.y);
     float4 OutColor;
-    if (GatherLinkedList(pixelID, OutColor))
+	
+	BRANCH
+    if (pixelID.x <= TextureSize.x && pixelID.y <= TextureSize.y)
     {
-        SceneColorTex[pixelID] = OutColor;
-    }
+        if (GatherLinkedList(pixelID, OutColor))
+        {
+			//EBlendOperation::BO_Add, // color blend op
+			//EBlendFactor::BF_One, // color source blend
+			//EBlendFactor::BF_SourceAlpha, //color dest blend
+			//EBlendOperation::BO_Add, //alpha blend op
+			//EBlendFactor::BF_Zero, // alpha src blend
+			//EBlendFactor::BF_Zero //alpha dest blend
+            SceneColorTex[pixelID] = (SceneColorTex[pixelID] * OutColor.a) + OutColor;
+        }
+    }    
 }

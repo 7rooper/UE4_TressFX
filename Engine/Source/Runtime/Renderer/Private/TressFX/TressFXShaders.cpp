@@ -158,3 +158,42 @@ void FTressFXFKBufferResolvePS::SetParameters(FRHICommandList& RHICmdList, const
 }
 
 IMPLEMENT_GLOBAL_SHADER(FTressFXFKBufferResolvePS, "/Engine/Private/TressFXPPLLResolve.usf", "ResolvePPLL", SF_Pixel);
+
+///////////////////////////////////////////////////////////////////////////////
+// TressFXFKBufferResolveCS
+//////////////////////////////////////////////////////////////////////////////
+
+void FTressFXFKBufferResolveCS::ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+{
+	FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+	OutEnvironment.SetDefine(TEXT("THREADGROUP_SIZEX"), FTressFXFKBufferResolveCS::ThreadSizeX);
+	OutEnvironment.SetDefine(TEXT("THREADGROUP_SIZEY"), FTressFXFKBufferResolveCS::ThreadSizeY);
+	int32 KBufferSize = FMath::Clamp(static_cast<int32>(GTressFXKBufferSize), MIN_TFX_KBUFFER_SIZE, MAX_TFX_KBUFFER_SIZE);
+	OutEnvironment.SetDefine(TEXT("KBUFFER_SIZE"), KBufferSize);
+}
+
+void FTressFXFKBufferResolveCS::SetParameters(
+	FRHICommandList& RHICmdList,
+	const FViewInfo& View,
+	const FShaderResourceViewRHIParamRef InLinkedListSRV,
+	FTextureRHIParamRef InHeadListSRV,
+	FSceneRenderTargets& SceneContext,
+	FIntPoint TargetSize
+)
+{
+	const auto ShaderRHI = GetComputeShader();
+	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);
+
+	SetSRVParameter(RHICmdList, ShaderRHI, LinkedListSRV, InLinkedListSRV);
+	SetTextureParameter(RHICmdList, ShaderRHI, FragmentListHead, InHeadListSRV);
+	SetUAVParameter(RHICmdList, ShaderRHI, SceneColorTex, SceneContext.GetSceneColorTextureUAV());
+	SetShaderValue(RHICmdList, ShaderRHI, TextureSize, FVector4((float)TargetSize.X, (float)TargetSize.Y, 0.0f, 0.0f));
+}
+
+void FTressFXFKBufferResolveCS::UnsetParameters(FRHICommandList& RHICmdList);
+{
+	const FComputeShaderRHIParamRef ShaderRHI = GetComputeShader();
+	RHICmdList.SetUAVParameter(ShaderRHI, TexTarget.GetBaseIndex(), NULL);
+}
+
+IMPLEMENT_GLOBAL_SHADER(FTressFXFKBufferResolveCS, "/Engine/Private/TressFXPPLLResolve.usf", "ResolvePPLL_CS", SF_Compute);

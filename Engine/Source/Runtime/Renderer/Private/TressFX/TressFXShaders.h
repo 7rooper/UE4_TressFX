@@ -542,3 +542,63 @@ public:
 	FShaderResourceParameter LinkedListSRV;
 
 };
+
+///////////////////////////////////////////////////////////////////////////////
+// TressFXFKBufferResolveCS
+//////////////////////////////////////////////////////////////////////////////
+
+
+class FTressFXFKBufferResolveCS : public FGlobalShader
+{
+	DECLARE_GLOBAL_SHADER(FTressFXFKBufferResolveCS);
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+	}
+
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
+
+	/** Default constructor. */
+	FTressFXFKBufferResolveCS() {}
+
+public:
+	FShaderResourceParameter SceneColorTex;
+	FShaderResourceParameter FragmentListHead;
+	FShaderResourceParameter LinkedListSRV;
+	FShaderParameter TextureSize;
+
+	static const uint8 ThreadSizeX = 32;
+	static const uint8 ThreadSizeY = 32;
+
+	/** Initialization constructor. */
+	FTressFXFKBufferResolveCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FGlobalShader(Initializer)
+	{
+		SceneColorTex.Bind(Initializer.ParameterMap, TEXT("SceneColorTex"));
+		FragmentListHead.Bind(Initializer.ParameterMap, TEXT("FragmentListHead"));
+		LinkedListSRV.Bind(Initializer.ParameterMap, TEXT("LinkedListSRV"));
+		TextureSize.Bind(Initializer.ParameterMap, TEXT("TextureSize"));
+	}
+
+	// FShader interface.
+	virtual bool Serialize(FArchive& Ar) override
+	{
+		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
+		Ar << LinkedListSRV << FragmentListHead << SceneColorTex << TextureSize;
+		return bShaderHasOutdatedParameters;
+	}
+
+	void SetParameters(
+		FRHICommandList& RHICmdList,
+		const FViewInfo& View,
+		const FShaderResourceViewRHIParamRef InLinkedListSRV,
+		FTextureRHIParamRef InHeadListSRV,
+		FSceneRenderTargets& SceneContext,
+		FIntPoint TargetSize
+	);
+
+	void UnsetParameters(FRHICommandList& RHICmdList);
+};
+
+

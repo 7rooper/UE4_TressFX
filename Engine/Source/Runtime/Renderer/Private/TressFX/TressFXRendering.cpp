@@ -34,7 +34,7 @@ DEFINE_LOG_CATEGORY(TressFXRenderingLog);
 
 extern int32 GTressFXRenderType;
 extern int32 GTressFXKBufferSize;
-
+extern int32 GBTressFXUseCompute;
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXFillColorPS - Pixel shader for Third pass of shortcut, and PPLL build of kbuffer
 ////////////////////////////////////////////////////////////////////////////////
@@ -615,6 +615,8 @@ ProcessKBuffer<KBufferSize>(__VA_ARGS__);
 #define PROCESS_KBUFFER2(KBufferSize, ...)					\
 switch (KBufferSize)										\
 {															\
+	case 2:  PROCESS_KBUFFER(2, __VA_ARGS__) break;			\
+	case 3:  PROCESS_KBUFFER(3, __VA_ARGS__) break;			\
 	case 4:  PROCESS_KBUFFER(4, __VA_ARGS__) break;			\
 	case 5:  PROCESS_KBUFFER(5, __VA_ARGS__) break;			\
 	case 6:  PROCESS_KBUFFER(6, __VA_ARGS__) break;			\
@@ -778,15 +780,12 @@ void RenderDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, TArray<FViewI
 
 		Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 
-
-
 		if (TFXRenderType == ETressFXRenderType::KBuffer)
 		{
 			//copy scene depth, so we have a copy that doesnt have hair depths in it
 			SCOPED_DRAW_EVENT(RHICmdList, TressFXCopySceneDepth);
 			TressFXCopySceneDepth(RHICmdList, View, SceneContext, SceneContext.TressFXSceneDepth);
 		}
-
 
 		RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 		{
@@ -887,7 +886,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 		}
 
 		
-		// shortcut pass 1, accumulate alpha, depths, and optionally velocity if the material wants it
+		// shortcut pass 1, accumulate alpha, depths, and optionally velocity if the material wants it (true by default)
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, DepthsAlpha);
 
@@ -967,7 +966,6 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 		{
 			continue;
 		}
-
 
 		// shortcut pass 3, fill colors
 		{
@@ -1066,8 +1064,6 @@ void RenderKbufferBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInf
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
 
 	RenderDepthsAndVelocity(RHICmdList, Views, Scene, ETressFXRenderType::KBuffer);
-
-
 }
 
 void RenderKBufferResolvePasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture)
@@ -1133,14 +1129,49 @@ void RenderKBufferResolvePasses(FRHICommandListImmediate& RHICmdList, TArray<FVi
 		}
 
 		{
-			SCOPED_DRAW_EVENT(RHICmdList, ResolveKbuffer);
+			//readable for resolve pass
+			FUnorderedAccessViewRHIParamRef Uavs[2] = {
+				TressFXKBufferListHeads->GetRenderTargetItem().UAV,
+				TressFXKBufferNodes->UAV
+			};
+			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, Uavs, 2);
+		}
+
+		//scene color automatically gets uav flag if greater >= sm5 and deferred shading, but checking is good idea
+		const uint32 SceneColorFlags = SceneContext.GetSceneColor()->GetDesc().Flags;
+		const bool bUseComputeResolve = (static_cast<uint32>(GBTressFXUseCompute) > 0) && (SceneColorFlags & TexCreate_UAV);
+		if (bUseComputeResolve)
+		{
+			UnbindRenderTargets(RHICmdList);
+			const FIntRect Rect = View.ViewRect;
+			FIntPoint DestSize(Rect.Width(), Rect.Height());
+			FRenderingCompositePassContext Context(RHICmdList, View);
+			Context.SetViewportAndCallRHI(Rect, 0.0f, 1.0f);
+			RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, SceneContext.GetSceneColorTextureUAV());
+			TShaderMapRef<FTressFXFKBufferResolveCS> ComputeShader(View.ShaderMap);
+			RHICmdList.SetComputeShader(ComputeShader->GetComputeShader());
+			
+
+			ComputeShader->SetParameters(RHICmdList, View, TressFXKBufferNodes->SRV, TressFXKBufferListHeads->GetRenderTargetItem().ShaderResourceTexture, SceneContext, DestSize);
+			
+			uint32 GroupSizeX = FMath::DivideAndRoundUp(DestSize.X, (int32)FTressFXFKBufferResolveCS::ThreadSizeX);
+			uint32 GroupSizeY = FMath::DivideAndRoundUp(DestSize.Y, (int32)FTressFXFKBufferResolveCS::ThreadSizeY);
+			DispatchComputeShader(RHICmdList, *ComputeShader, GroupSizeX, GroupSizeY, 1);
+			
+			ComputeShader->UnsetParameters(RHICmdList);
+			//needs to be readable or writable? JAKETODO
+			RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EComputeToGfx, SceneContext.GetSceneColorTextureUAV());
+		}
+		else
+		{
+			SCOPED_DRAW_EVENT(RHICmdList, ResolveKBuffer);
 
 			FRHIRenderPassInfo RPInfo(
 				SceneContext.GetSceneColorSurface(), ERenderTargetActions::Load_Store,
 				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
 			);
 
-			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXResolveKbuffer"));
+			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXResolveKBuffer"));
 
 			TShaderMapRef<FScreenVS>							VertexShader(View.ShaderMap);
 			TShaderMapRef<FTressFXFKBufferResolvePS>			PixelShader(View.ShaderMap);
@@ -1174,11 +1205,6 @@ void RenderKBufferResolvePasses(FRHICommandListImmediate& RHICmdList, TArray<FVi
 			GraphicsPSOInit.PrimitiveType = PT_TriangleList;
 			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
 
-			FUnorderedAccessViewRHIParamRef Uavs[2] = { 
-				TressFXKBufferListHeads->GetRenderTargetItem().UAV,
-				TressFXKBufferNodes->UAV
-			};
-			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, Uavs, 2);
 
 			VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
 			PixelShader->SetParameters(Context.RHICmdList, View, TressFXKBufferNodes->SRV, TressFXKBufferListHeads->GetRenderTargetItem().ShaderResourceTexture);
@@ -1196,7 +1222,6 @@ void RenderKBufferResolvePasses(FRHICommandListImmediate& RHICmdList, TArray<FVi
 
 			RHICmdList.EndRenderPass();
 		}
-
 
 		if (IsTransientResourceBufferAliasingEnabled()) 
 		{

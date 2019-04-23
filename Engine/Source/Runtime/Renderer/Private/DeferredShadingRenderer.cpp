@@ -1697,7 +1697,6 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	//@BEGIN third party code TressFX
 	//using this passed in ref inside RenderLights() instead because tressFX needs it later during the fill colors pass for dynamic shadows
 	TRefCountPtr<IPooledRenderTarget> ScreenShadowMaskTexture;
-	TRefCountPtr<IPooledRenderTarget> SceneDepthTemp;
 	//@END third party code TressFX
 
 
@@ -1878,14 +1877,6 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	}
 	checkSlow(RHICmdList.IsOutsideRenderPass());
 	UnbindRenderTargets(RHICmdList);
-
-	//@BEGIN third party code TressFX
-	if (TFXRenderType == ETressFXRenderType::KBuffer)
-	{
-		//SceneContext.SceneDepthZ = SceneDepthTemp;
-		//SceneDepthTemp = nullptr;
-	}
-	//@END third party code TressFX
 
 	// Notify the FX system that opaque primitives have been rendered and we now have a valid depth buffer.
 	if (Scene->FXSystem && Views.IsValidIndex(0) && bAllowGPUParticleSceneUpdate)
