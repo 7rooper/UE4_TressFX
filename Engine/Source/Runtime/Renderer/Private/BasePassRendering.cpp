@@ -533,15 +533,22 @@ void CreateTressFXColorPassUniformBuffer(
 	int32 NodePoolSize
 )
 {
-	checkf(ForwardScreenSpaceShadowMask && ForwardScreenSpaceShadowMask->GetRenderTargetItem().IsValid(), TEXT("ForwardScreenSpaceShadowMask was invalid in CreateTressFXKBufferPassUniformBuffer!"));
 	FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
 
 	FTressFXColorPassUniformParameters ColorPassParams;
 	SetupSharedBasePassParameters(RHICmdList, View, SceneRenderTargets, ColorPassParams.Shared);
 	ColorPassParams.NodePoolSize = NodePoolSize;
-	// Forward shading	
+	
 	ColorPassParams.UseForwardScreenSpaceShadowMask = 1;
-	ColorPassParams.ForwardScreenSpaceShadowMaskTexture = ForwardScreenSpaceShadowMask->GetRenderTargetItem().ShaderResourceTexture;
+
+	if (ForwardScreenSpaceShadowMask && ForwardScreenSpaceShadowMask->GetRenderTargetItem().IsValid())
+	{
+		ColorPassParams.ForwardScreenSpaceShadowMaskTexture = ForwardScreenSpaceShadowMask->GetRenderTargetItem().ShaderResourceTexture;
+	}
+	else
+	{
+		ColorPassParams.ForwardScreenSpaceShadowMaskTexture = GSystemTextures.WhiteDummy.GetReference()->GetRenderTargetItem().ShaderResourceTexture;
+	}
 
 	IPooledRenderTarget* IndirectOcclusion = SceneRenderTargets.ScreenSpaceAO;
 

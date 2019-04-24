@@ -1138,13 +1138,16 @@ void RenderKBufferResolvePasses(FRHICommandListImmediate& RHICmdList, TArray<FVi
 		}
 
 		//scene color automatically gets uav flag if greater >= sm5 and deferred shading, but checking is good idea
-		const uint32 SceneColorFlags = SceneContext.GetSceneColor()->GetDesc().Flags;
+		const FPooledRenderTargetDesc SceneColorDesc = SceneContext.GetSceneColor()->GetDesc();
+		const uint32 SceneColorFlags = SceneColorDesc.TargetableFlags;
 		const bool bUseComputeResolve = (static_cast<uint32>(GBTressFXUseCompute) > 0) && (SceneColorFlags & TexCreate_UAV);
+		
 		if (bUseComputeResolve)
 		{
 			UnbindRenderTargets(RHICmdList);
 			const FIntRect Rect = View.ViewRect;
 			FIntPoint DestSize(Rect.Width(), Rect.Height());
+
 			FRenderingCompositePassContext Context(RHICmdList, View);
 			Context.SetViewportAndCallRHI(Rect, 0.0f, 1.0f);
 			RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, SceneContext.GetSceneColorTextureUAV());
@@ -1152,7 +1155,14 @@ void RenderKBufferResolvePasses(FRHICommandListImmediate& RHICmdList, TArray<FVi
 			RHICmdList.SetComputeShader(ComputeShader->GetComputeShader());
 			
 
-			ComputeShader->SetParameters(RHICmdList, View, TressFXKBufferNodes->SRV, TressFXKBufferListHeads->GetRenderTargetItem().ShaderResourceTexture, SceneContext, DestSize);
+			ComputeShader->SetParameters(
+				RHICmdList, 
+				View, 
+				TressFXKBufferNodes->SRV, 
+				TressFXKBufferListHeads->GetRenderTargetItem().ShaderResourceTexture, 
+				SceneContext, 
+				DestSize
+			);
 			
 			uint32 GroupSizeX = FMath::DivideAndRoundUp(DestSize.X, (int32)FTressFXFKBufferResolveCS::ThreadSizeX);
 			uint32 GroupSizeY = FMath::DivideAndRoundUp(DestSize.Y, (int32)FTressFXFKBufferResolveCS::ThreadSizeY);

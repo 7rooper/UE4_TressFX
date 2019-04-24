@@ -370,7 +370,7 @@ FAutoConsoleVariableRef CVarTressFXKBufferSize(
 );
 
 int32 GBTressFXUseCompute = 0;
-FAutoConsoleVariableRef CVarTressFXKBufferSize(
+FAutoConsoleVariableRef CVarTressFXUseComputeResolves(
 	TEXT("tfx.UseCompute"),
 	GBTressFXUseCompute,
 	TEXT("Use compute shaders for resolve passes."),

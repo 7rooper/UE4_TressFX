@@ -170,6 +170,7 @@ void FTressFXFKBufferResolveCS::ModifyCompilationEnvironment(const FGlobalShader
 	OutEnvironment.SetDefine(TEXT("THREADGROUP_SIZEY"), FTressFXFKBufferResolveCS::ThreadSizeY);
 	int32 KBufferSize = FMath::Clamp(static_cast<int32>(GTressFXKBufferSize), MIN_TFX_KBUFFER_SIZE, MAX_TFX_KBUFFER_SIZE);
 	OutEnvironment.SetDefine(TEXT("KBUFFER_SIZE"), KBufferSize);
+	OutEnvironment.SetDefine(TEXT("PPLL_COMPUTE_RESOLVE"), TEXT("1"));
 }
 
 void FTressFXFKBufferResolveCS::SetParameters(
@@ -190,10 +191,10 @@ void FTressFXFKBufferResolveCS::SetParameters(
 	SetShaderValue(RHICmdList, ShaderRHI, TextureSize, FVector4((float)TargetSize.X, (float)TargetSize.Y, 0.0f, 0.0f));
 }
 
-void FTressFXFKBufferResolveCS::UnsetParameters(FRHICommandList& RHICmdList);
+void FTressFXFKBufferResolveCS::UnsetParameters(FRHICommandList& RHICmdList)
 {
 	const FComputeShaderRHIParamRef ShaderRHI = GetComputeShader();
-	RHICmdList.SetUAVParameter(ShaderRHI, TexTarget.GetBaseIndex(), NULL);
+	RHICmdList.SetUAVParameter(ShaderRHI, SceneColorTex.GetBaseIndex(), NULL);
 }
 
 IMPLEMENT_GLOBAL_SHADER(FTressFXFKBufferResolveCS, "/Engine/Private/TressFXPPLLResolve.usf", "ResolvePPLL_CS", SF_Compute);
