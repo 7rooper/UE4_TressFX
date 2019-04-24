@@ -250,7 +250,7 @@ void ResolvePPLL(FScreenVertexOutput Input, out float4 OutColor : SV_Target0)
 }
 
 
-// compute resolve version, not used currently because the tex would need a uav flag, and that might end up making everything slower
+// compute resolve version
 
 RWTexture2D<float4> SceneColorTex;
 float4 TextureSize; //size of the SceneColorTex

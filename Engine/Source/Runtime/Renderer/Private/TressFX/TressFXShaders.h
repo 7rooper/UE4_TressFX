@@ -457,14 +457,13 @@ public:
 
 	static const TCHAR* GetFunctionName()
 	{
-		return TEXT("main");
+		return TEXT("ShortcutResolvePS");
 	}
 
 	FTressFXShortCutResolveColorPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 	{
 		FragmentColorsTexture.Bind(Initializer.ParameterMap, TEXT("FragmentColorsTexture"));
 		tAccumInvAlpha.Bind(Initializer.ParameterMap, TEXT("tAccumInvAlpha"));
-		vFragmentBufferSize.Bind(Initializer.ParameterMap, TEXT("vFragmentBufferSize"));
 	}
 
 	FTressFXShortCutResolveColorPS() {}
@@ -474,7 +473,7 @@ public:
 	virtual bool Serialize(FArchive& Ar) override
 	{
 		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-		Ar << FragmentColorsTexture << tAccumInvAlpha << vFragmentBufferSize;
+		Ar << FragmentColorsTexture << tAccumInvAlpha;
 		return bShaderHasOutdatedParameters;
 	}
 
@@ -484,9 +483,82 @@ public:
 
 	FShaderResourceParameter FragmentColorsTexture;
 	FShaderResourceParameter tAccumInvAlpha;
-	FShaderParameter vFragmentBufferSize;
 };
 
+///////////////////////////////////////////////////////////////////////////////////
+////  FTressFXShortCutResolveColorCS - compute shader for final pass of shortcut
+//////////////////////////////////////////////////////////////////////////////////
+
+class FTressFXShortCutResolveColorCS : public FGlobalShader
+{
+	DECLARE_GLOBAL_SHADER(FTressFXShortCutResolveColorCS)
+
+public:
+
+	static const uint8 ThreadSizeX = 32;
+	static const uint8 ThreadSizeY = 32;
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+	}
+
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters & Parameters, FShaderCompilerEnvironment & OutEnvironment)
+	{
+		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		OutEnvironment.SetDefine(TEXT("SHORTCUT_COMPUTE_RESOLVE"), TEXT("1"));
+		OutEnvironment.SetDefine(TEXT("THREADGROUP_SIZEX"), FTressFXShortCutResolveColorCS::ThreadSizeX);
+		OutEnvironment.SetDefine(TEXT("THREADGROUP_SIZEY"), FTressFXShortCutResolveColorCS::ThreadSizeY);
+	}
+
+	static const TCHAR* GetSourceFilename()
+	{
+		return TEXT("/Engine/Private/TressFXShortCutResolveColorPS.usf");
+	}
+
+	static const TCHAR* GetFunctionName()
+	{
+		return TEXT("ShortcutResolveCS");
+	}
+
+	FTressFXShortCutResolveColorCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
+	{
+		FragmentColorsTexture.Bind(Initializer.ParameterMap, TEXT("FragmentColorsTexture"));
+		tAccumInvAlpha.Bind(Initializer.ParameterMap, TEXT("tAccumInvAlpha"));
+		SceneColorTex.Bind(Initializer.ParameterMap, TEXT("SceneColorTex"));
+		TextureSize.Bind(Initializer.ParameterMap, TEXT("TextureSize"));
+	}
+
+	FTressFXShortCutResolveColorCS() {}
+
+
+	// FShader interface.
+	virtual bool Serialize(FArchive& Ar) override
+	{
+		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
+		Ar << FragmentColorsTexture << tAccumInvAlpha << TextureSize << SceneColorTex;
+		return bShaderHasOutdatedParameters;
+	}
+
+	void SetParameters(
+		FRHICommandList& RHICmdList, 
+		const FViewInfo& View, 
+		const FTextureRHIParamRef InAccumInvAlphaSRV,
+		const FTextureRHIParamRef InFragmentColorsTextureSRV,
+		const FUnorderedAccessViewRHIRef SceneColorUAV,
+		FIntPoint TargetSize
+	);
+
+
+
+public:
+
+	FShaderResourceParameter FragmentColorsTexture;
+	FShaderResourceParameter tAccumInvAlpha;
+	FShaderParameter TextureSize;
+	FShaderResourceParameter SceneColorTex;
+
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // TressFXFKBufferResolvePS
@@ -593,8 +665,8 @@ public:
 		FRHICommandList& RHICmdList,
 		const FViewInfo& View,
 		const FShaderResourceViewRHIParamRef InLinkedListSRV,
-		FTextureRHIParamRef InHeadListSRV,
-		FSceneRenderTargets& SceneContext,
+		const FTextureRHIParamRef InHeadListSRV,
+		const FUnorderedAccessViewRHIRef SceneColorUAV,
 		FIntPoint TargetSize
 	);
 

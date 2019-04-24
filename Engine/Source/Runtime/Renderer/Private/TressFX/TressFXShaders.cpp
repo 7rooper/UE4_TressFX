@@ -128,12 +128,35 @@ void FTressFXShortCutResolveColorPS::SetParameters(FRHICommandList& RHICmdList, 
 
 	SetTextureParameter(RHICmdList, GetPixelShader(), FragmentColorsTexture, SceneContext.TressFXFragmentColorsTexture->GetRenderTargetItem().ShaderResourceTexture);
 	SetTextureParameter(RHICmdList, GetPixelShader(), tAccumInvAlpha, SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture);
-
-	FIntPoint BufferSize = View.ViewRect.Size();
-	SetShaderValue(RHICmdList, GetPixelShader(), vFragmentBufferSize, FVector4(BufferSize.X, BufferSize.Y, 0, 0));
 }
 
-IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveColorPS, "/Engine/Private/TressFXShortCutResolveColorPS.usf", "main", SF_Pixel);
+IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveColorPS, "/Engine/Private/TressFXShortCutResolveColorPS.usf", "ShortcutResolvePS", SF_Pixel);
+
+
+///////////////////////////////////////////////////////////////////////////////////
+////  FTressFXShortCutResolveColorCS - compute shader for final pass of shortcut
+//////////////////////////////////////////////////////////////////////////////////
+
+void FTressFXShortCutResolveColorCS::SetParameters(
+	FRHICommandList& RHICmdList,
+	const FViewInfo& View,
+	const FTextureRHIParamRef InAccumInvAlphaSRV,
+	const FTextureRHIParamRef InFragmentColorsTextureSRV,
+	const FUnorderedAccessViewRHIRef SceneColorUAV,
+	FIntPoint TargetSize
+)
+{
+	const auto ShaderRHI = GetComputeShader();
+	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);
+
+	SetTextureParameter(RHICmdList, GetPixelShader(), FragmentColorsTexture, InFragmentColorsTextureSRV);
+	SetTextureParameter(RHICmdList, GetPixelShader(), tAccumInvAlpha, InAccumInvAlphaSRV);
+	SetUAVParameter(RHICmdList, ShaderRHI, SceneColorTex, SceneColorUAV);
+	SetShaderValue(RHICmdList, ShaderRHI, TextureSize, FVector4((float)TargetSize.X, (float)TargetSize.Y, 0.0f, 0.0f));
+}
+
+IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveColorCS, "/Engine/Private/TressFXShortCutResolveColorPS.usf", "ShortcutResolveCS", SF_Compute);
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // TressFXFKBufferResolvePS
@@ -177,8 +200,8 @@ void FTressFXFKBufferResolveCS::SetParameters(
 	FRHICommandList& RHICmdList,
 	const FViewInfo& View,
 	const FShaderResourceViewRHIParamRef InLinkedListSRV,
-	FTextureRHIParamRef InHeadListSRV,
-	FSceneRenderTargets& SceneContext,
+	const FTextureRHIParamRef InHeadListSRV,
+	const FUnorderedAccessViewRHIRef SceneColorUAV,
 	FIntPoint TargetSize
 )
 {
@@ -187,7 +210,7 @@ void FTressFXFKBufferResolveCS::SetParameters(
 
 	SetSRVParameter(RHICmdList, ShaderRHI, LinkedListSRV, InLinkedListSRV);
 	SetTextureParameter(RHICmdList, ShaderRHI, FragmentListHead, InHeadListSRV);
-	SetUAVParameter(RHICmdList, ShaderRHI, SceneColorTex, SceneContext.GetSceneColorTextureUAV());
+	SetUAVParameter(RHICmdList, ShaderRHI, SceneColorTex, SceneColorUAV);
 	SetShaderValue(RHICmdList, ShaderRHI, TextureSize, FVector4((float)TargetSize.X, (float)TargetSize.Y, 0.0f, 0.0f));
 }
 

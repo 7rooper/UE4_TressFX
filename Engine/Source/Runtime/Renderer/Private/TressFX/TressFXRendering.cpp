@@ -145,6 +145,7 @@ IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_Shortcut, TEXT("/
 	typedef FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize> FTressFXFillColorPS_KBuffer##KBufferSize; \
 	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_KBuffer##KBufferSize, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
 
+static_assert(2 >= MIN_TFX_KBUFFER_SIZE, "MIN_TFX_KBUFFER_SIZE is not >= 2!");
 IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(2)
 IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(3)
 IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(4)
@@ -160,7 +161,7 @@ IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(13)
 IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(14)
 IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(15)
 IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(16)
-
+static_assert(16 <= MAX_TFX_KBUFFER_SIZE, "MAX_TFX_KBUFFER_SIZE is not <= 16!");
 #undef IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS
 
 #pragma optimize("", off)
@@ -205,6 +206,15 @@ void TressFXCopySceneDepth(FRHICommandList& RHICmdList, const FViewInfo& View, F
 		1
 	);
 	RHICmdList.EndRenderPass();
+}
+
+bool CanUseComputeResolves(const FSceneRenderTargets& SceneContext)
+{
+	//scene color automatically gets uav flag if greater >= sm5 and deferred shading, but checking is good idea
+	const FPooledRenderTargetDesc SceneColorDesc = SceneContext.GetSceneColor()->GetDesc();
+	const uint32 SceneColorFlags = SceneColorDesc.TargetableFlags;
+	const bool bUseComputeResolve = (static_cast<uint32>(GBTressFXUseCompute) > 0) && (SceneColorFlags & TexCreate_UAV);
+	return bUseComputeResolve;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1136,14 +1146,10 @@ void RenderKBufferResolvePasses(FRHICommandListImmediate& RHICmdList, TArray<FVi
 			};
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, Uavs, 2);
 		}
-
-		//scene color automatically gets uav flag if greater >= sm5 and deferred shading, but checking is good idea
-		const FPooledRenderTargetDesc SceneColorDesc = SceneContext.GetSceneColor()->GetDesc();
-		const uint32 SceneColorFlags = SceneColorDesc.TargetableFlags;
-		const bool bUseComputeResolve = (static_cast<uint32>(GBTressFXUseCompute) > 0) && (SceneColorFlags & TexCreate_UAV);
 		
-		if (bUseComputeResolve)
+		if (CanUseComputeResolves(SceneContext))
 		{
+			SCOPED_DRAW_EVENT(RHICmdList, ResolveKBufferCS);
 			UnbindRenderTargets(RHICmdList);
 			const FIntRect Rect = View.ViewRect;
 			FIntPoint DestSize(Rect.Width(), Rect.Height());
@@ -1160,7 +1166,7 @@ void RenderKBufferResolvePasses(FRHICommandListImmediate& RHICmdList, TArray<FVi
 				View, 
 				TressFXKBufferNodes->SRV, 
 				TressFXKBufferListHeads->GetRenderTargetItem().ShaderResourceTexture, 
-				SceneContext, 
+				SceneContext.GetSceneColorTextureUAV(),
 				DestSize
 			);
 			
@@ -1169,12 +1175,11 @@ void RenderKBufferResolvePasses(FRHICommandListImmediate& RHICmdList, TArray<FVi
 			DispatchComputeShader(RHICmdList, *ComputeShader, GroupSizeX, GroupSizeY, 1);
 			
 			ComputeShader->UnsetParameters(RHICmdList);
-			//needs to be readable or writable? JAKETODO
 			RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EComputeToGfx, SceneContext.GetSceneColorTextureUAV());
 		}
 		else
 		{
-			SCOPED_DRAW_EVENT(RHICmdList, ResolveKBuffer);
+			SCOPED_DRAW_EVENT(RHICmdList, ResolveKBufferPS);
 
 			FRHIRenderPassInfo RPInfo(
 				SceneContext.GetSceneColorSurface(), ERenderTargetActions::Load_Store,

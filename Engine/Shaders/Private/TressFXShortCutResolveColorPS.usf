@@ -26,24 +26,22 @@
 #include "TressFXShortCutCommon.ush"
 #include "TressFXRendering.ush"
 
-Texture2DArray<uint> FragmentDepthsTexture;
+#ifndef SHORTCUT_COMPUTE_RESOLVE
+	#define SHORTCUT_COMPUTE_RESOLVE 0
+#endif
+
 Texture2D<float4> FragmentColorsTexture;
 Texture2D<float> tAccumInvAlpha;
 
-// Fourth pass of ShortCut.
-// Full-screen pass that finalizes the weighted average, and blends using the accumulated 1-alpha product.
-EARLYDEPTHSTENCIL
-void main(FScreenVertexOutput input, out float4 outColor : SV_Target)
+bool ResolveShortCut(int2 vScreenAddress, out float4 outColor)
 {
-    int2 vScreenAddress = int2(input.Position.xy);
-
     float fInvAlpha = tAccumInvAlpha[vScreenAddress];
     float fAlpha = saturate(1.0 - fInvAlpha);
 
     if (fAlpha < SHORTCUT_MIN_ALPHA)
     {
         outColor = float4(0, 0, 0, 1);
-        return;
+        return false;
     }
     float4 fcolor;
     float colorSumX = FragmentColorsTexture[vScreenAddress].x;
@@ -56,4 +54,42 @@ void main(FScreenVertexOutput input, out float4 outColor : SV_Target)
     fcolor.xyz *= fAlpha;
     fcolor.w = fInvAlpha;
     outColor = fcolor;
+    return true;
+}
+
+// Fourth pass of ShortCut.
+// Full-screen pass that finalizes the weighted average, and blends using the accumulated 1-alpha product.
+EARLYDEPTHSTENCIL
+void ShortcutResolvePS(FScreenVertexOutput input, out float4 outColor : SV_Target)
+{
+    ResolveShortCut(int2(input.Position.xy), outColor);
+}
+
+//////////// compute version
+
+RWTexture2D<float4> SceneColorTex;
+float4 TextureSize; //size of the SceneColorTex
+
+#ifndef THREADGROUP_SIZEX
+	#define THREADGROUP_SIZEX 32
+#endif
+
+#ifndef THREADGROUP_SIZEY
+	#define THREADGROUP_SIZEY 32
+#endif
+
+[numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
+void ShortcutResolveCS(uint2 DispatchThreadId : SV_DispatchThreadID)
+{
+    uint2 pixelID = uint2(DispatchThreadId.x, DispatchThreadId.y);
+    float4 OutColor;
+	
+    BRANCH
+    if (pixelID.x <= TextureSize.x && pixelID.y <= TextureSize.y)
+    {
+        if (ResolveShortCut(pixelID, OutColor))
+        {
+            SceneColorTex[pixelID] = (SceneColorTex[pixelID] * OutColor.a) + OutColor;
+        }
+    }
 }
