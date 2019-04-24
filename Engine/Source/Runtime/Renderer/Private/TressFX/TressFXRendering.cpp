@@ -999,9 +999,49 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 			RHICmdList.EndRenderPass();
 		}
 
-		// shortcut pass 4: resolve color
 		{
-			SCOPED_DRAW_EVENT(RHICmdList, ResolveColors);
+			//readable for resolve pass
+			FTextureRHIParamRef Resources[2] = {
+				SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().TargetableTexture,
+				SceneContext.TressFXFragmentColorsTexture->GetRenderTargetItem().TargetableTexture
+			};
+			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources, 2);
+		}
+
+		// shortcut pass 4: resolve color
+		if (CanUseComputeResolves(SceneContext)) 
+		{
+			SCOPED_DRAW_EVENT(RHICmdList, ResolveColorsCS);
+			UnbindRenderTargets(RHICmdList);
+			const FIntRect Rect = View.ViewRect;
+			FIntPoint DestSize(Rect.Width(), Rect.Height());
+
+			FRenderingCompositePassContext Context(RHICmdList, View);
+			Context.SetViewportAndCallRHI(Rect, 0.0f, 1.0f);
+			RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, SceneContext.GetSceneColorTextureUAV());
+			TShaderMapRef<FTressFXShortCutResolveColorCS> ComputeShader(View.ShaderMap);
+			RHICmdList.SetComputeShader(ComputeShader->GetComputeShader());
+
+
+			ComputeShader->SetParameters(
+				RHICmdList,
+				View,
+				SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture,
+				SceneContext.TressFXFragmentColorsTexture->GetRenderTargetItem().ShaderResourceTexture,
+				SceneContext.GetSceneColorTextureUAV(),
+				DestSize
+			);
+
+			uint32 GroupSizeX = FMath::DivideAndRoundUp(DestSize.X, (int32)FTressFXShortCutResolveColorCS::ThreadSizeX);
+			uint32 GroupSizeY = FMath::DivideAndRoundUp(DestSize.Y, (int32)FTressFXShortCutResolveColorCS::ThreadSizeY);
+			DispatchComputeShader(RHICmdList, *ComputeShader, GroupSizeX, GroupSizeY, 1);
+
+			ComputeShader->UnsetParameters(RHICmdList);
+			RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EComputeToGfx, SceneContext.GetSceneColorTextureUAV());
+		}
+		else
+		{
+			SCOPED_DRAW_EVENT(RHICmdList, ResolveColorsPS);
 
 			FRHIRenderPassInfo RPInfo(
 				SceneContext.GetSceneColorSurface(), ERenderTargetActions::Load_Store,
@@ -1039,12 +1079,6 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
 			GraphicsPSOInit.PrimitiveType = PT_TriangleList;
 			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
-
-			FTextureRHIParamRef Resources[2] = {
-				SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().TargetableTexture,
-				SceneContext.TressFXFragmentColorsTexture->GetRenderTargetItem().TargetableTexture
-			};
-			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, Resources,2);
 
 			VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
 			PixelShader->SetParameters(Context.RHICmdList, View, SceneContext);

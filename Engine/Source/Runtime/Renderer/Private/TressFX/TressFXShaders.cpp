@@ -155,6 +155,12 @@ void FTressFXShortCutResolveColorCS::SetParameters(
 	SetShaderValue(RHICmdList, ShaderRHI, TextureSize, FVector4((float)TargetSize.X, (float)TargetSize.Y, 0.0f, 0.0f));
 }
 
+void FTressFXShortCutResolveColorCS::UnsetParameters(FRHICommandList& RHICmdList)
+{
+	const FComputeShaderRHIParamRef ShaderRHI = GetComputeShader();
+	RHICmdList.SetUAVParameter(ShaderRHI, SceneColorTex.GetBaseIndex(), NULL);
+}
+
 IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveColorCS, "/Engine/Private/TressFXShortCutResolveColorPS.usf", "ShortcutResolveCS", SF_Compute);
 
 

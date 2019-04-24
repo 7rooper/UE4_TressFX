@@ -549,7 +549,7 @@ public:
 		FIntPoint TargetSize
 	);
 
-
+	void UnsetParameters(FRHICommandList& RHICmdList);
 
 public:
 

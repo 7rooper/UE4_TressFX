@@ -87,9 +87,10 @@ void ShortcutResolveCS(uint2 DispatchThreadId : SV_DispatchThreadID)
     BRANCH
     if (pixelID.x <= TextureSize.x && pixelID.y <= TextureSize.y)
     {
-        if (ResolveShortCut(pixelID, OutColor))
-        {
+        //if (ResolveShortCut(pixelID, OutColor))
+        //{
+            ResolveShortCut(pixelID, OutColor);
             SceneColorTex[pixelID] = (SceneColorTex[pixelID] * OutColor.a) + OutColor;
-        }
+        //}
     }
 }
