@@ -1575,6 +1575,7 @@ protected:
 	/*@BEGIN Third party code TressFX*/
 	/* assumes that AnyViewHasTressFX() has been called and returned true */
 	bool ShouldRenderTressFX(int32 TressFXPass);
+	bool TressFXCanUseComputeResolves(const FSceneRenderTargets& SceneContext);
 	void RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList, int32 TFXRenderType);
 	void RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, int32 TFXRenderType);
 	void RenderTressFXResolveVelocity(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& VelocityRT);

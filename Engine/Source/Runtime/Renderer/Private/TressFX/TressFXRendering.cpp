@@ -208,12 +208,24 @@ void TressFXCopySceneDepth(FRHICommandList& RHICmdList, const FViewInfo& View, F
 	RHICmdList.EndRenderPass();
 }
 
-bool CanUseComputeResolves(const FSceneRenderTargets& SceneContext)
+bool IsSM6() 
+{
+	//for now just use GRHISupportsWaveOperations to detect sm6 - which will be dx12 only i think
+	// really would like an sm6 in featurelevel.... im sure we will get it eventually?
+	return GRHISupportsWaveOperations;
+}
+
+bool FSceneRenderer::TressFXCanUseComputeResolves(const FSceneRenderTargets& SceneContext)
 {
 	//scene color automatically gets uav flag if greater >= sm5 and deferred shading, but checking is good idea
 	const FPooledRenderTargetDesc SceneColorDesc = SceneContext.GetSceneColor()->GetDesc();
 	const uint32 SceneColorFlags = SceneColorDesc.TargetableFlags;
-	const bool bUseComputeResolve = (static_cast<uint32>(GBTressFXUseCompute) > 0) && (SceneColorFlags & TexCreate_UAV);
+
+	//this will not work correctly since there is no SP_PCD3D_SM6, or SM6 enumeration yet :*(
+	//const bool SupportsTypedUAVLoads = RHISupports4ComponentUAVReadWrite(ShaderPlatform);
+
+	const bool SupportsTypedUAVLoads = IsSM6() && FeatureLevel >= ERHIFeatureLevel::SM5;
+	const bool bUseComputeResolve = SupportsTypedUAVLoads && (static_cast<uint32>(GBTressFXUseCompute) > 0) && (SceneColorFlags & TexCreate_UAV);
 	return bUseComputeResolve;
 }
 
@@ -963,7 +975,13 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 	}
 }
 
-void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture)
+void RenderShortcutResolvePass(
+	FRHICommandListImmediate& RHICmdList, 
+	TArray<FViewInfo>& Views, 
+	FScene* Scene, 
+	TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture,
+	const bool bUseComputeResolve
+)
 {
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
 	SCOPED_DRAW_EVENT(RHICmdList, TressFXShortcut_Resolve);
@@ -976,7 +994,6 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 		{
 			continue;
 		}
-
 		// shortcut pass 3, fill colors
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, FillColors);
@@ -1009,7 +1026,7 @@ void RenderShortcutResolvePass(FRHICommandListImmediate& RHICmdList, TArray<FVie
 		}
 
 		// shortcut pass 4: resolve color
-		if (CanUseComputeResolves(SceneContext)) 
+		if (bUseComputeResolve)
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveColorsCS);
 			UnbindRenderTargets(RHICmdList);
@@ -1110,7 +1127,12 @@ void RenderKbufferBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInf
 	RenderDepthsAndVelocity(RHICmdList, Views, Scene, ETressFXRenderType::KBuffer);
 }
 
-void RenderKBufferResolvePasses(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture)
+void RenderKBufferResolvePasses(
+	FRHICommandListImmediate& RHICmdList, 
+	TArray<FViewInfo>& Views, FScene* Scene, 
+	TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture,
+	const bool bUseComputeResolve
+)
 {
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
 
@@ -1181,7 +1203,7 @@ void RenderKBufferResolvePasses(FRHICommandListImmediate& RHICmdList, TArray<FVi
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, Uavs, 2);
 		}
 		
-		if (CanUseComputeResolves(SceneContext))
+		if (bUseComputeResolve)
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveKBufferCS);
 			UnbindRenderTargets(RHICmdList);
@@ -1338,7 +1360,7 @@ void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdLi
 		{
 			if (ShouldRenderTressFX(ETressFXPass::FillColor_Shortcut)) 
 			{
-				RenderShortcutResolvePass(RHICmdList, Views, Scene, ScreenShadowMaskTexture);
+				RenderShortcutResolvePass(RHICmdList, Views, Scene, ScreenShadowMaskTexture, TressFXCanUseComputeResolves(FSceneRenderTargets::Get(RHICmdList)));
 			}
 			break;
 		}
@@ -1346,7 +1368,7 @@ void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdLi
 		{
 			if (ShouldRenderTressFX(ETressFXPass::FillColor_KBuffer)) 
 			{
-				RenderKBufferResolvePasses(RHICmdList, Views, Scene, ScreenShadowMaskTexture);	
+				RenderKBufferResolvePasses(RHICmdList, Views, Scene, ScreenShadowMaskTexture, TressFXCanUseComputeResolves(FSceneRenderTargets::Get(RHICmdList)));
 			}
 			break;
 		}
