@@ -1463,9 +1463,6 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 		{
 			//release shortcut textures
 			ReleaseTressFXResources(ETressFXRenderType::ShortCut);
-			TressFXAccumInvAlpha.SafeRelease();
-			TressFXFragmentDepthsTexture.SafeRelease();
-			TressFXFragmentColorsTexture.SafeRelease();
 			InitializeTressFXKBufferResources(RHICmdList);
 		}
 		else if (TFXRenderType == ETressFXRenderType::Opaque) 

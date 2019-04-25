@@ -149,8 +149,8 @@ void FTressFXShortCutResolveColorCS::SetParameters(
 	const auto ShaderRHI = GetComputeShader();
 	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);
 
-	SetTextureParameter(RHICmdList, GetPixelShader(), FragmentColorsTexture, InFragmentColorsTextureSRV);
-	SetTextureParameter(RHICmdList, GetPixelShader(), tAccumInvAlpha, InAccumInvAlphaSRV);
+	SetTextureParameter(RHICmdList, ShaderRHI, FragmentColorsTexture, InFragmentColorsTextureSRV);
+	SetTextureParameter(RHICmdList, ShaderRHI, tAccumInvAlpha, InAccumInvAlphaSRV);
 	SetUAVParameter(RHICmdList, ShaderRHI, SceneColorTex, SceneColorUAV);
 	SetShaderValue(RHICmdList, ShaderRHI, TextureSize, FVector4((float)TargetSize.X, (float)TargetSize.Y, 0.0f, 0.0f));
 }
