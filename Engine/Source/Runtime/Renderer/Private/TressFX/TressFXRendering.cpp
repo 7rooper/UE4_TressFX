@@ -208,11 +208,11 @@ void TressFXCopySceneDepth(FRHICommandList& RHICmdList, const FViewInfo& View, F
 	RHICmdList.EndRenderPass();
 }
 
-bool IsSM6() 
+bool IsSM6(ERHIFeatureLevel::Type CurrentFeatureLevel) 
 {
 	//for now just use GRHISupportsWaveOperations to detect sm6 - which will be dx12 only i think
 	// really would like an sm6 in featurelevel.... im sure we will get it eventually?
-	return GRHISupportsWaveOperations;
+	return GRHISupportsWaveOperations && CurrentFeatureLevel >= ERHIFeatureLevel::SM5;
 }
 
 bool FSceneRenderer::TressFXCanUseComputeResolves(const FSceneRenderTargets& SceneContext)
@@ -224,7 +224,7 @@ bool FSceneRenderer::TressFXCanUseComputeResolves(const FSceneRenderTargets& Sce
 	//this will not work correctly since there is no SP_PCD3D_SM6, or SM6 enumeration yet :*(
 	//const bool SupportsTypedUAVLoads = RHISupports4ComponentUAVReadWrite(ShaderPlatform);
 
-	const bool SupportsTypedUAVLoads = IsSM6() && FeatureLevel >= ERHIFeatureLevel::SM5;
+	const bool SupportsTypedUAVLoads = IsSM6(FeatureLevel);
 	const bool bUseComputeResolve = SupportsTypedUAVLoads && (static_cast<uint32>(GBTressFXUseCompute) > 0) && (SceneColorFlags & TexCreate_UAV);
 	return bUseComputeResolve;
 }
