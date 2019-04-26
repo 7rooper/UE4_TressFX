@@ -274,12 +274,6 @@ void ResolvePPLL_CS(uint2 DispatchThreadId : SV_DispatchThreadID)
     {
         if (GatherLinkedList(pixelID, OutColor))
         {
-			//EBlendOperation::BO_Add, // color blend op
-			//EBlendFactor::BF_One, // color source blend
-			//EBlendFactor::BF_SourceAlpha, //color dest blend
-			//EBlendOperation::BO_Add, //alpha blend op
-			//EBlendFactor::BF_Zero, // alpha src blend
-			//EBlendFactor::BF_Zero //alpha dest blend
             SceneColorTex[pixelID] = (SceneColorTex[pixelID] * OutColor.a) + OutColor;
         }
     }    

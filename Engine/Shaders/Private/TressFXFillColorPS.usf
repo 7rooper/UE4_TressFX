@@ -442,9 +442,9 @@ void main(
     }
 	#endif
 
-    float4 viewport = float4(View.ViewRectMin.xy, View.ViewSizeAndInvSize.xy);
-    float3 vNDC = ScreenPosToNDC(In.Position.xyz, viewport);
-    float TFXCoverage = ComputeCoverage(In.FactoryInterpolants.p0p1.xy, In.FactoryInterpolants.p0p1.zw, vNDC.xy, viewport.zw);
+    float2 viewport = ResolvedView.ViewSizeAndInvSize.xy;
+    float2 NDC = MaterialParameters.ScreenPosition.xy / MaterialParameters.ScreenPosition.w;
+    float TFXCoverage = ComputeCoverage(In.FactoryInterpolants.p0p1.xy, In.FactoryInterpolants.p0p1.zw, NDC, viewport, In.Position.z);
     half Opacity = GetMaterialOpacity(PixelMaterialInputs);
     float TFXAlpha = TFXCoverage * Opacity;
 	

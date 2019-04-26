@@ -21,7 +21,6 @@
 //
 
 //Unreal Engine 4 integration written by Leon Rosengarten and Jacob Kostenick 2019
-
 #pragma once
 #include "TressFXShortCutCommon.ush"
 #include "VelocityCommon.ush"
@@ -67,7 +66,8 @@ void main(
 	FMaterialPixelParameters MaterialParameters = GetMaterialPixelParameters(input.FactoryInterpolants, input.Position);
 	FPixelMaterialInputs PixelMaterialInputs;
 
-	#if USE_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS
+	//this path will never work because we dont have BasePassInterpolants.PixelPositionExcludingWPO
+	#if USE_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS && 0
 		{
 			float4 ScreenPosition = SvPositionToResolvedScreenPosition(input.Position);
 			float3 TranslatedWorldPosition = SvPositionToResolvedTranslatedWorld(input.Position);
@@ -83,7 +83,7 @@ void main(
 
     float2 viewport = ResolvedView.ViewSizeAndInvSize.xy;
     float2 NDC = MaterialParameters.ScreenPosition.xy / MaterialParameters.ScreenPosition.w;
-    float coverage = ComputeCoverage(p0p1.xy, p0p1.zw, NDC, viewport);
+    float coverage = ComputeCoverage(p0p1.xy, p0p1.zw, NDC, viewport, position.z);
 
 #if NEEDS_VELOCITY
     float2 Velocity = Calculate2DVelocity(MaterialParameters.ScreenPosition, input.FactoryInterpolants.VelocityPrevScreenPosition);

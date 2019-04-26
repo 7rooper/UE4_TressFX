@@ -150,13 +150,16 @@ float ComputeHairShadowAttenuation(float fDepthDistanceWS)
 //    return float3(Kd * diffuse, Ks1 * pow(specular_root, Ex1), Ks2 * pow(specular_tip, Ex2));
 //}
 
+#ifndef MODULATE_COVERAGE_BY_DEPTH
+	#define MODULATE_COVERAGE_BY_DEPTH 0
+#endif
 
 //--------------------------------------------------------------------------------------
 // ComputeCoverage
 //
 // Calculate the pixel coverage of a hair strand by computing the hair width
 //--------------------------------------------------------------------------------------
-float ComputeCoverage(float2 p0, float2 p1, float2 pixelLoc, float2 winSize)
+float ComputeCoverage(float2 p0, float2 p1, float2 pixelLoc, float2 winSize, float sceneDepthZ)
 {
     // p0, p1, pixelLoc are in d3d clip space (-1 to 1)x(-1 to 1)
 
@@ -179,8 +182,17 @@ float ComputeCoverage(float2 p0, float2 p1, float2 pixelLoc, float2 winSize)
     // signed distance (positive if inside hair, negative if outside hair)
     float relDist = sign * saturate(min(p0dist, p1dist));
 
-    // returns coverage based on the relative distance
-    // 0, if completely outside hair edge
-    // 1, if completely inside hair edge
-    return (relDist + 1.f) * 0.5f;
+	#if MODULATE_COVERAGE_BY_DEPTH
+		float modulator = 1 + (1 - sceneDepthZ);
+		float coverage = (relDist + 1.f) * 0.5f;
+		return saturate(coverage * modulator);
+	#else
+	    // returns coverage based on the relative distance
+		// 0, if completely outside hair edge
+		// 1, if completely inside hair edge
+
+		return (relDist + 1.f) * 0.5f;
+	#endif
+
+
 }
