@@ -587,6 +587,9 @@ public:
 	TRefCountPtr<IPooledRenderTarget> TressFXAccumInvAlpha;
 	TRefCountPtr<IPooledRenderTarget> TressFXFragmentDepthsTexture;
 	TRefCountPtr<IPooledRenderTarget> TressFXFragmentColorsTexture;
+
+	/* Adaptive Transparency Specific  */
+	TRefCountPtr<IPooledRenderTarget> TressFXAOITClearMask;
 	
 	/** k-buffer specific */
 	template <typename TRHICmdList>
@@ -598,8 +601,11 @@ public:
 		int32& OutTTressFXKBufferNodePoolSize
 	);
 private:
+
 	template <typename TRHICmdList>
 	void InitializeTressFXKBufferResources(TRHICmdList& RHICmdList, bool bForceReinit = false);
+
+	void InitializeTressFXAdapativeResources(FRHICommandList& RHICmcList, bool bForceReinit = false);
 
 	TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
 	FRWBufferStructured TressFXKBufferNodes;

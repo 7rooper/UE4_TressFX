@@ -1309,6 +1309,35 @@ void FSceneRenderTargets::AdjustGBufferRefCount(FRHICommandList& RHICmdList, int
 
 /*@BEGIN Third party code TressFX*/
 
+//struct AOITSPDepthData
+//{
+//	float4 depth[AOIT_RT_COUNT];
+//};
+//
+//struct AOITSPColorData
+//{
+//	uint4 color[AOIT_RT_COUNT];
+//};
+
+//#ifndef AOIT_NODE_COUNT 
+//#define AOIT_NODE_COUNT			(4)
+//#endif
+//
+//#if AOIT_NODE_COUNT == 2
+//#define AOIT_RT_COUNT			(1)
+//#else
+//#define AOIT_RT_COUNT			(AOIT_NODE_COUNT / 4)
+//#endif
+
+
+extern int32 GTressFXAOITNodeCount; // get node count from here, use to determine AOIT_RT_COUNT from above logic
+// use AOIT_RT_COUNT to determine buffer sizes
+
+void FSceneRenderTargets::InitializeTressFXAdapativeResources(FRHICommandList& RHICmcList, bool bForceReinit /*= false*/)
+{
+
+}
+
 extern int32 GTressFXRenderType;
 extern int32 GTressFXKBufferSize;
 template <typename TRHICmdList>
@@ -1415,7 +1444,12 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 	{
 		//all passes need velocity
 		{
-			FPooledRenderTargetDesc VelocityDesc(FPooledRenderTargetDesc::Create2DDesc(BufferSize, PF_G16R16, FClearValueBinding::Transparent, TexCreate_None, TexCreate_RenderTargetable, false));
+			FPooledRenderTargetDesc VelocityDesc(FPooledRenderTargetDesc::Create2DDesc(
+				BufferSize, 
+				PF_G16R16, 
+				FClearValueBinding::Transparent, 
+				TexCreate_None, 
+				TexCreate_RenderTargetable, false));
 			VelocityDesc.NumSamples = SampleCount;
 			GRenderTargetPool.FindFreeElement(RHICmdList, VelocityDesc, TressFXVelocity, TEXT("TressFXVelocity"));
 		}
@@ -1425,7 +1459,13 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 		// everything but opaque needs its own depth buffer
 		if (TFXRenderType > ETressFXRenderType::Opaque) 
 		{
-			FPooledRenderTargetDesc TressFXSceneDepthDesc(FPooledRenderTargetDesc::Create2DDesc(BufferSize, PF_DepthStencil, FClearValueBinding::DepthFar, TexCreate_None, TexCreate_ShaderResource | TexCreate_DepthStencilTargetable, false));
+			FPooledRenderTargetDesc TressFXSceneDepthDesc(
+				FPooledRenderTargetDesc::Create2DDesc(
+					BufferSize, 
+					PF_DepthStencil, 
+					FClearValueBinding::DepthFar, 
+					TexCreate_None, 
+					TexCreate_ShaderResource | TexCreate_DepthStencilTargetable, false));
 			TressFXSceneDepthDesc.NumSamples = SampleCount;
 			GRenderTargetPool.FindFreeElement(RHICmdList, TressFXSceneDepthDesc, TressFXSceneDepth, TEXT("TressFXSceneDepth"));
 		}
@@ -1435,26 +1475,46 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 			TressFXSceneDepth.SafeRelease();
 		}
 
+
 		if (TFXRenderType == ETressFXRenderType::ShortCut)
 		{
 			//make sure k-buffer resources are not allocated, they use a lot of memory
 			ReleaseTressFXResources(ETressFXRenderType::KBuffer);
+			ReleaseTressFXResources(ETressFXRenderType::AdaptiveTransparency);
 
 			{
-				FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(BufferSize, PF_R16F, FClearValueBinding(FLinearColor(1, 1, 1, 1)), TexCreate_None, TexCreate_ShaderResource | TexCreate_RenderTargetable, false));
+				FPooledRenderTargetDesc Desc(
+					FPooledRenderTargetDesc::Create2DDesc(
+						BufferSize, 
+						PF_R16F, 
+						FClearValueBinding(FLinearColor(1, 1, 1, 1)), 
+						TexCreate_None, 
+						TexCreate_ShaderResource | TexCreate_RenderTargetable, false));
 				Desc.NumSamples = SampleCount;
 				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXAccumInvAlpha, TEXT("TressFX_AccumInvAlpha"), false);
 			}
 
 			{
-				FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(BufferSize, PF_R32_UINT, FClearValueBinding::Transparent, TexCreate_None, TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false));
+				FPooledRenderTargetDesc Desc(
+					FPooledRenderTargetDesc::Create2DDesc(
+						BufferSize, 
+						PF_R32_UINT, 
+						FClearValueBinding::Transparent, 
+						TexCreate_None, 
+						TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false));
 				Desc.bIsArray = true;
 				Desc.ArraySize = 3;
 				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXFragmentDepthsTexture, TEXT("TressFX_FragmentDepthsTexture"));
 			}
 
 			{
-				FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(BufferSize, PF_FloatRGBA, FClearValueBinding::Transparent, TexCreate_None, TexCreate_ShaderResource | TexCreate_RenderTargetable, false));
+				FPooledRenderTargetDesc Desc(
+					FPooledRenderTargetDesc::Create2DDesc(
+						BufferSize, 
+						PF_FloatRGBA, 
+						FClearValueBinding::Transparent, 
+						TexCreate_None, 
+						TexCreate_ShaderResource | TexCreate_RenderTargetable, false));
 				Desc.NumSamples = SampleCount;
 				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXFragmentColorsTexture, TEXT("TressFX_FragmentColorsTexture"), false);
 			}
@@ -1463,12 +1523,34 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 		{
 			//release shortcut textures
 			ReleaseTressFXResources(ETressFXRenderType::ShortCut);
+			ReleaseTressFXResources(ETressFXRenderType::AdaptiveTransparency);
 			InitializeTressFXKBufferResources(RHICmdList);
 		}
 		else if (TFXRenderType == ETressFXRenderType::Opaque) 
 		{
 			ReleaseTressFXResources(ETressFXRenderType::KBuffer);
 			ReleaseTressFXResources(ETressFXRenderType::ShortCut);
+			ReleaseTressFXResources(ETressFXRenderType::AdaptiveTransparency);
+		}
+		else if (TFXRenderType == ETressFXRenderType::AdaptiveTransparency)
+		{
+			ReleaseTressFXResources(ETressFXRenderType::KBuffer);
+			ReleaseTressFXResources(ETressFXRenderType::ShortCut);
+			{
+				FPooledRenderTargetDesc ClearMaskDesc(
+					FPooledRenderTargetDesc::Create2DDesc(
+						BufferSize, 
+						PF_R32_UINT, 
+						FClearValueBinding(FLinearColor(1, 0, 0, 1)), 
+						TexCreate_None, TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false)
+				);
+				ClearMaskDesc.NumSamples = SampleCount;
+				GRenderTargetPool.FindFreeElement(RHICmdList, ClearMaskDesc, TressFXAOITClearMask, TEXT("TressFXAOITClearMask"));
+			}
+		}
+		else 
+		{
+			check(0);
 		}
 	}
 	else 

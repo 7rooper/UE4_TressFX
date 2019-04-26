@@ -1,0 +1,50 @@
+/////////////////////////////////////////////////////////////////////////////////////////////
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+#include "TressFXAdaptiveTransparency.ush"
+
+void AOITSPResolvePS(FScreenVertexOutput Input, out float4 OutColor : SV_Target0)
+{
+    float4 FinalColor = float4(0, 0, 0, 1);
+    uint2 pixelAddr = uint2(Input.Position.xy);
+
+	// Load control surface
+    AOITCtrlSurface ctrlSurface;
+    AOITLoadControlSurfaceSRV(pixelAddr, ctrlSurface);
+
+	// Any transparent fragment contributing to this pixel?
+    if (!ctrlSurface.clear)
+    {
+		// Load all nodes for this pixel    
+        ATSPNode nodeArray[AOIT_NODE_COUNT];
+        AOITSPLoadDataSRV(pixelAddr, nodeArray);
+
+		// Accumulate final transparent colors
+        float trans = 1;
+        float3 color = 0;
+		UNROLL
+        for (uint i = 0; i < AOIT_NODE_COUNT; i++)
+        {
+            color += trans * UnpackRGB(nodeArray[i].color);
+            trans = nodeArray[i].trans / 255;
+        }
+        FinalColor = float4(color, nodeArray[AOIT_NODE_COUNT - 1].trans / 255);
+    }
+
+    // blend accumualted transparent color with opaque background color
+    OutColor = FinalColor;
+}
+
