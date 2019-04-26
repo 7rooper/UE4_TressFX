@@ -26,7 +26,7 @@ UTressFXComponent::UTressFXComponent(const class FObjectInitializer& ObjectIniti
 
 FPrimitiveSceneProxy* UTressFXComponent::CreateSceneProxy()
 {
-	return new FTressFXSceneProxy(this);
+	return new FTressFXSceneProxy(this, Asset ? FName(*Asset->GetName()) : FName(*this->GetName()) );
 }
 
 bool UTressFXComponent::ShouldCreateRenderState() const
