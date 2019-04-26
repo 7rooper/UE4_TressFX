@@ -1319,24 +1319,52 @@ void FSceneRenderTargets::AdjustGBufferRefCount(FRHICommandList& RHICmdList, int
 //	uint4 color[AOIT_RT_COUNT];
 //};
 
-//#ifndef AOIT_NODE_COUNT 
-//#define AOIT_NODE_COUNT			(4)
-//#endif
-//
-//#if AOIT_NODE_COUNT == 2
-//#define AOIT_RT_COUNT			(1)
-//#else
-//#define AOIT_RT_COUNT			(AOIT_NODE_COUNT / 4)
-//#endif
 
+extern int32 GTressFXAOITNodeCount;
 
-extern int32 GTressFXAOITNodeCount; // get node count from here, use to determine AOIT_RT_COUNT from above logic
-// use AOIT_RT_COUNT to determine buffer sizes
-
-void FSceneRenderTargets::InitializeTressFXAdapativeResources(FRHICommandList& RHICmcList, bool bForceReinit /*= false*/)
+template <typename TRHICmdList>
+void FSceneRenderTargets::InitializeTressFXAdaptiveResources(TRHICmdList& RHICmdList, bool bForceReinit /*= false*/)
 {
+	const FIntPoint BuffSize = GetBufferSizeXY();
+	const int32 NodeCountVal = FMath::Clamp(static_cast<int32>(GTressFXAOITNodeCount), (int32)ETressFXPAOITNodeCount::Min, (int32)ETressFXPAOITNodeCount::Max);
+	const int32 AOITNodeCount = FMath::Pow(2, NodeCountVal);
+	int32 AOITRTCount;
+	if (AOITNodeCount == 2) 
+	{
+		AOITRTCount = 1;
+	}
+	else 
+	{
+		AOITRTCount = AOITNodeCount / 4;
+	}
+
+	if (bForceReinit || !TressFXAOITClearMask || !TressFXAOITClearMask.IsValid() || TressFXAOITClearMask->GetDesc().Extent != BuffSize)
+	{
+		FPooledRenderTargetDesc ClearMaskDesc(
+			FPooledRenderTargetDesc::Create2DDesc(
+				BuffSize,
+				PF_R32_UINT,
+				FClearValueBinding(FLinearColor(1, 0, 0, 1)),
+				TexCreate_None, TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false)
+		);
+		ClearMaskDesc.NumSamples = 1;
+		GRenderTargetPool.FindFreeElement(RHICmdList, ClearMaskDesc, TressFXAOITClearMask, TEXT("TressFXAOITClearMask"));
+	}
+
+
+	//TODO
 
 }
+
+#define IMPLEMENT_InitializeTressFXAdaptiveResources( TRHICmdList )							\
+	template void FSceneRenderTargets::InitializeTressFXAdaptiveResources< TRHICmdList >(	\
+		TRHICmdList& RHICmdList,															\
+		bool bForceReinit																	\
+	);
+
+IMPLEMENT_InitializeTressFXAdaptiveResources(FRHICommandList)
+IMPLEMENT_InitializeTressFXAdaptiveResources(FRHICommandListImmediate)
+
 
 extern int32 GTressFXRenderType;
 extern int32 GTressFXKBufferSize;
@@ -1348,7 +1376,15 @@ void FSceneRenderTargets::InitializeTressFXKBufferResources(TRHICmdList& RHICmdL
 
 	if (bForceReinit || !TressFXKBufferListHeads || !TressFXKBufferListHeads.IsValid() || TressFXKBufferListHeads->GetDesc().Extent != BuffSize)
 	{
-		FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(BufferSize, PF_R32_UINT, FClearValueBinding::Transparent, TexCreate_None, TexCreate_RenderTargetable | TexCreate_UAV, false));
+		FPooledRenderTargetDesc Desc(
+			FPooledRenderTargetDesc::Create2DDesc(
+				BuffSize,
+				PF_R32_UINT, 
+				FClearValueBinding::Transparent, 
+				TexCreate_None, 
+				TexCreate_RenderTargetable | TexCreate_UAV, 
+				false)
+		);
 		Desc.NumSamples = 1;
 		GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXKBufferListHeads, TEXT("PPLLHeads"));
 	}
@@ -1536,17 +1572,7 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 		{
 			ReleaseTressFXResources(ETressFXRenderType::KBuffer);
 			ReleaseTressFXResources(ETressFXRenderType::ShortCut);
-			{
-				FPooledRenderTargetDesc ClearMaskDesc(
-					FPooledRenderTargetDesc::Create2DDesc(
-						BufferSize, 
-						PF_R32_UINT, 
-						FClearValueBinding(FLinearColor(1, 0, 0, 1)), 
-						TexCreate_None, TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false)
-				);
-				ClearMaskDesc.NumSamples = SampleCount;
-				GRenderTargetPool.FindFreeElement(RHICmdList, ClearMaskDesc, TressFXAOITClearMask, TEXT("TressFXAOITClearMask"));
-			}
+			InitializeTressFXAdaptiveResources(RHICmdList);
 		}
 		else 
 		{

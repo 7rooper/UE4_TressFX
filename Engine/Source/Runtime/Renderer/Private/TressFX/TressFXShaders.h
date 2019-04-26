@@ -23,6 +23,19 @@ struct ETressFXPass
 	};
 };
 
+struct ETressFXPAOITNodeCount
+{
+	enum Type {
+		Nodes_2 = 1,
+		Nodes_4 = 2,
+		Nodes_8 = 3,
+		////
+		Num,
+		Min = Nodes_2,
+		Max = Nodes_8
+	};
+};
+
 class FTressFXShaderElementData;
 
 /////////////////////////////////////////////////////////////////////////////////

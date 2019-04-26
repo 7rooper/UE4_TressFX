@@ -605,7 +605,8 @@ private:
 	template <typename TRHICmdList>
 	void InitializeTressFXKBufferResources(TRHICmdList& RHICmdList, bool bForceReinit = false);
 
-	void InitializeTressFXAdapativeResources(FRHICommandList& RHICmcList, bool bForceReinit = false);
+	template <typename TRHICmdList>
+	void InitializeTressFXAdaptiveResources(TRHICmdList& RHICmdList, bool bForceReinit = false);
 
 	TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
 	FRWBufferStructured TressFXKBufferNodes;
