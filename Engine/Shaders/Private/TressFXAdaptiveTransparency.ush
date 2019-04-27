@@ -153,19 +153,18 @@ struct ATSPNode
 	#define USE_ROVS 0
 #endif
 
-// Since there's no reflection on the cpp side for these, set registers explicitly - don't change them, this is the expected order
 #if USE_ROVS
 RasterizerOrderedTexture2D<uint> gAOITSPClearMaskUAV        : register( u1 );
 #else
 RWTexture2D<uint> gAOITSPClearMaskUAV : register(u1);
 #endif
 
-RWStructuredBuffer<AOITSPDepthData>_AOITSPDepthDataUAV : register(u2);
-RWStructuredBuffer<AOITSPColorData>_AOITSPColorDataUAV : register(u3);
+RWStructuredBuffer<AOITSPDepthData> _AOITSPDepthDataUAV : register(u2);
+RWStructuredBuffer<AOITSPColorData> _AOITSPColorDataUAV : register(u3);
 
 Texture2D<uint> gAOITSPClearMaskSRV;
-StructuredBuffer<AOITSPColorData>_AOITSPColorDataSRV;
-StructuredBuffer<AOITSPDepthData>_AOITSPDepthDataSRV;
+StructuredBuffer<AOITSPColorData> _AOITSPColorDataSRV;
+StructuredBuffer<AOITSPDepthData> _AOITSPDepthDataSRV;
 
 
 //////////////////////////////////////////////

@@ -592,9 +592,17 @@ public:
 	void GetTressFXKBufferResources(
 		TRHICmdList& RHICmdList,
 		TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,
-		FRWBufferStructured*& OutTTressFXKBufferNodes,
-		FRWBuffer*& OutTTressFXKBufferCounter,
-		int32& OutTTressFXKBufferNodePoolSize
+		FRWBufferStructured*& OutTressFXKBufferNodes,
+		FRWBuffer*& OutTressFXKBufferCounter,
+		int32& OutTressFXKBufferNodePoolSize
+	);
+
+	template <typename TRHICmdList>
+	void GetTressFXAOITResources(
+		TRHICmdList& RHICmdList,
+		TRefCountPtr<IPooledRenderTarget>& OutTressFXAOITClearMask,
+		FRWBufferStructured*& OutTressFXAOITDepthBuffer,
+		FRWBufferStructured*& OutTressFXAOITColorBuffer
 	);
 private:
 

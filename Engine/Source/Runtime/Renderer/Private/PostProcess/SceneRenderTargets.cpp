@@ -1309,17 +1309,6 @@ void FSceneRenderTargets::AdjustGBufferRefCount(FRHICommandList& RHICmdList, int
 
 /*@BEGIN Third party code TressFX*/
 
-//struct AOITSPDepthData
-//{
-//	float4 depth[AOIT_RT_COUNT];
-//};
-//
-//struct AOITSPColorData
-//{
-//	uint4 color[AOIT_RT_COUNT];
-//};
-
-
 extern int32 GTressFXAOITNodeCount;
 
 template <typename TRHICmdList>
@@ -1328,15 +1317,8 @@ void FSceneRenderTargets::InitializeTressFXAdaptiveResources(TRHICmdList& RHICmd
 	const FIntPoint BuffSize = GetBufferSizeXY();
 	const int32 NodeCountVal = FMath::Clamp(static_cast<int32>(GTressFXAOITNodeCount), (int32)ETressFXPAOITNodeCount::Min, (int32)ETressFXPAOITNodeCount::Max);
 	const int32 AOITNodeCount = FMath::Pow(2, NodeCountVal);
-	int32 AOITRTCount;
-	if (AOITNodeCount == 2) 
-	{
-		AOITRTCount = 1;
-	}
-	else 
-	{
-		AOITRTCount = AOITNodeCount / 4;
-	}
+	
+	const int32 AOITRTCount = AOITNodeCount == 2 ? 1 : (AOITNodeCount / 4);
 
 	if (bForceReinit || !TressFXAOITClearMask || !TressFXAOITClearMask.IsValid() || TressFXAOITClearMask->GetDesc().Extent != BuffSize)
 	{
@@ -1351,9 +1333,24 @@ void FSceneRenderTargets::InitializeTressFXAdaptiveResources(TRHICmdList& RHICmd
 		GRenderTargetPool.FindFreeElement(RHICmdList, ClearMaskDesc, TressFXAOITClearMask, TEXT("TressFXAOITClearMask"));
 	}
 
+	check(AOITRTCount == 2 || AOITRTCount == 4 || AOITRTCount == 8)
 
-	//TODO
+	const uint32 StructSize = sizeof(uint32) * AOITRTCount;
+	const uint32 NumElements = BuffSize.X * BuffSize.Y;
+	const uint32 RequiredBufferBytes = StructSize * NumElements;
+	
 
+	if (bForceReinit || TressFXAOITDepthBuffer.NumBytes != RequiredBufferBytes)
+	{
+		TressFXAOITDepthBuffer.Release();
+		TressFXAOITDepthBuffer.Initialize(StructSize, NumElements, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("TressFXAOITDepthBuffer"));
+	}
+
+	if (bForceReinit || TressFXAOITColorBuffer.NumBytes != RequiredBufferBytes)
+	{
+		TressFXAOITColorBuffer.Release();
+		TressFXAOITColorBuffer.Initialize(StructSize, NumElements, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("TressFXAOITColorBuffer"));
+	}
 }
 
 #define IMPLEMENT_InitializeTressFXAdaptiveResources( TRHICmdList )							\
@@ -1365,6 +1362,30 @@ void FSceneRenderTargets::InitializeTressFXAdaptiveResources(TRHICmdList& RHICmd
 IMPLEMENT_InitializeTressFXAdaptiveResources(FRHICommandList)
 IMPLEMENT_InitializeTressFXAdaptiveResources(FRHICommandListImmediate)
 
+template <typename TRHICmdList>
+void GetTressFXAOITResources(
+	TRHICmdList& RHICmdList,
+	TRefCountPtr<IPooledRenderTarget>& OutTressFXAOITClearMask,
+	FRWBufferStructured*& OutTressFXAOITDepthBuffer,
+	FRWBufferStructured*& OutTressFXAOITColorBuffer
+)
+{
+	InitializeTressFXAdaptiveResources(RHICmdList, false);
+	OutTressFXAOITClearMask = TressFXAOITClearMask;
+	OutTressFXAOITDepthBuffer = &TressFXAOITDepthBuffer;
+	OutTressFXAOITColorBuffer = &TressFXAOITColorBuffer;
+}
+
+#define IMPLEMENT_GetTressFXAOITResources( TRHICmdList )								\
+	template void FSceneRenderTargets::GetTressFXAOITResources< TRHICmdList >(			\
+		TRHICmdList& RHICmdList,														\
+		TRefCountPtr<IPooledRenderTarget>& OutTressFXAOITClearMask,						\
+		FRWBufferStructured*& OutTressFXAOITDepthBuffer,								\
+		FRWBufferStructured*& OutTressFXAOITColorBuffer									\
+	);
+
+IMPLEMENT_GetTressFXAOITResources(FRHICommandList);
+IMPLEMENT_GetTressFXAOITResources(FRHICommandListImmediate);
 
 extern int32 GTressFXRenderType;
 extern int32 GTressFXKBufferSize;
@@ -1421,25 +1442,25 @@ template <typename TRHICmdList>
 void FSceneRenderTargets::GetTressFXKBufferResources(
 	TRHICmdList& RHICmdList,
 	TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,
-	FRWBufferStructured*& OutTTressFXKBufferNodes,
-	FRWBuffer*& OutTTressFXKBufferCounter,
-	int32& OutTTressFXKBufferNodePoolSize
+	FRWBufferStructured*& OutTressFXKBufferNodes,
+	FRWBuffer*& OutTressFXKBufferCounter,
+	int32& OutTressFXKBufferNodePoolSize
 )
 {
 	InitializeTressFXKBufferResources(RHICmdList, false);
 	OutTressFXKBufferListHeads = TressFXKBufferListHeads;
-	OutTTressFXKBufferNodes = &TressFXKBufferNodes;
-	OutTTressFXKBufferCounter = &TressFXKBufferCounter;
-	OutTTressFXKBufferNodePoolSize = TressFXKBufferNodePoolSize;
+	OutTressFXKBufferNodes = &TressFXKBufferNodes;
+	OutTressFXKBufferCounter = &TressFXKBufferCounter;
+	OutTressFXKBufferNodePoolSize = TressFXKBufferNodePoolSize;
 }
 
 #define IMPLEMENT_GetTressFXKBufferResources( TRHICmdList )									\
 	template void FSceneRenderTargets::GetTressFXKBufferResources< TRHICmdList >(			\
 		TRHICmdList& RHICmdList,															\
 		TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,						\
-		FRWBufferStructured*& OutTTressFXKBufferNodes,										\
-		FRWBuffer*& OutTTressFXKBufferCounter,												\
-		int32& OutTTressFXKBufferNodePoolSize												\
+		FRWBufferStructured*& OutTressFXKBufferNodes,										\
+		FRWBuffer*& OutTressFXKBufferCounter,												\
+		int32& OutTressFXKBufferNodePoolSize												\
 	);
 
 IMPLEMENT_GetTressFXKBufferResources(FRHICommandList);

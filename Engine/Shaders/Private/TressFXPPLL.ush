@@ -73,7 +73,7 @@ uint PackFloat4IntoUint(float4 vValue)
 Texture2D<uint> FragmentListHead;
 StructuredBuffer<FPPLL_Struct> LinkedListSRV;
 #else	
-RWTexture2D<int> RWFragmentListHead : register(FRAGMENT_LIST_REGISTER);
+RWTexture2D<uint> RWFragmentListHead : register(FRAGMENT_LIST_REGISTER);
 RWStructuredBuffer<FPPLL_Struct> RWLinkedListUAV : register(LINKED_LIST_REGISTER);
 //using this instead of the uav counter so i dont have to modify UE4's RHI any more
 RWBuffer<uint> RWCounterBuffer : register(COUNTER_BUFFER_REGISTER);
