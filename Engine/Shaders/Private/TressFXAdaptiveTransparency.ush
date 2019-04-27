@@ -154,13 +154,13 @@ struct ATSPNode
 #endif
 
 #if USE_ROVS
-RasterizerOrderedTexture2D<uint> gAOITSPClearMaskUAV        : register( u1 );
+RasterizerOrderedTexture2D<uint> gAOITSPClearMaskUAV        : register( u0 );
 #else
-RWTexture2D<uint> gAOITSPClearMaskUAV : register(u1);
+RWTexture2D<uint> gAOITSPClearMaskUAV : register(u0);
 #endif
 
-RWStructuredBuffer<AOITSPDepthData> _AOITSPDepthDataUAV : register(u2);
-RWStructuredBuffer<AOITSPColorData> _AOITSPColorDataUAV : register(u3);
+RWStructuredBuffer<AOITSPDepthData> _AOITSPDepthDataUAV : register(u1);
+RWStructuredBuffer<AOITSPColorData> _AOITSPColorDataUAV : register(u2);
 
 Texture2D<uint> gAOITSPClearMaskSRV;
 StructuredBuffer<AOITSPColorData> _AOITSPColorDataSRV;

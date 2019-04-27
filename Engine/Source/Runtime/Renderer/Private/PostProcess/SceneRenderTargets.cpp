@@ -1363,7 +1363,7 @@ IMPLEMENT_InitializeTressFXAdaptiveResources(FRHICommandList)
 IMPLEMENT_InitializeTressFXAdaptiveResources(FRHICommandListImmediate)
 
 template <typename TRHICmdList>
-void GetTressFXAOITResources(
+void FSceneRenderTargets::GetTressFXAOITResources(
 	TRHICmdList& RHICmdList,
 	TRefCountPtr<IPooledRenderTarget>& OutTressFXAOITClearMask,
 	FRWBufferStructured*& OutTressFXAOITDepthBuffer,
@@ -1384,8 +1384,8 @@ void GetTressFXAOITResources(
 		FRWBufferStructured*& OutTressFXAOITColorBuffer									\
 	);
 
-IMPLEMENT_GetTressFXAOITResources(FRHICommandList);
-IMPLEMENT_GetTressFXAOITResources(FRHICommandListImmediate);
+IMPLEMENT_GetTressFXAOITResources(FRHICommandList)
+IMPLEMENT_GetTressFXAOITResources(FRHICommandListImmediate)
 
 extern int32 GTressFXRenderType;
 extern int32 GTressFXKBufferSize;
@@ -1537,7 +1537,7 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 		{
 			//make sure k-buffer resources are not allocated, they use a lot of memory
 			ReleaseTressFXResources(ETressFXRenderType::KBuffer);
-			ReleaseTressFXResources(ETressFXRenderType::AdaptiveTransparency);
+			ReleaseTressFXResources(ETressFXRenderType::AOIT);
 
 			{
 				FPooledRenderTargetDesc Desc(
@@ -1580,16 +1580,16 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 		{
 			//release shortcut textures
 			ReleaseTressFXResources(ETressFXRenderType::ShortCut);
-			ReleaseTressFXResources(ETressFXRenderType::AdaptiveTransparency);
+			ReleaseTressFXResources(ETressFXRenderType::AOIT);
 			InitializeTressFXKBufferResources(RHICmdList);
 		}
 		else if (TFXRenderType == ETressFXRenderType::Opaque) 
 		{
 			ReleaseTressFXResources(ETressFXRenderType::KBuffer);
 			ReleaseTressFXResources(ETressFXRenderType::ShortCut);
-			ReleaseTressFXResources(ETressFXRenderType::AdaptiveTransparency);
+			ReleaseTressFXResources(ETressFXRenderType::AOIT);
 		}
-		else if (TFXRenderType == ETressFXRenderType::AdaptiveTransparency)
+		else if (TFXRenderType == ETressFXRenderType::AOIT)
 		{
 			ReleaseTressFXResources(ETressFXRenderType::KBuffer);
 			ReleaseTressFXResources(ETressFXRenderType::ShortCut);

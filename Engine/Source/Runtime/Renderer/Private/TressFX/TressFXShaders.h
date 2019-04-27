@@ -15,7 +15,11 @@ struct ETressFXPass
 		DepthsVelocity,
 		ResolveVelocity,
 		FillColor_Shortcut,
+		Resolve_Shortcut,
 		FillColor_KBuffer,
+		Resolve_KBuffer,
+		FillColor_AOIT,
+		Resolve_AOIT,
 
 		////
 		Num,
@@ -216,6 +220,7 @@ public:
 	{
 		OutEnvironment.SetDefine(TEXT("NEEDS_VELOCITY"), bCalcVelocity ? 1 : 0 );
 		OutEnvironment.SetDefine(TEXT("TFX_PPLL"), TFXRenderType == ETressFXRenderType::KBuffer ? 1 : 0);
+		OutEnvironment.SetDefine(TEXT("TFX_AOIT"), TFXRenderType == ETressFXRenderType::AOIT ? 1 : 0);
 		FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
 	}
 

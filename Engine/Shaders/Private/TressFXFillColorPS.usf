@@ -7,6 +7,10 @@
 	#define TFX_PPLL 0
 #endif
 
+#ifndef TFX_AOIT
+	#define TFX_AOIT 0
+#endif
+
 #define OpaqueBasePass TressFXColorFillPass
 
 #include "Common.ush"
@@ -399,6 +403,8 @@ float3 AOMultiBounce(float3 BaseColor, float AO)
 
 #if TFX_PPLL
 	#include "TressFXPPLL.ush"
+#elif TFX_AOIT
+	#include "TressFXAdaptiveTransparency.ush"
 #endif
 EARLYDEPTHSTENCIL
 void main(
@@ -556,6 +562,8 @@ void main(
 		BuildPPLL(float4(Color, TFXAlpha), int2(In.Position.xy), GBuffer.Depth);
 	#elif TFX_SHORTCUT		
 		OutColor = float4(Color * TFXAlpha, TFXAlpha);
+	#elif TFX_AOIT
+	`	//todo
 	#endif
 	return;
 }

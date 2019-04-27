@@ -109,7 +109,7 @@ struct ETressFXRenderType
 		Opaque,
 		ShortCut,
 		KBuffer,
-		AdaptiveTransparency,
+		AOIT,
 		///////
 		Num,
 		Max = (Num - 1)

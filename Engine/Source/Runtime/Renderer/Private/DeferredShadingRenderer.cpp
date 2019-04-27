@@ -1965,7 +1965,7 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	checkSlow(RHICmdList.IsOutsideRenderPass());
 
 	//@BEGIN third party code TressFX
-	if (bSceneHasTressFX && TFXRenderType == ETressFXRenderType::KBuffer)
+	if (bSceneHasTressFX && (TFXRenderType == ETressFXRenderType::KBuffer || TFXRenderType == ETressFXRenderType::AOIT))
 	{
 		RenderTressfXResolvePass(RHICmdList, ScreenShadowMaskTexture, TFXRenderType);
 	}

@@ -148,6 +148,18 @@ private:
 		ERasterizerCullMode MeshCullMode
 	);
 
+	template<int32 NodeCount>
+	void ProcessAOIT(
+		const FMeshBatch& RESTRICT MeshBatch,
+		uint64 BatchElementMask,
+		int32 StaticMeshId,
+		const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy,
+		const FMaterialRenderProxy& RESTRICT MaterialRenderProxy,
+		const FMaterial& RESTRICT MaterialResource,
+		ERasterizerFillMode MeshFillMode,
+		ERasterizerCullMode MeshCullMode
+	);
+
 	void ProcessShortcut(
 		const FMeshBatch& RESTRICT MeshBatch,
 		uint64 BatchElementMask,
