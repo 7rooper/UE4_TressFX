@@ -37,10 +37,10 @@ extern int32 GTressFXKBufferSize;
 extern int32 GBTressFXUseCompute;
 extern int32 GTressFXAOITNodeCount;
 /////////////////////////////////////////////////////////////////////////////////
-//  FTressFXFillColorPS - Pixel shader for Third pass of shortcut, and PPLL build of kbuffer
+//  FTressFXFillColorPS - Pixel shader for Third pass of shortcut, and PPLL build of kbuffer, and AOIT fragment captures
 ////////////////////////////////////////////////////////////////////////////////
 
-template <ETressFXPass::Type ColorPassType, int32 KBufferSizeOrAOITNodeCount>
+template <ETressFXPass::Type ColorPassType, int32 KBufferSizeOrAOITNodeCount, bool bUseROVS = false>
 class FTressFXFillColorPS : public FMeshMaterialShader
 {
 	DECLARE_SHADER_TYPE(FTressFXFillColorPS, MeshMaterial)
@@ -71,7 +71,6 @@ public:
 				RWAOITDepthBuffer.Bind(Initializer.ParameterMap, TEXT("gAOITSPDepthDataUAV"));
 				RWAOITColorBuffer.Bind(Initializer.ParameterMap, TEXT("gAOITSPColorDataUAV"));
 			}
-
 		}
 	}
 
@@ -83,7 +82,7 @@ public:
 		FForwardLightingParameters::ModifyCompilationEnvironment(Platform, OutEnvironment);
 		OutEnvironment.SetDefine(TEXT("TFX_SHORTCUT"), ColorPassType == ETressFXPass::FillColor_Shortcut ? TEXT("1") : TEXT("0"));
 		OutEnvironment.SetDefine(TEXT("TFX_PPLL"), ColorPassType == ETressFXPass::FillColor_KBuffer ? TEXT("1") : TEXT("0"));
-		
+		OutEnvironment.SetDefine(TEXT("TFX_AOIT"), ColorPassType == ETressFXPass::FillColor_AOIT ? TEXT("1") : TEXT("0"));
 		FShaderUniformBufferParameter::ModifyCompilationEnvironment(
 			FTressFXColorPassUniformParameters::StaticStructMetadata.GetShaderVariableName(),
 			FTressFXColorPassUniformParameters::StaticStructMetadata,
@@ -98,6 +97,7 @@ public:
 		else if (ColorPassType == ETressFXPass::FillColor_AOIT)
 		{
 			OutEnvironment.SetDefine(TEXT("AOIT_NODE_COUNT"), KBufferSizeOrAOITNodeCount);
+			OutEnvironment.SetDefine(TEXT("USE_ROVS"), bUseROVS ? 1 : 0);
 		}
 	}
 
@@ -106,6 +106,10 @@ public:
 	{
 		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
 		{
+			if (bUseROVS) 
+			{
+				return IsSM6(Material->GetFeatureLevel()) && IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5);
+			}
 			return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5);
 		}
 
@@ -176,8 +180,10 @@ typedef FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut, 0> FTressFXFillCol
 IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_Shortcut, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
 
 #define IMPLEMENT_TRESSFX_AOIT_CAPTURE_PASS(AOITNodeCount)															\
-	typedef FTressFXFillColorPS<ETressFXPass::FillColor_AOIT, AOITNodeCount> FTressFXFillColorPS_AOIT_##AOITNodeCount;  \
-	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_AOIT_##AOITNodeCount, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
+	typedef FTressFXFillColorPS<ETressFXPass::FillColor_AOIT, AOITNodeCount, false> FTressFXFillColorPS_AOIT_NoRov_##AOITNodeCount;  \
+	typedef FTressFXFillColorPS<ETressFXPass::FillColor_AOIT, AOITNodeCount, true> FTressFXFillColorPS_AOIT_Rov_##AOITNodeCount;		\
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_AOIT_Rov_##AOITNodeCount, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel); \
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_AOIT_NoRov_##AOITNodeCount, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
 
 IMPLEMENT_TRESSFX_AOIT_CAPTURE_PASS(2)
 IMPLEMENT_TRESSFX_AOIT_CAPTURE_PASS(4)
@@ -251,10 +257,10 @@ void TressFXCopySceneDepth(FRHICommandList& RHICmdList, const FViewInfo& View, F
 	RHICmdList.EndRenderPass();
 }
 
-bool IsSM6(ERHIFeatureLevel::Type CurrentFeatureLevel) 
+static bool IsSM6(ERHIFeatureLevel::Type CurrentFeatureLevel) 
 {
 	//for now just use GRHISupportsWaveOperations to detect sm6 - which will be dx12 only i think
-	// really would like an sm6 in featurelevel.... im sure we will get it eventually?
+	// really would like an sm6 in Erhifeaturelevel.... im sure we will get it eventually?
 	return GRHISupportsWaveOperations && CurrentFeatureLevel >= ERHIFeatureLevel::SM5;
 }
 
@@ -566,7 +572,7 @@ FMeshPassProcessor* CreateTRessFXDepthsAlphaPassProcessor(const FScene* Scene, c
 //FTressFXFillColorPassMeshProcessor
 /////////////////////////////////////////////////////////////////////////
 
-template<int32 NodeCount>
+template<int32 NodeCount, bool bUseROV>
 void FTressFXFillColorPassMeshProcessor::ProcessAOIT(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
@@ -586,24 +592,23 @@ void FTressFXFillColorPassMeshProcessor::ProcessAOIT(
 		EColorWriteMask::CW_NONE
 		>::GetRHI());
 
-	//TODO
 	DrawRenderState.SetDepthStencilState(
 		TStaticDepthStencilState<
-		//true, CF_GreaterEqual,
-		//true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
-		//true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
-		//0xff, 0xff, DWM_Zero
+		true, CF_GreaterEqual,
+		true, CF_Always, SO_Keep, SO_Keep, SO_Replace,
+		true, CF_Always, SO_Keep, SO_Keep, SO_Replace,
+		0xff, 0xff, DWM_Zero
 		>::GetRHI());
 
-	FTressFXShaderElementData ShaderElementData(ETressFXPass::FillColor_KBuffer, ViewIfDynamicMeshCommand);
+	FTressFXShaderElementData ShaderElementData(ETressFXPass::FillColor_AOIT, ViewIfDynamicMeshCommand);
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
 	TMeshProcessorShaders<
 		FTressFXVS<false>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
-		FTressFXFillColorPS<ETressFXPass::FillColor_AOIT, NodeCount>> TFXShaders;
+		FTressFXFillColorPS<ETressFXPass::FillColor_AOIT, NodeCount, bUseROV>> TFXShaders;
 
-	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_AOIT, NodeCount>>(VertexFactory->GetType());
+	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_AOIT, NodeCount, bUseROV>>(VertexFactory->GetType());
 	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<false>>(VertexFactory->GetType());
 
 	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
@@ -767,16 +772,24 @@ switch (KBufferSize)										\
 	default: check(0);										\
 }
 
-#define PROCESS_AOIT(NodeCount, ...) \
-ProcessAOIT<NodeCount>(__VA_ARGS__);
+#define PROCESS_AOIT(NodeCount, bUseRov , ...) \
+if(bUseRov)									   \
+{											   \
+	ProcessAOIT<NodeCount, true>(__VA_ARGS__); \
+}											   \
+else										   \
+{											   \
+	ProcessAOIT<NodeCount, false>(__VA_ARGS__);\
+}
 
-#define PROCESS_AOIT2(NodeCount, ...)					    \
-switch (NodeCount)											\
-{															\
-	case 2:  PROCESS_AOIT(2, __VA_ARGS__) break;			\
-	case 4:  PROCESS_AOIT(4, __VA_ARGS__) break;			\
-	case 8:  PROCESS_AOIT(8, __VA_ARGS__) break;			\
-	default: check(0);										\
+
+#define PROCESS_AOIT2(NodeCount, bUseRov, ...)					    \
+switch (NodeCount)													\
+{																	\
+	case 2:  PROCESS_AOIT(2, bUseRov, __VA_ARGS__) break;			\
+	case 4:  PROCESS_AOIT(4, bUseRov, __VA_ARGS__) break;			\
+	case 8:  PROCESS_AOIT(8, bUseRov, __VA_ARGS__) break;			\
+	default: check(0);												\
 }
 
 template<ETressFXRenderType::Type RenderType>
@@ -830,8 +843,10 @@ void FTressFXFillColorPassMeshProcessor::Process(
 		{
 			const int32 NodeCountVal = FMath::Clamp(static_cast<int32>(GTressFXAOITNodeCount), (int32)ETressFXPAOITNodeCount::Min, (int32)ETressFXPAOITNodeCount::Max);
 			const int32 AOITNodeCount = FMath::Pow(2, NodeCountVal);
+			const bool bUseRov = IsSM6(MaterialResource.GetFeatureLevel());
 			PROCESS_AOIT2(
 				AOITNodeCount,
+				bUseRov,
 				MeshBatch,
 				BatchElementMask,
 				StaticMeshId,
@@ -1274,7 +1289,7 @@ void RenderShortcutResolvePass(
 //////////////////////////////////////////////////////////////////////////
 //AOIT Passes
 /////////////////////////////////////////////////////////////////////////
-
+template<int AOITNodeCount>
 void RenderAOITResolvePasses(
 	FRHICommandListImmediate& RHICmdList,
 	TArray<FViewInfo>& Views, FScene* Scene,
@@ -1293,16 +1308,17 @@ void RenderAOITResolvePasses(
 			continue;
 		}
 
-		SCOPED_DRAW_EVENT(RHICmdList, TressFXKBufferPasses);
+		SCOPED_DRAW_EVENT(RHICmdList, TressFXAOITPasses);
 
 		TRefCountPtr<IPooledRenderTarget> TressFXAOITClearMask;
 		FRWBufferStructured* TressFXAOITDepthBuffer = nullptr;
 		FRWBufferStructured* TressFXAOITColorBuffer = nullptr;
-		SceneContext.GetTressFXAOITResources(RHICmdList, TressFXAOITClearMask, TressFXAOITDepthBuffer, TressFXAOITColorBuffer);
+		int32 DontUseThis;
+		SceneContext.GetTressFXAOITResources(RHICmdList, TressFXAOITClearMask, TressFXAOITDepthBuffer, TressFXAOITColorBuffer, DontUseThis);
 
 		// Fill buffers
 		{
-			SCOPED_DRAW_EVENT(RHICmdList, FillKbuffer);
+			SCOPED_DRAW_EVENT(RHICmdList, AOITCaptureFragments);
 
 			const uint32 MaskClearValue[4] = { 1, 0, 0, 1 };
 			ClearUAV(RHICmdList, TressFXAOITClearMask->GetRenderTargetItem(), MaskClearValue);
@@ -1348,102 +1364,108 @@ void RenderAOITResolvePasses(
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, UAVS, ARRAY_COUNT(UAVS));
 		}
 
-		//if (bUseComputeResolve)
-		//{
-		//	SCOPED_DRAW_EVENT(RHICmdList, ResolveKBufferCS);
-		//	UnbindRenderTargets(RHICmdList);
-		//	const FIntRect Rect = View.ViewRect;
-		//	FIntPoint DestSize(Rect.Width(), Rect.Height());
+		if (bUseComputeResolve)
+		{
+			/*SCOPED_DRAW_EVENT(RHICmdList, ResolveKBufferCS);
+			UnbindRenderTargets(RHICmdList);
+			const FIntRect Rect = View.ViewRect;
+			FIntPoint DestSize(Rect.Width(), Rect.Height());
 
-		//	FRenderingCompositePassContext Context(RHICmdList, View);
-		//	Context.SetViewportAndCallRHI(Rect, 0.0f, 1.0f);
-		//	RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, SceneContext.GetSceneColorTextureUAV());
-		//	TShaderMapRef<FTressFXFKBufferResolveCS> ComputeShader(View.ShaderMap);
-		//	RHICmdList.SetComputeShader(ComputeShader->GetComputeShader());
-
-
-		//	ComputeShader->SetParameters(
-		//		RHICmdList,
-		//		View,
-		//		TressFXKBufferNodes->SRV,
-		//		TressFXKBufferListHeads->GetRenderTargetItem().ShaderResourceTexture,
-		//		SceneContext.GetSceneColorTextureUAV(),
-		//		DestSize
-		//	);
-
-		//	uint32 GroupSizeX = FMath::DivideAndRoundUp(DestSize.X, (int32)FTressFXFKBufferResolveCS::ThreadSizeX);
-		//	uint32 GroupSizeY = FMath::DivideAndRoundUp(DestSize.Y, (int32)FTressFXFKBufferResolveCS::ThreadSizeY);
-		//	DispatchComputeShader(RHICmdList, *ComputeShader, GroupSizeX, GroupSizeY, 1);
-
-		//	ComputeShader->UnsetParameters(RHICmdList);
-		//	RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EComputeToGfx, SceneContext.GetSceneColorTextureUAV());
-		//}
-		//else
-		//{
-		//	SCOPED_DRAW_EVENT(RHICmdList, ResolveKBufferPS);
-
-		//	FRHIRenderPassInfo RPInfo(
-		//		SceneContext.GetSceneColorSurface(), ERenderTargetActions::Load_Store,
-		//		SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
-		//	);
-
-		//	RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXResolveKBuffer"));
-
-		//	TShaderMapRef<FScreenVS>							VertexShader(View.ShaderMap);
-		//	TShaderMapRef<FTressFXFKBufferResolvePS>			PixelShader(View.ShaderMap);
-
-		//	FRenderingCompositePassContext Context(RHICmdList, View);
-		//	Context.SetViewportAndCallRHI(View.ViewRect);
-
-		//	FGraphicsPipelineStateInitializer GraphicsPSOInit;
-		//	RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-
-		//	GraphicsPSOInit.BlendState = TStaticBlendState<
-		//		EColorWriteMask::CW_RGBA,
-		//		EBlendOperation::BO_Add,  // color blend op
-		//		EBlendFactor::BF_One,  // color source blend
-		//		EBlendFactor::BF_SourceAlpha, //color dest blend
-		//		EBlendOperation::BO_Add,   //alpha blend op
-		//		EBlendFactor::BF_Zero, // alpha src blend
-		//		EBlendFactor::BF_Zero //alpha dest blend
-		//	>::GetRHI();
-
-		//	GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
-		//	GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<
-		//		true, CF_Greater,
-		//		false, CF_Equal, SO_Keep, SO_Keep, SO_Keep,
-		//		false, CF_Always, SO_Keep, SO_Keep, SO_Keep,
-		//		0xff, 0x00, EDepthWriteMask::DWM_Zero, true>::GetRHI();
-
-		//	GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
-		//	GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
-		//	GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
-		//	GraphicsPSOInit.PrimitiveType = PT_TriangleList;
-		//	SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
+			FRenderingCompositePassContext Context(RHICmdList, View);
+			Context.SetViewportAndCallRHI(Rect, 0.0f, 1.0f);
+			RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, SceneContext.GetSceneColorTextureUAV());
+			TShaderMapRef<FTressFXFKBufferResolveCS> ComputeShader(View.ShaderMap);
+			RHICmdList.SetComputeShader(ComputeShader->GetComputeShader());
 
 
-		//	VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
-		//	PixelShader->SetParameters(Context.RHICmdList, View, TressFXKBufferNodes->SRV, TressFXKBufferListHeads->GetRenderTargetItem().ShaderResourceTexture);
+			ComputeShader->SetParameters(
+				RHICmdList,
+				View,
+				TressFXKBufferNodes->SRV,
+				TressFXKBufferListHeads->GetRenderTargetItem().ShaderResourceTexture,
+				SceneContext.GetSceneColorTextureUAV(),
+				DestSize
+			);
 
-		//	DrawRectangle(
-		//		RHICmdList,
-		//		0, 0,
-		//		View.ViewRect.Width(), View.ViewRect.Height(),
-		//		View.ViewRect.Min.X, View.ViewRect.Min.Y,
-		//		View.ViewRect.Width(), View.ViewRect.Height(),
-		//		View.ViewRect.Size(),
-		//		SceneContext.GetBufferSizeXY(),
-		//		*VertexShader,
-		//		EDRF_UseTriangleOptimization);
+			uint32 GroupSizeX = FMath::DivideAndRoundUp(DestSize.X, (int32)FTressFXFKBufferResolveCS::ThreadSizeX);
+			uint32 GroupSizeY = FMath::DivideAndRoundUp(DestSize.Y, (int32)FTressFXFKBufferResolveCS::ThreadSizeY);
+			DispatchComputeShader(RHICmdList, *ComputeShader, GroupSizeX, GroupSizeY, 1);
 
-		//	RHICmdList.EndRenderPass();
-		//}
+			ComputeShader->UnsetParameters(RHICmdList);
+			RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EComputeToGfx, SceneContext.GetSceneColorTextureUAV());*/
+		}
+		else
+		{
+			SCOPED_DRAW_EVENT(RHICmdList, ResolveAOITPS);
 
-		//if (IsTransientResourceBufferAliasingEnabled())
-		//{
-		//	TressFXKBufferNodes->DiscardTransientResource();
-		//	TressFXKBufferCounter->DiscardTransientResource();
-		//}
+			FRHIRenderPassInfo RPInfo(
+				SceneContext.GetSceneColorSurface(), ERenderTargetActions::Load_Store,
+				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
+			);
+
+			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXResolveAOIT"));
+
+
+
+			FRenderingCompositePassContext Context(RHICmdList, View);
+			Context.SetViewportAndCallRHI(View.ViewRect);
+
+			FGraphicsPipelineStateInitializer GraphicsPSOInit;
+			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+
+			GraphicsPSOInit.BlendState = TStaticBlendState<
+				EColorWriteMask::CW_RGBA,
+				EBlendOperation::BO_Add,  // color blend op
+				EBlendFactor::BF_One,  // color source blend
+				EBlendFactor::BF_SourceAlpha, //color dest blend
+				EBlendOperation::BO_Add,   //alpha blend op
+				EBlendFactor::BF_One, // alpha src blend
+				EBlendFactor::BF_Zero //alpha dest blend
+			>::GetRHI();
+
+			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
+			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<
+				true, CF_Greater,
+				false, CF_Equal, SO_Keep, SO_Keep, SO_Keep,
+				false, CF_Always, SO_Keep, SO_Keep, SO_Keep,
+				0xff, 0x00, EDepthWriteMask::DWM_Zero, true>::GetRHI();							
+																														
+				TShaderMapRef<FScreenVS>								VertexShader(View.ShaderMap);					
+				TShaderMapRef<FTressFXAOITResolvePS<AOITNodeCount>>		PixelShader(View.ShaderMap);					
+				GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;	
+				GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);				
+				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);					
+				GraphicsPSOInit.PrimitiveType = PT_TriangleList;														
+				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);													
+				VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);										
+				PixelShader->SetParameters(																				
+					Context.RHICmdList, 																				
+					View, 																								
+					TressFXAOITClearMask->GetRenderTargetItem().ShaderResourceTexture, 									
+					TressFXAOITDepthBuffer->SRV, 																		
+					TressFXAOITColorBuffer->SRV																			
+				);																										
+				DrawRectangle(																							
+					RHICmdList,																							
+					0, 0,																								
+					View.ViewRect.Width(), View.ViewRect.Height(),														
+					View.ViewRect.Min.X, View.ViewRect.Min.Y,															
+					View.ViewRect.Width(), View.ViewRect.Height(),														
+					View.ViewRect.Size(),																				
+					SceneContext.GetBufferSizeXY(),																		
+					*VertexShader,																						
+					EDRF_UseTriangleOptimization
+				);		
+			}
+
+		RHICmdList.EndRenderPass();
+
+
+		if (IsTransientResourceBufferAliasingEnabled())
+		{
+			TressFXAOITDepthBuffer->DiscardTransientResource();
+			TressFXAOITColorBuffer->DiscardTransientResource();
+		}
 	}
 }
 
@@ -1677,6 +1699,26 @@ void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList,
 	}
 }
 
+#define _RenderAOITResolvePasses(NodeCount, ...)												\
+switch(NodeCount)																				\
+{																								\
+	case 2:																						\
+	{																							\
+		RenderAOITResolvePasses<2>(__VA_ARGS__);												\
+		break;																					\
+	}																							\
+	case 4:																						\
+	{																							\
+		RenderAOITResolvePasses<4>(__VA_ARGS__);												\
+		break;																					\
+	}																							\
+	case 8:																						\
+	{																							\
+		RenderAOITResolvePasses<8>(__VA_ARGS__);												\
+		break;																					\
+	}																							\
+}
+
 void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture, int32 TFXRenderType)
 {
 
@@ -1708,7 +1750,9 @@ void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdLi
 		{
 			if (ShouldRenderTressFX(ETressFXPass::FillColor_AOIT))
 			{
-				
+				const int32 NodeCountCvarVal = FMath::Clamp(static_cast<int32>(GTressFXAOITNodeCount), (int32)ETressFXPAOITNodeCount::Min, (int32)ETressFXPAOITNodeCount::Max);
+				const int32 AOITNodeCount = FMath::Pow(2, NodeCountCvarVal);
+				_RenderAOITResolvePasses(AOITNodeCount, RHICmdList, Views, Scene, ScreenShadowMaskTexture, TressFXCanUseComputeResolves(FSceneRenderTargets::Get(RHICmdList)));
 			}
 			break;
 		}

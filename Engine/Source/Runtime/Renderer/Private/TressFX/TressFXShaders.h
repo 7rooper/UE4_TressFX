@@ -692,3 +692,79 @@ public:
 };
 
 
+///////////////////////////////////////////////////////////////////////////////
+// TressFXFAOITResolvePS
+//////////////////////////////////////////////////////////////////////////////
+
+template <int32 NodeCount>
+class FTressFXAOITResolvePS : public FGlobalShader
+{
+	DECLARE_GLOBAL_SHADER(FTressFXAOITResolvePS);
+
+public:
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+	}
+
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+	{
+		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		OutEnvironment.SetDefine(TEXT("AOIT_NODE_COUNT"), NodeCount);
+	};
+
+	static const TCHAR* GetSourceFilename()
+	{
+		return TEXT("/Engine/Private/TressFXAdaptiveTransparency.usf");
+	}
+
+	static const TCHAR* GetFunctionName()
+	{
+		return TEXT("AOITResolvePS");
+	}
+
+	FTressFXAOITResolvePS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FGlobalShader(Initializer)
+	{
+		ClearMaskSRV.Bind(Initializer.ParameterMap, TEXT("gAOITSPClearMaskSRV"));
+		if (NodeCount == 8)
+		{
+			DepthBufferSRV.Bind(Initializer.ParameterMap, TEXT("g8AOITSPDepthDataSRV"));
+			ColorBufferSRV.Bind(Initializer.ParameterMap, TEXT("g8AOITSPColorDataSRV"));
+		}
+		else
+		{
+			DepthBufferSRV.Bind(Initializer.ParameterMap, TEXT("gAOITSPDepthDataSRV"));
+			ColorBufferSRV.Bind(Initializer.ParameterMap, TEXT("gAOITSPColorDataSRV"));
+		}
+	}
+
+
+	FTressFXAOITResolvePS() {}
+
+	virtual bool Serialize(FArchive& Ar) override
+	{
+		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
+		Ar << ClearMaskSRV;
+		Ar << DepthBufferSRV;
+		Ar << ColorBufferSRV;
+		return bShaderHasOutdatedParameters;
+	}
+
+
+	void SetParameters(
+		FRHICommandList& RHICmdList, 
+		const FViewInfo& View, 
+		FTextureRHIParamRef InClearMaskSRV,
+		FShaderResourceViewRHIParamRef InDepthBufferSRV,
+		FShaderResourceViewRHIParamRef InColorBufferSRV
+	);
+
+
+public:
+	FShaderResourceParameter ClearMaskSRV;
+	FShaderResourceParameter DepthBufferSRV;
+	FShaderResourceParameter ColorBufferSRV;
+
+};

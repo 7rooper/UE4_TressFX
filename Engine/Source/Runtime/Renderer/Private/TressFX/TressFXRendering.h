@@ -148,7 +148,7 @@ private:
 		ERasterizerCullMode MeshCullMode
 	);
 
-	template<int32 NodeCount>
+	template<int32 NodeCount, bool bUseROV>
 	void ProcessAOIT(
 		const FMeshBatch& RESTRICT MeshBatch,
 		uint64 BatchElementMask,

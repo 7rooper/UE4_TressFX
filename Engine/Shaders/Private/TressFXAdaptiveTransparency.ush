@@ -329,7 +329,8 @@ void AOITSPLoadDataSRV(in uint2 pixelAddr, out ATSPNode nodeArray[AOIT_NODE_COUN
     data.color = _AOITSPColorDataSRV[addr];
 
 #if AOIT_NODE_COUNT == 2
-	UNROLLfor (uint j = 0; j < 2; j++) {
+	UNROLL 
+	for (uint j = 0; j < 2; j++) {
 		ATSPNode node = { 0, UnpackUnnormAlpha(data.color[0][2 + j]),
 			data.color[0][2 + j] & 0xFFFFFFUL };
 		nodeArray[j] = node;
@@ -359,7 +360,8 @@ void AOITSPLoadDataUAV(in uint2 pixelAddr, out ATSPNode nodeArray[AOIT_NODE_COUN
     data.color = _AOITSPColorDataUAV[addr];
 
 #if AOIT_NODE_COUNT == 2
-	UNROLLfor (uint j = 0; j < 2; j++) {
+	UNROLL 
+	for (uint j = 0; j < 2; j++) {
 		ATSPNode node = { asfloat(data.color[0][j]),
 			UnpackUnnormAlpha(data.color[0][2 + j]),
 			data.color[0][2 + j] & 0xFFFFFFUL };
@@ -391,7 +393,8 @@ void AOITSPStoreDataUAV(in uint2 pixelAddr, ATSPNode nodeArray[AOIT_NODE_COUNT])
     uint addr = AOITAddrGenUAV(pixelAddr);
 
 #if AOIT_NODE_COUNT == 2
-	UNROLLfor (uint j = 0; j < 2; j++) {
+	UNROLL
+	for (uint j = 0; j < 2; j++) {
 		data.color[0][j] = asuint((asuint(float(nodeArray[j].depth)) & (uint)AOIT_TRANS_MASK) | (uint)(nodeArray[j].trans));
 		data.color[0][2 + j] = (nodeArray[j].color & 0xFFFFFFUL) |
 			(((uint)(nodeArray[j].trans)) << 24UL);

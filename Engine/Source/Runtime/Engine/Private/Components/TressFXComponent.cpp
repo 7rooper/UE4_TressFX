@@ -269,7 +269,7 @@ void UTressFXComponent::SetUpMorphMapping()
 	}
 	else
 	{
-		UE_LOG(TressFXComponentLog, Log, TEXT("No scene proxy found, cannot call UpdateMorphIndices_RenderThread"), *this->GetFName().ToString());
+		UE_LOG(TressFXComponentLog, Warning, TEXT("No scene proxy found, cannot call UpdateMorphIndices_RenderThread"), *this->GetFName().ToString());
 	}
 }
 

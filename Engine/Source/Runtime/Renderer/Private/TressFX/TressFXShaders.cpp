@@ -96,25 +96,22 @@ IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(3); //aoit
 ////  FTressFXShortCutResolveDepthPS - pixel shader for 2nd pass of shortcut
 //////////////////////////////////////////////////////////////////////////////////
 
-void FTressFXShortCutResolveDepthPS<false>::SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext)
-{
-	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
-
-	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);
-	SetTextureParameter(RHICmdList, ShaderRHI, FragmentDepthsTexture, SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().ShaderResourceTexture);
-	SceneTextureShaderParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, ESceneTextureSetupMode::All);
+#define IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(bWriteClosestDepth)																				\
+void FTressFXShortCutResolveDepthPS<bWriteClosestDepth>::SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext)	\
+{																																								\
+	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();																									\
+																																								\
+	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);													\
+	SetTextureParameter(RHICmdList, ShaderRHI, FragmentDepthsTexture, SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().ShaderResourceTexture);	\
+	SceneTextureShaderParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, ESceneTextureSetupMode::All);													\
+	if (bWriteClosestDepth)																																		\
+	{																																							\
+		SetTextureParameter(RHICmdList, ShaderRHI, tAccumInvAlpha, SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture);				\
+	}																																							\
 }
-
-void FTressFXShortCutResolveDepthPS<true>::SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext)
-{
-	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
-
-	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);
-	SetTextureParameter(RHICmdList, ShaderRHI, FragmentDepthsTexture, SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().ShaderResourceTexture);
-	SceneTextureShaderParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, ESceneTextureSetupMode::All);
-	SetTextureParameter(RHICmdList, ShaderRHI, tAccumInvAlpha, SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture);
-}
-
+IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(true)
+IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(false)
+#undef IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters
 
 IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveDepthPS<true>, "/Engine/Private/TressFXShortCutResolveDepthPS.usf", "main", SF_Pixel);
 IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveDepthPS<false>, "/Engine/Private/TressFXShortCutResolveDepthPS.usf", "main", SF_Pixel);
@@ -228,3 +225,32 @@ void FTressFXFKBufferResolveCS::UnsetParameters(FRHICommandList& RHICmdList)
 }
 
 IMPLEMENT_GLOBAL_SHADER(FTressFXFKBufferResolveCS, "/Engine/Private/TressFXPPLLResolve.usf", "ResolvePPLL_CS", SF_Compute);
+
+///////////////////////////////////////////////////////////////////////////////
+// FTressFXAOITResolvePS
+//////////////////////////////////////////////////////////////////////////////
+
+#define IMPLEMENT_FTressFXAOITResolvePS_SetParameters(NodeCount)																\
+void FTressFXAOITResolvePS<NodeCount>::SetParameters(																			\
+	FRHICommandList& RHICmdList,																								\
+	const FViewInfo& View,																										\
+	FTextureRHIParamRef InClearMaskSRV,																							\
+	FShaderResourceViewRHIParamRef InDepthBufferSRV,																			\
+	FShaderResourceViewRHIParamRef InColorBufferSRV																				\
+) {																																\
+	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();																	\
+	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);					\
+																																\
+	SetTextureParameter(RHICmdList, ShaderRHI, ClearMaskSRV, InClearMaskSRV);													\
+	SetSRVParameter(RHICmdList, ShaderRHI, DepthBufferSRV, InDepthBufferSRV);													\
+	SetSRVParameter(RHICmdList, ShaderRHI, ColorBufferSRV, InColorBufferSRV);													\
+}
+
+IMPLEMENT_FTressFXAOITResolvePS_SetParameters(2)
+IMPLEMENT_FTressFXAOITResolvePS_SetParameters(4)
+IMPLEMENT_FTressFXAOITResolvePS_SetParameters(8)
+#undef IMPLEMENT_FTressFXAOITResolvePS_SetParameters
+
+IMPLEMENT_GLOBAL_SHADER(FTressFXAOITResolvePS<2>, "/Engine/Private/TressFXAdaptiveTransparency.usf", "AOITResolvePS", SF_Pixel);
+IMPLEMENT_GLOBAL_SHADER(FTressFXAOITResolvePS<4>, "/Engine/Private/TressFXAdaptiveTransparency.usf", "AOITResolvePS", SF_Pixel);
+IMPLEMENT_GLOBAL_SHADER(FTressFXAOITResolvePS<8>, "/Engine/Private/TressFXAdaptiveTransparency.usf", "AOITResolvePS", SF_Pixel);

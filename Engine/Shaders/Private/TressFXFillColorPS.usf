@@ -563,7 +563,8 @@ void main(
 	#elif TFX_SHORTCUT		
 		OutColor = float4(Color * TFXAlpha, TFXAlpha);
 	#elif TFX_AOIT
-	`	//todo
+		//not sure if i need to multiply by TFXAlpha here or not (im thinking not)
+		WriteNewPixelToAOIT(In.Position.xy, GBuffer.Depth, float4(Color, TFXAlpha));
 	#endif
 	return;
 }

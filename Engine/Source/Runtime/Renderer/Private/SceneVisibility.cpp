@@ -2683,7 +2683,7 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 			PassMask.Set(EMeshPass::TressFX_FillColors);
 			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
 		}
-		else if (TFXRenderType == ETressFXRenderType::KBuffer) 
+		else if (TFXRenderType == ETressFXRenderType::KBuffer || TFXRenderType == ETressFXRenderType::AOIT) 
 		{
 			//need to write velocity, but no depth
 			PassMask.Set(EMeshPass::TressFX_DepthsVelocity);

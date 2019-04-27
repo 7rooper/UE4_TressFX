@@ -602,7 +602,8 @@ public:
 		TRHICmdList& RHICmdList,
 		TRefCountPtr<IPooledRenderTarget>& OutTressFXAOITClearMask,
 		FRWBufferStructured*& OutTressFXAOITDepthBuffer,
-		FRWBufferStructured*& OutTressFXAOITColorBuffer
+		FRWBufferStructured*& OutTressFXAOITColorBuffer,
+		int32& NodeCount
 	);
 private:
 
@@ -610,7 +611,7 @@ private:
 	void InitializeTressFXKBufferResources(TRHICmdList& RHICmdList, bool bForceReinit = false);
 
 	template <typename TRHICmdList>
-	void InitializeTressFXAdaptiveResources(TRHICmdList& RHICmdList, bool bForceReinit = false);
+	void InitializeTressFXAdaptiveResources(TRHICmdList& RHICmdList, int32& OutNodeCount, bool bForceReinit = false);
 
 	/** k-buffer specific */
 	TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;

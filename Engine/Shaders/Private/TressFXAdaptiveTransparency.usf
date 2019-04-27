@@ -16,7 +16,7 @@
 
 #include "TressFXAdaptiveTransparency.ush"
 
-void AOITSPResolvePS(FScreenVertexOutput Input, out float4 OutColor : SV_Target0)
+void AOITResolvePS(FScreenVertexOutput Input, out float4 OutColor : SV_Target0)
 {
     float4 FinalColor = float4(0, 0, 0, 1);
     uint2 pixelAddr = uint2(Input.Position.xy);
