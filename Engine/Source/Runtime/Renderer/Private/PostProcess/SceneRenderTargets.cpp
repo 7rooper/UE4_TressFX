@@ -1336,7 +1336,7 @@ void FSceneRenderTargets::InitializeTressFXAdaptiveResources(TRHICmdList& RHICmd
 	}
 
 
-	const uint32 StructSize = sizeof(uint32) * AOITRTCount;
+	const uint32 StructSize = sizeof(uint32) * 4 * AOITRTCount;
 	const uint32 NumElements = BuffSize.X * BuffSize.Y;
 	const uint32 RequiredBufferBytes = StructSize * NumElements;
 	

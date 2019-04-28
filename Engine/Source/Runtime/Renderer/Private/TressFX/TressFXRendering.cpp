@@ -97,7 +97,7 @@ public:
 		else if (ColorPassType == ETressFXPass::FillColor_AOIT)
 		{
 			OutEnvironment.SetDefine(TEXT("AOIT_NODE_COUNT"), KBufferSizeOrAOITNodeCount);
-			OutEnvironment.SetDefine(TEXT("USE_ROVS"), bUseROVS ? 1 : 0);
+			OutEnvironment.SetDefine(TEXT("USE_ROVS"), (bUseROVS && IsSM6(Material->GetFeatureLevel())) ? 1 : 0);
 		}
 	}
 
@@ -1329,10 +1329,10 @@ void RenderAOITResolvePasses(
 
 			FUnorderedAccessViewRHIParamRef UAVS[] = {
 				TressFXAOITClearMask->GetRenderTargetItem().UAV,
-				TressFXAOITColorBuffer->UAV,
-				TressFXAOITDepthBuffer->UAV
+				TressFXAOITDepthBuffer->UAV,
+				TressFXAOITColorBuffer->UAV
 			};
-			RHICmdList.TransitionResources(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToGfx, UAVS, ARRAY_COUNT(UAVS));
+			RHICmdList.TransitionResources(EResourceTransitionAccess::EWritable, EResourceTransitionPipeline::EGfxToGfx, UAVS, ARRAY_COUNT(UAVS));
 
 			FRHIRenderPassInfo RPInfo(
 				ARRAY_COUNT(UAVS), UAVS
@@ -1346,7 +1346,7 @@ void RenderAOITResolvePasses(
 
 			TUniformBufferRef<FTressFXColorPassUniformParameters> TFXColorPassUniformBuffer;
 
-			CreateTressFXColorPassUniformBuffer(RHICmdList, View, ScreenShadowMaskTexture, TFXColorPassUniformBuffer, 0);
+			CreateTressFXColorPassUniformBuffer(RHICmdList, View, ScreenShadowMaskTexture, TFXColorPassUniformBuffer, 0, &TressFXAOITClearMask);
 			FMeshPassProcessorRenderState DrawRenderState(View, TFXColorPassUniformBuffer);
 			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
@@ -1359,11 +1359,15 @@ void RenderAOITResolvePasses(
 			FUnorderedAccessViewRHIParamRef UAVS[] = {
 				TressFXAOITClearMask->GetRenderTargetItem().UAV,
 				TressFXAOITColorBuffer->UAV,
-				TressFXAOITDepthBuffer->UAV
+
 			};
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, UAVS, ARRAY_COUNT(UAVS));
 		}
 
+		//if (!IsSM6(Scene->GetFeatureLevel()))
+		//{
+		//	return;
+		//}
 		if (bUseComputeResolve)
 		{
 			/*SCOPED_DRAW_EVENT(RHICmdList, ResolveKBufferCS);
@@ -1405,8 +1409,6 @@ void RenderAOITResolvePasses(
 
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXResolveAOIT"));
 
-
-
 			FRenderingCompositePassContext Context(RHICmdList, View);
 			Context.SetViewportAndCallRHI(View.ViewRect);
 
@@ -1428,35 +1430,38 @@ void RenderAOITResolvePasses(
 				true, CF_Greater,
 				false, CF_Equal, SO_Keep, SO_Keep, SO_Keep,
 				false, CF_Always, SO_Keep, SO_Keep, SO_Keep,
-				0xff, 0x00, EDepthWriteMask::DWM_Zero, true>::GetRHI();							
+			0xff, 0x00, EDepthWriteMask::DWM_Zero, true>::GetRHI();					
 																														
-				TShaderMapRef<FScreenVS>								VertexShader(View.ShaderMap);					
-				TShaderMapRef<FTressFXAOITResolvePS<AOITNodeCount>>		PixelShader(View.ShaderMap);					
-				GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;	
-				GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);				
-				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);					
-				GraphicsPSOInit.PrimitiveType = PT_TriangleList;														
-				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);													
-				VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);										
-				PixelShader->SetParameters(																				
-					Context.RHICmdList, 																				
-					View, 																								
-					TressFXAOITClearMask->GetRenderTargetItem().ShaderResourceTexture, 									
-					TressFXAOITDepthBuffer->SRV, 																		
-					TressFXAOITColorBuffer->SRV																			
-				);																										
-				DrawRectangle(																							
-					RHICmdList,																							
-					0, 0,																								
-					View.ViewRect.Width(), View.ViewRect.Height(),														
-					View.ViewRect.Min.X, View.ViewRect.Min.Y,															
-					View.ViewRect.Width(), View.ViewRect.Height(),														
-					View.ViewRect.Size(),																				
-					SceneContext.GetBufferSizeXY(),																		
-					*VertexShader,																						
-					EDRF_UseTriangleOptimization
-				);		
-			}
+			TShaderMapRef<FScreenVS>								VertexShader(View.ShaderMap);					
+			TShaderMapRef<FTressFXAOITResolvePS<AOITNodeCount>>		PixelShader(View.ShaderMap);					
+			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;	
+			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);				
+			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);					
+			GraphicsPSOInit.PrimitiveType = PT_TriangleList;														
+			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);													
+			VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
+			const FIntPoint Dimensions = TressFXAOITClearMask->GetDesc().Extent;
+			PixelShader->SetParameters(																				
+				Context.RHICmdList, 																				
+				View, 																								
+				TressFXAOITClearMask->GetRenderTargetItem().ShaderResourceTexture, 									
+				TressFXAOITDepthBuffer->SRV, 																		
+				TressFXAOITColorBuffer->SRV,
+				Dimensions.X,
+				Dimensions.Y
+			);																										
+			DrawRectangle(																							
+				RHICmdList,																							
+				0, 0,																								
+				View.ViewRect.Width(), View.ViewRect.Height(),														
+				View.ViewRect.Min.X, View.ViewRect.Min.Y,															
+				View.ViewRect.Width(), View.ViewRect.Height(),														
+				View.ViewRect.Size(),																				
+				SceneContext.GetBufferSizeXY(),																		
+				*VertexShader,																						
+				EDRF_UseTriangleOptimization
+			);		
+		}
 
 		RHICmdList.EndRenderPass();
 

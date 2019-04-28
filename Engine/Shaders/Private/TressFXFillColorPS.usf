@@ -550,7 +550,8 @@ void main(
 	IndirectOcclusion = GetIndirectOcclusion(NearestResolvedDepthScreenUV, GBuffer);
 	DiffuseIndirectLighting *= IndirectOcclusion;
 	SubsurfaceIndirectLighting *= IndirectOcclusion;
-	IndirectIrradiance *= IndirectOcclusion;
+	IndirectIrradiance *= IndirectOcclusion; 
+
 
     uint GridIndex = ComputeLightGridCellIndex((uint2) (In.Position.xy - ResolvedView.ViewRectMin.xy), In.Position.w, 0);
     const float Dither = InterleavedGradientNoise(MaterialParameters.SvPosition.xy, View.StateFrameIndexMod8);
@@ -564,7 +565,7 @@ void main(
 		OutColor = float4(Color * TFXAlpha, TFXAlpha);
 	#elif TFX_AOIT
 		//not sure if i need to multiply by TFXAlpha here or not (im thinking not)
-		WriteNewPixelToAOIT(In.Position.xy, GBuffer.Depth, float4(Color, TFXAlpha));
+		WriteNewPixelToAOIT(In.Position.xy, In.Position.z, float4(Color, TFXAlpha));
 	#endif
 	return;
 }

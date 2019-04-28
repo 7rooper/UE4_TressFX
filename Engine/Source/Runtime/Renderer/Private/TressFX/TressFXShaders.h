@@ -728,6 +728,7 @@ public:
 		: FGlobalShader(Initializer)
 	{
 		ClearMaskSRV.Bind(Initializer.ParameterMap, TEXT("gAOITSPClearMaskSRV"));
+		MaskTextureSize.Bind(Initializer.ParameterMap, TEXT("MaskTextureSize"));
 		if (NodeCount == 8)
 		{
 			DepthBufferSRV.Bind(Initializer.ParameterMap, TEXT("g8AOITSPDepthDataSRV"));
@@ -758,7 +759,9 @@ public:
 		const FViewInfo& View, 
 		FTextureRHIParamRef InClearMaskSRV,
 		FShaderResourceViewRHIParamRef InDepthBufferSRV,
-		FShaderResourceViewRHIParamRef InColorBufferSRV
+		FShaderResourceViewRHIParamRef InColorBufferSRV,
+		int32 MaskTextureSizeX,
+		int32 MaskTextureSizeY
 	);
 
 
@@ -766,5 +769,6 @@ public:
 	FShaderResourceParameter ClearMaskSRV;
 	FShaderResourceParameter DepthBufferSRV;
 	FShaderResourceParameter ColorBufferSRV;
+	FShaderParameter MaskTextureSize;
 
 };

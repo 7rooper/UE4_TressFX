@@ -35,16 +35,16 @@ void AOITResolvePS(FScreenVertexOutput Input, out float4 OutColor : SV_Target0)
 		// Accumulate final transparent colors
         float trans = 1;
         float3 color = 0;
-		UNROLL
-        for (uint i = 0; i < AOIT_NODE_COUNT; i++)
+        UNROLL
+        for (int i = 0; i < AOIT_NODE_COUNT; i++)
         {
             color += trans * UnpackRGB(nodeArray[i].color);
-            trans = nodeArray[i].trans / 255;
+            trans = float( nodeArray[i].trans / 255);
         }
         FinalColor = float4(color, nodeArray[AOIT_NODE_COUNT - 1].trans / 255);
     }
 
     // blend accumualted transparent color with opaque background color
-    OutColor = FinalColor;
+    OutColor = saturate(FinalColor);
 }
 

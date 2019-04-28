@@ -230,20 +230,23 @@ IMPLEMENT_GLOBAL_SHADER(FTressFXFKBufferResolveCS, "/Engine/Private/TressFXPPLLR
 // FTressFXAOITResolvePS
 //////////////////////////////////////////////////////////////////////////////
 
-#define IMPLEMENT_FTressFXAOITResolvePS_SetParameters(NodeCount)																\
-void FTressFXAOITResolvePS<NodeCount>::SetParameters(																			\
-	FRHICommandList& RHICmdList,																								\
-	const FViewInfo& View,																										\
-	FTextureRHIParamRef InClearMaskSRV,																							\
-	FShaderResourceViewRHIParamRef InDepthBufferSRV,																			\
-	FShaderResourceViewRHIParamRef InColorBufferSRV																				\
-) {																																\
-	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();																	\
-	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);					\
-																																\
-	SetTextureParameter(RHICmdList, ShaderRHI, ClearMaskSRV, InClearMaskSRV);													\
-	SetSRVParameter(RHICmdList, ShaderRHI, DepthBufferSRV, InDepthBufferSRV);													\
-	SetSRVParameter(RHICmdList, ShaderRHI, ColorBufferSRV, InColorBufferSRV);													\
+#define IMPLEMENT_FTressFXAOITResolvePS_SetParameters(NodeCount)																	\
+void FTressFXAOITResolvePS<NodeCount>::SetParameters(																				\
+	FRHICommandList& RHICmdList,																									\
+	const FViewInfo& View,																											\
+	FTextureRHIParamRef InClearMaskSRV,																								\
+	FShaderResourceViewRHIParamRef InDepthBufferSRV,																				\
+	FShaderResourceViewRHIParamRef InColorBufferSRV,																				\
+	int32 MaskTextureSizeX,																											\
+	int32 MaskTextureSizeY																											\
+) {																																	\
+	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();																		\
+	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);						\
+																																	\
+	SetTextureParameter(RHICmdList, ShaderRHI, ClearMaskSRV, InClearMaskSRV);														\
+	SetSRVParameter(RHICmdList, ShaderRHI, DepthBufferSRV, InDepthBufferSRV);														\
+	SetSRVParameter(RHICmdList, ShaderRHI, ColorBufferSRV, InColorBufferSRV);														\
+	SetShaderValue(RHICmdList, ShaderRHI, MaskTextureSize, FVector4((float)MaskTextureSizeX, (float)MaskTextureSizeY, 0.0f, 0.0f)); \
 }
 
 IMPLEMENT_FTressFXAOITResolvePS_SetParameters(2)
