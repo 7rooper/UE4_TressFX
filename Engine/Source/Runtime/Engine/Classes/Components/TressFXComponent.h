@@ -172,7 +172,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "TressFX")
 		bool bEnableMorphTargets = false;
 
-	/** Morphs require a remapping process to support morph target of skeletal mesh. This progress would be slow when vertex number is very large, and cause long halt in editor. If this option is on, remapping happens when any edit occurs. If this option is off, remapping happens only when the parent skeletal mesh of this component changes. If you want to do remapping once when you need, just turn it on and then off. */
+	/** Morphs require a remapping process to support morph target of skeletal mesh. This process would be slow when vertex number is very large, and cause long halt in editor. If this option is on, remapping happens when any edit occurs. If this option is off, remapping happens only when the parent skeletal mesh of this component changes. If you want to do remapping once when you need, just turn it on and then off. */
 	UPROPERTY(EditDefaultsOnly, Category = "TressFX")
 		bool bAutoRemapMorphTarget = false;
 
@@ -181,9 +181,6 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 		class UTressFXAsset* Asset;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
-		class UTressFXBoneSkinningAsset* BoneSkinningAsset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 		class UTressFXMesh* SDFCollisionMeshAsset;

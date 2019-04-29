@@ -801,9 +801,15 @@ bool FSceneRenderer::ShouldRenderTressFX(int32 TressFXPass)
 		return false;
 	}
 
-	if (!Scene->World || (Scene->World->WorldType != EWorldType::EditorPreview && Scene->World->WorldType != EWorldType::Inactive))
+	const bool bRenderInPreview = true;//easy to turn off later...
+	const bool isEditorPreview = Scene->World->WorldType == EWorldType::EditorPreview;
+	if (!Scene->World || (Scene->World->WorldType != EWorldType::Inactive))
 	{
 		return true;
+	}
+	if (isEditorPreview) 
+	{
+		return bRenderInPreview;
 	}
 	return false;
 }
