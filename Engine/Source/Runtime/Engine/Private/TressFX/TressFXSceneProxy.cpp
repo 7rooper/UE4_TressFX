@@ -120,19 +120,12 @@ FPrimitiveViewRelevance FTressFXSceneProxy::GetViewRelevance(const FSceneView * 
 	FPrimitiveViewRelevance ViewRel;
 	MaterialRelevance.SetPrimitiveViewRelevance(ViewRel);
 	ViewRel.bDrawRelevance = IsShown(View);
-	ViewRel.bShadowRelevance = true;
+	ViewRel.bShadowRelevance = View->Family->EngineShowFlags.TressFX;;
 	ViewRel.bDynamicRelevance = true;
-	ViewRel.bRenderInMainPass = true;
+	ViewRel.bRenderInMainPass = View->Family->EngineShowFlags.TressFX;
 	ViewRel.bTressFX = View->Family->EngineShowFlags.TressFX;
 	return ViewRel;
 }
-
-struct FBoneSkinData
-{
-	float boneIndex[4];
-	float weight[4];
-};
-
 
 void UploadGPUData(FStructuredBufferRHIParamRef Buffer, int32 ElementSize, int32 ElementCount, void* InData)
 {

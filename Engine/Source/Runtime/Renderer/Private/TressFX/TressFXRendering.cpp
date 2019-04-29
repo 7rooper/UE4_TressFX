@@ -817,7 +817,7 @@ void RenderDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, TArray<FViewI
 	{
 		FViewInfo& View = Views[ViewIndex];
 
-		if (View.TressFXMeshBatches.Num() < 1 || !View.ShouldRenderView())
+		if (View.TressFXMeshBatches.Num() < 1 || !View.ShouldRenderView() || !View.Family->EngineShowFlags.TressFX)
 		{
 			continue;
 		}
@@ -916,7 +916,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 	{
 		FViewInfo& View = Views[ViewIndex];
 
-		if (View.TressFXMeshBatches.Num() < 1 || !View.ShouldRenderView())
+		if (View.TressFXMeshBatches.Num() < 1 || !View.ShouldRenderView() || !View.Family->EngineShowFlags.TressFX)
 		{
 			continue;
 		}
@@ -1012,7 +1012,7 @@ void RenderShortcutResolvePass(
 	{
 		FViewInfo& View = Views[ViewIndex];
 
-		if (View.TressFXMeshBatches.Num() < 1 || !View.ShouldRenderView())
+		if (View.TressFXMeshBatches.Num() < 1 || !View.ShouldRenderView() || !View.Family->EngineShowFlags.TressFX)
 		{
 			continue;
 		}
@@ -1160,7 +1160,7 @@ void RenderKBufferResolvePasses(
 	{
 		FViewInfo& View = Views[ViewIndex];
 
-		if (View.TressFXMeshBatches.Num() < 1 || !View.ShouldRenderView())
+		if (View.TressFXMeshBatches.Num() < 1 || !View.ShouldRenderView() || !View.Family->EngineShowFlags.TressFX)
 		{
 			continue;
 		}
@@ -1412,6 +1412,11 @@ void FSceneRenderer::RenderTressFXResolveVelocity(FRHICommandListImmediate& RHIC
 	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
 	{
 		const FViewInfo& View = Views[ViewIndex];
+
+		if (!View.Family->EngineShowFlags.TressFX) 
+		{
+			continue;
+		}
 
 		FTextureRHIParamRef Resources[] = {
 			SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture,
