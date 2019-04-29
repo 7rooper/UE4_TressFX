@@ -2676,16 +2676,14 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 		}
 		else if (TFXRenderType == ETressFXRenderType::ShortCut)
 		{
-			//velocity is rendered during depths alpha too
 			PassMask.Set(EMeshPass::TressFX_DepthsAlpha);
 			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsAlpha] += NumElements;
 
 			PassMask.Set(EMeshPass::TressFX_FillColors);
 			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
 		}
-		else if (TFXRenderType == ETressFXRenderType::KBuffer || TFXRenderType == ETressFXRenderType::AOIT) 
+		else if (TFXRenderType == ETressFXRenderType::KBuffer) 
 		{
-			//need to write velocity, but no depth
 			PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
 			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
 

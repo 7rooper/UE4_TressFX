@@ -530,8 +530,7 @@ void CreateTressFXColorPassUniformBuffer(
 	const FViewInfo& View,
 	IPooledRenderTarget* ForwardScreenSpaceShadowMask,
 	TUniformBufferRef<FTressFXColorPassUniformParameters>& TFXColorPassUniformBuffer,
-	int32 NodePoolSize,
-	TRefCountPtr<IPooledRenderTarget>* AOITClearMask
+	int32 NodePoolSize
 )
 {
 	FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
@@ -541,18 +540,6 @@ void CreateTressFXColorPassUniformBuffer(
 	ColorPassParams.NodePoolSize = NodePoolSize;
 
 	ColorPassParams.UseForwardScreenSpaceShadowMask = 1;
-
-	if (AOITClearMask) 
-	{
-		const FIntPoint Dimensions = (*AOITClearMask)->GetDesc().Extent;
-		ColorPassParams.AOITClearMaskHeight = Dimensions.Y;
-		ColorPassParams.AOITClearMaskWidth = Dimensions.X;
-	}
-	else 
-	{
-		ColorPassParams.AOITClearMaskHeight = 0;
-		ColorPassParams.AOITClearMaskWidth = 0;
-	}
 
 	if (ForwardScreenSpaceShadowMask && ForwardScreenSpaceShadowMask->GetRenderTargetItem().IsValid())
 	{

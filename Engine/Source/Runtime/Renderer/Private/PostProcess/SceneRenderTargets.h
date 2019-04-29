@@ -579,6 +579,7 @@ public:
 	bool bCustomDepthIsValid;
 
 	/*@BEGIN Third party code TressFX*/
+
 	/** common targets */
 	TRefCountPtr<IPooledRenderTarget> TressFXSceneDepth;
 	TRefCountPtr<IPooledRenderTarget> TressFXVelocity;
@@ -597,32 +598,16 @@ public:
 		int32& OutTressFXKBufferNodePoolSize
 	);
 
-	template <typename TRHICmdList>
-	void GetTressFXAOITResources(
-		TRHICmdList& RHICmdList,
-		TRefCountPtr<IPooledRenderTarget>& OutTressFXAOITClearMask,
-		FRWBufferStructured*& OutTressFXAOITDepthBuffer,
-		FRWBufferStructured*& OutTressFXAOITColorBuffer,
-		int32& NodeCount
-	);
 private:
 
 	template <typename TRHICmdList>
 	void InitializeTressFXKBufferResources(TRHICmdList& RHICmdList, bool bForceReinit = false);
-
-	template <typename TRHICmdList>
-	void InitializeTressFXAdaptiveResources(TRHICmdList& RHICmdList, int32& OutNodeCount, bool bForceReinit = false);
 
 	/** k-buffer specific */
 	TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
 	FRWBufferStructured TressFXKBufferNodes;
 	FRWBuffer TressFXKBufferCounter;
 	int32 TressFXKBufferNodePoolSize;
-
-	/* Adaptive Transparency Specific  */
-	TRefCountPtr<IPooledRenderTarget> TressFXAOITClearMask;
-	FRWBufferStructured TressFXAOITDepthBuffer;
-	FRWBufferStructured TressFXAOITColorBuffer;
 
 	/*@END Third party code TressFX*/
 

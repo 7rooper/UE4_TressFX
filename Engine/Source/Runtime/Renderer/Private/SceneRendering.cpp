@@ -369,17 +369,7 @@ FAutoConsoleVariableRef CVarTressFXKBufferSize(
 	ECVF_RenderThreadSafe
 );
 
-int32 GTressFXAOITNodeCount = 1;
-FAutoConsoleVariableRef CVarTressFXAOITNodeCount(
-	TEXT("tfx.AOIT.NodeCount"),
-	GTressFXAOITNodeCount,
-	TEXT("1: 2 Nodes")
-	TEXT("2: 4 Nodes")
-	TEXT("3: 8 Nodes"),
-	ECVF_RenderThreadSafe
-);
-
-int32 GBTressFXUseCompute = 0;
+int32 GBTressFXUseCompute = 1;
 FAutoConsoleVariableRef CVarTressFXUseComputeResolves(
 	TEXT("tfx.UseCompute"),
 	GBTressFXUseCompute,

@@ -89,7 +89,6 @@ IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXDepthsAlphaPS<false>, TEXT("/
 IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(0); //opaque
 IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(1); //shortcut
 IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(2); //kbuffer
-IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(3); //aoit
 #undef IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -225,35 +224,3 @@ void FTressFXFKBufferResolveCS::UnsetParameters(FRHICommandList& RHICmdList)
 }
 
 IMPLEMENT_GLOBAL_SHADER(FTressFXFKBufferResolveCS, "/Engine/Private/TressFXPPLLResolve.usf", "ResolvePPLL_CS", SF_Compute);
-
-///////////////////////////////////////////////////////////////////////////////
-// FTressFXAOITResolvePS
-//////////////////////////////////////////////////////////////////////////////
-
-#define IMPLEMENT_FTressFXAOITResolvePS_SetParameters(NodeCount)																	\
-void FTressFXAOITResolvePS<NodeCount>::SetParameters(																				\
-	FRHICommandList& RHICmdList,																									\
-	const FViewInfo& View,																											\
-	FTextureRHIParamRef InClearMaskSRV,																								\
-	FShaderResourceViewRHIParamRef InDepthBufferSRV,																				\
-	FShaderResourceViewRHIParamRef InColorBufferSRV,																				\
-	int32 MaskTextureSizeX,																											\
-	int32 MaskTextureSizeY																											\
-) {																																	\
-	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();																		\
-	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);						\
-																																	\
-	SetTextureParameter(RHICmdList, ShaderRHI, ClearMaskSRV, InClearMaskSRV);														\
-	SetSRVParameter(RHICmdList, ShaderRHI, DepthBufferSRV, InDepthBufferSRV);														\
-	SetSRVParameter(RHICmdList, ShaderRHI, ColorBufferSRV, InColorBufferSRV);														\
-	SetShaderValue(RHICmdList, ShaderRHI, MaskTextureSize, FVector4((float)MaskTextureSizeX, (float)MaskTextureSizeY, 0.0f, 0.0f)); \
-}
-
-IMPLEMENT_FTressFXAOITResolvePS_SetParameters(2)
-IMPLEMENT_FTressFXAOITResolvePS_SetParameters(4)
-IMPLEMENT_FTressFXAOITResolvePS_SetParameters(8)
-#undef IMPLEMENT_FTressFXAOITResolvePS_SetParameters
-
-IMPLEMENT_GLOBAL_SHADER(FTressFXAOITResolvePS<2>, "/Engine/Private/TressFXAdaptiveTransparency.usf", "AOITResolvePS", SF_Pixel);
-IMPLEMENT_GLOBAL_SHADER(FTressFXAOITResolvePS<4>, "/Engine/Private/TressFXAdaptiveTransparency.usf", "AOITResolvePS", SF_Pixel);
-IMPLEMENT_GLOBAL_SHADER(FTressFXAOITResolvePS<8>, "/Engine/Private/TressFXAdaptiveTransparency.usf", "AOITResolvePS", SF_Pixel);
