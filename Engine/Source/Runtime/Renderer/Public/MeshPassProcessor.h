@@ -291,6 +291,8 @@ struct FMeshDrawCommandDebugData
  */
 class FMeshDrawShaderBindings
 {
+	friend uint32 GetDynamicInstancingHash(const FMeshDrawShaderBindings& MeshDrawShaderBindings);
+
 public:
 
 	FMeshDrawShaderBindings() {}
