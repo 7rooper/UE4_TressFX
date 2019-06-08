@@ -39,7 +39,6 @@
 #endif 
 
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXShadeParametersUniformBuffer, ENGINE_API)
-	SHADER_PARAMETER(float, g_HairShadowAlpha)
 	SHADER_PARAMETER(float, g_FiberRadius)
 	SHADER_PARAMETER(float, g_FiberSpacing)
 	SHADER_PARAMETER(int32, g_NumVerticesPerStrand)

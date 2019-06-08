@@ -75,7 +75,7 @@ public:
 	FTressFXVertexFactoryShaderParameters()
 	{
 	}
-	FShaderUniformBufferParameter tressfxShadeParameters;
+	FShaderUniformBufferParameter TressfxShadeParameters;
 
 	FShaderResourceParameter HairThicknessCoeffs;
 	FShaderResourceParameter HairStrandTexCd;

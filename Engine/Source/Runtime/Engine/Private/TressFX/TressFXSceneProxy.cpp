@@ -12,29 +12,26 @@
 #include "MaterialShared.h"
 #include "Materials/Material.h"
 
-class FTressFXCopyMorphDeltasCs : public FGlobalShader
+class FTressFXCopyMorphDeltasCS : public FGlobalShader
 {
-	DECLARE_GLOBAL_SHADER(FTressFXCopyMorphDeltasCs);
+	DECLARE_GLOBAL_SHADER(FTressFXCopyMorphDeltasCS);
 
-	FTressFXCopyMorphDeltasCs()
+	FTressFXCopyMorphDeltasCS()
 	{}
 
-	FTressFXCopyMorphDeltasCs(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	FTressFXCopyMorphDeltasCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 		: FGlobalShader(Initializer)
 	{
 		MorphVertexCount.Bind(Initializer.ParameterMap, TEXT("MorphVertexCount"));
 		MorphIndexBuffer.Bind(Initializer.ParameterMap, TEXT("MorphIndexBuffer"));
 		MorphVertexBuffer.Bind(Initializer.ParameterMap, TEXT("MorphVertexBuffer"));
 		MorphPositionDeltaBuffer.Bind(Initializer.ParameterMap, TEXT("MorphPositionDeltaBuffer"));
-		//MorphNormalDeltaBuffer.Bind(Initializer.ParameterMap, TEXT("MorphNormalDeltaBuffer"));
 	}
 
 	virtual bool Serialize(FArchive& Ar)
 	{
 		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-		Ar << MorphVertexCount << MorphIndexBuffer << MorphVertexBuffer << MorphPositionDeltaBuffer
-			//<< MorphNormalDeltaBuffer
-			;
+		Ar << MorphVertexCount << MorphIndexBuffer << MorphVertexBuffer << MorphPositionDeltaBuffer;
 		return bShaderHasOutdatedParameters;
 	}
 
@@ -52,10 +49,9 @@ class FTressFXCopyMorphDeltasCs : public FGlobalShader
 	FShaderResourceParameter MorphIndexBuffer;
 	FShaderResourceParameter MorphVertexBuffer;
 	FShaderResourceParameter MorphPositionDeltaBuffer;
-	//FShaderResourceParameter MorphNormalDeltaBuffer;
 };
 
-IMPLEMENT_GLOBAL_SHADER(FTressFXCopyMorphDeltasCs, "/Engine/Private/TressFXSimulation.usf", "CopyMorphDeltas", SF_Compute);
+IMPLEMENT_GLOBAL_SHADER(FTressFXCopyMorphDeltasCS, "/Engine/Private/TressFXSimulation.usf", "CopyMorphDeltas", SF_Compute);
 
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXShadeParametersUniformBuffer, "TressFXShadeParameters");
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXSimParametersUniformBuffer, "TressFXSimParameters");
@@ -268,21 +264,19 @@ void FTressFXSceneProxy::CopyMorphs(FRHICommandList& RHICmdList)
 
 		{
 			SCOPED_DRAW_EVENTF(RHICmdList, TressFXCopyMorphDeltas, TEXT("TressFXCopyMorphDeltas %s"), *TFXComponent->Asset->GetName());
-			// Copy position and normal delta
-			TShaderMapRef<FTressFXCopyMorphDeltasCs> CopyMorphDeltasCs(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
+			// Copy position delta
+			TShaderMapRef<FTressFXCopyMorphDeltasCS> CopyMorphDeltasCS(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 
-			RHICmdList.SetComputeShader(CopyMorphDeltasCs->GetComputeShader());
+			RHICmdList.SetComputeShader(CopyMorphDeltasCS->GetComputeShader());
 
-			SetShaderValue(RHICmdList, CopyMorphDeltasCs->GetComputeShader(), CopyMorphDeltasCs->MorphVertexCount, VertexCount);
-			SetSRVParameter(RHICmdList, CopyMorphDeltasCs->GetComputeShader(), CopyMorphDeltasCs->MorphIndexBuffer, MorphIndexBuffer.SRV);
-			SetSRVParameter(RHICmdList, CopyMorphDeltasCs->GetComputeShader(), CopyMorphDeltasCs->MorphVertexBuffer, MorphVertexBuffer);
-			SetUAVParameter(RHICmdList, CopyMorphDeltasCs->GetComputeShader(), CopyMorphDeltasCs->MorphPositionDeltaBuffer, MorphPositionDeltaBuffer.UAV);
-			//SetUAVParameter(RHICmdList, CopyMorphDeltasCs->GetComputeShader(), CopyMorphDeltasCs->MorphNormalDeltaBuffer, MorphNormalDeltaBuffer.UAV);
-			//JAKETODO: will this work on large meshes, do i care?
+			SetShaderValue(RHICmdList, CopyMorphDeltasCS->GetComputeShader(), CopyMorphDeltasCS->MorphVertexCount, VertexCount);
+			SetSRVParameter(RHICmdList, CopyMorphDeltasCS->GetComputeShader(), CopyMorphDeltasCS->MorphIndexBuffer, MorphIndexBuffer.SRV);
+			SetSRVParameter(RHICmdList, CopyMorphDeltasCS->GetComputeShader(), CopyMorphDeltasCS->MorphVertexBuffer, MorphVertexBuffer);
+			SetUAVParameter(RHICmdList, CopyMorphDeltasCS->GetComputeShader(), CopyMorphDeltasCS->MorphPositionDeltaBuffer, MorphPositionDeltaBuffer.UAV);
+			//JAKETODO: will this work on large meshes?
 			RHICmdList.DispatchComputeShader(VertexCount / 256 + 1, 1, 1);
 
-			SetUAVParameter(RHICmdList, CopyMorphDeltasCs->GetComputeShader(), CopyMorphDeltasCs->MorphPositionDeltaBuffer, nullptr);
-			//SetUAVParameter(RHICmdList, CopyMorphDeltasCs->GetComputeShader(), CopyMorphDeltasCs->MorphNormalDeltaBuffer, nullptr);
+			SetUAVParameter(RHICmdList, CopyMorphDeltasCS->GetComputeShader(), CopyMorphDeltasCS->MorphPositionDeltaBuffer, nullptr);
 			// In editor, it would be invalid sometimes. So set it to null and wait for update. 
 			MorphVertexBuffer = nullptr;
 		}
@@ -290,7 +284,6 @@ void FTressFXSceneProxy::CopyMorphs(FRHICommandList& RHICmdList)
 	else
 	{
 		MorphPositionDeltaBuffer.Release();
-		//MorphNormalDeltaBuffer.Release();
 	}
 }
 
@@ -307,7 +300,6 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 		return;
 	}
 
-	//FMaterialRenderProxy* MaterialProxy = Material->GetRenderProxy(IsSelected());
 	FMaterialRenderProxy* MaterialProxy = Material->GetRenderProxy();
 
 	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
@@ -336,7 +328,6 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 
 				BatchElement.FirstIndex = 0;
 				BatchElement.NumIndices = TressFXHairObject->mtotalIndices;
-				//BatchElement.bDrawIndexedInstanced = true;
 				BatchElement.NumPrimitives = TressFXHairObject->mtotalIndices / 3;
 				BatchElement.MinVertexIndex = 0;
 				BatchElement.MaxVertexIndex = TressFXHairObject->PosTanCollection.PositionsData.Num() - 1;

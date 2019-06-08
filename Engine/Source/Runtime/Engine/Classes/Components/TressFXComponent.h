@@ -126,9 +126,6 @@ struct FTressFXShadeSettings
 public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
-	float HairShadowAlpha;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 	float FiberRadius;
 
 	/* the assumed, average, world space distance between hair fibers */
@@ -142,7 +139,6 @@ public:
 	FTressFXShadeSettings()
 	{
 		//sensible defaults
-		HairShadowAlpha = 0.004;
 		FiberRadius = 0.25;
 		FiberSpacing = 0.1;
 		HairThickness = 0.2f;
