@@ -30,7 +30,7 @@ public:
 		, Damping(0.08f)
 		, GravityMagnitude(10.0)
 		, TipSeparation(0.0f)
-		, WindMagnitude(0)
+		, WindMagnitude(1.0f)
 		, WindDirection(FVector(1, 0, 0))
 	{
 	}
@@ -107,11 +107,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 	float TipSeparation;
 
-	// Wind Magnitude allows you to see the effect of wind on the hair
+	// Scale up or down the wind strength on a per component basis
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 	float WindMagnitude;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+	UPROPERTY()
 	FVector WindDirection;
 
 };

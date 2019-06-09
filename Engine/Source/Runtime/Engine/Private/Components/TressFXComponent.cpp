@@ -18,7 +18,7 @@
 
 DEFINE_LOG_CATEGORY(TressFXComponentLog);
 
-UTressFXComponent::UTressFXComponent(const class FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
+UTressFXComponent::UTressFXComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	bTickInEditor = true;
@@ -195,7 +195,7 @@ void UTressFXComponent::SetUpMorphMapping()
 		const int32 GuideNum = this->Asset->ImportData->NumGuideStrands;
 		TArray<FVector> GuideRootVertices = this->Asset->ImportData->GetRootPositions();
 
-		// Find closest skeletal mesh vertex for each vertex of HairWorks growth mesh
+		// Find closest skeletal mesh vertex for each vertex of mesh
 		const FTransform RelativeTransform = GetRelativeTransform();
 
 		MorphIndices.SetNumUninitialized(GuideNum, true);
@@ -241,7 +241,7 @@ void UTressFXComponent::SetUpMorphMapping()
 
 			for (auto* Instance : Instances)
 			{
-				auto* TFXComp = CastChecked<UTressFXComponent>(Instance);
+				UTressFXComponent* TFXComp = CastChecked<UTressFXComponent>(Instance);
 				TFXComp->CachedSkeletalMeshForMorph = CachedSkeletalMeshForMorph;
 				TFXComp->MorphIndices = MorphIndices;
 				TFXComp->Modify();
@@ -293,9 +293,12 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 		float WindMaxGust;
 		World->Scene->GetWindParameters_GameThread(Position, OutWindDirection, OutWindSpeed, WindMinGust, WindMaxGust);
 		//OutWindSpeed *= -1; // not sure why this was here...
-		//adjust windspeed, tressfx needs much stronger wind to have any effect, 1000 seems to be a good number for now
+		//adjust windspeed, tressfx seems to needs much stronger wind to have any effect, 1000 seems to be a good number for now
 		OutWindSpeed *= 1000;
+		OutWindSpeed *= TressFXSimulationSettings.WindMagnitude;
 	}
+
+
 
 	TSharedRef<FTressFXSceneProxy::FDynamicRenderData> DynamicRenderData(new FTressFXSceneProxy::FDynamicRenderData);
 
