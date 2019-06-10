@@ -13,6 +13,7 @@
 #include "Materials/Material.h"
 #include "DrawDebugHelpers.h"
 #include "Components/CapsuleComponent.h"
+#include "Runtime\Engine\Classes\Animation\AnimInstance.h"
 #include "Engine/Texture2D.h"
 
 
@@ -298,8 +299,6 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 		OutWindSpeed *= TressFXSimulationSettings.WindMagnitude;
 	}
 
-
-
 	TSharedRef<FTressFXSceneProxy::FDynamicRenderData> DynamicRenderData(new FTressFXSceneProxy::FDynamicRenderData);
 
 	 //Update morph data
@@ -360,6 +359,17 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 			}
 		}
 	}
+	else if(ParentSkeletalMeshComponent && CollisionType == ETressFXCollisionType::TFXCollsion_PhysicsAsset && ParentSkeletalMeshComponent->IsAnySimulatingPhysics())
+	{
+
+		UPhysicsAsset* PhysicsAsset = ParentSkeletalMeshComponent->GetPhysicsAsset();
+		if (PhysicsAsset)
+		{
+			//TODO
+
+		}
+	}
+
 	DynamicRenderData->NumCollisionCapsules = FIntVector4(NumCapsules, NumCapsules, NumCapsules, NumCapsules);
 
 #if WITH_EDITOR
@@ -383,18 +393,18 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 
 			if (RefBase.ContainsNaN())
 			{
-				UE_LOG(TressFXComponentLog, Log, TEXT("Found NaN in RefBase Bone Matrix:  %s"), *this->GetFName().ToString());
+				UE_LOG(TressFXComponentLog, Warning, TEXT("Found NaN in RefBase Bone Matrix:  %s"), *this->GetFName().ToString());
 			}
 			if (ParentSkel.ContainsNaN())
 			{
-				UE_LOG(TressFXComponentLog, Log, TEXT("Found NaN in ParentSkel Bone Matrix:  %s"), *this->GetFName().ToString());
+				UE_LOG(TressFXComponentLog, Warning, TEXT("Found NaN in ParentSkel Bone Matrix:  %s"), *this->GetFName().ToString());
 			}
 
 			FMatrix Result = (RefBase * ParentSkel);
 
 			if (Result.ContainsNaN())
 			{
-				UE_LOG(TressFXComponentLog, Log, TEXT("Found NaN in Result Bone Matrix:  %s"), *this->GetFName().ToString());
+				UE_LOG(TressFXComponentLog, Warning, TEXT("Found NaN in Result Bone Matrix:  %s"), *this->GetFName().ToString());
 			}		
 
 			if(SkelBoneIndex < AMD_TRESSFX_MAX_NUM_BONES)

@@ -153,9 +153,11 @@ public:
 UCLASS(BlueprintType, Blueprintable, ClassGroup = (Rendering, Common), hidecategories = (Object, Activation, "Components|Activation"), ShowCategories = (Mobility), editinlinenew, meta = (BlueprintSpawnableComponent))
 class UTressFXComponent : public UPrimitiveComponent
 {
-	GENERATED_UCLASS_BODY()
+	GENERATED_BODY()
 
 public:
+
+	UTressFXComponent(const class FObjectInitializer& ObjectInitializer);
 
 	/** Morph remapping */
 	UPROPERTY()

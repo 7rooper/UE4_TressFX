@@ -97,6 +97,7 @@ enum ETressFXCollisionType
 {
 	TFXCollsion_None UMETA(DisplayName = "No Collision"),
 	TFXCollsion_Capsule UMETA(DisplayName = "Capsule Collision"),
+	TFXCollsion_PhysicsAsset UMETA(DisplayName = "Physics Asset"),
 	TFXCollsion_SDF UMETA(DisplayName = "Signed Distance Field Collision")
 };
 
