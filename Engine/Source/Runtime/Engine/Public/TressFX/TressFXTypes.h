@@ -13,15 +13,12 @@
 //no
 #pragma warning( disable : 5038)
 
-
-
 #define TRESSFX_MAX_INFLUENTIAL_BONE_COUNT 4
 
 #define AMD_TRESSFX_VERSION_MAJOR                    4
 #define AMD_TRESSFX_VERSION_MINOR                    0
 #define AMD_TRESSFX_VERSION_PATCH                    0
 
-//for nvidia, might want to experiment changing these to 32 ...
 #define TRESSFX_SIM_THREAD_GROUP_SIZE 64
 #define TRESSFX_MIN_VERTS_PER_STRAND_FOR_GPU_ITERATION 64
 
@@ -47,49 +44,49 @@ END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXSimParametersUniformBuffer, ENGINE_API)
-SHADER_PARAMETER(FVector4, g_Wind)
-SHADER_PARAMETER(FVector4, g_Wind1)
-SHADER_PARAMETER(FVector4, g_Wind2)
-SHADER_PARAMETER(FVector4, g_Wind3)
-SHADER_PARAMETER(FVector4, g_Shape)
-SHADER_PARAMETER(FVector4, g_GravTimeTip)
-SHADER_PARAMETER(FIntVector4, g_SimInts)
-SHADER_PARAMETER(FIntVector4, g_Counts)
-SHADER_PARAMETER(FVector4, g_VSP)
-#if TRESSFX_DQ
-SHADER_PARAMETER_ARRAY(FVector4, g_BoneSkinningDQ, [AMD_TRESSFX_MAX_NUM_BONES * 2])
-#else
-SHADER_PARAMETER_ARRAY(FMatrix, g_BoneSkinningMatrix, [AMD_TRESSFX_MAX_NUM_BONES])
+	SHADER_PARAMETER(FVector4, g_Wind)
+	SHADER_PARAMETER(FVector4, g_Wind1)
+	SHADER_PARAMETER(FVector4, g_Wind2)
+	SHADER_PARAMETER(FVector4, g_Wind3)
+	SHADER_PARAMETER(FVector4, g_Shape)
+	SHADER_PARAMETER(FVector4, g_GravTimeTip)
+	SHADER_PARAMETER(FIntVector4, g_SimInts)
+	SHADER_PARAMETER(FIntVector4, g_Counts)
+	SHADER_PARAMETER(FVector4, g_VSP)
+	#if TRESSFX_DQ
+	SHADER_PARAMETER_ARRAY(FVector4, g_BoneSkinningDQ, [AMD_TRESSFX_MAX_NUM_BONES * 2])
+	#else
+	SHADER_PARAMETER_ARRAY(FMatrix, g_BoneSkinningMatrix, [AMD_TRESSFX_MAX_NUM_BONES])
 #endif
 
 #if TRESSFX_COLLISION_CAPSULES
-SHADER_PARAMETER_ARRAY(FVector4, g_centerAndRadius0, [TRESSFX_MAX_NUM_COLLISION_CAPSULES])
-SHADER_PARAMETER_ARRAY(FVector4, g_centerAndRadius1, [TRESSFX_MAX_NUM_COLLISION_CAPSULES])
-SHADER_PARAMETER(FIntVector4, g_numCollisionCapsules)
+	SHADER_PARAMETER_ARRAY(FVector4, g_centerAndRadius0, [TRESSFX_MAX_NUM_COLLISION_CAPSULES])
+	SHADER_PARAMETER_ARRAY(FVector4, g_centerAndRadius1, [TRESSFX_MAX_NUM_COLLISION_CAPSULES])
+	SHADER_PARAMETER(FIntVector4, g_numCollisionCapsules)
 #endif
 
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXBoneSkinningUniformBuffer, ENGINE_API)
-SHADER_PARAMETER_ARRAY(FMatrix, g_BoneSkinningMatrix, [AMD_TRESSFX_MAX_NUM_BONES])
-SHADER_PARAMETER(int32, g_NumMeshVertices)
+	SHADER_PARAMETER_ARRAY(FMatrix, g_BoneSkinningMatrix, [AMD_TRESSFX_MAX_NUM_BONES])
+	SHADER_PARAMETER(int32, g_NumMeshVertices)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXSDFUniformBuffer, ENGINE_API)
-SHADER_PARAMETER(FVector4, g_Origin)
-SHADER_PARAMETER(float, g_CellSize)
-SHADER_PARAMETER(int32, g_NumCellsX)
-SHADER_PARAMETER(int32, g_NumCellsY)
-SHADER_PARAMETER(int32, g_NumCellsZ)
-SHADER_PARAMETER(int32, g_MaxMarchingCubesVertices)
-SHADER_PARAMETER(float, g_MarchingCubesIsolevel)
-SHADER_PARAMETER(float, g_CollisionMargin)
-SHADER_PARAMETER(int32, g_NumHairVerticesPerStrand)
-SHADER_PARAMETER(int32, g_NumTotalHairVertices)
-SHADER_PARAMETER(float, pad1)
-SHADER_PARAMETER(float, pad2)
-SHADER_PARAMETER(float, pad3)
+	SHADER_PARAMETER(FVector4, g_Origin)
+	SHADER_PARAMETER(float, g_CellSize)
+	SHADER_PARAMETER(int32, g_NumCellsX)
+	SHADER_PARAMETER(int32, g_NumCellsY)
+	SHADER_PARAMETER(int32, g_NumCellsZ)
+	SHADER_PARAMETER(int32, g_MaxMarchingCubesVertices)
+	SHADER_PARAMETER(float, g_MarchingCubesIsolevel)
+	SHADER_PARAMETER(float, g_CollisionMargin)
+	SHADER_PARAMETER(int32, g_NumHairVerticesPerStrand)
+	SHADER_PARAMETER(int32, g_NumTotalHairVertices)
+	SHADER_PARAMETER(float, pad1)
+	SHADER_PARAMETER(float, pad2)
+	SHADER_PARAMETER(float, pad3)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 UENUM()
@@ -363,8 +360,6 @@ public:
 	TUniformBufferRef<FTressFXSDFUniformBuffer>  SDFUniformBuffer;
 
 	virtual void InitDynamicRHI() override;
-
-
 	virtual void ReleaseDynamicRHI() override;
 };
 
@@ -495,6 +490,6 @@ private:
 	// SDF collision margin.
 	float m_CollisionMargin;
 
-	void UpdateSDFGrid(const FVector& TightBoxMin, const FVector& TightBoxMax);;
+	void UpdateSDFGrid(const FVector& TightBoxMin, const FVector& TightBoxMax);
 };
 #pragma warning( pop ) 
