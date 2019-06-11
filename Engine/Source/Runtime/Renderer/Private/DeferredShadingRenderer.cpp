@@ -1523,13 +1523,18 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	checkSlow(RHICmdList.IsOutsideRenderPass());
 
 	// If bBasePassCanOutputVelocity is set, basepass fully writes the velocity buffer unless bUseSelectiveBasePassOutputs is enabled.
-	if (bShouldRenderVelocities && (!bBasePassCanOutputVelocity || bUseSelectiveBasePassOutputs))
+	//if (bShouldRenderVelocities && (!bBasePassCanOutputVelocity || bUseSelectiveBasePassOutputs))
+	if (bShouldRenderVelocities)
 	{
-		// Render the velocities of movable objects
-		RHICmdList.SetCurrentStat(GET_STATID(STAT_CLM_Velocity));
-		RenderVelocities(RHICmdList, SceneContext.SceneVelocity);
-		RHICmdList.SetCurrentStat(GET_STATID(STAT_CLM_AfterVelocity));
-		ServiceLocalQueue();
+		if (bBasePassCanOutputVelocity || bUseSelectiveBasePassOutputs)
+		{
+			// Render the velocities of movable objects
+			RHICmdList.SetCurrentStat(GET_STATID(STAT_CLM_Velocity));
+			RenderVelocities(RHICmdList, SceneContext.SceneVelocity);
+			RHICmdList.SetCurrentStat(GET_STATID(STAT_CLM_AfterVelocity));
+			ServiceLocalQueue();
+		}
+
 	}
 
 #if !UE_BUILD_SHIPPING
