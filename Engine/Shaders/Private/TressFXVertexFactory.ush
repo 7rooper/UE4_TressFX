@@ -87,6 +87,9 @@ FVertexFactoryInterpolantsVSToPS VertexFactoryGetInterpolantsVSToPS(FVertexFacto
     Interpolants.strandUV = tressfxVert.strandUV;
 #if NUM_MATERIAL_TEXCOORDS
 	Interpolants.TexCoords[0] = VertexParameters.TexCoords[0];
+    #if NUM_MATERIAL_TEXCOORDS > 1
+    Interpolants.TexCoords[1] = float2(tressfxVert.Root2Tip, 1.0f-tressfxVert.Root2Tip);
+    #endif
 #endif
     return Interpolants;
 
@@ -104,6 +107,9 @@ FMaterialPixelParameters GetMaterialPixelParameters(FVertexFactoryInterpolantsVS
 
 #if NUM_MATERIAL_TEXCOORDS
 	Result.TexCoords[0] = Interpolants.TexCoords[0];
+    #if NUM_MATERIAL_TEXCOORDS > 1
+    Result.TexCoords[1] = Interpolants.TexCoords[1];
+    #endif
 #endif
 
     return Result;

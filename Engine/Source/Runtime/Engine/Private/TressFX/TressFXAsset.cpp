@@ -196,6 +196,7 @@ bool FTressFXRuntimeData::GenerateFollowHairs(int32 numFollowHairsPerGuideHair /
 			FVector offset = GetRandom(-maxRadiusAroundGuideHair, maxRadiusAroundGuideHair) * t0 + GetRandom(-maxRadiusAroundGuideHair, maxRadiusAroundGuideHair) * t1;
 			followOffset[indexStrandFollow] = FVector4(offset, (float)indexGuideStrand);
 
+			float InvNumVerticesPerStrand = 1.0f / NumVerticesPerStrand;
 			for (int32 k = 0; k < NumVerticesPerStrand; k++)
 			{
 				const FVector4* guideVert = &pos[indexRootVertMaster + k];
@@ -203,9 +204,11 @@ bool FTressFXRuntimeData::GenerateFollowHairs(int32 numFollowHairsPerGuideHair /
 				// not sure why it was hardcoded to 1... thanks guy
 				// https://github.com/GPUOpen-Effects/TressFX/pull/39/commits/ea9086cf7368ef4027b8dc5b44e1d5fb2ca160cf
 				FVector4* followVert = &pos[indexRootVertFollow + k];
-
+				
 				float factor = tipSeparationFactor * ((float)k / ((float)NumVerticesPerStrand)) + 1.0f;
 				*followVert = FVector4(ToFVector(*guideVert) + offset * factor, guideVert->W);
+
+				followVert->W = k * InvNumVerticesPerStrand; // for uv
 			}
 		}
 	}
