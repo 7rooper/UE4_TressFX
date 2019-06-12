@@ -23,6 +23,7 @@ UTressFXComponent::UTressFXComponent(const FObjectInitializer& ObjectInitializer
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	bTickInEditor = true;
+	//this->bCastInsetShadow = true;
 }
 
 FPrimitiveSceneProxy* UTressFXComponent::CreateSceneProxy()
@@ -70,12 +71,12 @@ void UTressFXComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 
 	const FName Name = (PropertyChangedEvent.Property != nullptr) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
 	const FName MemberName = (PropertyChangedEvent.MemberProperty != nullptr) ? PropertyChangedEvent.MemberProperty->GetFName() : NAME_None;
-	if(Name == TEXT("bEnableMorphTargets") && this->bEnableMorphTargets == true)
+	if(Name == GET_MEMBER_NAME_CHECKED(UTressFXComponent, bEnableMorphTargets) && this->bEnableMorphTargets == true)
 	{
 		this->SetUpMorphMapping();
 		this->MarkRenderDynamicDataDirty();
 	}
-	else if (Name == TEXT("bEnableMorphTargets"))
+	else if (Name == GET_MEMBER_NAME_CHECKED(UTressFXComponent, bEnableMorphTargets))
 	{
 		MorphIndices.Empty(true);
 		CachedSkeletalMeshForMorph = nullptr;
