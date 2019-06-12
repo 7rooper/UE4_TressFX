@@ -118,12 +118,13 @@ float3 GetStrandColor(int index)
 struct TressFXVertex
 {
 #if NEEDS_VELOCITY
-    float4 PrevPosition;
+    float4 PrevPosition;// screen space position
 #endif
-    float4 Position;
+    float4 Position;// screen space position
     float4 Tangent;
     float4 p0p1;
     float2 strandUV;
+    float Root2Tip;// 0 to 1
 };
 
 TressFXVertex GetExpandedTressFXVert(
@@ -159,6 +160,7 @@ TressFXVertex GetExpandedTressFXVert(
     float4 hairEdgePositions[2]; // 0 is negative, 1 is positive
     hairEdgePositions[0] = float4(v + 1.0 * right * ratio * g_FiberRadius, 1.0);
     hairEdgePositions[1] = float4(v + -1.0 * right * ratio * g_FiberRadius, 1.0);
+    // to screen space
     hairEdgePositions[0] = MatrixMult(viewProj, hairEdgePositions[0]);
     hairEdgePositions[1] = MatrixMult(viewProj, hairEdgePositions[1]);
 
@@ -185,11 +187,14 @@ TressFXVertex GetExpandedTressFXVert(
     Output.Tangent = float4(t, ratio);
     Output.p0p1 = float4(hairEdgePositions[0].xy / max(hairEdgePositions[0].w, TRESSFX_FLOAT_EPSILON), hairEdgePositions[1].xy / max(hairEdgePositions[1].w, TRESSFX_FLOAT_EPSILON));
     Output.strandUV = GetStrandUV(index);
+    Output.Root2Tip = g_GuideHairVertexPositions[index].w;
     //Output.PosCheck = MatrixMult(g_mView, float4(v,1));
     return Output;
 
 }
 
+
+// **** not used ****
 TressFXVertex GetExpandedTressFXVertStrandCopies(uint vertexId, float3 eye, float2 winSize, float4x4 viewProj, uint instanceId)
 {
     // Access the current line segment
