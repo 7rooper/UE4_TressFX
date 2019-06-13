@@ -487,7 +487,7 @@ void SetupDepthsAlphaPassState(FMeshPassProcessorRenderState& DrawRenderState)
 {
 	DrawRenderState.SetBlendState(TStaticBlendState<
 		//accum inv allpha
-		CW_RED
+		  CW_RED
 		, BO_Add
 		, BF_Zero
 		, BF_SourceColor
@@ -495,6 +495,14 @@ void SetupDepthsAlphaPassState(FMeshPassProcessorRenderState& DrawRenderState)
 		, BF_Zero
 		, BF_SourceAlpha
 		//velocity
+		, CW_RGBA
+		, BO_Add
+		, BF_One
+		, BF_Zero
+		, BO_Add
+		, BF_One
+		, BF_Zero
+		//gbufferb
 		, CW_RGBA
 		, BO_Add
 		, BF_One
@@ -943,14 +951,16 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			static const uint32 ShortcutClearValue[4] = { SHORTCUT_INITIAL_DEPTH ,SHORTCUT_INITIAL_DEPTH,SHORTCUT_INITIAL_DEPTH,SHORTCUT_INITIAL_DEPTH };
 			ClearUAV(RHICmdList, SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem(), ShortcutClearValue);
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
-
-
+			
 			FUnorderedAccessViewRHIParamRef UAVs[] = { SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().UAV};
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EWritable, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
 			
+			RHICmdList.TransitionResource(EResourceTransitionAccess::EWritable, SceneContext.GBufferB->GetRenderTargetItem().TargetableTexture);
+
 			FRHITexture* ColorTargets[] = {
 				SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().TargetableTexture,
-				SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture
+				SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture,
+				SceneContext.GBufferB->GetRenderTargetItem().TargetableTexture,
 			};
 
 			FRHIRenderPassInfo RPInfo(ARRAY_COUNT(ColorTargets), ColorTargets, ERenderTargetActions::Load_Store);

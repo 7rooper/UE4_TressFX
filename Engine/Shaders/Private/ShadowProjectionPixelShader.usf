@@ -9,8 +9,8 @@
 #endif
 
 /*@BEGIN Third party code TressFX*/
-#ifndef USE_TRESSFX
-	#define USE_TRESSFX 0
+#ifndef TRESSFX_INSET_SHADOW
+	#define TRESSFX_INSET_SHADOW 0
 #endif
 /*@END Third party code TressFX*/
 
@@ -211,7 +211,7 @@ void Main(
 		FGBufferData GBufferData = GetGBufferData(ScreenUV);
 		
 		/*@BEGIN Third party code TressFX*/
-		#if USE_TRESSFX 
+		#if TRESSFX_INSET_SHADOW 
 		GBufferData.ShadingModelID = SHADINGMODELID_HAIR;
 		#endif
 		/*@END Third party code TressFX*/

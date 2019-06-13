@@ -23,7 +23,9 @@
 //Unreal Engine 4 integration written by Leon Rosengarten and Jacob Kostenick 2019
 #pragma once
 #include "TressFXShortCutCommon.ush"
+#include "DeferredShadingCommon.ush"
 #include "VelocityCommon.ush"
+#include "ShadingCommon.ush"
 
 
 #include "/Engine/Generated/Material.ush"
@@ -51,12 +53,11 @@ EARLYDEPTHSTENCIL
 void main(
 	PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace
 	,out float4 AccumInvAlpha : SV_Target0
-#if NEEDS_VELOCITY
-	,out float4 OutVelocity : SV_Target1
-#endif
+	, out float4 OutVelocity : SV_Target1
+	, out float4 OutGBufferB : SV_Target2
 )
 {
-
+ 
     float4 position = input.Position;
     ResolvedView = ResolveView();
 
@@ -88,6 +89,8 @@ void main(
 #if NEEDS_VELOCITY
     float2 Velocity = Calculate2DVelocity(MaterialParameters.ScreenPosition, input.FactoryInterpolants.VelocityPrevScreenPosition);
     OutVelocity = float4(EncodeVelocityToTexture(Velocity), 0, 0);
+	#else
+    OutVelocity = float4(EncodeVelocityToTexture(float2(0, 0)), 0, 0);
 #endif
 
     half Opacity = GetMaterialOpacity(PixelMaterialInputs);
@@ -123,4 +126,11 @@ void main(
     InterlockedMax(RWFragmentDepthsTexture[uint3(vScreenAddress, 2)], uDepth, uDepth2Prev);
 
     AccumInvAlpha = 1.0 - alpha;
+
+    //if (alpha < TRESSFX_MIN_ALPHA_FOR_SCENE_DEPTH)
+    //{
+        uint Mask = 0;
+        Mask |= SKIP_VELOCITY_MASK; // i think just leaving it at 0 would also work
+        OutGBufferB.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) SHADINGMODELID_HAIR, (uint) Mask);
+    //}  
 }

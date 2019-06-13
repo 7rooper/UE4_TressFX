@@ -468,7 +468,7 @@ float3 GetForwardDirectLightingTest(
 
 		// LightAttenuation: Light function + per-object shadows in z, per-object SSS shadowing in w, 
 		// Whole scene directional light shadows in x, whole scene directional light SSS shadows in y
-        float4 LightAt = LightAttenuation;
+        float4 LightAt = DynamicShadowFactors;
         float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAt, Dither, uint2(0, 0), RectTexture).xyz;
 
 		FLATTEN
@@ -680,7 +680,7 @@ void main(
     uint GridIndex = ComputeLightGridCellIndex((uint2) (In.Position.xy - ResolvedView.ViewRectMin.xy), In.Position.w, 0);
     const float Dither = InterleavedGradientNoise(MaterialParameters.SvPosition.xy, View.StateFrameIndexMod8);
     const uint EyeIndex = 0;
-    Color += GetForwardDirectLightingTest(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither);
+    Color += GetForwardDirectLighting(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither);
     
 	#if TFX_PPLL
 		//color will be multipled be TFXAlpha during resolve pass
