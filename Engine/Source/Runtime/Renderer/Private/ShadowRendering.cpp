@@ -232,12 +232,100 @@ IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false);
 IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true);
 #undef IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER
 
+/*@BEGIN Third party code TressFX*/
+
+// Implements tressfx a pixel shader for spot light PCSS.
+#define IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseFadePlane, TressFXInsetShadow) \
+	typedef TSpotPercentageCloserShadowProjectionPS<Quality, UseFadePlane, TressFXInsetShadow> TSpotPercentageCloserShadowProjectionPS##Quality##UseFadePlane##TressFXInsetShadow; \
+	IMPLEMENT_SHADER_TYPE(template<>,TSpotPercentageCloserShadowProjectionPS##Quality##UseFadePlane##TressFXInsetShadow,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true);
+#undef IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER
+
+// Implements a tressfx pixel shader for directional light PCSS.
+#define IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseFadePlane, TressFXInsetShadow) \
+	typedef TDirectionalPercentageCloserShadowProjectionPS<Quality, UseFadePlane, TressFXInsetShadow> TDirectionalPercentageCloserShadowProjectionPS##Quality##UseFadePlane##TressFXInsetShadow; \
+	IMPLEMENT_SHADER_TYPE(template<>,TDirectionalPercentageCloserShadowProjectionPS##Quality##UseFadePlane##TressFXInsetShadow,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5,false, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5,true, true);
+#undef IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER
+
+// Implements a tressfx pixel shader for one point spotlight PCSS.
+#define IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseTransmission, TressFXInsetShadow) \
+	typedef TOnePassPointShadowProjectionPS<Quality,  UseTransmission, TressFXInsetShadow> FOnePassPointShadowProjectionPS##Quality##UseTransmission##TressFXInsetShadow; \
+	IMPLEMENT_SHADER_TYPE(template<>,FOnePassPointShadowProjectionPS##Quality##UseTransmission##TressFXInsetShadow,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("MainOnePassPointLightPS"),SF_Pixel);
+
+IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(1, false, true);
+IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(2, false, true);
+IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(3, false, true);
+IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(4, false, true);
+IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true);
+
+IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(1, true, true);
+IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(2, true, true);
+IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(3, true, true);
+IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(4, true, true);
+IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true);
+
+#undef IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER
+
+//modulated
+#define IMPLEMENT_TRESSFX_MODULATED_SHADOW_PROJECTION_PIXEL_SHADER(Quality, TressFXInsetShadow) \
+	typedef TModulatedShadowProjection<Quality, TressFXInsetShadow> TModulatedShadowProjectionTFX##Quality##TressFXInsetShadow; \
+	IMPLEMENT_SHADER_TYPE(template<>,TModulatedShadowProjectionTFX##Quality##TressFXInsetShadow,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
+
+IMPLEMENT_TRESSFX_MODULATED_SHADOW_PROJECTION_PIXEL_SHADER(1, true);
+IMPLEMENT_TRESSFX_MODULATED_SHADOW_PROJECTION_PIXEL_SHADER(2, true);
+IMPLEMENT_TRESSFX_MODULATED_SHADOW_PROJECTION_PIXEL_SHADER(3, true);
+IMPLEMENT_TRESSFX_MODULATED_SHADOW_PROJECTION_PIXEL_SHADER(4, true);
+IMPLEMENT_TRESSFX_MODULATED_SHADOW_PROJECTION_PIXEL_SHADER(5, true);
+
+#undef IMPLEMENT_TRESSFX_MODULATED_SHADOW_PROJECTION_PIXEL_SHADER
+
+#define IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseFadePlane,UseTransmission, TressFXInsetShadow) \
+	typedef TShadowProjectionPS<Quality, UseFadePlane, false, UseTransmission, TressFXInsetShadow> FShadowProjectionPS##Quality##UseFadePlane##UseTransmission##TressFXInsetShadow; \
+	IMPLEMENT_SHADER_TYPE(template<>,FShadowProjectionPS##Quality##UseFadePlane##UseTransmission##TressFXInsetShadow,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
+
+// tressfx Projection shaders without the distance fade, with different quality levels.
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, false, false, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, false, false, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, false, false, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, false, false, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, false, true);
+
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true, true);
+
+// tressfx Projection shaders with the distance fade, with different quality levels.
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, true, false, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, true, false, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, true, false, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, true, false, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, false, true);
+
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true, true);
+#undef IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER
+
+/*@END Third party code TressFX*/
+
 static void GetShadowProjectionShaders(
 	int32 Quality, const FViewInfo& View, const FProjectedShadowInfo* ShadowInfo, bool bMobileModulatedProjections,
 	FShadowProjectionVertexShaderInterface** OutShadowProjVS, FShadowProjectionPixelShaderInterface** OutShadowProjPS)
 {
 	check(!*OutShadowProjVS);
 	check(!*OutShadowProjPS);
+
+
+	//@BEGIN third party code TressFX
+	bool bTressFXInsetShadow = ShadowInfo->bTressFX && ShadowInfo->bPerObjectOpaqueShadow;
+	//@END third party code TressFX
 
 	if (ShadowInfo->bTranslucentShadow)
 	{

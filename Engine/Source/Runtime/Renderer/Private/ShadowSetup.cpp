@@ -514,6 +514,9 @@ FProjectedShadowInfo::FProjectedShadowInfo()
 	, bSelfShadowOnly(false)
 	, bPerObjectOpaqueShadow(false)
 	, bTransmission(false)
+	/*@BEGIN Third party code TressFX*/
+	, bTressFX(false)
+	/*@END Third party code TressFX*/
 	, LightSceneInfo(0)
 	, ParentSceneInfo(0)
 	, NumDynamicSubjectMeshElements(0)
@@ -553,6 +556,11 @@ bool FProjectedShadowInfo::SetupPerObjectProjection(
 	bPreShadow = bInPreShadow;
 	bSelfShadowOnly = InParentSceneInfo->Proxy->CastsSelfShadowOnly();
 	bTransmission = InLightSceneInfo->Proxy->Transmission();
+
+	/*@BEGIN Third party code TressFX*/
+	//kind of a hack, come up with better way in future
+	bTressFX = false; //TodO dynamic_cast<FTressFXSceneProxy*>(InParentSceneInfo->Proxy) != nullptr;
+	/*@END Third party code TressFX*/
 
 	check(!bRayTracedDistanceField);
 

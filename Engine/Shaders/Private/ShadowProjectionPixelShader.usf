@@ -8,6 +8,12 @@
 #define FORCE_FLOATS (COMPILER_METAL)
 #endif
 
+/*@BEGIN Third party code TressFX*/
+#ifndef USE_TRESSFX
+	#define USE_TRESSFX 0
+#endif
+/*@END Third party code TressFX*/
+
 #ifndef USE_FADE_PLANE
 	#define USE_FADE_PLANE 0
 #endif
@@ -203,6 +209,12 @@ void Main(
 	#if FEATURE_LEVEL >= FEATURE_LEVEL_SM4 && !FORWARD_SHADING && !APPLY_TRANSLUCENCY_SHADOWS
 
 		FGBufferData GBufferData = GetGBufferData(ScreenUV);
+		
+		/*@BEGIN Third party code TressFX*/
+		#if USE_TRESSFX 
+		GBufferData.ShadingModelID = SHADINGMODELID_HAIR;
+		#endif
+		/*@END Third party code TressFX*/
 
 		BRANCH
 		if (IsSubsurfaceModel(GBufferData.ShadingModelID))
