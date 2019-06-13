@@ -558,8 +558,7 @@ bool FProjectedShadowInfo::SetupPerObjectProjection(
 	bTransmission = InLightSceneInfo->Proxy->Transmission();
 
 	/*@BEGIN Third party code TressFX*/
-	//kind of a hack, come up with better way in future
-	bTressFX = false; //TodO dynamic_cast<FTressFXSceneProxy*>(InParentSceneInfo->Proxy) != nullptr;
+	bTressFX = InParentSceneInfo->Proxy && InParentSceneInfo->Proxy->IsTressFX();
 	/*@END Third party code TressFX*/
 
 	check(!bRayTracedDistanceField);

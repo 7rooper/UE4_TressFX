@@ -215,6 +215,5 @@ protected:
 	FShaderResourceViewRHIRef MorphVertexBuffer;
 public:
 	FRWBufferStructured MorphPositionDeltaBuffer;
-	//FRWBufferStructured MorphNormalDeltaBuffer;
 	bool GetMorphTargetsEnabled() { return bEnableMorphTargets; }
 };

@@ -37,7 +37,7 @@ class FTressFXCopyMorphDeltasCS : public FGlobalShader
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 	{
-		return Parameters.Platform == EShaderPlatform::SP_PCD3D_SM5;
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 	}
 
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
@@ -79,11 +79,11 @@ FTressFXSDFUniformBuffer::FTressFXSDFUniformBuffer()
 	FMemory::Memzero(*this);
 }
 
-FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName ResourceName, FTressFXHairObject* InHairObject) :
-	FPrimitiveSceneProxy(InComponent, ResourceName),
-	VertexFactory(GetScene().GetFeatureLevel())
+FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName ResourceName, FTressFXHairObject* InHairObject) 
+	: FPrimitiveSceneProxy(InComponent, ResourceName)
+	, VertexFactory(GetScene().GetFeatureLevel())
 {
-
+	bIsTressFX = true;
 	TFXComponent = Cast<UTressFXComponent>(InComponent);
 	TressFXHairObject = InHairObject;
 
