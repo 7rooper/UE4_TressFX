@@ -127,8 +127,8 @@ void main(
 
     AccumInvAlpha = 1.0 - alpha;
 
-	// in tressfx, we are always writing velocity to gbuffer, so we are going to hijack the SKIP_VELOCITY_MASK to indicate thats its non-opaque tressfx
+	// in tressfx, we are always writing custom data, so we are going to hijack the SKIP_CUSTOMDATA_MASK to indicate thats its non-opaque tressfx
     uint Mask = 0;
-    Mask |= SKIP_VELOCITY_MASK;
+    Mask |= SKIP_CUSTOMDATA_MASK;
     OutGBufferB.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) SHADINGMODELID_TRESSFX, (uint) Mask);  
 }

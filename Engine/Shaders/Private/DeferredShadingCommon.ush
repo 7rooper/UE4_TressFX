@@ -576,10 +576,10 @@ FGBufferData DecodeGBufferData(
 
 	GBuffer.Velocity = !(GBuffer.SelectiveOutputMask & SKIP_VELOCITY_MASK) ? InGBufferVelocity : 0;
 	/*@BEGIN Third party code TressFX*/
-	// in tressfx, we are always writing velocity to gbuffer, and using this SKIP_VELOCITY_MASK for something else
+	// in tressfx, we are always writing custom data, so we are going to hijack the SKIP_CUSTOMDATA_MASK to indicate thats its non-opaque tressfx
     if (GBuffer.ShadingModelID == SHADINGMODELID_TRESSFX)
 	{
-        GBuffer.Velocity = InGBufferVelocity;
+        GBuffer.CustomData = InGBufferD;
     }
 	/*@END Third party code TressFX*/
 
