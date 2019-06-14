@@ -470,6 +470,9 @@ enum EMaterialShadingModel
 	MSM_Hair				UMETA(DisplayName="Hair"),
 	MSM_Cloth				UMETA(DisplayName="Cloth"),
 	MSM_Eye					UMETA(DisplayName="Eye"),
+	/*@BEGIN Third party code TressFX*/
+	MSM_TressFX				UMETA(DisplayName = "TressFX"),
+	/*@END Third party code TressFX*/
 	MSM_MAX,
 };
 

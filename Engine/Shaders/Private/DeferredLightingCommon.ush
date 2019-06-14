@@ -181,13 +181,13 @@ void GetShadowTerms(FGBufferData GBuffer, FDeferredLightData LightData, float3 W
 	}
 
 #if SUPPORT_CONTACT_SHADOWS
-	if ((LightData.ShadowedBits < 2 && (GBuffer.ShadingModelID == SHADINGMODELID_HAIR))
+	if ((LightData.ShadowedBits < 2 && (GBuffer.ShadingModelID == SHADINGMODELID_HAIR /*@BEGIN Third party code TressFX*/ || GBuffer.ShadingModelID == SHADINGMODELID_TRESSFX /*@END Third party code TressFX*/))
 		|| GBuffer.ShadingModelID == SHADINGMODELID_EYE)
 	{
 		ContactShadowLength = 0.2 * ContactShadowLengthScreenScale;
 	}
 
-	#if MATERIAL_CONTACT_SHADOWS
+#if MATERIAL_CONTACT_SHADOWS
 		ContactShadowLength = 0.2 * ContactShadowLengthScreenScale;
 	#endif
 
@@ -200,7 +200,7 @@ void GetShadowTerms(FGBufferData GBuffer, FDeferredLightData LightData, float3 W
 		Shadow.SurfaceShadow *= ContactShadow;
 
 		FLATTEN
-		if( GBuffer.ShadingModelID == SHADINGMODELID_HAIR )
+		if( GBuffer.ShadingModelID == SHADINGMODELID_HAIR /*@BEGIN Third party code TressFX*/ || GBuffer.ShadingModelID == SHADINGMODELID_TRESSFX /*@END Third party code TressFX*/ )
 			Shadow.TransmissionShadow *= ContactShadow;
 		else if( GBuffer.ShadingModelID != SHADINGMODELID_EYE )
 			Shadow.TransmissionShadow *= ContactShadow * 0.5 + 0.5;

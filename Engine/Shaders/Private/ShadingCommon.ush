@@ -14,7 +14,11 @@
 #define SHADINGMODELID_HAIR					7
 #define SHADINGMODELID_CLOTH				8
 #define SHADINGMODELID_EYE					9
-#define SHADINGMODELID_NUM					10
+/*@BEGIN Third party code TressFX*/
+#define SHADINGMODELID_TRESSFX				10
+#define SHADINGMODELID_NUM					11
+/*@END Third party code TressFX*/
+//#define SHADINGMODELID_NUM					10
 #define SHADINGMODELID_MASK					0xF					
 
 // The flags are defined so that 0 value has no effect!
@@ -45,6 +49,10 @@ uint GetShadingModelID()
 	return SHADINGMODELID_CLOTH;
 #elif MATERIAL_SHADINGMODEL_EYE
 	return SHADINGMODELID_EYE;
+/*@BEGIN Third party code TressFX*/
+#elif MATERIAL_SHADINGMODEL_TRESSFX
+	return SHADINGMODELID_TRESSFX;
+/*@END Third party code TressFX*/
 #else
 	return SHADINGMODELID_MASK;
 #endif
@@ -66,6 +74,9 @@ float3 GetShadingModelColor(uint ShadingModelID)
 	else if (ShadingModelID == SHADINGMODELID_HAIR) return float3(0.6f, 0.1f, 0.5f);
 	else if (ShadingModelID == SHADINGMODELID_CLOTH) return float3(0.7f, 1.0f, 1.0f); 
 	else if (ShadingModelID == SHADINGMODELID_EYE) return float3(0.3f, 1.0f, 1.0f); 
+	/*@BEGIN Third party code TressFX*/
+	else if (ShadingModelID == SHADINGMODELID_TRESSFX) return float3(0.4f, 0.0f, 0.8f); // Purple
+	/*@END Third party code TressFX*/
 	else return float3(1.0f, 1.0f, 1.0f); // White
 #else
 	switch(ShadingModelID)
@@ -80,6 +91,9 @@ float3 GetShadingModelColor(uint ShadingModelID)
 		case SHADINGMODELID_HAIR: return float3(0.6f, 0.1f, 0.5f);
 		case SHADINGMODELID_CLOTH: return float3(0.7f, 1.0f, 1.0f);
 		case SHADINGMODELID_EYE: return float3(0.3f, 1.0f, 1.0f);
+		/*@BEGIN Third party code TressFX*/
+		case SHADINGMODELID_TRESSFX: return float3(0.4f, 0.0f, 0.8f); // Purple
+		/*@END Third party code TressFX*/
 		default: return float3(1.0f, 1.0f, 1.0f); // White
 	}
 #endif

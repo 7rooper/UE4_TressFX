@@ -419,7 +419,7 @@ void MainPS(in noperspective float4 UVAndScreenPos : TEXCOORD0, float4 SvPositio
 		SpecularContribution += SampleColor * F;
 	}
 	
-	BRANCH if( GBuffer.ShadingModelID == SHADINGMODELID_HAIR )
+	BRANCH if( GBuffer.ShadingModelID == SHADINGMODELID_HAIR /*@BEGIN Third party code TressFX*/ || GBuffer.ShadingModelID == SHADINGMODELID_TRESSFX /*@END Third party code TressFX*/)
 	{
 		float3 FakeNormal = normalize( V - N * dot(V,N) );
 		FakeNormal = normalize( FakeNormal + 0 * float3(0,0,1) );
@@ -433,7 +433,7 @@ void MainPS(in noperspective float4 UVAndScreenPos : TEXCOORD0, float4 SvPositio
 	{
 		NonSpecularContribution = 0;
 
-		BRANCH if( GBuffer.ShadingModelID == SHADINGMODELID_HAIR )
+		BRANCH if( GBuffer.ShadingModelID == SHADINGMODELID_HAIR /*@BEGIN Third party code TressFX*/ || GBuffer.ShadingModelID == SHADINGMODELID_TRESSFX /*@END Third party code TressFX*/)
 		{
 			SpecularContribution = ImageBasedLightingHair( GBuffer, -ScreenVector, GBuffer.WorldNormal, Random );
 		}

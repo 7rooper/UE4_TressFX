@@ -133,7 +133,7 @@ float3 SkyLightDiffuse(FScreenSpaceData ScreenSpaceData, float4 UVAndScreenPos, 
 	}
 
 	BRANCH
-	if (GBuffer.ShadingModelID == SHADINGMODELID_HAIR)
+	if (GBuffer.ShadingModelID == SHADINGMODELID_HAIR /*@BEGIN Third party code TressFX*/ || GBuffer.ShadingModelID == SHADINGMODELID_TRESSFX /*@END Third party code TressFX*/)
 	{
 		float3 N = GBuffer.WorldNormal;
 		float3 V = -normalize(mul(float4(UVAndScreenPos.zw, 1, 0), View.ScreenToWorld).xyz);
@@ -350,7 +350,7 @@ void ReflectionEnvironmentSkyLighting(
 	}
 
 	BRANCH
-	if (ShadingModelID != SHADINGMODELID_UNLIT && ShadingModelID != SHADINGMODELID_HAIR)
+	if (ShadingModelID != SHADINGMODELID_UNLIT && ShadingModelID != SHADINGMODELID_HAIR /*@BEGIN Third party code TressFX*/ && ShadingModelID != SHADINGMODELID_TRESSFX /*@END Third party code TressFX*/)
 	{
 #if SPECULAR_BOUNCE
 		OutColor.xyz += SpecularBounce(ScreenSpaceData, UVAndScreenPos);

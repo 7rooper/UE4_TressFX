@@ -75,6 +75,10 @@ float NormalCurvatureToRoughness(float3 WorldNormal)
 #include "ShadingModelsMaterial.ush"
 #if MATERIAL_SHADINGMODEL_HAIR || SIMPLE_FORWARD_DIRECTIONAL_LIGHT
 #include "ShadingModels.ush"
+/*@BEGIN Third party code TressFX*/
+#elif MATERIAL_SHADINGMODEL_TRESSFX
+	#include "ShadingModels.ush"
+/*@END Third party code TressFX*/
 #endif
 
 #ifndef COMPILER_GLSL
@@ -978,7 +982,7 @@ void FPixelShaderInOut_MainPS(
 			DiffuseColorForIndirect += SubsurfaceColor * saturate( GetMaterialCustomData0(MaterialParameters) );
 		#endif
 
-		#if MATERIAL_SHADINGMODEL_HAIR
+		#if MATERIAL_SHADINGMODEL_HAIR /*@BEGIN Third party code TressFX*/ || MATERIAL_SHADINGMODEL_TRESSFX /*@END Third party code TressFX*/
 		{
 			float3 N = MaterialParameters.WorldNormal;
 			float3 V = MaterialParameters.CameraVector;
@@ -1030,7 +1034,7 @@ void FPixelShaderInOut_MainPS(
 				#endif
 			#endif
             
-            #if !MATERIAL_SHADINGMODEL_HAIR
+            #if !MATERIAL_SHADINGMODEL_HAIR /*@BEGIN Third party code TressFX*/ && !MATERIAL_SHADINGMODEL_TRESSFX /*@END Third party code TressFX*/
 				int SingleCaptureIndex = GetPrimitiveData(MaterialParameters.PrimitiveId).SingleCaptureIndex;
 			    Color += GetImageBasedReflectionLighting(MaterialParameters, GBuffer.Roughness, GBuffer.SpecularColor, IndirectIrradiance, GridIndex, SingleCaptureIndex, EyeIndex) 
 					* IndirectOcclusion 

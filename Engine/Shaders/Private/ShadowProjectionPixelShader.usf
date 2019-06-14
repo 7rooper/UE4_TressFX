@@ -212,7 +212,7 @@ void Main(
 		
 		/*@BEGIN Third party code TressFX*/
 		#if TRESSFX_INSET_SHADOW 
-		GBufferData.ShadingModelID = SHADINGMODELID_HAIR;
+			//GBufferData.ShadingModelID = SHADINGMODELID_HAIR;
 		#endif
 		/*@END Third party code TressFX*/
 
@@ -222,7 +222,7 @@ void Main(
 			float Opacity = GBufferData.CustomData.a;
 			// Derive density from a heuristic using opacity, tweaked for useful falloff ranges and to give a linear depth falloff with opacity
 			float Density = -.05f * log(1 - min(Opacity, .999f));
-			if( GBufferData.ShadingModelID == SHADINGMODELID_HAIR || GBufferData.ShadingModelID == SHADINGMODELID_EYE )
+			if (GBufferData.ShadingModelID == SHADINGMODELID_HAIR || GBufferData.ShadingModelID == SHADINGMODELID_EYE /*@BEGIN Third party code TressFX*/ || GBufferData.ShadingModelID == SHADINGMODELID_TRESSFX /*@END Third party code TressFX*/)
 			{
 				Opacity = 1;
 				Density = 1;

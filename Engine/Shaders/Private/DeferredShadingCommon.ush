@@ -290,7 +290,11 @@ bool IsSubsurfaceModel(int ShadingModel)
 		|| ShadingModel == SHADINGMODELID_SUBSURFACE_PROFILE
 		|| ShadingModel == SHADINGMODELID_TWOSIDED_FOLIAGE
 		|| ShadingModel == SHADINGMODELID_HAIR
-		|| ShadingModel == SHADINGMODELID_EYE;
+		|| ShadingModel == SHADINGMODELID_EYE
+		/*@BEGIN Third party code TressFX*/
+		|| ShadingModel == SHADINGMODELID_TRESSFX
+		/*@END Third party code TressFX*/
+		;
 }
 
 bool UseSubsurfaceProfile(int ShadingModel)

@@ -4380,6 +4380,26 @@ void UMaterial::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 	{
 		bRequiresCompilation = false;
 	}
+
+	/*@BEGIN Third party code TressFX*/
+	const FName Name = PropertyThatChanged ? PropertyThatChanged->GetFName() : NAME_None;
+	if (Name == GET_MEMBER_NAME_CHECKED(UMaterial, ShadingModel))
+	{
+		UEnumProperty* EnumProp = Cast<UEnumProperty>(PropertyThatChanged);
+		void* Value = PropertyThatChanged->ContainerPtrToValuePtr<uint8>(this);
+		EnumProp->GetUnderlyingProperty()->GetSignedIntPropertyValue(Value);
+		if (Value)
+		{
+			//JAKETODO, test if this works
+			int32* IntValue = (int32*)Value;
+			if (IntValue && *IntValue == EMaterialShadingModel::MSM_TressFX)
+			{
+				this->bUsedWithTressFX = true;
+				bRequiresCompilation = true;
+			}
+		}
+	}
+	/*@END Third party code TressFX*/
 	
 	if (bRequiresCompilation)
 	{

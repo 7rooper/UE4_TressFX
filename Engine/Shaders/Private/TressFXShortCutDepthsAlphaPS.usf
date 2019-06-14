@@ -131,6 +131,6 @@ void main(
     //{
         uint Mask = 0;
         Mask |= SKIP_VELOCITY_MASK; // i think just leaving it at 0 would also work
-        OutGBufferB.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) SHADINGMODELID_HAIR, (uint) Mask);
+        OutGBufferB.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) SHADINGMODELID_TRESSFX, (uint) Mask);
     //}  
 }
