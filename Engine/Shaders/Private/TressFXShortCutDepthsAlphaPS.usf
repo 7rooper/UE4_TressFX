@@ -127,7 +127,7 @@ void main(
 
     AccumInvAlpha = 1.0 - alpha;
 
-    if (alpha < TRESSFX_MIN_ALPHA_FOR_SCENE_DEPTH)
+    if (alpha >= TRESSFX_MIN_ALPHA_FOR_SCENE_DEPTH)
     {
         uint Mask = 0;
         Mask |= SKIP_VELOCITY_MASK; // i think just leaving it at 0 would also work
