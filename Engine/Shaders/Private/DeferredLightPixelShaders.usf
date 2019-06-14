@@ -75,10 +75,11 @@ void DeferredLightPixelMain(
 	FScreenSpaceData ScreenSpaceData = GetScreenSpaceData(ScreenUV);
 
 	/*@BEGIN Third party code TressFX*/
+	// in tressfx, we are always writing velocity to gbuffer, so we are going to hijack the SKIP_VELOCITY_MASK to indicate thats its non-opaque tressfx
     BRANCH
-    if (ScreenSpaceData.GBuffer.ShadingModelID == SHADINGMODELID_TRESSFX)
+    if (ScreenSpaceData.GBuffer.ShadingModelID == SHADINGMODELID_TRESSFX && (ScreenSpaceData.GBuffer.SelectiveOutputMask & SKIP_VELOCITY_MASK))
     {
-		//we need to do the lighting for tressfx later
+		//we need to do the lighting for non opaque tressfx later
         return;
     }
 	/*@END Third party code TressFX*/

@@ -37,7 +37,10 @@ Texture2DArray<uint> FragmentDepthsTexture;
 
 // Second pass of ShortCut.
 // Full-screen pass that writes the farthest of the near depths for depth culling.
-void main(FScreenVertexOutput input, out float OutDepth : SV_DEPTH)
+void main(
+	FScreenVertexOutput input, 
+	out float OutDepth : SV_DEPTH
+)
 {
     const int2 vScreenAddress = int2(input.Position.xy);
 

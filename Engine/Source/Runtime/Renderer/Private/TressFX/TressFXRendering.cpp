@@ -874,8 +874,7 @@ void ShortcutDepthsResolve_Impl(
 	FSceneRenderTargets& SceneContext, 
 	FViewInfo& View, 
 	FRHITexture* DepthTarget, 
-	const FPooledRenderTargetDesc DepthTargetDesc, 
-	const TCHAR *PassName
+	const FPooledRenderTargetDesc DepthTargetDesc
 )
 {
 	FRHIRenderPassInfo RPInfo(
@@ -992,8 +991,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 				SceneContext, 
 				View,
 				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, 
-				SceneContext.TressFXSceneDepth->GetDesc(),
-				TEXT("TressFXResolveDepthsToTressFXDepth")
+				SceneContext.TressFXSceneDepth->GetDesc()
 			);
 		}
 
@@ -1006,8 +1004,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 				SceneContext,
 				View,
 				SceneContext.GetSceneDepthSurface(),
-				SceneContext.SceneDepthZ->GetDesc(),
-				TEXT("TressFXResolveCloserDepthsToSceneDepth")
+				SceneContext.SceneDepthZ->GetDesc()
 			);
 		}
 	}

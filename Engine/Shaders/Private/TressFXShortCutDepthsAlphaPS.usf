@@ -127,10 +127,8 @@ void main(
 
     AccumInvAlpha = 1.0 - alpha;
 
-    if (alpha >= TRESSFX_MIN_ALPHA_FOR_SCENE_DEPTH)
-    {
-        uint Mask = 0;
-        Mask |= SKIP_VELOCITY_MASK; // i think just leaving it at 0 would also work
-        OutGBufferB.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) SHADINGMODELID_TRESSFX, (uint) Mask);
-    }  
+	// in tressfx, we are always writing velocity to gbuffer, so we are going to hijack the SKIP_VELOCITY_MASK to indicate thats its non-opaque tressfx
+    uint Mask = 0;
+    Mask |= SKIP_VELOCITY_MASK;
+    OutGBufferB.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) SHADINGMODELID_TRESSFX, (uint) Mask);  
 }
