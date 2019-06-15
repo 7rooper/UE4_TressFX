@@ -144,7 +144,7 @@ public:
 	{
 		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
 		{
-			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+			return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5);
 		}
 
 		return false;
@@ -212,7 +212,7 @@ public:
 	{
 		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
 		{
-			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+			return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5);
 		}
 
 		return false;
@@ -274,7 +274,7 @@ public:
 	{
 		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
 		{
-			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+			return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5);
 		}
 
 		return false;
