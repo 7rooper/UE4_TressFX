@@ -24,19 +24,6 @@ struct ETressFXPass
 	};
 };
 
-struct ETressFXPAOITNodeCount
-{
-	enum Type {
-		Nodes_2 = 1,
-		Nodes_4 = 2,
-		Nodes_8 = 3,
-		////
-		Num,
-		Min = Nodes_2,
-		Max = Nodes_8
-	};
-};
-
 class FTressFXShaderElementData;
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -155,10 +142,9 @@ public:
 
 	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType)
 	{
-		// Only the local vertex factory supports the position-only stream
 		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
 		{
-			return true;
+			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 		}
 
 		return false;
@@ -226,7 +212,7 @@ public:
 	{
 		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
 		{
-			return true;
+			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 		}
 
 		return false;
@@ -288,7 +274,7 @@ public:
 	{
 		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
 		{
-			return true;
+			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 		}
 
 		return false;
@@ -685,86 +671,4 @@ public:
 	);
 
 	void UnsetParameters(FRHICommandList& RHICmdList);
-};
-
-
-///////////////////////////////////////////////////////////////////////////////
-// TressFXFAOITResolvePS
-//////////////////////////////////////////////////////////////////////////////
-
-template <int32 NodeCount>
-class FTressFXAOITResolvePS : public FGlobalShader
-{
-	DECLARE_GLOBAL_SHADER(FTressFXAOITResolvePS);
-
-public:
-
-	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
-	{
-		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
-	}
-
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
-	{
-		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-		OutEnvironment.SetDefine(TEXT("AOIT_NODE_COUNT"), NodeCount);
-	};
-
-	static const TCHAR* GetSourceFilename()
-	{
-		return TEXT("/Engine/Private/TressFXAdaptiveTransparency.usf");
-	}
-
-	static const TCHAR* GetFunctionName()
-	{
-		return TEXT("AOITResolvePS");
-	}
-
-	FTressFXAOITResolvePS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FGlobalShader(Initializer)
-	{
-		ClearMaskSRV.Bind(Initializer.ParameterMap, TEXT("gAOITSPClearMaskSRV"));
-		MaskTextureSize.Bind(Initializer.ParameterMap, TEXT("MaskTextureSize"));
-		if (NodeCount == 8)
-		{
-			DepthBufferSRV.Bind(Initializer.ParameterMap, TEXT("g8AOITSPDepthDataSRV"));
-			ColorBufferSRV.Bind(Initializer.ParameterMap, TEXT("g8AOITSPColorDataSRV"));
-		}
-		else
-		{
-			DepthBufferSRV.Bind(Initializer.ParameterMap, TEXT("gAOITSPDepthDataSRV"));
-			ColorBufferSRV.Bind(Initializer.ParameterMap, TEXT("gAOITSPColorDataSRV"));
-		}
-	}
-
-
-	FTressFXAOITResolvePS() {}
-
-	virtual bool Serialize(FArchive& Ar) override
-	{
-		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-		Ar << ClearMaskSRV;
-		Ar << DepthBufferSRV;
-		Ar << ColorBufferSRV;
-		return bShaderHasOutdatedParameters;
-	}
-
-
-	void SetParameters(
-		FRHICommandList& RHICmdList, 
-		const FViewInfo& View, 
-		FTextureRHIParamRef InClearMaskSRV,
-		FShaderResourceViewRHIParamRef InDepthBufferSRV,
-		FShaderResourceViewRHIParamRef InColorBufferSRV,
-		int32 MaskTextureSizeX,
-		int32 MaskTextureSizeY
-	);
-
-
-public:
-	FShaderResourceParameter ClearMaskSRV;
-	FShaderResourceParameter DepthBufferSRV;
-	FShaderResourceParameter ColorBufferSRV;
-	FShaderParameter MaskTextureSize;
-
 };
