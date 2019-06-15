@@ -831,7 +831,18 @@ void FDeferredShadingSceneRenderer::RenderForwardShadingShadowProjections(FRHICo
 	if (bScreenShadowMaskNeeded)
 	{
 		FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
-		SceneRenderTargets.AllocateScreenShadowMask(RHICmdList, ForwardScreenSpaceShadowMask);
+		/*@BEGIN Third party code TressFX*/
+		bool bIsTressFXProjection = false;
+		if (!ForwardScreenSpaceShadowMask || !ForwardScreenSpaceShadowMask.IsValid()) 
+		{
+			SceneRenderTargets.AllocateScreenShadowMask(RHICmdList, ForwardScreenSpaceShadowMask);
+		}
+		else
+		{
+			bIsTressFXProjection = true;
+		}
+		/*@END Third party code TressFX*/
+		//SceneRenderTargets.AllocateScreenShadowMask(RHICmdList, ForwardScreenSpaceShadowMask);
 
 		SCOPED_DRAW_EVENT(RHICmdList, ShadowProjectionOnOpaque);
 		SCOPED_GPU_STAT(RHICmdList, ShadowProjection);
@@ -859,7 +870,7 @@ void FDeferredShadingSceneRenderer::RenderForwardShadingShadowProjections(FRHICo
 
 				if (VisibleLightInfo.ShadowsToProject.Num() > 0)
 				{
-					FSceneRenderer::RenderShadowProjections(RHICmdList, LightSceneInfo, ForwardScreenSpaceShadowMask, true, false);
+					FSceneRenderer::RenderShadowProjections(RHICmdList, LightSceneInfo, ForwardScreenSpaceShadowMask, true, false /*@BEGIN Third party code TressFX*/ ,bIsTressFXProjection /*@END Third party code TressFX*/);
 				}
 
 				RenderCapsuleDirectShadows(RHICmdList, *LightSceneInfo, ForwardScreenSpaceShadowMask, VisibleLightInfo.CapsuleShadowsToProject, true);

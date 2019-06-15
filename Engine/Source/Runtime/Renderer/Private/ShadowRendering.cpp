@@ -303,7 +303,7 @@ static void GetShadowProjectionShaders(
 
 
 	//@BEGIN third party code TressFX
-	const bool bTressFXInsetShadow = ShadowInfo->bTressFX && ShadowInfo->bPerObjectOpaqueShadow;
+	const bool bTressFXShadows = ShadowInfo->bTressFX;
 	//@END third party code TressFX
 
 	if (ShadowInfo->bTranslucentShadow)
@@ -411,7 +411,7 @@ static void GetShadowProjectionShaders(
 		else if (ShadowInfo->bTransmission)
 		{
 			//@BEGIN third party code TressFX
-			if (bTressFXInsetShadow)
+			if (bTressFXShadows)
 			{
 				switch (Quality)
 				{
@@ -447,7 +447,7 @@ static void GetShadowProjectionShaders(
 			if (CVarFilterMethod.GetValueOnRenderThread() == 1 && ShadowInfo->GetLightSceneInfo().Proxy->GetLightType() == LightType_Spot)
 			{
 				//@BEGIN third party code TressFX
-				if (bTressFXInsetShadow)
+				if (bTressFXShadows)
 				{
 					*OutShadowProjPS = View.ShaderMap->GetShader<TSpotPercentageCloserShadowProjectionPS<5, false, true> >();
 				}
@@ -463,7 +463,7 @@ static void GetShadowProjectionShaders(
 			else
 			{
 				//@BEGIN third party code TressFX
-				if (bTressFXInsetShadow)
+				if (bTressFXShadows)
 				{
 					switch (Quality)
 					{
@@ -506,14 +506,18 @@ void FProjectedShadowInfo::SetBlendStateForProjection(
 	bool bIsWholeSceneDirectionalShadow,
 	bool bUseFadePlane,
 	bool bProjectingForForwardShading, 
-	bool bMobileModulatedProjections)
+	bool bMobileModulatedProjections
+	/*@BEGIN third party code TressFX */
+	, bool bIsTressFXProjection
+	/*@END third party code TressFX */
+)
 {
 	// With forward shading we are packing shadowing for all 4 possible stationary lights affecting each pixel into channels of the same texture, based on assigned shadowmap channels.
 	// With deferred shading we have 4 channels for each light.  
 	//	* CSM and per-object shadows are kept in separate channels to allow fading CSM out to precomputed shadowing while keeping per-object shadows past the fade distance.
 	//	* Subsurface shadowing requires an extra channel for each
 
-	if (bProjectingForForwardShading)
+	if (bProjectingForForwardShading /*@BEGIN third party code TressFX */ && !bIsTressFXProjection 	/*@END third party code TressFX */)
 	{
 		FBlendStateRHIParamRef BlendState = NULL;
 
@@ -614,7 +618,7 @@ void FProjectedShadowInfo::SetBlendStateForProjection(
 	}
 }
 
-void FProjectedShadowInfo::SetBlendStateForProjection(FGraphicsPipelineStateInitializer& GraphicsPSOInit, bool bProjectingForForwardShading, bool bMobileModulatedProjections) const
+void FProjectedShadowInfo::SetBlendStateForProjection(FGraphicsPipelineStateInitializer& GraphicsPSOInit, bool bProjectingForForwardShading, bool bMobileModulatedProjections /*@BEGIN third party code TressFX */, bool bIsTressFXProjection /*@END third party code TressFX */) const
 {
 	SetBlendStateForProjection(
 		GraphicsPSOInit,
@@ -622,7 +626,11 @@ void FProjectedShadowInfo::SetBlendStateForProjection(FGraphicsPipelineStateInit
 		IsWholeSceneDirectionalShadow(),
 		CascadeSettings.FadePlaneLength > 0 && !bRayTracedDistanceField,
 		bProjectingForForwardShading, 
-		bMobileModulatedProjections);
+		bMobileModulatedProjections
+		/*@BEGIN third party code TressFX */
+		, bIsTressFXProjection 
+		/*@END third party code TressFX */
+	);
 }
 
 void FProjectedShadowInfo::SetupFrustumForProjection(const FViewInfo* View, TArray<FVector4, TInlineAllocator<8>>& OutFrustumVertices, bool& bOutCameraInsideShadowFrustum) const
@@ -883,7 +891,7 @@ void FProjectedShadowInfo::SetupProjectionStencilMask(
 	}
 }
 
-void FProjectedShadowInfo::RenderProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const FViewInfo* View, const FSceneRenderer* SceneRender, bool bProjectingForForwardShading, bool bMobileModulatedProjections) const
+void FProjectedShadowInfo::RenderProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const FViewInfo* View, const FSceneRenderer* SceneRender, bool bProjectingForForwardShading, bool bMobileModulatedProjections/*@BEGIN third party code TressFX */, bool bIsTressFXProjection /*@END third party code TressFX */) const
 {
 #if WANTS_DRAW_MESH_EVENTS
 	FString EventName;
@@ -960,7 +968,7 @@ void FProjectedShadowInfo::RenderProjection(FRHICommandListImmediate& RHICmdList
 		}
 	}
 
-	SetBlendStateForProjection(GraphicsPSOInit, bProjectingForForwardShading, bMobileModulatedProjections);
+	SetBlendStateForProjection(GraphicsPSOInit, bProjectingForForwardShading, bMobileModulatedProjections /*@BEGIN third party code TressFX */,bIsTressFXProjection /*@END third party code TressFX */);
 
 	GraphicsPSOInit.PrimitiveType = IsWholeSceneDirectionalShadow() ? PT_TriangleStrip : PT_TriangleList;
 
@@ -1065,7 +1073,7 @@ static void SetPointLightShaderTempl(FRHICommandList& RHICmdList, FGraphicsPipel
 }
 
 /** Render one pass point light shadow projections. */
-void FProjectedShadowInfo::RenderOnePassPointLightProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const FViewInfo& View, bool bProjectingForForwardShading) const
+void FProjectedShadowInfo::RenderOnePassPointLightProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const FViewInfo& View, bool bProjectingForForwardShading /*@BEGIN third party code TressFX */, bool bIsTressFXProjection /*@END third party code TressFX */) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_RenderWholeSceneShadowProjectionsTime);
 
@@ -1075,7 +1083,7 @@ void FProjectedShadowInfo::RenderOnePassPointLightProjection(FRHICommandListImme
 
 	FGraphicsPipelineStateInitializer GraphicsPSOInit;
 	RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-	SetBlendStateForProjection(GraphicsPSOInit, bProjectingForForwardShading, false);
+	SetBlendStateForProjection(GraphicsPSOInit, bProjectingForForwardShading, false /*@BEGIN third party code TressFX */ ,bIsTressFXProjection /*@END third party code TressFX */);
 	GraphicsPSOInit.PrimitiveType = PT_TriangleList;
 
 	const bool bCameraInsideLightGeometry = ((FVector)View.ViewMatrices.GetViewOrigin() - LightBounds.Center).SizeSquared() < FMath::Square(LightBounds.W * 1.05f + View.NearClippingDistance * 2.0f);
@@ -1115,8 +1123,8 @@ void FProjectedShadowInfo::RenderOnePassPointLightProjection(FRHICommandListImme
 
 		//@BEGIN third party code TressFX
 		//this entire block might not be needed, not sure this case will ever occur
-		const bool bTressFXInsetShadow = this->bTressFX && this->bPerObjectOpaqueShadow;
-		if (bTressFXInsetShadow) 
+		const bool bTressFXShadow = this->bTressFX;
+		if (bTressFXShadow)
 		{
 			switch (LocalQuality)
 			{
@@ -1455,7 +1463,7 @@ bool FDeferredShadingSceneRenderer::InjectReflectiveShadowMaps(FRHICommandListIm
 	return true;
 }
 
-bool FSceneRenderer::RenderShadowProjections(FRHICommandListImmediate& RHICmdList, const FLightSceneInfo* LightSceneInfo, IPooledRenderTarget* ScreenShadowMaskTexture, bool bProjectingForForwardShading, bool bMobileModulatedProjections)
+bool FSceneRenderer::RenderShadowProjections(FRHICommandListImmediate& RHICmdList, const FLightSceneInfo* LightSceneInfo, IPooledRenderTarget* ScreenShadowMaskTexture, bool bProjectingForForwardShading, bool bMobileModulatedProjections, bool bIsTressFXProjection)
 {
 	FVisibleLightInfo& VisibleLightInfo = VisibleLightInfos[LightSceneInfo->Id];
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
@@ -1525,11 +1533,11 @@ bool FSceneRenderer::RenderShadowProjections(FRHICommandListImmediate& RHICmdLis
 					{
 						if (ProjectedShadowInfo->bOnePassPointLightShadow)
 						{
-							ProjectedShadowInfo->RenderOnePassPointLightProjection(RHICmdList, ViewIndex, View, bProjectingForForwardShading);
+							ProjectedShadowInfo->RenderOnePassPointLightProjection(RHICmdList, ViewIndex, View, bProjectingForForwardShading /*@BEGIN third party code TressFX */, bIsTressFXProjection /*@END third party code TressFX */);
 						}
 						else
 						{
-							ProjectedShadowInfo->RenderProjection(RHICmdList, ViewIndex, &View, this, bProjectingForForwardShading, bMobileModulatedProjections);
+							ProjectedShadowInfo->RenderProjection(RHICmdList, ViewIndex, &View, this, bProjectingForForwardShading, bMobileModulatedProjections /*@BEGIN third party code TressFX */, bIsTressFXProjection /*@END third party code TressFX */);
 						}
 					}
 				}

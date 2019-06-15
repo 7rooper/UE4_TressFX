@@ -370,7 +370,11 @@ bool FDeferredShadingSceneRenderer::RenderLightFunctionForMaterial(
 									false,
 									false,
 									bProjectingForForwardShading,
-									false);
+									false
+									/*@BEGIN Third party code TressFX*/
+									,false
+									/*@BEGIN Third party code TressFX*/
+								);
 							}
 						}
 						else

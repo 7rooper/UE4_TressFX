@@ -2411,6 +2411,17 @@ void FSceneRenderTargets::AllocateScreenShadowMask(FRHICommandList& RHICmdList, 
 	GRenderTargetPool.FindFreeElement(RHICmdList, Desc, ScreenShadowMaskTexture, TEXT("ScreenShadowMaskTexture"));
 }
 
+/*@BEGIN Third party code TressFX*/
+void FSceneRenderTargets::AllocateTressFXScreenShadowMask(FRHICommandList& RHICmdList, TRefCountPtr<IPooledRenderTarget>& TressFXScreenShadowMaskTexture)
+{
+	//identical to AllocateScreenShadowMask
+	FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(GetBufferSizeXY(), PF_B8G8R8A8, FClearValueBinding::White, TexCreate_None, TexCreate_RenderTargetable, false));
+	Desc.Flags |= GFastVRamConfig.ScreenSpaceShadowMask;
+	Desc.NumSamples = GetNumSceneColorMSAASamples(GetCurrentFeatureLevel());
+	GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXScreenShadowMaskTexture, TEXT("TressFXScreenShadowMaskTexture"));
+}
+/*@END Third party code TressFX*/
+
 const FTexture2DRHIRef& FSceneRenderTargets::GetOptionalShadowDepthColorSurface(FRHICommandList& RHICmdList, int32 Width, int32 Height) const
 {
 	// Look for matching resolution

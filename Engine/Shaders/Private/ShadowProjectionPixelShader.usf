@@ -9,8 +9,8 @@
 #endif
 
 /*@BEGIN Third party code TressFX*/
-#ifndef TRESSFX_INSET_SHADOW
-	#define TRESSFX_INSET_SHADOW 0
+#ifndef TRESSFX_SHADOWS
+	#define TRESSFX_SHADOWS 0
 #endif
 /*@END Third party code TressFX*/
 
@@ -206,13 +206,13 @@ void Main(
 		BlendFactor = 1.0f - saturate((SceneW - FadePlaneOffset) * InvFadePlaneLength);
 	#endif
 
-	#if FEATURE_LEVEL >= FEATURE_LEVEL_SM4 && !FORWARD_SHADING && !APPLY_TRANSLUCENCY_SHADOWS
+	#if (FEATURE_LEVEL >= FEATURE_LEVEL_SM4 && !FORWARD_SHADING && !APPLY_TRANSLUCENCY_SHADOWS )/*@BEGIN Third party code TressFX*/ || (TRESSFX_SHADOWS && FEATURE_LEVEL >= FEATURE_LEVEL_SM4) /*@END Third party code TressFX*/
 
 		FGBufferData GBufferData = GetGBufferData(ScreenUV);
 		
 		/*@BEGIN Third party code TressFX*/
-		#if TRESSFX_INSET_SHADOW 
-			//GBufferData.ShadingModelID = SHADINGMODELID_HAIR;
+		#if TRESSFX_SHADOWS 
+			//todo
 		#endif
 		/*@END Third party code TressFX*/
 

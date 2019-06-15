@@ -476,6 +476,10 @@ public:
 
 	void AllocateScreenShadowMask(FRHICommandList& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture);
 
+	/*@BEGIN Third party code TressFX*/
+	void AllocateTressFXScreenShadowMask(FRHICommandList& RHICmdList, TRefCountPtr<IPooledRenderTarget>& TressFXScreenShadowMaskTexture);
+	/*@END Third party code TressFX*/
+
 	TRefCountPtr<IPooledRenderTarget>& GetReflectionBrightnessTarget();
 
 	FORCEINLINE bool IsSeparateTranslucencyPass() const { return bSeparateTranslucencyPass; }

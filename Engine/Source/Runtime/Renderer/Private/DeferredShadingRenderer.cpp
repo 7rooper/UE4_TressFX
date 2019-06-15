@@ -1115,11 +1115,18 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	extern int32 GTressFXRenderType;
 	int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
 	TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
+	//TressFX needs it own screenshadowmasktexture
+	TRefCountPtr<IPooledRenderTarget> TressFXScreenShadowMaskTexture;
+
 	{
 		//Only opaque hairs should render depths here, otherwise, wait until after basepass
 		if (bSceneHasTressFX && (TFXRenderType == ETressFXRenderType::Opaque))
 		{
 			RenderTressFXDepthsAndVelocity(RHICmdList, TFXRenderType);
+		}
+		else if (bSceneHasTressFX && (TFXRenderType > ETressFXRenderType::Opaque))
+		{
+			SceneContext.AllocateTressFXScreenShadowMask(RHICmdList, TressFXScreenShadowMaskTexture);
 		}
 	}
 	/*@End Third party code TressFX*/
@@ -1426,6 +1433,10 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	{
 		RenderTressFXBasePass(RHICmdList, TFXRenderType);
 	}
+	if (bSceneHasTressFX && (TFXRenderType > ETressFXRenderType::Opaque))
+	{
+		RenderForwardShadingShadowProjections(RHICmdList, TressFXScreenShadowMaskTexture);
+	}
 	//@END third party code TressFX
 
 	// BASE PASS ENDS HERE.
@@ -1693,12 +1704,6 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 
 	checkSlow(RHICmdList.IsOutsideRenderPass());
 
-	//@BEGIN third party code TressFX
-	//using this passed in ref inside RenderLights() instead because tressFX needs it later during the fill colors pass for dynamic shadows
-	TRefCountPtr<IPooledRenderTarget> ScreenShadowMaskTexture;
-	//@END third party code TressFX
-
-
 	// Render lighting.
 	if (bRenderDeferredLighting)
 	{
@@ -1729,7 +1734,7 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 		RHICmdList.SetCurrentStat(GET_STATID(STAT_CLM_Lighting));
 		RenderLights(RHICmdList,
 			//@BEGIN third party code TressFX
-			ScreenShadowMaskTexture
+			TressFXScreenShadowMaskTexture
 			//@END third party code TressFX
 		);
 		RHICmdList.SetCurrentStat(GET_STATID(STAT_CLM_AfterLighting));
@@ -1899,7 +1904,7 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	if (bSceneHasTressFX && TFXRenderType == ETressFXRenderType::ShortCut)
 	{
 		//Shortcut is fake oit, so the stuff behind it actually gets culled, thus we need to render it before the translucency pass
-		RenderTressfXResolvePass(RHICmdList, ScreenShadowMaskTexture, TFXRenderType);
+		RenderTressfXResolvePass(RHICmdList, TressFXScreenShadowMaskTexture, TFXRenderType);
 	}
 	//@END third party code TressFX
 
@@ -1973,7 +1978,7 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	//@BEGIN third party code TressFX
 	if (bSceneHasTressFX && TFXRenderType == ETressFXRenderType::KBuffer)
 	{
-		RenderTressfXResolvePass(RHICmdList, ScreenShadowMaskTexture, TFXRenderType);
+		RenderTressfXResolvePass(RHICmdList, TressFXScreenShadowMaskTexture, TFXRenderType);
 	}
 	//@END third party code TressFX
 

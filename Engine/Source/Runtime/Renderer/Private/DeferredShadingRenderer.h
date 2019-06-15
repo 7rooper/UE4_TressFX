@@ -230,7 +230,7 @@ private:
 	/** Renders the scene's lighting. */
 	void RenderLights(FRHICommandListImmediate& RHICmdList, 
 		//@BEGIN third party code TressFX
-		TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture
+		TRefCountPtr<IPooledRenderTarget>& TressFXScreenShadowMaskTexture
 		//@END third party code TressFX
 	);
 

@@ -526,7 +526,7 @@ static bool LightRequiresDenosier(const FLightSceneInfo& LightSceneInfo)
 /** Renders the scene's lighting. */
 void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICmdList, 
 	//@BEGIN third party code TressFX
-	TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture
+	TRefCountPtr<IPooledRenderTarget>& TressFXScreenShadowMaskTexture
 	//@END third party code TressFX
 )
 {
@@ -968,10 +968,7 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 
 			bool bDirectLighting = ViewFamily.EngineShowFlags.DirectLighting;
 
-			//@BEGIN third party code TressFX
-			//using the passed in ref instead because tressFX need it later
-			//TRefCountPtr<IPooledRenderTarget> ScreenShadowMaskTexture;
-			//@END third party code TressFX
+			TRefCountPtr<IPooledRenderTarget> ScreenShadowMaskTexture;
 
 			// Draw shadowed and light function lights
 			for (int32 LightIndex = AttenuationLightStart; LightIndex < SortedLights.Num(); LightIndex++)
