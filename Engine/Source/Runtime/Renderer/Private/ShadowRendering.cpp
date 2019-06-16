@@ -325,6 +325,10 @@ static void GetShadowProjectionShaders(
 	{
 		*OutShadowProjVS = View.ShaderMap->GetShader<FShadowProjectionNoTransformVS>();
 
+		//@BEGIN third party code TressFX
+		//JAKETODO, tressfx cases
+		//@END third party code TressFX
+
 		if (CVarFilterMethod.GetValueOnRenderThread() == 1)
 		{
 			if (ShadowInfo->CascadeSettings.FadePlaneLength > 0)
@@ -1524,6 +1528,9 @@ bool FSceneRenderer::RenderShadowProjections(FRHICommandListImmediate& RHICmdLis
 		}
 		else
 		{
+			/*@BEGIN Third party code TressFX*/
+			ProjectedShadowInfo->bTressFXInScene |= bTressFXShadows;
+			/*@END Third party code TressFX*/
 			NormalShadows.Add(ProjectedShadowInfo);
 		}
 	}

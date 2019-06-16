@@ -1090,7 +1090,7 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 
 						/*@BEGIN Third party code TressFX*/
 						FRHIRenderPassInfo RPInfo;
-						if (bSceneHasTressFX && false) 
+						if (bSceneHasTressFX && LightIndex == AttenuationLightStart) 
 						{
 							FRHITexture* ColorRTs[] =
 							{

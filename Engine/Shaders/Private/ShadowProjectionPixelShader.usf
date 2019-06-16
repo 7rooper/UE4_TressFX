@@ -98,6 +98,11 @@ EARLYDEPTHSTENCIL
 void Main(
 	in float4 SVPos : SV_POSITION,
 	out float4 OutColor : SV_Target0
+	/*@BEGIN Third party code TressFX*/
+#if TRESSFX_SHADOWS 
+	,out float4 OutTFXColor : SV_Target1
+#endif
+	/*@END Third party code TressFX*/
 	)
 {
 	const FPQMPContext PQMPContext = PQMPInit(SVPos.xy);
@@ -209,12 +214,6 @@ void Main(
 	#if FEATURE_LEVEL >= FEATURE_LEVEL_SM4 && !FORWARD_SHADING && !APPLY_TRANSLUCENCY_SHADOWS
 
 		FGBufferData GBufferData = GetGBufferData(ScreenUV);
-		
-		/*@BEGIN Third party code TressFX*/
-		#if TRESSFX_SHADOWS 
-			//todo
-		#endif
-		/*@END Third party code TressFX*/
 
 		BRANCH
 		if (IsSubsurfaceModel(GBufferData.ShadingModelID))
@@ -310,6 +309,14 @@ void Main(
 		}
 #endif
 #endif
+
+	/*@BEGIN Third party code TressFX*/
+#if TRESSFX_SHADOWS 
+    OutTFXColor = OutColor;
+#endif
+	/*@END Third party code TressFX*/
+
+
 }
 
 #if FEATURE_LEVEL >= FEATURE_LEVEL_SM4
