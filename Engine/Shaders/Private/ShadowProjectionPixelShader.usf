@@ -206,7 +206,7 @@ void Main(
 		BlendFactor = 1.0f - saturate((SceneW - FadePlaneOffset) * InvFadePlaneLength);
 	#endif
 
-	#if (FEATURE_LEVEL >= FEATURE_LEVEL_SM4 && !FORWARD_SHADING && !APPLY_TRANSLUCENCY_SHADOWS )/*@BEGIN Third party code TressFX*/ || (TRESSFX_SHADOWS && FEATURE_LEVEL >= FEATURE_LEVEL_SM4) /*@END Third party code TressFX*/
+	#if FEATURE_LEVEL >= FEATURE_LEVEL_SM4 && !FORWARD_SHADING && !APPLY_TRANSLUCENCY_SHADOWS
 
 		FGBufferData GBufferData = GetGBufferData(ScreenUV);
 		

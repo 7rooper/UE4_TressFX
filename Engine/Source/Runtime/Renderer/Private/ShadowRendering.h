@@ -320,7 +320,7 @@ public:
 	uint32 bTransmission : 1;
 
 	/*@BEGIN Third party code TressFX*/
-	uint32 bTressFX : 1;
+	uint32 bTressFXInScene : 1;
 	/*@END Third party code TressFX*/
 
 	/** View projection matrices for each cubemap face, used by one pass point light shadows. */
@@ -391,16 +391,16 @@ public:
 		bool bProjectingForForwardShading,
 		bool bMobileModulatedProjections
 		/*@BEGIN third party code TressFX */
-		,bool bIsTressFXProjection
+		,bool bSceneHasTressFX
 		/*@END third party code TressFX */
 	);
 
-	void SetBlendStateForProjection(FGraphicsPipelineStateInitializer& GraphicsPSOInit, bool bProjectingForForwardShading, bool bMobileModulatedProjections	/*@BEGIN third party code TressFX */, bool bIsTressFXProjection /*@END third party code TressFX */) const;
+	void SetBlendStateForProjection(FGraphicsPipelineStateInitializer& GraphicsPSOInit, bool bProjectingForForwardShading, bool bMobileModulatedProjections	/*@BEGIN third party code TressFX */, bool bSceneHasTressFX /*@END third party code TressFX */) const;
 
 	/**
 	 * Projects the shadow onto the scene for a particular view.
 	 */
-	void RenderProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const class FViewInfo* View, const class FSceneRenderer* SceneRender, bool bProjectingForForwardShading, bool bMobile,  /*@BEGIN third party code TressFX */ bool bIsTressFXProjection = false /*@END third party code TressFX */) const;
+	void RenderProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const class FViewInfo* View, const class FSceneRenderer* SceneRender, bool bProjectingForForwardShading, bool bMobile,  /*@BEGIN third party code TressFX */ bool bTressFXSInScene = false /*@END third party code TressFX */) const;
 
 	void BeginRenderRayTracedDistanceFieldProjection(FRHICommandListImmediate& RHICmdList, const FViewInfo& View);
 
@@ -408,7 +408,7 @@ public:
 	void RenderRayTracedDistanceFieldProjection(FRHICommandListImmediate& RHICmdList, const class FViewInfo& View, IPooledRenderTarget* ScreenShadowMaskTexture, bool bProjectingForForwardShading);
 
 	/** Render one pass point light shadow projections. */
-	void RenderOnePassPointLightProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const FViewInfo& View, bool bProjectingForForwardShading, /*@BEGIN third party code TressFX */ bool bIsTressFXProjection = false 	/*@END third party code TressFX */) const;
+	void RenderOnePassPointLightProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const FViewInfo& View, bool bProjectingForForwardShading, /*@BEGIN third party code TressFX */ bool bSceneHasTressFX = false 	/*@END third party code TressFX */) const;
 
 	/**
 	 * Renders the projected shadow's frustum wireframe with the given FPrimitiveDrawInterface.

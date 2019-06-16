@@ -1433,11 +1433,6 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	{
 		RenderTressFXBasePass(RHICmdList, TFXRenderType);
 	}
-	if (bSceneHasTressFX && (TFXRenderType > ETressFXRenderType::Opaque))
-	{
-		RenderForwardShadingShadowProjections(RHICmdList, TressFXScreenShadowMaskTexture);
-	}
-	//@END third party code TressFX
 
 	// BASE PASS ENDS HERE.
 

@@ -970,6 +970,10 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 
 			TRefCountPtr<IPooledRenderTarget> ScreenShadowMaskTexture;
 
+			/*@BEGIN Third party code TressFX*/
+			const bool bSceneHasTressFX = TressFXScreenShadowMaskTexture.IsValid();
+			/*@End Third party code TressFX*/
+
 			// Draw shadowed and light function lights
 			for (int32 LightIndex = AttenuationLightStart; LightIndex < SortedLights.Num(); LightIndex++)
 			{
@@ -1084,7 +1088,24 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 						// All shadows render with min blending
 						bool bClearToWhite = !bClearLightScreenExtentsOnly;
 
-						FRHIRenderPassInfo RPInfo(ScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture, ERenderTargetActions::Load_Store);
+						/*@BEGIN Third party code TressFX*/
+						FRHIRenderPassInfo RPInfo;
+						if (bSceneHasTressFX && false) 
+						{
+							FRHITexture* ColorRTs[] =
+							{
+								ScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture,
+								TressFXScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture
+							};
+							RPInfo = FRHIRenderPassInfo(2, ColorRTs, ERenderTargetActions::Load_Store);
+						}
+						else 
+						{
+							RPInfo = FRHIRenderPassInfo(ScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture, ERenderTargetActions::Load_Store);
+						}
+						//FRHIRenderPassInfo RPInfo(ScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture, ERenderTargetActions::Load_Store);
+						/*@END Third party code TressFX*/
+
 						RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_DontStore, ERenderTargetActions::Load_Store);
 						RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.GetSceneDepthSurface();
 						RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthRead_StencilWrite;
@@ -1123,7 +1144,7 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 
 						RHICmdList.EndRenderPass();
 
-						RenderShadowProjections(RHICmdList, &LightSceneInfo, ScreenShadowMaskTexture, bInjectedTranslucentVolume);
+						RenderShadowProjections(RHICmdList, &LightSceneInfo, ScreenShadowMaskTexture, bInjectedTranslucentVolume /*@BEGIN Third party code TressFX*/,TressFXScreenShadowMaskTexture /*@END Third party code TressFX*/);
 					}
 
 					bUsedShadowMaskTexture = true;					

@@ -303,7 +303,7 @@ static void GetShadowProjectionShaders(
 
 
 	//@BEGIN third party code TressFX
-	const bool bTressFXShadows = ShadowInfo->bTressFX;
+	const bool bTressFXInScene = ShadowInfo->bTressFXInScene;
 	//@END third party code TressFX
 
 	if (ShadowInfo->bTranslucentShadow)
@@ -411,7 +411,7 @@ static void GetShadowProjectionShaders(
 		else if (ShadowInfo->bTransmission)
 		{
 			//@BEGIN third party code TressFX
-			if (bTressFXShadows)
+			if (bTressFXInScene)
 			{
 				switch (Quality)
 				{
@@ -447,7 +447,7 @@ static void GetShadowProjectionShaders(
 			if (CVarFilterMethod.GetValueOnRenderThread() == 1 && ShadowInfo->GetLightSceneInfo().Proxy->GetLightType() == LightType_Spot)
 			{
 				//@BEGIN third party code TressFX
-				if (bTressFXShadows)
+				if (bTressFXInScene)
 				{
 					*OutShadowProjPS = View.ShaderMap->GetShader<TSpotPercentageCloserShadowProjectionPS<5, false, true> >();
 				}
@@ -463,7 +463,7 @@ static void GetShadowProjectionShaders(
 			else
 			{
 				//@BEGIN third party code TressFX
-				if (bTressFXShadows)
+				if (bTressFXInScene)
 				{
 					switch (Quality)
 					{
@@ -508,7 +508,7 @@ void FProjectedShadowInfo::SetBlendStateForProjection(
 	bool bProjectingForForwardShading, 
 	bool bMobileModulatedProjections
 	/*@BEGIN third party code TressFX */
-	, bool bIsTressFXProjection
+	, bool bSceneHasTressFX
 	/*@END third party code TressFX */
 )
 {
@@ -517,7 +517,7 @@ void FProjectedShadowInfo::SetBlendStateForProjection(
 	//	* CSM and per-object shadows are kept in separate channels to allow fading CSM out to precomputed shadowing while keeping per-object shadows past the fade distance.
 	//	* Subsurface shadowing requires an extra channel for each
 
-	if (bProjectingForForwardShading /*@BEGIN third party code TressFX */ && !bIsTressFXProjection 	/*@END third party code TressFX */)
+	if (bProjectingForForwardShading)
 	{
 		FBlendStateRHIParamRef BlendState = NULL;
 
@@ -579,19 +579,44 @@ void FProjectedShadowInfo::SetBlendStateForProjection(
 
 		if (bIsWholeSceneDirectionalShadow)
 		{
-			// Note: blend logic has to match ordering in FCompareFProjectedShadowInfoBySplitIndex.  For example the fade plane blend mode requires that shadow to be rendered first.
-			// use R and G in Light Attenuation
-			if (bUseFadePlane)
+			/*@BEGIN third party code TressFX */
+			if (bSceneHasTressFX)
 			{
-				// alpha is used to fade between cascades, we don't don't need to do BO_Min as we leave B and A untouched which has translucency shadow
-				GraphicsPSOInit.BlendState = TStaticBlendState<CW_RG, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha>::GetRHI();
+				if (bUseFadePlane)
+				{
+					// alpha is used to fade between cascades, we don't don't need to do BO_Min as we leave B and A untouched which has translucency shadow
+					GraphicsPSOInit.BlendState = TStaticBlendState<CW_RG, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_One, BF_Zero
+						,CW_RG, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_One, BF_Zero
+					>::GetRHI();
+				}
+				else
+				{
+					// first cascade rendered doesn't require fading (CO_Min is needed to combine multiple shadow passes)
+					// RTDF shadows: CO_Min is needed to combine with far shadows which overlap the same depth range
+					GraphicsPSOInit.BlendState = TStaticBlendState<CW_RG, BO_Min, BF_One, BF_One, BO_Add, BF_One, BF_Zero
+						,CW_RG, BO_Min, BF_One, BF_One, BO_Add, BF_One, BF_Zero
+					>::GetRHI();
+				}
 			}
-			else
+			else 
 			{
-				// first cascade rendered doesn't require fading (CO_Min is needed to combine multiple shadow passes)
-				// RTDF shadows: CO_Min is needed to combine with far shadows which overlap the same depth range
-				GraphicsPSOInit.BlendState = TStaticBlendState<CW_RG, BO_Min, BF_One, BF_One>::GetRHI();
-			}
+			/*@END third party code TressFX */
+				// Note: blend logic has to match ordering in FCompareFProjectedShadowInfoBySplitIndex.  For example the fade plane blend mode requires that shadow to be rendered first.
+				// use R and G in Light Attenuation
+				if (bUseFadePlane)
+				{
+					// alpha is used to fade between cascades, we don't don't need to do BO_Min as we leave B and A untouched which has translucency shadow
+					GraphicsPSOInit.BlendState = TStaticBlendState<CW_RG, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha>::GetRHI();
+				}
+				else
+				{
+					// first cascade rendered doesn't require fading (CO_Min is needed to combine multiple shadow passes)
+					// RTDF shadows: CO_Min is needed to combine with far shadows which overlap the same depth range
+					GraphicsPSOInit.BlendState = TStaticBlendState<CW_RG, BO_Min, BF_One, BF_One>::GetRHI();
+				}
+			/*@BEGIN third party code TressFX */
+			}	
+			/*@END third party code TressFX */
 		}
 		else
 		{
@@ -610,15 +635,30 @@ void FProjectedShadowInfo::SetBlendStateForProjection(
 			}
 			else
 			{
-				// use B and A in Light Attenuation
-				// CO_Min is needed to combine multiple shadow passes
-				GraphicsPSOInit.BlendState = TStaticBlendState<CW_BA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One>::GetRHI();
+				/*@BEGIN third party code TressFX */
+				if (bSceneHasTressFX)
+				{
+					GraphicsPSOInit.BlendState = TStaticBlendState<CW_BA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One
+						,CW_BA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One
+					>::GetRHI();
+				}
+				else 
+				{
+				/*@END third party code TressFX */
+					
+					// use B and A in Light Attenuation
+					// CO_Min is needed to combine multiple shadow passes
+					GraphicsPSOInit.BlendState = TStaticBlendState<CW_BA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One>::GetRHI();
+				
+				/*@BEGIN third party code TressFX */
+				}
+				/*@END third party code TressFX */
 			}
 		}
 	}
 }
 
-void FProjectedShadowInfo::SetBlendStateForProjection(FGraphicsPipelineStateInitializer& GraphicsPSOInit, bool bProjectingForForwardShading, bool bMobileModulatedProjections /*@BEGIN third party code TressFX */, bool bIsTressFXProjection /*@END third party code TressFX */) const
+void FProjectedShadowInfo::SetBlendStateForProjection(FGraphicsPipelineStateInitializer& GraphicsPSOInit, bool bProjectingForForwardShading, bool bMobileModulatedProjections /*@BEGIN third party code TressFX */, bool bSceneHasTressFX /*@END third party code TressFX */) const
 {
 	SetBlendStateForProjection(
 		GraphicsPSOInit,
@@ -628,7 +668,7 @@ void FProjectedShadowInfo::SetBlendStateForProjection(FGraphicsPipelineStateInit
 		bProjectingForForwardShading, 
 		bMobileModulatedProjections
 		/*@BEGIN third party code TressFX */
-		, bIsTressFXProjection 
+		, bSceneHasTressFX
 		/*@END third party code TressFX */
 	);
 }
@@ -891,7 +931,7 @@ void FProjectedShadowInfo::SetupProjectionStencilMask(
 	}
 }
 
-void FProjectedShadowInfo::RenderProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const FViewInfo* View, const FSceneRenderer* SceneRender, bool bProjectingForForwardShading, bool bMobileModulatedProjections/*@BEGIN third party code TressFX */, bool bIsTressFXProjection /*@END third party code TressFX */) const
+void FProjectedShadowInfo::RenderProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const FViewInfo* View, const FSceneRenderer* SceneRender, bool bProjectingForForwardShading, bool bMobileModulatedProjections/*@BEGIN third party code TressFX */, bool bTressFXSInScene /*@END third party code TressFX */) const
 {
 #if WANTS_DRAW_MESH_EVENTS
 	FString EventName;
@@ -968,7 +1008,7 @@ void FProjectedShadowInfo::RenderProjection(FRHICommandListImmediate& RHICmdList
 		}
 	}
 
-	SetBlendStateForProjection(GraphicsPSOInit, bProjectingForForwardShading, bMobileModulatedProjections /*@BEGIN third party code TressFX */,bIsTressFXProjection /*@END third party code TressFX */);
+	SetBlendStateForProjection(GraphicsPSOInit, bProjectingForForwardShading, bMobileModulatedProjections /*@BEGIN third party code TressFX */, bTressFXSInScene /*@END third party code TressFX */);
 
 	GraphicsPSOInit.PrimitiveType = IsWholeSceneDirectionalShadow() ? PT_TriangleStrip : PT_TriangleList;
 
@@ -1056,11 +1096,11 @@ void FProjectedShadowInfo::RenderProjection(FRHICommandListImmediate& RHICmdList
 }
 
 
-template <uint32 Quality /*@BEGIN third party code TressFX */, bool bTressFXInsetShadow = false /*@End third party code TressFX */>
+template <uint32 Quality /*@BEGIN third party code TressFX */, bool bSceneHasTressFX = false /*@End third party code TressFX */>
 static void SetPointLightShaderTempl(FRHICommandList& RHICmdList, FGraphicsPipelineStateInitializer& GraphicsPSOInit, int32 ViewIndex, const FViewInfo& View, const FProjectedShadowInfo* ShadowInfo)
 {
 	TShaderMapRef<FShadowVolumeBoundProjectionVS> VertexShader(View.ShaderMap);
-	TShaderMapRef<TOnePassPointShadowProjectionPS<Quality /*@BEGIN third party code TressFX */, bTressFXInsetShadow /*@End third party code TressFX */> > PixelShader(View.ShaderMap);
+	TShaderMapRef<TOnePassPointShadowProjectionPS<Quality /*@BEGIN third party code TressFX */, bSceneHasTressFX /*@End third party code TressFX */> > PixelShader(View.ShaderMap);
 
 	GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetVertexDeclarationFVector4();
 	GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
@@ -1073,7 +1113,7 @@ static void SetPointLightShaderTempl(FRHICommandList& RHICmdList, FGraphicsPipel
 }
 
 /** Render one pass point light shadow projections. */
-void FProjectedShadowInfo::RenderOnePassPointLightProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const FViewInfo& View, bool bProjectingForForwardShading /*@BEGIN third party code TressFX */, bool bIsTressFXProjection /*@END third party code TressFX */) const
+void FProjectedShadowInfo::RenderOnePassPointLightProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const FViewInfo& View, bool bProjectingForForwardShading /*@BEGIN third party code TressFX */, bool bSceneHasTressFX /*@END third party code TressFX */) const
 {
 	SCOPE_CYCLE_COUNTER(STAT_RenderWholeSceneShadowProjectionsTime);
 
@@ -1083,7 +1123,7 @@ void FProjectedShadowInfo::RenderOnePassPointLightProjection(FRHICommandListImme
 
 	FGraphicsPipelineStateInitializer GraphicsPSOInit;
 	RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-	SetBlendStateForProjection(GraphicsPSOInit, bProjectingForForwardShading, false /*@BEGIN third party code TressFX */ ,bIsTressFXProjection /*@END third party code TressFX */);
+	SetBlendStateForProjection(GraphicsPSOInit, bProjectingForForwardShading, false /*@BEGIN third party code TressFX */ , bSceneHasTressFX /*@END third party code TressFX */);
 	GraphicsPSOInit.PrimitiveType = PT_TriangleList;
 
 	const bool bCameraInsideLightGeometry = ((FVector)View.ViewMatrices.GetViewOrigin() - LightBounds.Center).SizeSquared() < FMath::Square(LightBounds.W * 1.05f + View.NearClippingDistance * 2.0f);
@@ -1122,9 +1162,7 @@ void FProjectedShadowInfo::RenderOnePassPointLightProjection(FRHICommandListImme
 		}
 
 		//@BEGIN third party code TressFX
-		//this entire block might not be needed, not sure this case will ever occur
-		const bool bTressFXShadow = this->bTressFX;
-		if (bTressFXShadow)
+		if (bSceneHasTressFX)
 		{
 			switch (LocalQuality)
 			{
@@ -1463,7 +1501,7 @@ bool FDeferredShadingSceneRenderer::InjectReflectiveShadowMaps(FRHICommandListIm
 	return true;
 }
 
-bool FSceneRenderer::RenderShadowProjections(FRHICommandListImmediate& RHICmdList, const FLightSceneInfo* LightSceneInfo, IPooledRenderTarget* ScreenShadowMaskTexture, bool bProjectingForForwardShading, bool bMobileModulatedProjections, bool bIsTressFXProjection)
+bool FSceneRenderer::RenderShadowProjections(FRHICommandListImmediate& RHICmdList, const FLightSceneInfo* LightSceneInfo, IPooledRenderTarget* ScreenShadowMaskTexture, bool bProjectingForForwardShading, bool bMobileModulatedProjections /*@BEGIN Third party code TressFX*/, IPooledRenderTarget* TressFXScreenShadowMaskTexture /*@END Third party code TressFX*/)
 {
 	FVisibleLightInfo& VisibleLightInfo = VisibleLightInfos[LightSceneInfo->Id];
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
@@ -1472,6 +1510,10 @@ bool FSceneRenderer::RenderShadowProjections(FRHICommandListImmediate& RHICmdLis
 	// #todo-renderpasses How many ShadowsToProject do we have usually?
 	TArray<FProjectedShadowInfo*> DistanceFieldShadows;
 	TArray<FProjectedShadowInfo*> NormalShadows;
+
+	/*@BEGIN Third party code TressFX*/
+	const bool bTressFXShadows = TressFXScreenShadowMaskTexture != nullptr;
+	/*@END Third party code TressFX*/
 
 	for (int32 ShadowIndex = 0; ShadowIndex < VisibleLightInfo.ShadowsToProject.Num(); ShadowIndex++)
 	{
@@ -1497,8 +1539,25 @@ bool FSceneRenderer::RenderShadowProjections(FRHICommandListImmediate& RHICmdLis
 		else
 		{
 			check(RHICmdList.IsOutsideRenderPass());
+			/*@BEGIN Third party code TressFX*/
+			FRHIRenderPassInfo RPInfo;
+			if (bTressFXShadows)
+			{
+				FRHITexture* ColorRTs[] =
+				{
+					ScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture,
+					TressFXScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture
+				};
+				RPInfo = FRHIRenderPassInfo(2, ColorRTs, ERenderTargetActions::Load_Store);
+			}
+			else
+			{
+				RPInfo = FRHIRenderPassInfo(ScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture, ERenderTargetActions::Load_Store);
+			}			
 			// Normal deferred shadows render to the shadow mask
-			FRHIRenderPassInfo RPInfo(ScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture, ERenderTargetActions::Load_Store);
+			//FRHIRenderPassInfo RPInfo(ScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture, ERenderTargetActions::Load_Store);
+			/*@END Third party code TressFX*/
+
 			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_DontStore, ERenderTargetActions::Load_Store);
 			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.GetSceneDepthSurface();
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthRead_StencilWrite;
@@ -1533,11 +1592,11 @@ bool FSceneRenderer::RenderShadowProjections(FRHICommandListImmediate& RHICmdLis
 					{
 						if (ProjectedShadowInfo->bOnePassPointLightShadow)
 						{
-							ProjectedShadowInfo->RenderOnePassPointLightProjection(RHICmdList, ViewIndex, View, bProjectingForForwardShading /*@BEGIN third party code TressFX */, bIsTressFXProjection /*@END third party code TressFX */);
+							ProjectedShadowInfo->RenderOnePassPointLightProjection(RHICmdList, ViewIndex, View, bProjectingForForwardShading /*@BEGIN third party code TressFX */, bTressFXShadows /*@END third party code TressFX */);
 						}
 						else
 						{
-							ProjectedShadowInfo->RenderProjection(RHICmdList, ViewIndex, &View, this, bProjectingForForwardShading, bMobileModulatedProjections /*@BEGIN third party code TressFX */, bIsTressFXProjection /*@END third party code TressFX */);
+							ProjectedShadowInfo->RenderProjection(RHICmdList, ViewIndex, &View, this, bProjectingForForwardShading, bMobileModulatedProjections /*@BEGIN third party code TressFX */, bTressFXShadows /*@END third party code TressFX */);
 						}
 					}
 				}
@@ -1588,7 +1647,7 @@ bool FSceneRenderer::RenderShadowProjections(FRHICommandListImmediate& RHICmdLis
 	return true;
 }
 	
-bool FDeferredShadingSceneRenderer::RenderShadowProjections(FRHICommandListImmediate& RHICmdList, const FLightSceneInfo* LightSceneInfo, IPooledRenderTarget* ScreenShadowMaskTexture, bool& bInjectedTranslucentVolume)
+bool FDeferredShadingSceneRenderer::RenderShadowProjections(FRHICommandListImmediate& RHICmdList, const FLightSceneInfo* LightSceneInfo, IPooledRenderTarget* ScreenShadowMaskTexture, bool& bInjectedTranslucentVolume /*@BEGIN Third party code TressFX*/, IPooledRenderTarget* TressFXScreenShadowMaskTexture/*@END Third party code TressFX*/)
 {
 	SCOPED_NAMED_EVENT(FDeferredShadingSceneRenderer_RenderShadowProjections, FColor::Emerald);
 	SCOPE_CYCLE_COUNTER(STAT_ProjectedShadowDrawTime);
@@ -1599,7 +1658,7 @@ bool FDeferredShadingSceneRenderer::RenderShadowProjections(FRHICommandListImmed
 
 	FVisibleLightInfo& VisibleLightInfo = VisibleLightInfos[LightSceneInfo->Id];
 
-	FSceneRenderer::RenderShadowProjections(RHICmdList, LightSceneInfo, ScreenShadowMaskTexture, false, false);
+	FSceneRenderer::RenderShadowProjections(RHICmdList, LightSceneInfo, ScreenShadowMaskTexture, false, false /*@BEGIN Third party code TressFX*/, TressFXScreenShadowMaskTexture /*@END Third party code TressFX*/);
 
 	checkSlow(RHICmdList.IsOutsideRenderPass());
 	for (int32 ShadowIndex = 0; ShadowIndex < VisibleLightInfo.ShadowsToProject.Num(); ShadowIndex++)
