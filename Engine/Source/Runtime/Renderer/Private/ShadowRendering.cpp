@@ -234,18 +234,26 @@ IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true);
 
 /*@BEGIN Third party code TressFX*/
 
+// Implements tressfx a pixel shader for directional light PCSS.
+#define IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseFadePlane, bTressFXInScene) \
+	typedef TDirectionalPercentageCloserShadowProjectionPS<Quality, UseFadePlane, bTressFXInScene> TDirectionalPercentageCloserShadowProjectionPS##Quality##UseFadePlane##bTressFXInScene; \
+	IMPLEMENT_SHADER_TYPE(template<>,TDirectionalPercentageCloserShadowProjectionPS##Quality##UseFadePlane##bTressFXInScene,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true);
+#undef IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER
+
 // Implements tressfx a pixel shader for spot light PCSS.
-#define IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseFadePlane, TressFXInsetShadow) \
-	typedef TSpotPercentageCloserShadowProjectionPS<Quality, UseFadePlane, TressFXInsetShadow> TSpotPercentageCloserShadowProjectionPS##Quality##UseFadePlane##TressFXInsetShadow; \
-	IMPLEMENT_SHADER_TYPE(template<>,TSpotPercentageCloserShadowProjectionPS##Quality##UseFadePlane##TressFXInsetShadow,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
+#define IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseFadePlane, bTressFXInScene) \
+	typedef TSpotPercentageCloserShadowProjectionPS<Quality, UseFadePlane, bTressFXInScene> TSpotPercentageCloserShadowProjectionPS##Quality##UseFadePlane##bTressFXInScene; \
+	IMPLEMENT_SHADER_TYPE(template<>,TSpotPercentageCloserShadowProjectionPS##Quality##UseFadePlane##bTressFXInScene,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
 IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true);
 IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true);
 #undef IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER
 
 // Implements a tressfx pixel shader for one point spotlight PCSS.
-#define IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseTransmission, TressFXInsetShadow) \
-	typedef TOnePassPointShadowProjectionPS<Quality,  UseTransmission, TressFXInsetShadow> FOnePassPointShadowProjectionPS##Quality##UseTransmission##TressFXInsetShadow; \
-	IMPLEMENT_SHADER_TYPE(template<>,FOnePassPointShadowProjectionPS##Quality##UseTransmission##TressFXInsetShadow,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("MainOnePassPointLightPS"),SF_Pixel);
+#define IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseTransmission, bTressFXInScene) \
+	typedef TOnePassPointShadowProjectionPS<Quality,  UseTransmission, bTressFXInScene> FOnePassPointShadowProjectionPS##Quality##UseTransmission##bTressFXInScene; \
+	IMPLEMENT_SHADER_TYPE(template<>,FOnePassPointShadowProjectionPS##Quality##UseTransmission##bTressFXInScene,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("MainOnePassPointLightPS"),SF_Pixel);
 
 IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(1, false, true);
 IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(2, false, true);
@@ -261,9 +269,9 @@ IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true);
 
 #undef IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER
 
-#define IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseFadePlane,UseTransmission, TressFXInsetShadow) \
-	typedef TShadowProjectionPS<Quality, UseFadePlane, false, UseTransmission, TressFXInsetShadow> FShadowProjectionPS##Quality##UseFadePlane##UseTransmission##TressFXInsetShadow; \
-	IMPLEMENT_SHADER_TYPE(template<>,FShadowProjectionPS##Quality##UseFadePlane##UseTransmission##TressFXInsetShadow,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
+#define IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseFadePlane,UseTransmission, bTressFXInScene) \
+	typedef TShadowProjectionPS<Quality, UseFadePlane, false, UseTransmission, bTressFXInScene> FShadowProjectionPS##Quality##UseFadePlane##UseTransmission##bTressFXInScene; \
+	IMPLEMENT_SHADER_TYPE(template<>,FShadowProjectionPS##Quality##UseFadePlane##UseTransmission##bTressFXInScene,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
 
 // tressfx Projection shaders without the distance fade, with different quality levels.
 IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, false, false, true);
@@ -294,17 +302,15 @@ IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true, true);
 
 /*@END Third party code TressFX*/
 
+/*@BEGIN Third party code TressFX*/
+template <bool bTressFXInScene>
+/*@END Third party code TressFX*/
 static void GetShadowProjectionShaders(
 	int32 Quality, const FViewInfo& View, const FProjectedShadowInfo* ShadowInfo, bool bMobileModulatedProjections,
 	FShadowProjectionVertexShaderInterface** OutShadowProjVS, FShadowProjectionPixelShaderInterface** OutShadowProjPS)
 {
 	check(!*OutShadowProjVS);
 	check(!*OutShadowProjPS);
-
-
-	//@BEGIN third party code TressFX
-	const bool bTressFXInScene = ShadowInfo->bTressFXInScene;
-	//@END third party code TressFX
 
 	if (ShadowInfo->bTranslucentShadow)
 	{
@@ -325,16 +331,12 @@ static void GetShadowProjectionShaders(
 	{
 		*OutShadowProjVS = View.ShaderMap->GetShader<FShadowProjectionNoTransformVS>();
 
-		//@BEGIN third party code TressFX
-		//JAKETODO, tressfx cases
-		//@END third party code TressFX
-
 		if (CVarFilterMethod.GetValueOnRenderThread() == 1)
 		{
 			if (ShadowInfo->CascadeSettings.FadePlaneLength > 0)
-				*OutShadowProjPS = View.ShaderMap->GetShader<TDirectionalPercentageCloserShadowProjectionPS<5, true> >();
+				*OutShadowProjPS = View.ShaderMap->GetShader<TDirectionalPercentageCloserShadowProjectionPS<5, true /*@BEGIN Third party code TressFX*/, bTressFXInScene /*@END Third party code TressFX*/> >();
 			else
-				*OutShadowProjPS = View.ShaderMap->GetShader<TDirectionalPercentageCloserShadowProjectionPS<5, false> >();
+				*OutShadowProjPS = View.ShaderMap->GetShader<TDirectionalPercentageCloserShadowProjectionPS<5, false /*@BEGIN Third party code TressFX*/, bTressFXInScene /*@END Third party code TressFX*/> >();
 		}
 		else if (ShadowInfo->CascadeSettings.FadePlaneLength > 0)
 		{
@@ -342,11 +344,11 @@ static void GetShadowProjectionShaders(
 			{
 				switch (Quality)
 				{
-				case 1: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<1, true, false, true> >(); break;
-				case 2: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<2, true, false, true> >(); break;
-				case 3: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<3, true, false, true> >(); break;
-				case 4: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<4, true, false, true> >(); break;
-				case 5: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<5, true, false, true> >(); break;
+				case 1: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<1, true, false, true /*@BEGIN Third party code TressFX*/, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 2: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<2, true, false, true /*@BEGIN Third party code TressFX*/, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 3: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<3, true, false, true /*@BEGIN Third party code TressFX*/, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 4: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<4, true, false, true /*@BEGIN Third party code TressFX*/, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 5: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<5, true, false, true /*@BEGIN Third party code TressFX*/, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
 				default:
 					check(0);
 				}
@@ -355,11 +357,11 @@ static void GetShadowProjectionShaders(
 			{
 				switch (Quality)
 				{
-				case 1: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<1, true> >(); break;
-				case 2: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<2, true> >(); break;
-				case 3: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<3, true> >(); break;
-				case 4: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<4, true> >(); break;
-				case 5: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<5, true> >(); break;
+				case 1: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<1, true /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 2: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<2, true /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 3: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<3, true /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 4: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<4, true /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 5: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<5, true /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
 				default:
 					check(0);
 				}
@@ -371,24 +373,24 @@ static void GetShadowProjectionShaders(
 			{
 				switch (Quality)
 				{
-				case 1: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<1, false, false, true> >(); break;
-				case 2: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<2, false, false, true> >(); break;
-				case 3: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<3, false, false, true> >(); break;
-				case 4: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<4, false, false, true> >(); break;
-				case 5: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<5, false, false, true> >(); break;
+				case 1: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<1, false, false, true /*@BEGIN Third party code TressFX*/, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 2: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<2, false, false, true /*@BEGIN Third party code TressFX*/, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 3: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<3, false, false, true /*@BEGIN Third party code TressFX*/, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 4: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<4, false, false, true /*@BEGIN Third party code TressFX*/, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 5: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<5, false, false, true /*@BEGIN Third party code TressFX*/, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
 				default:
 					check(0);
 				}
 			}
 			else
-			{ 
+			{
 				switch (Quality)
 				{
-				case 1: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<1, false> >(); break;
-				case 2: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<2, false> >(); break;
-				case 3: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<3, false> >(); break;
-				case 4: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<4, false> >(); break;
-				case 5: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<5, false> >(); break;
+				case 1: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<1, false /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 2: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<2, false /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 3: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<3, false /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 4: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<4, false /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 5: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<5, false /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
 				default:
 					check(0);
 				}
@@ -399,7 +401,7 @@ static void GetShadowProjectionShaders(
 	{
 		*OutShadowProjVS = View.ShaderMap->GetShader<FShadowVolumeBoundProjectionVS>();
 
-		if(bMobileModulatedProjections)
+		if (bMobileModulatedProjections)
 		{
 			switch (Quality)
 			{
@@ -414,88 +416,35 @@ static void GetShadowProjectionShaders(
 		}
 		else if (ShadowInfo->bTransmission)
 		{
-			//@BEGIN third party code TressFX
-			if (bTressFXInScene)
+			switch (Quality)
 			{
-				switch (Quality)
-				{
-				case 1: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<1, false, false, true, true> >(); break;
-				case 2: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<2, false, false, true, true> >(); break;
-				case 3: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<3, false, false, true, true> >(); break;
-				case 4: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<4, false, false, true, true> >(); break;
-				case 5: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<5, false, false, true, true> >(); break;
-				default:
-					check(0);
-				}
+			case 1: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<1, false, false, true  /*@BEGIN Third party code TressFX*/, true /*@END Third party code TressFX*/> >(); break;
+			case 2: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<2, false, false, true  /*@BEGIN Third party code TressFX*/, true /*@END Third party code TressFX*/> >(); break;
+			case 3: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<3, false, false, true  /*@BEGIN Third party code TressFX*/, true /*@END Third party code TressFX*/> >(); break;
+			case 4: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<4, false, false, true  /*@BEGIN Third party code TressFX*/, true /*@END Third party code TressFX*/> >(); break;
+			case 5: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<5, false, false, true  /*@BEGIN Third party code TressFX*/, true /*@END Third party code TressFX*/> >(); break;
+			default:
+				check(0);
 			}
-			else
-			{
-			//@END third party code TressFX
-				switch (Quality)
-				{
-				case 1: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<1, false, false, true> >(); break;
-				case 2: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<2, false, false, true> >(); break;
-				case 3: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<3, false, false, true> >(); break;
-				case 4: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<4, false, false, true> >(); break;
-				case 5: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<5, false, false, true> >(); break;
-				default:
-					check(0);
-				}
-			//@BEGIN third party code TressFX
-			} // yes really just the brace come at me
-			//@END third party code TressFX
-
 		}
 		else
 		{
 			if (CVarFilterMethod.GetValueOnRenderThread() == 1 && ShadowInfo->GetLightSceneInfo().Proxy->GetLightType() == LightType_Spot)
 			{
-				//@BEGIN third party code TressFX
-				if (bTressFXInScene)
-				{
-					*OutShadowProjPS = View.ShaderMap->GetShader<TSpotPercentageCloserShadowProjectionPS<5, false, true> >();
-				}
-				else 
-				{
-				//@END third party code TressFX
-					*OutShadowProjPS = View.ShaderMap->GetShader<TSpotPercentageCloserShadowProjectionPS<5, false> >();
-				//@BEGIN third party code TressFX
-				} // yes really just the brace come at me
-				//@END third party code TressFX
-
+				*OutShadowProjPS = View.ShaderMap->GetShader<TSpotPercentageCloserShadowProjectionPS<5, false /*@BEGIN Third party code TressFX*/, bTressFXInScene /*@END Third party code TressFX*/> >();
 			}
 			else
 			{
-				//@BEGIN third party code TressFX
-				if (bTressFXInScene)
+				switch (Quality)
 				{
-					switch (Quality)
-					{
-					case 1: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<1, false, false, false, true> >(); break;
-					case 2: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<2, false, false, false, true> >(); break;
-					case 3: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<3, false, false, false, true> >(); break;
-					case 4: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<4, false, false, false, true> >(); break;
-					case 5: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<5, false, false, false, true> >(); break;
-					default:
-						check(0);
-					}
+				case 1: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<1, false /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 2: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<2, false /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 3: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<3, false /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 4: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<4, false /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				case 5: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<5, false /*@BEGIN Third party code TressFX*/, false, false, bTressFXInScene /*@END Third party code TressFX*/> >(); break;
+				default:
+					check(0);
 				}
-				else
-				{
-				//@END third party code TressFX
-					switch (Quality)
-					{
-					case 1: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<1, false> >(); break;
-					case 2: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<2, false> >(); break;
-					case 3: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<3, false> >(); break;
-					case 4: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<4, false> >(); break;
-					case 5: *OutShadowProjPS = View.ShaderMap->GetShader<TShadowProjectionPS<5, false> >(); break;
-					default:
-						check(0);
-					}
-				//@BEGIN third party code TressFX
-				} // yes really just the brace come at me
-				//@END third party code TressFX
 			}
 		}
 	}
@@ -935,7 +884,7 @@ void FProjectedShadowInfo::SetupProjectionStencilMask(
 	}
 }
 
-void FProjectedShadowInfo::RenderProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const FViewInfo* View, const FSceneRenderer* SceneRender, bool bProjectingForForwardShading, bool bMobileModulatedProjections/*@BEGIN third party code TressFX */, bool bTressFXSInScene /*@END third party code TressFX */) const
+void FProjectedShadowInfo::RenderProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const FViewInfo* View, const FSceneRenderer* SceneRender, bool bProjectingForForwardShading, bool bMobileModulatedProjections/*@BEGIN third party code TressFX */, bool InbTressFXInScene /*@END third party code TressFX */) const
 {
 #if WANTS_DRAW_MESH_EVENTS
 	FString EventName;
@@ -1012,7 +961,7 @@ void FProjectedShadowInfo::RenderProjection(FRHICommandListImmediate& RHICmdList
 		}
 	}
 
-	SetBlendStateForProjection(GraphicsPSOInit, bProjectingForForwardShading, bMobileModulatedProjections /*@BEGIN third party code TressFX */, bTressFXSInScene /*@END third party code TressFX */);
+	SetBlendStateForProjection(GraphicsPSOInit, bProjectingForForwardShading, bMobileModulatedProjections /*@BEGIN third party code TressFX */, InbTressFXInScene /*@END third party code TressFX */);
 
 	GraphicsPSOInit.PrimitiveType = IsWholeSceneDirectionalShadow() ? PT_TriangleStrip : PT_TriangleList;
 
@@ -1050,8 +999,17 @@ void FProjectedShadowInfo::RenderProjection(FRHICommandListImmediate& RHICmdList
 
 		FShadowProjectionVertexShaderInterface* ShadowProjVS = nullptr;
 		FShadowProjectionPixelShaderInterface* ShadowProjPS = nullptr;
-
-		GetShadowProjectionShaders(LocalQuality, *View, this, bMobileModulatedProjections, &ShadowProjVS, &ShadowProjPS);
+		/*@BEGIN Third party code TressFX*/
+		if (bTressFXInScene) 
+		{
+			GetShadowProjectionShaders<true>(LocalQuality, *View, this, bMobileModulatedProjections, &ShadowProjVS, &ShadowProjPS);
+		}
+		else 
+		{
+			GetShadowProjectionShaders<false>(LocalQuality, *View, this, bMobileModulatedProjections, &ShadowProjVS, &ShadowProjPS);
+		}
+		/*@END Third party code TressFX*/
+		//GetShadowProjectionShaders(LocalQuality, *View, this, bMobileModulatedProjections, &ShadowProjVS, &ShadowProjPS);
 
 		GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetVertexDeclarationFVector4();
 		GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(ShadowProjVS);
