@@ -3157,7 +3157,7 @@ void FScene::UpdateSpeedTreeWind(double CurrentTime)
 	#undef SET_SPEEDTREE_TABLE_FLOAT4V
 }
 
-FUniformBufferRHIParamRef FScene::GetSpeedTreeUniformBuffer(const FVertexFactory* VertexFactory) const
+FRHIUniformBuffer* FScene::GetSpeedTreeUniformBuffer(const FVertexFactory* VertexFactory) const
 {
 	if (VertexFactory != NULL)
 	{
@@ -3172,7 +3172,7 @@ FUniformBufferRHIParamRef FScene::GetSpeedTreeUniformBuffer(const FVertexFactory
 		}
 	}
 
-	return FUniformBufferRHIParamRef();
+	return nullptr;
 }
 
 /**
@@ -3672,7 +3672,7 @@ public:
 	virtual void AddSpeedTreeWind(class FVertexFactory* VertexFactory, const class UStaticMesh* StaticMesh) override {}
 	virtual void RemoveSpeedTreeWind_RenderThread(class FVertexFactory* VertexFactory, const class UStaticMesh* StaticMesh) override {}
 	virtual void UpdateSpeedTreeWind(double CurrentTime) override {}
-	virtual FUniformBufferRHIParamRef GetSpeedTreeUniformBuffer(const FVertexFactory* VertexFactory) const override { return FUniformBufferRHIParamRef(); }
+	virtual FRHIUniformBuffer* GetSpeedTreeUniformBuffer(const FVertexFactory* VertexFactory) const override { return nullptr; }
 
 	virtual void Release() override {}
 

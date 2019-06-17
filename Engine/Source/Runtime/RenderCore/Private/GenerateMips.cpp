@@ -35,7 +35,7 @@ class FGenerateMipsCS : public FGlobalShader
 IMPLEMENT_GLOBAL_SHADER(FGenerateMipsCS, "/Engine/Private/ComputeGenerateMips.usf", "MainCS", SF_Compute);
 
 //Initialise the texture for usage with RenderGraph and ComputeGenerateMips shader
-FGenerateMipsStruct* FGenerateMips::SetupTexture(FTextureRHIParamRef InTexture,
+FGenerateMipsStruct* FGenerateMips::SetupTexture(FRHITexture* InTexture,
 	ESamplerFilter InFilter,
 	ESamplerAddressMode InAddressU,
 	ESamplerAddressMode InAddressV,
@@ -90,7 +90,7 @@ FGenerateMipsStruct* FGenerateMips::SetupTexture(FTextureRHIParamRef InTexture,
 }
 
 //Compute shader execution function for generating mips in real time.
-void FGenerateMips::Compute(FRHICommandListImmediate& RHIImmCmdList, FTextureRHIParamRef InTexture)
+void FGenerateMips::Compute(FRHICommandListImmediate& RHIImmCmdList, FRHITexture* InTexture)
 {
 	check(IsInRenderingThread());	
 	//Currently only 2D textures supported
@@ -141,7 +141,7 @@ void FGenerateMips::Compute(FRHICommandListImmediate& RHIImmCmdList, FTextureRHI
 }
 
 //Public execute function for calling the generate mips compute shader. Handles everything per platform.
-void FGenerateMips::Execute(FRHICommandListImmediate& RHICmdList, FTextureRHIParamRef InTexture,
+void FGenerateMips::Execute(FRHICommandListImmediate& RHICmdList, FRHITexture* InTexture,
 	ESamplerFilter InFilter,
 	ESamplerAddressMode InAddressU,
 	ESamplerAddressMode InAddressV,
