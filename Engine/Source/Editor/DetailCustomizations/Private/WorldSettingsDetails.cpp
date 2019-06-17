@@ -23,6 +23,15 @@
 
 FWorldSettingsDetails::~FWorldSettingsDetails()
 {
+	GetMutableDefault<UEditorExperimentalSettings>()->OnSettingChanged().Remove(ExperimentalDelegateHandle);
+}
+
+void FWorldSettingsDetails::OnEditorExperimentalSettingsChanged(FName InPropertyName)
+{
+	if (DetailLayoutBuilder && InPropertyName == GET_MEMBER_NAME_CHECKED(UEditorExperimentalSettings, bLandscapeLayerSystem))
+	{
+		DetailLayoutBuilder->ForceRefreshDetails();
+	}
 }
 
 /* IDetailCustomization overrides
@@ -30,6 +39,13 @@ FWorldSettingsDetails::~FWorldSettingsDetails()
 
 void FWorldSettingsDetails::CustomizeDetails( IDetailLayoutBuilder& DetailBuilder )
 {
+	DetailLayoutBuilder = &DetailBuilder;
+
+	if (!ExperimentalDelegateHandle.IsValid())
+	{
+		ExperimentalDelegateHandle = GetMutableDefault<UEditorExperimentalSettings>()->OnSettingChanged().AddSP(this, &FWorldSettingsDetails::OnEditorExperimentalSettingsChanged);
+	}
+
 	IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("GameMode");
 	CustomizeGameInfoProperty("DefaultGameMode", DetailBuilder, Category);
 

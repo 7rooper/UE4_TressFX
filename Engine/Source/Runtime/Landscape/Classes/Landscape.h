@@ -387,7 +387,7 @@ private:
 public:
 
 #if WITH_EDITORONLY_DATA
-	UPROPERTY(EditAnywhere, Category=Landscape)
+	UPROPERTY(EditAnywhere, Category=Experimental)
 	bool bCanHaveLayersContent = false;
 
 	DECLARE_EVENT(ALandscape, FLandscapeBPCustomBrushChangedDelegate);

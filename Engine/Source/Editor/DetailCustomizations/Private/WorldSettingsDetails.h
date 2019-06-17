@@ -27,6 +27,8 @@ public:
 
 	virtual ~FWorldSettingsDetails();
 
+	void OnEditorExperimentalSettingsChanged(FName InPropertyName);
+
 	// IDetailCustomization interface
 
 	virtual void CustomizeDetails( IDetailLayoutBuilder& DetailBuilder ) override;
@@ -72,6 +74,8 @@ private:
 
 	/** Helper class to customizer GameMode property */
 	TSharedPtr<FGameModeInfoCustomizer>	GameInfoModeCustomizer;
+	FDelegateHandle ExperimentalDelegateHandle;
+	IDetailLayoutBuilder* DetailLayoutBuilder = nullptr;
 };
 
 
