@@ -1179,6 +1179,12 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 				if (bUsedShadowMaskTexture)
 				{
 					RHICmdList.CopyToResolveTarget(ScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture, ScreenShadowMaskTexture->GetRenderTargetItem().ShaderResourceTexture, FResolveParams(FResolveRect()));
+					/*@BEGIN Third party code TressFX*/
+					if (bSceneHasTressFX) 
+					{
+						RHICmdList.CopyToResolveTarget(TressFXScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture, TressFXScreenShadowMaskTexture->GetRenderTargetItem().ShaderResourceTexture, FResolveParams(FResolveRect()));
+					}
+					/*@END Third party code TressFX*/
 				}
 			
 				if(bDirectLighting && !bInjectedTranslucentVolume)

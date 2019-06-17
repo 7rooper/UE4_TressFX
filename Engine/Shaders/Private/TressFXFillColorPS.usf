@@ -406,7 +406,9 @@ float3 GetForwardDirectLightingTressFX(
 	, float2 ScreenUV
 	, uint PrimitiveId
 	, uint EyeIndex
-	, float Dither)
+	, float Dither
+	, float TFXAlpha
+)
 {
 
 	float4 DynamicShadowFactors = 1;
@@ -681,7 +683,7 @@ void main(
     uint GridIndex = ComputeLightGridCellIndex((uint2) (In.Position.xy - ResolvedView.ViewRectMin.xy), In.Position.w, 0);
     const float Dither = InterleavedGradientNoise(MaterialParameters.SvPosition.xy, View.StateFrameIndexMod8);
     const uint EyeIndex = 0;
-    Color += GetForwardDirectLightingTressFX(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither);
+    Color += GetForwardDirectLightingTressFX(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither, TFXAlpha);
     
 	#if TFX_PPLL
 		//color will be multipled be TFXAlpha during resolve pass

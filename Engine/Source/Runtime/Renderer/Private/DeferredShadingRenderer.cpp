@@ -1117,7 +1117,6 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
 	//TressFX needs it own screenshadowmasktexture
 	TRefCountPtr<IPooledRenderTarget> TressFXScreenShadowMaskTexture;
-
 	{
 		//Only opaque hairs should render depths here, otherwise, wait until after basepass
 		if (bSceneHasTressFX && (TFXRenderType == ETressFXRenderType::Opaque))
