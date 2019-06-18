@@ -986,12 +986,9 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			FUnorderedAccessViewRHIParamRef UAVs[] = { SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().UAV};
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EWritable, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
 			
-			RHICmdList.TransitionResource(EResourceTransitionAccess::EWritable, SceneContext.GBufferB->GetRenderTargetItem().TargetableTexture);
-
 			FRHITexture* ColorTargets[] = {
 				SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().TargetableTexture,
-				SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture,
-				SceneContext.GBufferB->GetRenderTargetItem().TargetableTexture,
+				SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture
 			};
 
 			FRHIRenderPassInfo RPInfo(ARRAY_COUNT(ColorTargets), ColorTargets, ERenderTargetActions::Load_Store);

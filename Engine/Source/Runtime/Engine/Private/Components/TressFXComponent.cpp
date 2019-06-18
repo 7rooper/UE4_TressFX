@@ -23,7 +23,6 @@ UTressFXComponent::UTressFXComponent(const FObjectInitializer& ObjectInitializer
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	bTickInEditor = true;
-	//this->bCastInsetShadow = true;
 }
 
 FPrimitiveSceneProxy* UTressFXComponent::CreateSceneProxy()

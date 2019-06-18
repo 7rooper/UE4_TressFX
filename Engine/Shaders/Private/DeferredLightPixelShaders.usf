@@ -74,16 +74,6 @@ void DeferredLightPixelMain(
 	
 	FScreenSpaceData ScreenSpaceData = GetScreenSpaceData(ScreenUV);
 
-	/*@BEGIN Third party code TressFX*/
-	// in tressfx, we are always writing custom data, so we are going to hijack the SKIP_CUSTOMDATA_MASK to indicate thats its non-opaque tressfx
-  //  BRANCH
-  //  if (ScreenSpaceData.GBuffer.ShadingModelID == SHADINGMODELID_TRESSFX && (ScreenSpaceData.GBuffer.SelectiveOutputMask & SKIP_CUSTOMDATA_MASK))
-  //  {
-		////we need to do the lighting for non opaque tressfx later
-  //      return;
-  //  }
-	/*@END Third party code TressFX*/
-
 	// Only light pixels marked as using deferred shading
 	BRANCH if( ScreenSpaceData.GBuffer.ShadingModelID > 0 
 #if USE_LIGHTING_CHANNELS

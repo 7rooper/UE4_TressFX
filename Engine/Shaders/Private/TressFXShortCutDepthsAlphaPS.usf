@@ -53,8 +53,9 @@ EARLYDEPTHSTENCIL
 void main(
 	PS_INPUT_HAIR_AA input OPTIONAL_IsFrontFace
 	,out float4 AccumInvAlpha : SV_Target0
+#if NEEDS_VELOCITY
 	, out float4 OutVelocity : SV_Target1
-	, out float4 OutGBufferB : SV_Target2
+#endif
 )
 {
  
@@ -88,18 +89,11 @@ void main(
 
 #if NEEDS_VELOCITY
     float2 Velocity = Calculate2DVelocity(MaterialParameters.ScreenPosition, input.FactoryInterpolants.VelocityPrevScreenPosition);
-    OutVelocity = float4(EncodeVelocityToTexture(Velocity), 0, 0);
-	#else
-    OutVelocity = float4(EncodeVelocityToTexture(float2(0, 0)), 0, 0);
+	OutVelocity = float4(EncodeVelocityToTexture(Velocity), 0, 0);
 #endif
 
     half Opacity = GetMaterialOpacity(PixelMaterialInputs);
-    float alpha = coverage * Opacity;
-
-	// in tressfx, we are always writing custom data, so we are going to hijack the SKIP_CUSTOMDATA_MASK to indicate thats its non-opaque tressfx
-    //uint Mask = 0;
-    //Mask |= SKIP_CUSTOMDATA_MASK;
-    //OutGBufferB.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) SHADINGMODELID_TRESSFX, (uint) Mask);  
+    float alpha = coverage * Opacity; 
 
     if (alpha < SHORTCUT_MIN_ALPHA)
     {
@@ -131,9 +125,4 @@ void main(
     InterlockedMax(RWFragmentDepthsTexture[uint3(vScreenAddress, 2)], uDepth, uDepth2Prev);
 
     AccumInvAlpha = 1.0 - alpha;
-
-	// in tressfx, we are always writing custom data, so we are going to hijack the SKIP_CUSTOMDATA_MASK to indicate thats its non-opaque tressfx
-    //uint Mask = 0;
-    //Mask |= SKIP_CUSTOMDATA_MASK;
-    //OutGBufferB.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) SHADINGMODELID_TRESSFX, (uint) Mask);  
 }

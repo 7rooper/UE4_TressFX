@@ -2416,7 +2416,7 @@ void FSceneRenderTargets::AllocateTressFXScreenShadowMask(FRHICommandList& RHICm
 {
 	//identical to AllocateScreenShadowMask
 	FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(GetBufferSizeXY(), PF_B8G8R8A8, FClearValueBinding::White, TexCreate_None, TexCreate_RenderTargetable, false));
-	//Desc.Flags |= GFastVRamConfig.ScreenSpaceShadowMask;
+	//Desc.Flags |= GFastVRamConfig.ScreenSpaceShadowMask; //jaketodo, test if i can use the same config here
 	Desc.NumSamples = GetNumSceneColorMSAASamples(GetCurrentFeatureLevel());
 	GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXScreenShadowMaskTexture, TEXT("TressFXScreenShadowMaskTexture"));
 }
