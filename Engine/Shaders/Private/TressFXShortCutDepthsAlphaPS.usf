@@ -97,9 +97,9 @@ void main(
     float alpha = coverage * Opacity;
 
 	// in tressfx, we are always writing custom data, so we are going to hijack the SKIP_CUSTOMDATA_MASK to indicate thats its non-opaque tressfx
-    uint Mask = 0;
-    Mask |= SKIP_CUSTOMDATA_MASK;
-    OutGBufferB.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) SHADINGMODELID_TRESSFX, (uint) Mask);  
+    //uint Mask = 0;
+    //Mask |= SKIP_CUSTOMDATA_MASK;
+    //OutGBufferB.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) SHADINGMODELID_TRESSFX, (uint) Mask);  
 
     if (alpha < SHORTCUT_MIN_ALPHA)
     {

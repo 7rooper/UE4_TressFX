@@ -39,7 +39,7 @@ extern int32 GBTressFXUseCompute;
 //  FTressFXFillColorPS - Pixel shader for Third pass of shortcut, and PPLL build of kbuffer
 ////////////////////////////////////////////////////////////////////////////////
 
-template <ETressFXPass::Type ColorPassType, int32 KBufferSize>
+template <ETressFXPass::Type ColorPassType, int32 KBufferSize, bool bInsetShadows>
 class FTressFXFillColorPS : public FMeshMaterialShader
 {
 	DECLARE_SHADER_TYPE(FTressFXFillColorPS, MeshMaterial)
@@ -67,6 +67,7 @@ public:
 		FForwardLightingParameters::ModifyCompilationEnvironment(Platform, OutEnvironment);
 		OutEnvironment.SetDefine(TEXT("TFX_SHORTCUT"), ColorPassType == ETressFXPass::FillColor_Shortcut ? TEXT("1") : TEXT("0"));
 		OutEnvironment.SetDefine(TEXT("TFX_PPLL"), ColorPassType == ETressFXPass::FillColor_KBuffer ? TEXT("1") : TEXT("0"));
+		OutEnvironment.SetDefine(TEXT("USING_INSET_SHADOWS"), bInsetShadows ? TEXT("1") : TEXT("0"));
 		FShaderUniformBufferParameter::ModifyCompilationEnvironment(
 			FTressFXColorPassUniformParameters::StaticStructMetadata.GetShaderVariableName(),
 			FTressFXColorPassUniformParameters::StaticStructMetadata,
@@ -139,12 +140,16 @@ public:
 
 };
 
-typedef FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut, 0> FTressFXFillColorPS_Shortcut;
-IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_Shortcut, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
+typedef FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut, 0, false> FTressFXFillColorPS_ShortcutNoInsetShadows;
+typedef FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut, 0, true> FTressFXFillColorPS_ShortcutWithInsetShadows;
+IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_ShortcutNoInsetShadows, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
+IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_ShortcutWithInsetShadows, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
 
 #define IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(KBufferSize) \
-	typedef FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize> FTressFXFillColorPS_KBuffer##KBufferSize; \
-	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_KBuffer##KBufferSize, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
+	typedef FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize, false> FTressFXFillColorPS_KBufferNoInsetShadows##KBufferSize; \
+	typedef FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize, true> FTressFXFillColorPS_KBufferWithInsetShadows##KBufferSize; \
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_KBufferWithInsetShadows##KBufferSize, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel); \
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_KBufferNoInsetShadows##KBufferSize, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
 
 static_assert(2 >= MIN_TFX_KBUFFER_SIZE, "MIN_TFX_KBUFFER_SIZE is not >= 2!");
 IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(2)
@@ -532,7 +537,7 @@ FMeshPassProcessor* CreateTRessFXDepthsAlphaPassProcessor(const FScene* Scene, c
 //FTressFXFillColorPassMeshProcessor
 /////////////////////////////////////////////////////////////////////////
 
-template<int32 KBufferSize>
+template<int32 KBufferSize, bool bInsetShadows>
 void FTressFXFillColorPassMeshProcessor::ProcessKBuffer(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
@@ -565,9 +570,9 @@ void FTressFXFillColorPassMeshProcessor::ProcessKBuffer(
 		FTressFXVS<false>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
-		FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize>> TFXShaders;
+		FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize, bInsetShadows>> TFXShaders;
 
-	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize>>(VertexFactory->GetType());
+	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize, bInsetShadows>>(VertexFactory->GetType());
 	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<false>>(VertexFactory->GetType());
 
 	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
@@ -587,6 +592,7 @@ void FTressFXFillColorPassMeshProcessor::ProcessKBuffer(
 	);
 }
 
+template<bool bInsetShadows>
 void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
@@ -626,9 +632,9 @@ void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 		FTressFXVS<false>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
-		FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut,0>> TFXShaders;
+		FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut,0, bInsetShadows>> TFXShaders;
 
-	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut,0>>(VertexFactory->GetType());
+	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut,0, bInsetShadows>>(VertexFactory->GetType());
 	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<false>>(VertexFactory->GetType());
 
 	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
@@ -650,29 +656,35 @@ void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 
 
 
-#define PROCESS_KBUFFER(KBufferSize, ...)	\
-ProcessKBuffer<KBufferSize>(__VA_ARGS__);									
+#define PROCESS_KBUFFER(KBufferSize,bInsetShadows, ...)	\
+	if(bInsetShadows)														\
+	{																		\
+		ProcessKBuffer<KBufferSize, true>(__VA_ARGS__);						\
+	}																		\
+	else																	\
+	{																		\
+		ProcessKBuffer<KBufferSize, false>(__VA_ARGS__);					\
+	}
+								
 
-//there has to be a better way to do this, but im not clever enough
-
-#define PROCESS_KBUFFER2(KBufferSize, ...)					\
-switch (KBufferSize)										\
-{															\
-	case 2:  PROCESS_KBUFFER(2, __VA_ARGS__) break;			\
-	case 3:  PROCESS_KBUFFER(3, __VA_ARGS__) break;			\
-	case 4:  PROCESS_KBUFFER(4, __VA_ARGS__) break;			\
-	case 5:  PROCESS_KBUFFER(5, __VA_ARGS__) break;			\
-	case 6:  PROCESS_KBUFFER(6, __VA_ARGS__) break;			\
-	case 7:  PROCESS_KBUFFER(7, __VA_ARGS__) break;			\
-	case 8:  PROCESS_KBUFFER(8, __VA_ARGS__) break;			\
-	case 9:  PROCESS_KBUFFER(9, __VA_ARGS__) break;			\
-	case 10: PROCESS_KBUFFER(10, __VA_ARGS__) break;		\
-	case 11: PROCESS_KBUFFER(11, __VA_ARGS__) break;		\
-	case 12: PROCESS_KBUFFER(12, __VA_ARGS__) break;		\
-	case 13: PROCESS_KBUFFER(13, __VA_ARGS__) break;		\
-	case 14: PROCESS_KBUFFER(14, __VA_ARGS__) break;		\
-	case 15: PROCESS_KBUFFER(15, __VA_ARGS__) break;		\
-	case 16: PROCESS_KBUFFER(16, __VA_ARGS__) break;		\
+#define PROCESS_KBUFFER2(KBufferSize, bInsetShadows, ...)					\
+switch (KBufferSize)														\
+{																			\
+	case 2:  PROCESS_KBUFFER(2, bInsetShadows, __VA_ARGS__) break;			\
+	case 3:  PROCESS_KBUFFER(3, bInsetShadows, __VA_ARGS__) break;			\
+	case 4:  PROCESS_KBUFFER(4, bInsetShadows, __VA_ARGS__) break;			\
+	case 5:  PROCESS_KBUFFER(5, bInsetShadows, __VA_ARGS__) break;			\
+	case 6:  PROCESS_KBUFFER(6, bInsetShadows, __VA_ARGS__) break;			\
+	case 7:  PROCESS_KBUFFER(7, bInsetShadows, __VA_ARGS__) break;			\
+	case 8:  PROCESS_KBUFFER(8, bInsetShadows, __VA_ARGS__) break;			\
+	case 9:  PROCESS_KBUFFER(9, bInsetShadows, __VA_ARGS__) break;			\
+	case 10: PROCESS_KBUFFER(10, bInsetShadows, __VA_ARGS__) break;		\
+	case 11: PROCESS_KBUFFER(11, bInsetShadows, __VA_ARGS__) break;		\
+	case 12: PROCESS_KBUFFER(12, bInsetShadows, __VA_ARGS__) break;		\
+	case 13: PROCESS_KBUFFER(13, bInsetShadows, __VA_ARGS__) break;		\
+	case 14: PROCESS_KBUFFER(14, bInsetShadows, __VA_ARGS__) break;		\
+	case 15: PROCESS_KBUFFER(15, bInsetShadows, __VA_ARGS__) break;		\
+	case 16: PROCESS_KBUFFER(16, bInsetShadows, __VA_ARGS__) break;		\
 	default: check(0);										\
 }
 
@@ -688,6 +700,8 @@ void FTressFXFillColorPassMeshProcessor::Process(
 	ERasterizerCullMode MeshCullMode
 )
 {	   
+	const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
+
 	switch(RenderType)
 	{
 		case ETressFXRenderType::KBuffer: 
@@ -696,8 +710,10 @@ void FTressFXFillColorPassMeshProcessor::Process(
 			const FMaterial& MeshBatchMaterial = MeshBatch.MaterialRenderProxy->GetMaterialWithFallback(FeatureLevel, FallbackMaterialRenderProxyPtr);
 
 			int32 KBufferSize = FMath::Clamp(static_cast<int32>(GTressFXKBufferSize), MIN_TFX_KBUFFER_SIZE, MAX_TFX_KBUFFER_SIZE);
+
 			PROCESS_KBUFFER2(
 				KBufferSize, 
+				TFXProxy->CastsInsetShadow(),
 				MeshBatch, 
 				BatchElementMask, 
 				StaticMeshId, 
@@ -711,16 +727,32 @@ void FTressFXFillColorPassMeshProcessor::Process(
 		}
 		case ETressFXRenderType::ShortCut:
 		{
-			ProcessShortcut(
-				MeshBatch,
-				BatchElementMask,
-				StaticMeshId,
-				PrimitiveSceneProxy,
-				MaterialRenderProxy,
-				MaterialResource,
-				MeshFillMode,
-				MeshCullMode
-			);
+			if (TFXProxy->CastsInsetShadow())
+			{
+				ProcessShortcut<true>(
+					MeshBatch,
+					BatchElementMask,
+					StaticMeshId,
+					PrimitiveSceneProxy,
+					MaterialRenderProxy,
+					MaterialResource,
+					MeshFillMode,
+					MeshCullMode
+				);
+			}
+			else
+			{
+				ProcessShortcut<false>(
+					MeshBatch,
+					BatchElementMask,
+					StaticMeshId,
+					PrimitiveSceneProxy,
+					MaterialRenderProxy,
+					MaterialResource,
+					MeshFillMode,
+					MeshCullMode
+					);
+			}
 			break;
 		}
 		default: 

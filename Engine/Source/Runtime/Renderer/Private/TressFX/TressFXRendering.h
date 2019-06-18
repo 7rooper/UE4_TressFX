@@ -136,7 +136,7 @@ private:
 		ERasterizerCullMode MeshCullMode
 	);
 
-	template<int32 KBufferSize>
+	template<int32 KBufferSize, bool bInsetShadows>
 	void ProcessKBuffer(
 		const FMeshBatch& RESTRICT MeshBatch,
 		uint64 BatchElementMask,
@@ -148,6 +148,7 @@ private:
 		ERasterizerCullMode MeshCullMode
 	);
 
+	template<bool bInsetShadows>
 	void ProcessShortcut(
 		const FMeshBatch& RESTRICT MeshBatch,
 		uint64 BatchElementMask,
