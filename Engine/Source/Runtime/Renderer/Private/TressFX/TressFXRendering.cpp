@@ -34,7 +34,7 @@ DEFINE_LOG_CATEGORY(TressFXRenderingLog);
 
 extern int32 GTressFXRenderType;
 extern int32 GTressFXKBufferSize;
-extern int32 GBTressFXUseCompute;
+extern int32 GBTressFXPreferCompute;
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXFillColorPS - Pixel shader for Third pass of shortcut, and PPLL build of kbuffer
 ////////////////////////////////////////////////////////////////////////////////
@@ -217,7 +217,7 @@ void TressFXCopySceneDepth(FRHICommandList& RHICmdList, const FViewInfo& View, F
 static bool IsSM6(ERHIFeatureLevel::Type CurrentFeatureLevel) 
 {
 	//for now just use GRHISupportsWaveOperations to detect sm6 - which will be dx12 only i think
-	// really would like an sm6 in Erhifeaturelevel.... im sure we will get it eventually?
+	// really would like an sm6 in ERHIFeatureLevel.... im sure we will get it eventually?
 	return GRHISupportsWaveOperations && CurrentFeatureLevel >= ERHIFeatureLevel::SM5;
 }
 
@@ -230,8 +230,8 @@ bool FSceneRenderer::TressFXCanUseComputeResolves(const FSceneRenderTargets& Sce
 	//this will not work correctly since there is no SP_PCD3D_SM6, or SM6 enumeration yet :*(
 	//const bool SupportsTypedUAVLoads = RHISupports4ComponentUAVReadWrite(ShaderPlatform);
 
-	const bool SupportsTypedUAVLoads = true; //temporarily just setting this to true since technically its using sm5.1 HW	//IsSM6(FeatureLevel); //dumb hack
-	const bool bUseComputeResolve = SupportsTypedUAVLoads && (static_cast<uint32>(GBTressFXUseCompute) > 0) && (SceneColorFlags & TexCreate_UAV);
+	const bool SupportsTypedUAVLoads = true; //temporarily just setting this to true since technically its using > sm5.1 HW	//IsSM6(FeatureLevel); //dumb hack
+	const bool bUseComputeResolve = SupportsTypedUAVLoads && (static_cast<uint32>(GBTressFXPreferCompute) > 0) && (SceneColorFlags & TexCreate_UAV);
 	return bUseComputeResolve;
 }
 

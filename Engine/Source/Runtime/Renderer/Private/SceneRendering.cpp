@@ -369,11 +369,11 @@ FAutoConsoleVariableRef CVarTressFXKBufferSize(
 	ECVF_RenderThreadSafe
 );
 
-int32 GBTressFXUseCompute = 1;
+int32 GBTressFXPreferCompute = 1;
 FAutoConsoleVariableRef CVarTressFXUseComputeResolves(
-	TEXT("tfx.UseCompute"),
-	GBTressFXUseCompute,
-	TEXT("Use compute shaders for resolve passes."),
+	TEXT("tfx.PreferCompute"),
+	GBTressFXPreferCompute,
+	TEXT("Use compute shaders for resolve passes, if supported."),
 	ECVF_RenderThreadSafe
 );
 

@@ -1000,7 +1000,7 @@ void FProjectedShadowInfo::RenderProjection(FRHICommandListImmediate& RHICmdList
 		FShadowProjectionVertexShaderInterface* ShadowProjVS = nullptr;
 		FShadowProjectionPixelShaderInterface* ShadowProjPS = nullptr;
 		/*@BEGIN Third party code TressFX*/
-		if (bTressFXInScene) 
+		if (InbTressFXInScene)
 		{
 			GetShadowProjectionShaders<true>(LocalQuality, *View, this, bMobileModulatedProjections, &ShadowProjVS, &ShadowProjPS);
 		}
@@ -1486,9 +1486,6 @@ bool FSceneRenderer::RenderShadowProjections(FRHICommandListImmediate& RHICmdLis
 		}
 		else
 		{
-			/*@BEGIN Third party code TressFX*/
-			ProjectedShadowInfo->bTressFXInScene |= bTressFXShadows;
-			/*@END Third party code TressFX*/
 			NormalShadows.Add(ProjectedShadowInfo);
 		}
 	}

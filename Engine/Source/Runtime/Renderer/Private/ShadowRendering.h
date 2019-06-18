@@ -320,7 +320,8 @@ public:
 	uint32 bTransmission : 1;
 
 	/*@BEGIN Third party code TressFX*/
-	uint32 bTressFXInScene : 1;
+	//unused currently, but i will be needing it
+	uint32 bIsPerObjectTressFX : 1;
 	/*@END Third party code TressFX*/
 
 	/** View projection matrices for each cubemap face, used by one pass point light shadows. */

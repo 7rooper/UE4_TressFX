@@ -515,7 +515,7 @@ FProjectedShadowInfo::FProjectedShadowInfo()
 	, bPerObjectOpaqueShadow(false)
 	, bTransmission(false)
 	/*@BEGIN Third party code TressFX*/
-	, bTressFXInScene(false)
+	, bIsPerObjectTressFX(false)
 	/*@END Third party code TressFX*/
 	, LightSceneInfo(0)
 	, ParentSceneInfo(0)
@@ -1997,7 +1997,7 @@ void FSceneRenderer::CreatePerObjectProjectedShadow(
 				{
 					ProjectedShadowInfo->bPerObjectOpaqueShadow = true;
 					//@BEGIN third party code TressFX
-					ProjectedShadowInfo->bTressFXInScene = bTressFXInScene;
+					ProjectedShadowInfo->bIsPerObjectTressFX = bTressFXInScene && PrimitiveSceneInfo->Proxy->IsTressFX();
 					//@END third party code TressFX
 					ProjectedShadowInfo->FadeAlphas = ResolutionFadeAlphas;
 					VisibleLightInfo.MemStackProjectedShadows.Add(ProjectedShadowInfo);
@@ -2122,10 +2122,6 @@ void FSceneRenderer::CreatePerObjectProjectedShadow(
 
 				if (bOk)
 				{
-					//@BEGIN third party code TressFX
-					ProjectedPreShadowInfo->bTressFXInScene = bTressFXInScene;
-					//@END third party code TressFX
-
 					// Update fade alpha on the cached preshadow
 					ProjectedPreShadowInfo->FadeAlphas = ResolutionPreShadowFadeAlphas;
 
