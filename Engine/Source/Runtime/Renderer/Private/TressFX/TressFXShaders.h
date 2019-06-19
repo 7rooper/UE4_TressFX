@@ -363,7 +363,7 @@ class FTressFXResolveVelocityPs : public FGlobalShader
 ///////////////////////////////////////////////////////////////////////////////////
 ////  FTressFXShortCutResolveDepthPS
 //////////////////////////////////////////////////////////////////////////////////
-template<bool bWriteClosestDepth = false>
+template<bool bWriteClosestDepth = false, bool bWriteShadingModelToGBuffer = false>
 class FTressFXShortCutResolveDepthPS : public FGlobalShader
 {
 
@@ -379,6 +379,7 @@ public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		OutEnvironment.SetDefine(TEXT("WRITE_CLOSEST_DEPTH"), bWriteClosestDepth ? TEXT("1") : TEXT("0"));
+		OutEnvironment.SetDefine(TEXT("WRITE_GBUFFER_SHADING_MODEL"), bWriteShadingModelToGBuffer ? TEXT("1") : TEXT("0"));
 		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 

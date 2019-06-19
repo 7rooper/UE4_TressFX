@@ -95,8 +95,8 @@ IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(2); //kbuffer
 ////  FTressFXShortCutResolveDepthPS - pixel shader for 2nd pass of shortcut
 //////////////////////////////////////////////////////////////////////////////////
 
-#define IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(bWriteClosestDepth)																				\
-void FTressFXShortCutResolveDepthPS<bWriteClosestDepth>::SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext)	\
+#define IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(bWriteClosestDepth, bWriteShadingModelToGBuffer)																				\
+void FTressFXShortCutResolveDepthPS<bWriteClosestDepth, bWriteShadingModelToGBuffer>::SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext)	\
 {																																								\
 	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();																									\
 																																								\
@@ -108,12 +108,22 @@ void FTressFXShortCutResolveDepthPS<bWriteClosestDepth>::SetParameters(FRHIComma
 		SetTextureParameter(RHICmdList, ShaderRHI, tAccumInvAlpha, SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture);				\
 	}																																							\
 }
-IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(true)
-IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(false)
+IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(true, true)
+IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(true, false)
+IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(false, false)
+IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(false, true)
 #undef IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters
 
-IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveDepthPS<true>, "/Engine/Private/TressFXShortCutResolveDepthPS.usf", "main", SF_Pixel);
-IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveDepthPS<false>, "/Engine/Private/TressFXShortCutResolveDepthPS.usf", "main", SF_Pixel);
+#define IMPLEMENT_FTressFXShortCutResolveDepthPS(bWriteClosestDepth, bWriteShadingModelToGBuffer)		\
+	typedef FTressFXShortCutResolveDepthPS<bWriteClosestDepth, bWriteShadingModelToGBuffer> FTressFXShortCutResolveDepthPS##bWriteClosestDepth##bWriteShadingModelToGBuffer; \
+	IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveDepthPS##bWriteClosestDepth##bWriteShadingModelToGBuffer, "/Engine/Private/TressFXShortCutResolveDepthPS.usf", "main", SF_Pixel);
+
+IMPLEMENT_FTressFXShortCutResolveDepthPS(true, true)
+IMPLEMENT_FTressFXShortCutResolveDepthPS(true, false)
+IMPLEMENT_FTressFXShortCutResolveDepthPS(false, false)
+IMPLEMENT_FTressFXShortCutResolveDepthPS(false, true)
+
+#undef IMPLEMENT_FTressFXShortCutResolveDepthPS
 
 ///////////////////////////////////////////////////////////////////////////////////
 ////  FTressFXShortCutResolveColorPS - pixel shader for final pass of shortcut

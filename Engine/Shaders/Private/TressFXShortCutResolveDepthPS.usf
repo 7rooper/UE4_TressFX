@@ -23,6 +23,7 @@
 //Unreal Engine 4 integration written by Leon Rosengarten and Jacob Kostenick 2019
 
 #include "TressFXShortCutCommon.ush"
+#include "DeferredShadingCommon.ush"
 
 Texture2DArray<uint> FragmentDepthsTexture;
 
@@ -35,11 +36,18 @@ Texture2DArray<uint> FragmentDepthsTexture;
 	Texture2D<float> tAccumInvAlpha;
 #endif
 
+#ifndef WRITE_GBUFFER_SHADING_MODEL
+	#define WRITE_GBUFFER_SHADING_MODEL 0
+#endif
+
 // Second pass of ShortCut.
 // Full-screen pass that writes the farthest of the near depths for depth culling.
 void main(
 	FScreenVertexOutput input, 
 	out float OutDepth : SV_DEPTH
+	#if WRITE_GBUFFER_SHADING_MODEL && WRITE_CLOSEST_DEPTH
+	, out float4 OutGBufferB : SV_Target0
+	#endif
 )
 {
     const int2 vScreenAddress = int2(input.Position.xy);
@@ -54,6 +62,14 @@ void main(
 			discard;
 			return;
 		}
+		
+		#if WRITE_GBUFFER_SHADING_MODEL
+			// in tressfx, we are always writing custom data, so we are going to borrow the SKIP_CUSTOMDATA_MASK to indicate thats its non-opaque tressfx
+			uint Mask = 0;
+			Mask |= SKIP_CUSTOMDATA_MASK;
+			OutGBufferB.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) SHADINGMODELID_TRESSFX, (uint) Mask); 
+		#endif
+
 		float HairDepth = asfloat(FragmentDepthsTexture[uint3(vScreenAddress, 0)]);
 	#else
 		// Write farthest depth value for culling in the next pass.

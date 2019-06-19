@@ -900,28 +900,56 @@ void RenderDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, TArray<FViewI
 //////////////////////////////////////////////////////////////////////////
 //Shortcut Passes
 /////////////////////////////////////////////////////////////////////////
-template<bool bWriteClosestDepth>
+template<bool bWriteClosestDepth, bool bWriteShadingModel>
 void ShortcutDepthsResolve_Impl(
 	FRHICommandListImmediate& RHICmdList, 
 	FSceneRenderTargets& SceneContext, 
 	FViewInfo& View, 
 	FRHITexture* DepthTarget, 
-	const FPooledRenderTargetDesc DepthTargetDesc
+	const FPooledRenderTargetDesc DepthTargetDesc,
+	FRHITexture* GBufferBTarget = nullptr
 )
 {
-	FRHIRenderPassInfo RPInfo(
-		DepthTarget,
-		EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
-	);
-	RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXshortcutResolveDepth"));
 
-	TShaderMapRef<FScreenVS>											VertexShader(View.ShaderMap);
-	TShaderMapRef<FTressFXShortCutResolveDepthPS<bWriteClosestDepth>>	PixelShader(View.ShaderMap);
-
+	FRHIRenderPassInfo RPInfo;
 	FGraphicsPipelineStateInitializer GraphicsPSOInit;
 	RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 
-	GraphicsPSOInit.BlendState = TStaticBlendState<CW_NONE>::GetRHI();
+	if(bWriteShadingModel)
+	{
+		check(GBufferBTarget)
+		RHICmdList.TransitionResource(EResourceTransitionAccess::EWritable, GBufferBTarget);
+		RPInfo = FRHIRenderPassInfo(
+			GBufferBTarget, 
+			ERenderTargetActions::Load_Store,
+			DepthTarget,
+			EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
+		);
+		GraphicsPSOInit.BlendState = TStaticBlendState<
+			  CW_RGBA
+			, BO_Add
+			, BF_One
+			, BF_Zero
+			, BO_Add
+			, BF_One
+			, BF_Zero
+			, CW_NONE
+		>::GetRHI();
+	}
+	else
+	{
+		RPInfo = FRHIRenderPassInfo(
+			DepthTarget,
+			EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
+		);
+		GraphicsPSOInit.BlendState = TStaticBlendState <CW_NONE>::GetRHI();
+	}
+
+	RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXshortcutResolveDepth"));
+
+	TShaderMapRef<FScreenVS>											VertexShader(View.ShaderMap);
+	TShaderMapRef<FTressFXShortCutResolveDepthPS<bWriteClosestDepth, bWriteShadingModel>>	PixelShader(View.ShaderMap);
+
 	GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
 	GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<true, CF_Always>::GetRHI();
 
@@ -930,7 +958,7 @@ void ShortcutDepthsResolve_Impl(
 	GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
 	GraphicsPSOInit.PrimitiveType = PT_TriangleList;
 
-	SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
+	SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, EApplyRendertargetOption::ForceApply);
 
 	VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
 	PixelShader->SetParameters(RHICmdList, View, SceneContext);
@@ -1015,7 +1043,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 		// shortcut pass 2, depths resolve to the tressfxscenedepth texture, write the farthest depth
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveFarthestDepthsToTressFXSceneDepth);
-			ShortcutDepthsResolve_Impl<false>(
+			ShortcutDepthsResolve_Impl<false, false>(
 				RHICmdList, 
 				SceneContext, 
 				View,
@@ -1028,12 +1056,13 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 		// this wont be perfect but looks better than using the far depths from the above pass
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveCloserDepthsToSceneDepth);
-			ShortcutDepthsResolve_Impl<true>(
+			ShortcutDepthsResolve_Impl<true, true>(
 				RHICmdList,
 				SceneContext,
 				View,
 				SceneContext.GetSceneDepthSurface(),
-				SceneContext.SceneDepthZ->GetDesc()
+				SceneContext.SceneDepthZ->GetDesc(),
+				SceneContext.GBufferB->GetRenderTargetItem().TargetableTexture
 			);
 		}
 	}
