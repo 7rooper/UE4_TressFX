@@ -151,6 +151,10 @@ private:
 	/** Keep the references over the pooled render target, since FRDGTexture is allocated on MemStack. */
 	TMap<FRDGBuffer*, TRefCountPtr<FPooledRDGBuffer>, SceneRenderingSetAllocator> AllocatedBuffers;
 
+	/** Tracks external resources to their registered render graph counterparts for de-duplication. */
+	TMap<const IPooledRenderTarget*, FRDGTexture*, SceneRenderingSetAllocator> ExternalTextures;
+	TMap<const FPooledRDGBuffer*, FRDGBuffer*, SceneRenderingSetAllocator> ExternalBuffers;
+
 	/** Array of all deferred access to internal textures. */
 	struct FDeferredInternalTextureQuery
 	{
@@ -194,19 +198,9 @@ private:
 
 	void AllocateRHITextureIfNeeded(FRDGTexture* Texture);
 	void AllocateRHITextureUAVIfNeeded(FRDGTextureUAV* UAV);
+	void AllocateRHIBufferIfNeeded(FRDGBuffer* Buffer);
 	void AllocateRHIBufferSRVIfNeeded(FRDGBufferSRV* SRV);
 	void AllocateRHIBufferUAVIfNeeded(FRDGBufferUAV* UAV);
-
-	void TransitionTexture(
-		FRDGTexture* Texture,
-		ERDGPassAccess PassAccess,
-		ERDGPassPipeline PassPipeline) const;
-
-	void TransitionUAV(
-		FRHIUnorderedAccessView* UAV,
-		FRDGTrackedResource* UnderlyingResource,
-		ERDGPassAccess PassAccess,
-		ERDGPassPipeline PassPipeline) const;
 
 	void ExecutePass(const FRDGPass* Pass);
 	void PrepareResourcesForExecute(const FRDGPass* Pass, struct FRHIRenderPassInfo* OutRPInfo, bool* bOutHasRenderTargets);
