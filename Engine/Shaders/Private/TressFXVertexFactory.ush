@@ -88,7 +88,7 @@ FVertexFactoryInterpolantsVSToPS VertexFactoryGetInterpolantsVSToPS(FVertexFacto
 #if NUM_MATERIAL_TEXCOORDS
 	Interpolants.TexCoords[0] = VertexParameters.TexCoords[0];
     #if NUM_MATERIAL_TEXCOORDS > 1
-    Interpolants.TexCoords[1] = float2(tressfxVert.Root2Tip, 1.0f-tressfxVert.Root2Tip);
+    Interpolants.TexCoords[1] = float2(0, tressfxVert.Root2Tip);// TODO:strandID(0~1), root to tip value
     #endif
 #endif
     return Interpolants;
