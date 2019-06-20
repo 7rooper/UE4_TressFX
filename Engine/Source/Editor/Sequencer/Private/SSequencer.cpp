@@ -446,6 +446,13 @@ void SSequencer::Construct(const FArguments& InArgs, TSharedRef<FSequencer> InSe
 				[
 					SNew(SCurveEditorTreeFilterStatusBar, InSequencer->GetCurveEditor())
 				]
+
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				.HAlign(HAlign_Center)
+				[
+					InSequencer->MakeTransportControls(true)
+				]
 			];
 
 		// Register an instanced custom property type layout to handle converting FFrameNumber from Tick Resolution to Display Rate.
