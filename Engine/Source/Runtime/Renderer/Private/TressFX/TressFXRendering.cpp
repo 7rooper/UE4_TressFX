@@ -277,7 +277,7 @@ void FTressFXDepthsVelocityPassMeshProcessor::Process(
 
 	FMeshPassProcessorRenderState DrawRenderState(PassDrawRenderState);
 
-	if (bNoDepth)
+	if (true)
 	{
 		DrawRenderState.SetDepthStencilState(TStaticDepthStencilState<false, CF_DepthNearOrEqual>::GetRHI());
 	}
