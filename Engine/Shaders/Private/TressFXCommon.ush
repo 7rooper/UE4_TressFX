@@ -24,9 +24,8 @@
 
 #pragma once
 
-cbuffer tressfxShadeParameters
+cbuffer TressfxShadeParameters
 {
-    float g_HairShadowAlpha;
     float g_FiberRadius;
     float g_FiberSpacing;
     int g_NumVerticesPerStrand;

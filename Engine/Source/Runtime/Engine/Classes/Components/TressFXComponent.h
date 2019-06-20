@@ -30,7 +30,7 @@ public:
 		, Damping(0.08f)
 		, GravityMagnitude(10.0)
 		, TipSeparation(0.0f)
-		, WindMagnitude(0)
+		, WindMagnitude(1.0f)
 		, WindDirection(FVector(1, 0, 0))
 	{
 	}
@@ -107,11 +107,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 	float TipSeparation;
 
-	// Wind Magnitude allows you to see the effect of wind on the hair
+	// Scale up or down the wind strength on a per component basis
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 	float WindMagnitude;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+	UPROPERTY()
 	FVector WindDirection;
 
 };
@@ -124,9 +124,6 @@ struct FTressFXShadeSettings
 	GENERATED_USTRUCT_BODY()
 
 public:
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
-	float HairShadowAlpha;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 	float FiberRadius;
@@ -142,7 +139,6 @@ public:
 	FTressFXShadeSettings()
 	{
 		//sensible defaults
-		HairShadowAlpha = 0.004;
 		FiberRadius = 0.25;
 		FiberSpacing = 0.1;
 		HairThickness = 0.2f;
@@ -157,9 +153,11 @@ public:
 UCLASS(BlueprintType, Blueprintable, ClassGroup = (Rendering, Common), hidecategories = (Object, Activation, "Components|Activation"), ShowCategories = (Mobility), editinlinenew, meta = (BlueprintSpawnableComponent))
 class UTressFXComponent : public UPrimitiveComponent
 {
-	GENERATED_UCLASS_BODY()
+	GENERATED_BODY()
 
 public:
+
+	UTressFXComponent(const class FObjectInitializer& ObjectInitializer);
 
 	/** Morph remapping */
 	UPROPERTY()

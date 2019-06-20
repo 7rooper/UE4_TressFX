@@ -48,7 +48,7 @@ public:
 
 	FTressFXFillColorPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
 	{
-		tressfxShadeParameters.Bind(Initializer.ParameterMap, TEXT("tressfxShadeParameters"));
+		TressfxShadeParameters.Bind(Initializer.ParameterMap, TEXT("TressfxShadeParameters"));
 		ColorPassUniformBuffer.Bind(Initializer.ParameterMap, FTressFXColorPassUniformParameters::StaticStructMetadata.GetShaderVariableName());
 		if (ColorPassType == ETressFXPass::FillColor_KBuffer)
 		{
@@ -93,7 +93,7 @@ public:
 	virtual bool Serialize(FArchive& Ar) override
 	{
 		const bool result = FMeshMaterialShader::Serialize(Ar);
-		Ar << tressfxShadeParameters;
+		Ar << TressfxShadeParameters;
 		Ar << ColorPassUniformBuffer;
 
 		if (ColorPassType == ETressFXPass::FillColor_KBuffer)
@@ -124,13 +124,13 @@ public:
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
 		const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
 		const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)PrimitiveSceneProxy;
-		ShaderBindings.Add(tressfxShadeParameters, TFXProxy->TressFXHairObject->ShadeParametersUniformBuffer);
+		ShaderBindings.Add(TressfxShadeParameters, TFXProxy->TressFXHairObject->ShadeParametersUniformBuffer);
 		ShaderBindings.Add(ColorPassUniformBuffer, DrawRenderState.GetPassUniformBuffer());
 	}
 
 public:
 	FShaderUniformBufferParameter ColorPassUniformBuffer;
-	FShaderUniformBufferParameter tressfxShadeParameters;
+	FShaderUniformBufferParameter TressfxShadeParameters;
 	
 	//Kbuffer
 	FRWShaderParameter RWFragmentListHead;

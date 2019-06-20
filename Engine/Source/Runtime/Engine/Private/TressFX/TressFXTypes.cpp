@@ -6,7 +6,7 @@ void FTressFXImportData::Serialize(FArchive& Ar)
 	Ar << NumGuideVertices << NumVerticesPerStrand << NumTotalStrands << NumGuideStrands << Positions << StrandUV << ImportedPositions;
 	Ar << ImportRotation << ImportTranslation;
 	Ar << ImportScale;
-	// JAKETODO, i doubt this will deserialize correctly outside of the editor
+	//
 #if WITH_EDITORONLY_DATA
 	Ar << StrandUV_Original;
 #endif

@@ -15166,9 +15166,9 @@ UMaterialExpressionTressFXGetHairTangent::UMaterialExpressionTressFXGetHairTange
 #if WITH_EDITORONLY_DATA
 	MenuCategories.Add(ConstructorStatics.NAME_Vectors);
 	MenuCategories.Add(ConstructorStatics.NAME_Coordinates);
+	bShaderInputData = true;
 #endif
 
-	bShaderInputData = true;
 }
 
 #if WITH_EDITOR
@@ -15210,9 +15210,9 @@ UMaterialExpressionTressFXGetStrandUV::UMaterialExpressionTressFXGetStrandUV(con
 #if WITH_EDITORONLY_DATA
 	MenuCategories.Add(ConstructorStatics.NAME_Vectors);
 	MenuCategories.Add(ConstructorStatics.NAME_Coordinates);
+	bShaderInputData = true;
 #endif
 
-	bShaderInputData = true;
 }
 
 #if WITH_EDITOR

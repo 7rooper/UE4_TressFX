@@ -13,12 +13,13 @@
 #include "Materials/Material.h"
 #include "DrawDebugHelpers.h"
 #include "Components/CapsuleComponent.h"
+#include "Runtime\Engine\Classes\Animation\AnimInstance.h"
 #include "Engine/Texture2D.h"
 
 
 DEFINE_LOG_CATEGORY(TressFXComponentLog);
 
-UTressFXComponent::UTressFXComponent(const class FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
+UTressFXComponent::UTressFXComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	bTickInEditor = true;
@@ -195,7 +196,7 @@ void UTressFXComponent::SetUpMorphMapping()
 		const int32 GuideNum = this->Asset->ImportData->NumGuideStrands;
 		TArray<FVector> GuideRootVertices = this->Asset->ImportData->GetRootPositions();
 
-		// Find closest skeletal mesh vertex for each vertex of HairWorks growth mesh
+		// Find closest skeletal mesh vertex for each vertex of mesh
 		const FTransform RelativeTransform = GetRelativeTransform();
 
 		MorphIndices.SetNumUninitialized(GuideNum, true);
@@ -241,7 +242,7 @@ void UTressFXComponent::SetUpMorphMapping()
 
 			for (auto* Instance : Instances)
 			{
-				auto* TFXComp = CastChecked<UTressFXComponent>(Instance);
+				UTressFXComponent* TFXComp = CastChecked<UTressFXComponent>(Instance);
 				TFXComp->CachedSkeletalMeshForMorph = CachedSkeletalMeshForMorph;
 				TFXComp->MorphIndices = MorphIndices;
 				TFXComp->Modify();
@@ -293,8 +294,9 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 		float WindMaxGust;
 		World->Scene->GetWindParameters_GameThread(Position, OutWindDirection, OutWindSpeed, WindMinGust, WindMaxGust);
 		//OutWindSpeed *= -1; // not sure why this was here...
-		//adjust windspeed, tressfx needs much stronger wind to have any effect, 1000 seems to be a good number for now
+		//adjust windspeed, tressfx seems to needs much stronger wind to have any effect, 1000 seems to be a good number for now
 		OutWindSpeed *= 1000;
+		OutWindSpeed *= TressFXSimulationSettings.WindMagnitude;
 	}
 
 	TSharedRef<FTressFXSceneProxy::FDynamicRenderData> DynamicRenderData(new FTressFXSceneProxy::FDynamicRenderData);
@@ -357,6 +359,17 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 			}
 		}
 	}
+	else if(ParentSkeletalMeshComponent && CollisionType == ETressFXCollisionType::TFXCollsion_PhysicsAsset && ParentSkeletalMeshComponent->IsAnySimulatingPhysics())
+	{
+
+		UPhysicsAsset* PhysicsAsset = ParentSkeletalMeshComponent->GetPhysicsAsset();
+		if (PhysicsAsset)
+		{
+			//TODO
+
+		}
+	}
+
 	DynamicRenderData->NumCollisionCapsules = FIntVector4(NumCapsules, NumCapsules, NumCapsules, NumCapsules);
 
 #if WITH_EDITOR
@@ -380,18 +393,18 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 
 			if (RefBase.ContainsNaN())
 			{
-				UE_LOG(TressFXComponentLog, Log, TEXT("Found NaN in RefBase Bone Matrix:  %s"), *this->GetFName().ToString());
+				UE_LOG(TressFXComponentLog, Warning, TEXT("Found NaN in RefBase Bone Matrix:  %s"), *this->GetFName().ToString());
 			}
 			if (ParentSkel.ContainsNaN())
 			{
-				UE_LOG(TressFXComponentLog, Log, TEXT("Found NaN in ParentSkel Bone Matrix:  %s"), *this->GetFName().ToString());
+				UE_LOG(TressFXComponentLog, Warning, TEXT("Found NaN in ParentSkel Bone Matrix:  %s"), *this->GetFName().ToString());
 			}
 
 			FMatrix Result = (RefBase * ParentSkel);
 
 			if (Result.ContainsNaN())
 			{
-				UE_LOG(TressFXComponentLog, Log, TEXT("Found NaN in Result Bone Matrix:  %s"), *this->GetFName().ToString());
+				UE_LOG(TressFXComponentLog, Warning, TEXT("Found NaN in Result Bone Matrix:  %s"), *this->GetFName().ToString());
 			}		
 
 			if(SkelBoneIndex < AMD_TRESSFX_MAX_NUM_BONES)

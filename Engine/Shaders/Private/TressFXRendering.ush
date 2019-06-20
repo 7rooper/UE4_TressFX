@@ -87,7 +87,7 @@ float ComputeHairShadowAttenuation(float fDepthDistanceWS, float fFiberSpacing, 
 
 float ComputeHairShadowAttenuation(float fDepthDistanceWS)
 {
-    return ComputeHairShadowAttenuation(fDepthDistanceWS, g_FiberRadius, g_FiberSpacing, g_HairShadowAlpha);
+    return ComputeHairShadowAttenuation(fDepthDistanceWS, g_FiberRadius, g_FiberSpacing, .004);
 }
 
 

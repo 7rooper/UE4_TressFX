@@ -12,7 +12,7 @@
 
 void FTressFXVertexFactoryShaderParameters::Bind(const FShaderParameterMap& ParameterMap)
 {
-	tressfxShadeParameters.Bind(ParameterMap, TEXT("tressfxShadeParameters"));
+	TressfxShadeParameters.Bind(ParameterMap, TEXT("TressfxShadeParameters"));
 	HairThicknessCoeffs.Bind(ParameterMap, TEXT("g_HairThicknessCoeffs"));
 	HairStrandTexCd.Bind(ParameterMap, TEXT("g_HairStrandTexCd"));
 	NumVerticesPerStrand.Bind(ParameterMap, TEXT("g_NumVerticesPerStrand"));
@@ -20,12 +20,11 @@ void FTressFXVertexFactoryShaderParameters::Bind(const FShaderParameterMap& Para
 	g_GuideHairVertexPositions.Bind(ParameterMap, TEXT("g_GuideHairVertexPositions"));
 	g_GuideHairVertexTangents.Bind(ParameterMap, TEXT("g_GuideHairVertexTangents"));
 	g_HairVertexPositionsPrev.Bind(ParameterMap, TEXT("g_HairVertexPositionsPrev"));
-
 }
 
 void FTressFXVertexFactoryShaderParameters::Serialize(FArchive& Ar)
 {
-	Ar << tressfxShadeParameters
+	Ar << TressfxShadeParameters
 		<< HairThicknessCoeffs
 		<< HairStrandTexCd
 		<< NumVerticesPerStrand
@@ -53,7 +52,7 @@ void FTressFXVertexFactoryShaderParameters::GetElementShaderBindings(
 	if (BatchData->TressFXHairObject)
 	{
 		// UAVS should already be transitioned to readable by the end of the simulation since we dont have rhicmdlist here
-		ShaderBindings.Add(tressfxShadeParameters, BatchData->TressFXHairObject->ShadeParametersUniformBuffer);
+		ShaderBindings.Add(TressfxShadeParameters, BatchData->TressFXHairObject->ShadeParametersUniformBuffer);
 		ShaderBindings.Add(g_bThinTip, 1); // new system does not accept bools
 		ShaderBindings.Add(g_GuideHairVertexPositions, BatchData->TressFXHairObject->PosTanCollection.Positions.SRV);
 		ShaderBindings.Add(g_HairVertexPositionsPrev, BatchData->TressFXHairObject->PosTanCollection.PositionsPrev.SRV);
