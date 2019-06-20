@@ -25,6 +25,7 @@ class FSequencerTimeSliderController;
 class FVirtualTrackArea;
 class ISequencerEditTool;
 class SSequencerLabelBrowser;
+class SCurveEditorTree;
 class SSequencerTrackArea;
 class SSequencerTrackOutliner;
 class SSequencerTransformBox;
@@ -298,6 +299,9 @@ private:
 	/** Handles section selection changes. */
 	void HandleSectionSelectionChanged();
 
+	/** Handles changes to the selected outliner nodes. */
+	void HandleOutlinerNodeSelectionChanged();
+
 	/** Syncs the current node selection to the curve editor. */
 	void SyncCurveEditorToSelection();
 
@@ -499,6 +503,12 @@ private:
 
 	/** Outliner widget */
 	TSharedPtr<SSequencerTrackOutliner> TrackOutliner;
+
+	/** Curve editor tree widget */
+	TSharedPtr<SCurveEditorTree> CurveEditorTree;
+
+	/** Curve editor filter that shows only the selected nodes */
+	TSharedPtr<FCurveEditorTreeFilter> SequencerSelectionCurveEditorFilter;
 
 	/** The breadcrumb trail widget for this sequencer */
 	TSharedPtr<SBreadcrumbTrail<FSequencerBreadcrumb>> BreadcrumbTrail;
