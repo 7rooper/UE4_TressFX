@@ -22,7 +22,8 @@
 
 //Unreal Engine 4 integration written by Leon Rosengarten and Jacob Kostenick 2019
 
-#pragma once
+#ifndef TRESS_FX_COMMON_USH
+#define TRESS_FX_COMMON_USH
 
 cbuffer TressfxShadeParameters
 {
@@ -31,3 +32,5 @@ cbuffer TressfxShadeParameters
     int g_NumVerticesPerStrand;
     float g_ratio;
 };
+
+#endif
