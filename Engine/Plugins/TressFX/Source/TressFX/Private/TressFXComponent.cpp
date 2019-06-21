@@ -163,7 +163,7 @@ void UTressFXComponent::SetUpMorphMapping()
 	{
 		return;
 	}
-#ifndef TRESSFX_SINGLE_PLUGIN
+#ifndef TRESSFX_STANDALONE_PLUGIN
 
 	UE_LOG(TressFXComponentLog, Warning, TEXT("SetupMorphMapping Called"), *this->GetFName().ToString());
 	// Setup morph index mapping
@@ -312,7 +312,7 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 		{
 			break;
 		}
-#ifndef TRESSFX_SINGLE_PLUGIN
+#ifndef TRESSFX_STANDALONE_PLUGIN
 		if (ParentSkeletalMeshComponent->MeshObject->IsCPUSkinned())
 		{
 			break;

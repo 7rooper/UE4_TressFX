@@ -12,7 +12,7 @@
 #include "MaterialShared.h"
 #include "Materials/Material.h"
 
-#ifdef TRESSFX_SINGLE_PLUGIN
+#ifdef TRESSFX_STANDALONE_PLUGIN
 #define TRESSFX_SHOW_FLAG StaticMeshes
 #else
 #include "SkeletalRenderPublic.h"
@@ -97,7 +97,7 @@ FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName 
 
 	Material = TFXComponent->HairMaterial;
 
-#ifdef TRESSFX_SINGLE_PLUGIN
+#ifdef TRESSFX_STANDALONE_PLUGIN
     if (!Material || !Material->CheckMaterialUsage_Concurrent(MATUSAGE_SkeletalMesh))
     {
         Material = UMaterial::GetDefaultMaterial(MD_Surface);
@@ -133,7 +133,7 @@ FPrimitiveViewRelevance FTressFXSceneProxy::GetViewRelevance(const FSceneView * 
 	ViewRel.bShadowRelevance = View->Family->EngineShowFlags.TRESSFX_SHOW_FLAG;;
 	ViewRel.bDynamicRelevance = true;
 	ViewRel.bRenderInMainPass = View->Family->EngineShowFlags.TRESSFX_SHOW_FLAG;
-#ifndef TRESSFX_SINGLE_PLUGIN
+#ifndef TRESSFX_STANDALONE_PLUGIN
 	ViewRel.bTressFX = View->Family->EngineShowFlags.TressFX;
 #endif
 	return ViewRel;
@@ -204,7 +204,7 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 	this->SDFMeshResources = DynamicData.SDFMeshResources;
 	this->bEnableMorphTargets = DynamicData.bEnableMorphTargets;
 
-//#ifdef TRESSFX_SINGLE_PLUGIN
+//#ifdef TRESSFX_STANDALONE_PLUGIN
 #if 1
     this->MorphVertexBuffer = nullptr;
     this->MorphVertexUpdateFrameNumber = 0;
@@ -311,7 +311,7 @@ void FTressFXSceneProxy::CopyMorphs(FRHICommandList& RHICmdList)
 
 bool FTressFXSceneProxy::WantsVelocityDraw()
 {
-#ifdef TRESSFX_SINGLE_PLUGIN
+#ifdef TRESSFX_STANDALONE_PLUGIN
     return Material && Material->GetMaterial();
 #else
 	return Material && Material->GetMaterial() ? Material->GetMaterial()->bTressFXRenderVelocity : false;
@@ -337,7 +337,7 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 			{
 				// Draw the mesh.
 				FMeshBatch& Mesh = Collector.AllocateMesh();
-#ifndef TRESSFX_SINGLE_PLUGIN
+#ifndef TRESSFX_STANDALONE_PLUGIN
 				Mesh.bTressFX = true;
 #endif
 				FMeshBatchElement& BatchElement = Mesh.Elements[0];
@@ -355,7 +355,7 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 				BatchElement.PrimitiveUniformBuffer = DynamicPrimitiveUniformBuffer.UniformBuffer.GetUniformBufferRHI();
 
 				BatchElement.FirstIndex = 0;
-#ifndef TRESSFX_SINGLE_PLUGIN
+#ifndef TRESSFX_STANDALONE_PLUGIN
 				BatchElement.NumIndices = TressFXHairObject->mtotalIndices;
 #endif
 				BatchElement.NumPrimitives = TressFXHairObject->mtotalIndices / 3;

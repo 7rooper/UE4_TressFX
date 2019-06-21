@@ -100,7 +100,7 @@ FMaterialPixelParameters GetMaterialPixelParameters(FVertexFactoryInterpolantsVS
 
     FMaterialPixelParameters Result = MakeInitializedMaterialPixelParameters();
 
-#if USE_TRESSFX && !TRESSFX_SINGLE_PLUGIN
+#if USE_TRESSFX && !TRESSFX_STANDALONE_PLUGIN
     Result.HairTangent = Interpolants.Tangent;
 	Result.StrandUV = Interpolants.strandUV;
 #endif

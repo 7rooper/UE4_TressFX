@@ -73,7 +73,7 @@ FVertexFactoryShaderParameters* FTressFXVertexFactory::ConstructShaderParameters
 
 bool FTressFXVertexFactory::ShouldCompilePermutation(EShaderPlatform Platform, const class FMaterial* Material, const class FShaderType* ShaderType)
 {
-#ifdef TRESSFX_SINGLE_PLUGIN
+#ifdef TRESSFX_STANDALONE_PLUGIN
     return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::Type::SM5) && (Material->IsSpecialEngineMaterial());
 #else
     return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::Type::SM5) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial());
@@ -88,8 +88,8 @@ void FTressFXVertexFactory::ModifyCompilationEnvironment(const FVertexFactoryTyp
 	OutEnvironment.SetDefine(TEXT("TRESSFX_VERTEX_FACTORY"), 1);
 	OutEnvironment.SetDefine(TEXT("WITH_TRESSFX_VERTEX_FACTORY"), 1);
 	OutEnvironment.SetDefine(TEXT("USE_TRESSFX"), 1);
-#ifdef TRESSFX_SINGLE_PLUGIN
-    OutEnvironment.SetDefine(TEXT("TRESSFX_SINGLE_PLUGIN"), 1);
+#ifdef TRESSFX_STANDALONE_PLUGIN
+    OutEnvironment.SetDefine(TEXT("TRESSFX_STANDALONE_PLUGIN"), 1);
 #endif
 }
 
