@@ -2,7 +2,7 @@
 #include "CoreMinimal.h"
 #include "RendererInterface.h"
 #include "MeshMaterialShader.h"
-#include "TressFX/TressFXSceneProxy.h"
+//#include "TressFX/TressFXSceneProxy.h"
 #include "ShaderBaseClasses.h"
 #include "GlobalShader.h"
 

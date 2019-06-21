@@ -19,6 +19,20 @@ DECLARE_LOG_CATEGORY_EXTERN(TressFXRenderingLog, Log, All);
 #define MIN_TFX_KBUFFER_SIZE 2
 #define TFX_PPLL_NULL 0xffffffff
 
+struct ETressFXRenderType
+{
+	enum Type
+	{
+		Opaque,
+		ShortCut,
+		KBuffer,
+		///////
+		Num,
+		Max = (Num - 1)
+	};
+
+};
+
 struct FPPLL_Struct
 {
 	uint32 Depth;

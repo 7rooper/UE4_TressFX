@@ -25,7 +25,7 @@
 #include "ClearQuad.h"
 #include "ScreenRendering.h"
 #include "PostProcess/SceneFilterRendering.h"
-#include "TressFX/TressFXSceneProxy.h"
+#include "TressFXPublicDef.h"
 #include "PostProcess/RenderingCompositionGraph.h"
 #include "PostProcess/PostProcessing.h"
 #include "PipelineStateCache.h"
@@ -123,8 +123,9 @@ public:
 
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
 		const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
-		const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)PrimitiveSceneProxy;
-		ShaderBindings.Add(TressfxShadeParameters, TFXProxy->TressFXHairObject->ShadeParametersUniformBuffer);
+		ITressFXSceneProxy* TFXProxy = (ITressFXSceneProxy*)PrimitiveSceneProxy;
+		//ShaderBindings.Add(TressfxShadeParameters, TFXProxy->TressFXHairObject->ShadeParametersUniformBuffer);
+		ShaderBindings.Add(TressfxShadeParameters, TFXProxy->GetHairObjectShaderUniformBufferParam());
 		ShaderBindings.Add(ColorPassUniformBuffer, DrawRenderState.GetPassUniformBuffer());
 	}
 
@@ -340,7 +341,7 @@ void FTressFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 	if (bDraw)
 	{
 		//guess i dont really need the proxy for now, but i might add some more configurable render settings on it later
-		const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
+		//const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
 		const ERasterizerFillMode MeshFillMode = ComputeMeshFillMode(MeshBatch, MeshBatchMaterial);
 		const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, MeshBatchMaterial);
 		PROCESS_DEPTHSVELOCITY2(
@@ -456,7 +457,7 @@ void TressFXDepthsAlphaPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRIC
 	if (bDraw)
 	{
 		//guess i dont really need the proxy for now, but i might add some more configurable render settings on it later
-		const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
+		//const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
 		const ERasterizerFillMode MeshFillMode = FM_Solid;// ComputeMeshFillMode(MeshBatch, MeshBatchMaterial);
 		const ERasterizerCullMode MeshCullMode = CM_CW; // ComputeMeshCullMode(MeshBatch, MeshBatchMaterial);
 		
@@ -740,7 +741,7 @@ void FTressFXFillColorPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT
 	if (bDraw)
 	{
 		//guess i dont really need the proxy for now, but i might add some more configurable render settings on it later
-		const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
+		//const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
 		const ERasterizerFillMode MeshFillMode = ComputeMeshFillMode(MeshBatch, MeshBatchMaterial);
 		const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, MeshBatchMaterial);
 		int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
