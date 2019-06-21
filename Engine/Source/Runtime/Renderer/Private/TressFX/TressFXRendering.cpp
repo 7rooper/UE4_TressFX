@@ -1040,20 +1040,8 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			RHICmdList.TransitionResource(EResourceTransitionAccess::EReadable, SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture);
 			RHICmdList.EndRenderPass();
 		}
-		// shortcut pass 2, depths resolve to the tressfxscenedepth texture, write the farthest depth
-		{
-			SCOPED_DRAW_EVENT(RHICmdList, ResolveFarthestDepthsToTressFXSceneDepth);
-			ShortcutDepthsResolve_Impl<false, false>(
-				RHICmdList, 
-				SceneContext, 
-				View,
-				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, 
-				SceneContext.TressFXSceneDepth->GetDesc()
-			);
-		}
 
-		// shortcut pass 2.5, depths resolve 2, resolve depths closer to the camera to ue4 scene depth, mainly for shadows and lighting
-		// this wont be perfect but looks better than using the far depths from the above pass
+		// shortcut pass 2, resolve depths closer to the camera to ue4 scene depth, mainly for shadows and lighting
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveCloserDepthsToSceneDepth);
 			ShortcutDepthsResolve_Impl<true, true>(
@@ -1087,6 +1075,19 @@ void RenderShortcutResolvePass(
 		{
 			continue;
 		}
+
+		// shortcut pass 2.5, depths resolve to the tressfxscenedepth texture, write the farthest depth
+		{
+			SCOPED_DRAW_EVENT(RHICmdList, ResolveFarthestDepthsToTressFXSceneDepth);
+			ShortcutDepthsResolve_Impl<false, false>(
+				RHICmdList,
+				SceneContext,
+				View,
+				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture,
+				SceneContext.TressFXSceneDepth->GetDesc()
+				);
+		}
+
 		// shortcut pass 3, fill colors
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, FillColors);

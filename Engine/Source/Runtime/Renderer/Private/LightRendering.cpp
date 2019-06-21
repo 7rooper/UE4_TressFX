@@ -242,17 +242,17 @@ class FDeferredLightPS : public FGlobalShader
 	{}
 
 public:
-	void SetParameters(FRHICommandList& RHICmdList, const FSceneView& View, const FLightSceneInfo* LightSceneInfo, IPooledRenderTarget* ScreenShadowMaskTexture)
+	void SetParameters(FRHICommandList& RHICmdList, const FSceneView& View, const FLightSceneInfo* LightSceneInfo, IPooledRenderTarget* ScreenShadowMaskTexture /*@BEGIN Third party code TressFX*/, bool bUseTressFXSceneDepth = false /*@END Third party code TressFX*/)
 	{
 		const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
-		SetParametersBase(RHICmdList, ShaderRHI, View, ScreenShadowMaskTexture, LightSceneInfo->Proxy->GetIESTextureResource());
+		SetParametersBase(RHICmdList, ShaderRHI, View, ScreenShadowMaskTexture, LightSceneInfo->Proxy->GetIESTextureResource() /*@BEGIN Third party code TressFX*/, bUseTressFXSceneDepth /*@END Third party code TressFX*/);
 		SetDeferredLightParameters(RHICmdList, ShaderRHI, GetUniformBufferParameter<FDeferredLightUniformStruct>(), LightSceneInfo, View);
 	}
 
-	void SetParametersSimpleLight(FRHICommandList& RHICmdList, const FSceneView& View, const FSimpleLightEntry& SimpleLight, const FSimpleLightPerViewEntry& SimpleLightPerViewData)
+	void SetParametersSimpleLight(FRHICommandList& RHICmdList, const FSceneView& View, const FSimpleLightEntry& SimpleLight, const FSimpleLightPerViewEntry& SimpleLightPerViewData /*@BEGIN Third party code TressFX*/, bool bUseTressFXSceneDepth = false /*@END Third party code TressFX*/)
 	{
 		const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
-		SetParametersBase(RHICmdList, ShaderRHI, View, NULL, NULL);
+		SetParametersBase(RHICmdList, ShaderRHI, View, NULL, NULL /*@BEGIN Third party code TressFX*/, bUseTressFXSceneDepth /*@END Third party code TressFX*/);
 		SetSimpleDeferredLightParameters(RHICmdList, ShaderRHI, GetUniformBufferParameter<FDeferredLightUniformStruct>(), SimpleLight, SimpleLightPerViewData, View);
 	}
 
@@ -277,10 +277,10 @@ public:
 
 private:
 
-	void SetParametersBase(FRHICommandList& RHICmdList, const FPixelShaderRHIParamRef ShaderRHI, const FSceneView& View, IPooledRenderTarget* ScreenShadowMaskTexture, FTexture* IESTextureResource)
+	void SetParametersBase(FRHICommandList& RHICmdList, const FPixelShaderRHIParamRef ShaderRHI, const FSceneView& View, IPooledRenderTarget* ScreenShadowMaskTexture, FTexture* IESTextureResource /*@BEGIN Third party code TressFX*/ , bool bUseTressFXSceneDepth = false /*@END Third party code TressFX*/)
 	{
 		FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI,View.ViewUniformBuffer);
-		SceneTextureParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, ESceneTextureSetupMode::All);
+		SceneTextureParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, /*@BEGIN Third party code TressFX*/ bUseTressFXSceneDepth ? ESceneTextureSetupMode::AllWithTFXSceneDepth : /*@END Third party code TressFX*/ ESceneTextureSetupMode::All);
 
 		FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
 
@@ -522,7 +522,6 @@ static bool LightRequiresDenosier(const FLightSceneInfo& LightSceneInfo)
 	return false;
 }
 
-
 /** Renders the scene's lighting. */
 void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICmdList, 
 	//@BEGIN third party code TressFX
@@ -538,6 +537,10 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 
 
 	bool bStencilBufferDirty = false;	// The stencil buffer should've been cleared to 0 already
+
+	/*@BEGIN Third party code TressFX*/
+	const bool bSceneHasTressFX = TressFXScreenShadowMaskTexture.IsValid();
+	/*@End Third party code TressFX*/
 
 	SCOPE_CYCLE_COUNTER(STAT_LightingDrawTime);
 	SCOPE_CYCLE_COUNTER(STAT_LightRendering);
@@ -678,7 +681,7 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 				SCOPED_DRAW_EVENT(RHICmdList, StandardDeferredLighting);
 
 				// make sure we don't clear the depth
-				SceneContext.BeginRenderingSceneColor(RHICmdList, ESimpleRenderTargetMode::EExistingColorAndDepth, FExclusiveDepthStencil::DepthRead_StencilWrite, true);
+				SceneContext.BeginRenderingSceneColor(RHICmdList, ESimpleRenderTargetMode::EExistingColorAndDepth, FExclusiveDepthStencil::DepthRead_StencilWrite, true /*@BEGIN Third party code TressFX*/ ,bSceneHasTressFX /*@END Third party code TressFX*/);
 
 				// Draw non-shadowed non-light function lights without changing render targets between them
 				for (int32 LightIndex = StandardDeferredStart; LightIndex < AttenuationLightStart; LightIndex++)
@@ -687,7 +690,7 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 					const FLightSceneInfo* const LightSceneInfo = SortedLightInfo.LightSceneInfo;
 
 					// Render the light to the scene color buffer, using a 1x1 white texture as input 
-					RenderLight(RHICmdList, LightSceneInfo, NULL, false, false);
+					RenderLight(RHICmdList, LightSceneInfo, NULL, false, false /*@BEGIN Third party code TressFX*/, bSceneHasTressFX /*@END Third party code TressFX*/);
 				}
 
 				SceneContext.FinishRenderingSceneColor(RHICmdList);
@@ -970,10 +973,6 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 
 			TRefCountPtr<IPooledRenderTarget> ScreenShadowMaskTexture;
 
-			/*@BEGIN Third party code TressFX*/
-			const bool bSceneHasTressFX = TressFXScreenShadowMaskTexture.IsValid();
-			/*@End Third party code TressFX*/
-
 			// Draw shadowed and light function lights
 			for (int32 LightIndex = AttenuationLightStart; LightIndex < SortedLights.Num(); LightIndex++)
 			{
@@ -1209,12 +1208,12 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 				}
 				else
 				{
-					SceneContext.BeginRenderingSceneColor(RHICmdList, ESimpleRenderTargetMode::EExistingColorAndDepth, FExclusiveDepthStencil::DepthRead_StencilWrite);
+					SceneContext.BeginRenderingSceneColor(RHICmdList, ESimpleRenderTargetMode::EExistingColorAndDepth, FExclusiveDepthStencil::DepthRead_StencilWrite /*@BEGIN Third party code TressFX*/,true, bSceneHasTressFX /*@END Third party code TressFX*/);
 
 					// Render the light to the scene color buffer, conditionally using the attenuation buffer or a 1x1 white texture as input 
 					if (bDirectLighting)
 					{
-						RenderLight(RHICmdList, &LightSceneInfo, ScreenShadowMaskTexture, false, true);
+						RenderLight(RHICmdList, &LightSceneInfo, ScreenShadowMaskTexture, false, true /*@BEGIN Third party code TressFX*/, bSceneHasTressFX /*@END Third party code TressFX*/);
 					}
 
 					SceneContext.FinishRenderingSceneColor(RHICmdList);
@@ -1364,7 +1363,7 @@ void CalculateLightNearFarDepthFromBounds(const FViewInfo& View, const FSphere &
  * @param LightIndex The light's index into FScene::Lights
  * @return true if anything got rendered
  */
-void FDeferredShadingSceneRenderer::RenderLight(FRHICommandList& RHICmdList, const FLightSceneInfo* LightSceneInfo, IPooledRenderTarget* ScreenShadowMaskTexture, bool bRenderOverlap, bool bIssueDrawEvent)
+void FDeferredShadingSceneRenderer::RenderLight(FRHICommandList& RHICmdList, const FLightSceneInfo* LightSceneInfo, IPooledRenderTarget* ScreenShadowMaskTexture, bool bRenderOverlap, bool bIssueDrawEvent /*@BEGIN Third party code TressFX*/, bool bUseTressFXSceneDepth /*@END Third party code TressFX*/)
 {
 	SCOPE_CYCLE_COUNTER(STAT_DirectLightRenderingTime);
 	INC_DWORD_STAT(STAT_NumLightsUsingStandardDeferred);
@@ -1434,7 +1433,7 @@ void FDeferredShadingSceneRenderer::RenderLight(FRHICommandList& RHICmdList, con
 				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
 
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
-				PixelShader->SetParameters(RHICmdList, View, LightSceneInfo, ScreenShadowMaskTexture);
+				PixelShader->SetParameters(RHICmdList, View, LightSceneInfo, ScreenShadowMaskTexture /*@BEGIN Third party code TressFX*/, bUseTressFXSceneDepth /*@END Third party code TressFX*/);
 			}
 
 			VertexShader->SetParameters(RHICmdList, View, LightSceneInfo);

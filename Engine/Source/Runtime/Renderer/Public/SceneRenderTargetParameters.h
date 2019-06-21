@@ -67,6 +67,10 @@ enum class ESceneTextureSetupMode : uint32
 	GBuffers = 2,
 	SSAO = 4,
 	CustomDepth = 8,
+	/*@BEGIN Third party code TressFX*/
+	TressFXSceneDepth = 16,
+	AllWithTFXSceneDepth = TressFXSceneDepth | GBuffers | SSAO | CustomDepth,
+	/*@END Third party code TressFX*/
 	All = SceneDepth | GBuffers | SSAO | CustomDepth
 };
 
