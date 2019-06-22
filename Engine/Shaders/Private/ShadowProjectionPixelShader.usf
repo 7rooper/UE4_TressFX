@@ -224,7 +224,7 @@ void Main(
 		/*@END Third party code TressFX*/
 
 		BRANCH
-		if (IsSubsurfaceModel(GBufferData.ShadingModelID))
+		if (IsSubsurfaceModel(GBufferData.ShadingModelID) /*@BEGIN Third party code TressFX*/ || bIsTressFXNonOpaquePixel /*@END Third party code TressFX*/)
 		{
 			float Opacity = GBufferData.CustomData.a;
 			// Derive density from a heuristic using opacity, tweaked for useful falloff ranges and to give a linear depth falloff with opacity
@@ -340,7 +340,7 @@ void Main(
 	if(bIsTressFXNonOpaquePixel)
     {
         OutTFXColor = FinalColor;
-		OutColor = float4(0,0,0,0);
+		OutColor = float4(1,1,0,0);
     }
     else
     {
