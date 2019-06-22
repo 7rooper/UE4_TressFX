@@ -220,8 +220,7 @@ void Main(
 		FGBufferData GBufferData = GetGBufferData(ScreenUV);
 
 		/*@BEGIN Third party code TressFX*/
-		const bool bIsTressFXPixel = GBufferData.ShadingModelID == SHADINGMODELID_TRESSFX;
-		const bool bIsTressFXNonOpaquePixel = TRESSFX_SHADOWS && bIsTressFXPixel && (GBufferData.SelectiveOutputMask & SKIP_CUSTOMDATA_MASK);
+		const bool bIsTressFXNonOpaquePixel = TRESSFX_SHADOWS && (GBufferData.SelectiveOutputMask & IS_TRESSFX_NON_OPAQUE_PIXEL);
 		/*@END Third party code TressFX*/
 
 		BRANCH
@@ -230,7 +229,7 @@ void Main(
 			float Opacity = GBufferData.CustomData.a;
 			// Derive density from a heuristic using opacity, tweaked for useful falloff ranges and to give a linear depth falloff with opacity
 			float Density = -.05f * log(1 - min(Opacity, .999f));
-			if (GBufferData.ShadingModelID == SHADINGMODELID_HAIR || GBufferData.ShadingModelID == SHADINGMODELID_EYE /*@BEGIN Third party code TressFX*/ || bIsTressFXPixel /*@END Third party code TressFX*/)
+			if (GBufferData.ShadingModelID == SHADINGMODELID_HAIR || GBufferData.ShadingModelID == SHADINGMODELID_EYE /*@BEGIN Third party code TressFX*/ || bIsTressFXNonOpaquePixel || GBufferData.ShadingModelID == SHADINGMODELID_TRESSFX /*@END Third party code TressFX*/)
 			{
 				Opacity = 1;
 				Density = 1;

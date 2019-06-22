@@ -40,14 +40,15 @@ Texture2DArray<uint> FragmentDepthsTexture;
 	#define WRITE_GBUFFER_SHADING_MODEL 0
 #endif
 
+#if WRITE_GBUFFER_SHADING_MODEL && WRITE_CLOSEST_DEPTH
+	RWTexture2D<float4> RWGBufferB : register(u1);
+#endif
+
 // Second pass of ShortCut.
 // Full-screen pass that writes the farthest of the near depths for depth culling.
 void main(
 	FScreenVertexOutput input, 
 	out float OutDepth : SV_DEPTH
-	#if WRITE_GBUFFER_SHADING_MODEL && WRITE_CLOSEST_DEPTH
-	, out float4 OutGBufferB : SV_Target0
-	#endif
 )
 {
     const int2 vScreenAddress = int2(input.Position.xy);
@@ -64,10 +65,13 @@ void main(
 		}
 		
 		#if WRITE_GBUFFER_SHADING_MODEL
-			// in tressfx, we are always writing custom data, so we are going to borrow the SKIP_CUSTOMDATA_MASK to indicate thats its non-opaque tressfx
-			uint Mask = 0;
-			Mask |= SKIP_CUSTOMDATA_MASK;
-			OutGBufferB.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) SHADINGMODELID_TRESSFX, (uint) Mask); 
+			// we need to know if a pixel is non-opaque tressfx, but without actually writing the shading model to the gbuffer			
+			float4 Current = RWGBufferB[uint2(input.Position.xy)];
+			uint CurrentMask = DecodeSelectiveOutputMask(Current.a);
+			uint CurrentShadingModel = DecodeShadingModelId(Current.a);
+			CurrentMask |= IS_TRESSFX_NON_OPAQUE_PIXEL;
+			Current.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) CurrentShadingModel, (uint) CurrentMask); 
+			RWGBufferB[uint2(input.Position.xy)] = Current;
 		#endif
 
 		float HairDepth = asfloat(FragmentDepthsTexture[uint3(vScreenAddress, 0)]);

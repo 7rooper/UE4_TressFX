@@ -1432,7 +1432,8 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	{
 		RenderTressFXBasePass(RHICmdList, TFXRenderType);
 	}
-
+	//@END third party code TressFX
+	
 	// BASE PASS ENDS HERE.
 
 	if (ViewFamily.EngineShowFlags.VisualizeLightCulling)

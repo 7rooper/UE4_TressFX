@@ -718,9 +718,12 @@ void ApplyBentNormal( in FMaterialPixelParameters MaterialParameters, in float R
 uint GetSelectiveOutputMask()
 {
 	uint Mask = 0;
-#if !WRITES_CUSTOMDATA_TO_GBUFFER
-	Mask |= SKIP_CUSTOMDATA_MASK;
-#endif
+/*@BEGIN Third party code TressFX*/
+//commenting this out because tressfx needs this mask for itself, and the logic for SKIP_CUSTOMDATA_MASK can be determined by shading model instead
+//#if !WRITES_CUSTOMDATA_TO_GBUFFER
+//	Mask |= SKIP_CUSTOMDATA_MASK;
+//#endif
+/*@END Third party code TressFX*/
 #if !GBUFFER_HAS_PRECSHADOWFACTOR
 	Mask |= SKIP_PRECSHADOW_MASK;
 #endif

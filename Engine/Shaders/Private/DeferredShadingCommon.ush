@@ -297,6 +297,21 @@ bool IsSubsurfaceModel(int ShadingModel)
 		;
 }
 
+/*@BEGIN Third party code TressFX*/
+bool WritesCustomData(int ShadingModel)
+{
+	return ShadingModel == SHADINGMODELID_SUBSURFACE 
+	|| ShadingModel == SHADINGMODELID_PREINTEGRATED_SKIN 
+	|| ShadingModel == SHADINGMODELID_SUBSURFACE_PROFILE
+	|| ShadingModel == SHADINGMODELID_TWOSIDED_FOLIAGE
+	|| ShadingModel == SHADINGMODELID_HAIR
+	|| ShadingModel == SHADINGMODELID_EYE
+	|| ShadingModel == SHADINGMODELID_TRESSFX
+	|| ShadingModel == SHADINGMODELID_CLEAR_COAT
+	|| ShadingModel == SHADINGMODELID_CLOTH;
+}
+/*@BEGIN Third party code TressFX*/
+
 bool UseSubsurfaceProfile(int ShadingModel)
 {
 	return ShadingModel == SHADINGMODELID_SUBSURFACE_PROFILE || ShadingModel == SHADINGMODELID_EYE;
@@ -534,7 +549,10 @@ FGBufferData DecodeGBufferData(
 	GBuffer.IndirectIrradiance = 1;
 #endif
 
-	GBuffer.CustomData = !(GBuffer.SelectiveOutputMask & SKIP_CUSTOMDATA_MASK) ? InGBufferD : 0;
+	/*@BEGIN Third party code TressFX*/
+	//GBuffer.CustomData = !(GBuffer.SelectiveOutputMask & SKIP_CUSTOMDATA_MASK) ? InGBufferD : 0;
+    GBuffer.CustomData = WritesCustomData(GBuffer.ShadingModelID) ? InGBufferD : 0;
+	/*@END Third party code TressFX*/
 
 	GBuffer.PrecomputedShadowFactors = !(GBuffer.SelectiveOutputMask & SKIP_PRECSHADOW_MASK) ? InGBufferE :  ((GBuffer.SelectiveOutputMask & ZERO_PRECSHADOW_MASK) ? 0 :  1);
 	GBuffer.CustomDepth = ConvertFromDeviceZ(CustomNativeDepth);

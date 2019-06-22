@@ -907,7 +907,7 @@ void ShortcutDepthsResolve_Impl(
 	FViewInfo& View, 
 	FRHITexture* DepthTarget, 
 	const FPooledRenderTargetDesc DepthTargetDesc,
-	FRHITexture* GBufferBTarget = nullptr
+	TRefCountPtr<IPooledRenderTarget>* GBufferB = nullptr
 )
 {
 
@@ -917,24 +917,17 @@ void ShortcutDepthsResolve_Impl(
 
 	if(bWriteShadingModel)
 	{
-		check(GBufferBTarget)
-		RHICmdList.TransitionResource(EResourceTransitionAccess::EWritable, GBufferBTarget);
+		check(GBufferB && GBufferB->IsValid());
+		
+		FUnorderedAccessViewRHIParamRef UAVs[] = { GBufferB->GetReference()->GetRenderTargetItem().UAV };
+		RHICmdList.TransitionResources(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
 		RPInfo = FRHIRenderPassInfo(
-			GBufferBTarget, 
-			ERenderTargetActions::Load_Store,
-			DepthTarget,
-			EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
+			ARRAY_COUNT(UAVs), UAVs
 		);
-		GraphicsPSOInit.BlendState = TStaticBlendState<
-			  CW_RGBA
-			, BO_Add
-			, BF_One
-			, BF_Zero
-			, BO_Add
-			, BF_One
-			, BF_Zero
-			, CW_NONE
-		>::GetRHI();
+		RPInfo.DepthStencilRenderTarget.Action = EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil;
+		RPInfo.DepthStencilRenderTarget.DepthStencilTarget = DepthTarget;
+		RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
+		RPInfo.bIsMSAA = false;
 	}
 	else
 	{
@@ -942,13 +935,15 @@ void ShortcutDepthsResolve_Impl(
 			DepthTarget,
 			EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
 		);
-		GraphicsPSOInit.BlendState = TStaticBlendState <CW_NONE>::GetRHI();
+	
 	}
-
+	GraphicsPSOInit.BlendState = TStaticBlendState <>::GetRHI();
 	RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXshortcutResolveDepth"));
 
-	TShaderMapRef<FScreenVS>											VertexShader(View.ShaderMap);
-	TShaderMapRef<FTressFXShortCutResolveDepthPS<bWriteClosestDepth, bWriteShadingModel>>	PixelShader(View.ShaderMap);
+	TShaderMapRef<FScreenVS> VertexShader(View.ShaderMap);
+	TShaderMapRef<
+		FTressFXShortCutResolveDepthPS<bWriteClosestDepth, bWriteShadingModel>
+	>	PixelShader(View.ShaderMap);
 
 	GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
 	GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<true, CF_Always>::GetRHI();
@@ -977,6 +972,11 @@ void ShortcutDepthsResolve_Impl(
 		Size,
 		*VertexShader
 	);
+	if (bWriteShadingModel)
+	{
+		FUnorderedAccessViewRHIParamRef UAVs[] = { GBufferB->GetReference()->GetRenderTargetItem().UAV };
+		RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
+	}
 
 	RHICmdList.EndRenderPass();
 }
@@ -1050,7 +1050,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 				View,
 				SceneContext.GetSceneDepthSurface(),
 				SceneContext.SceneDepthZ->GetDesc(),
-				SceneContext.GBufferB->GetRenderTargetItem().TargetableTexture
+				&SceneContext.GBufferB
 			);
 		}
 	}

@@ -402,6 +402,10 @@ public:
 		{
 			tAccumInvAlpha.Bind(Initializer.ParameterMap, TEXT("tAccumInvAlpha"));
 		}
+		if (bWriteShadingModelToGBuffer) 
+		{
+			RWGBufferB.Bind(Initializer.ParameterMap, TEXT("RWGBufferB"));
+		}
 	}
 
 	FTressFXShortCutResolveDepthPS() {}
@@ -417,6 +421,10 @@ public:
 		{
 			Ar << tAccumInvAlpha;
 		}
+		if(bWriteShadingModelToGBuffer)
+		{
+			Ar << RWGBufferB;
+		}
 		return bShaderHasOutdatedParameters;	
 	}
 
@@ -425,6 +433,7 @@ public:
 	FShaderResourceParameter FragmentDepthsTexture;
 	FSceneTextureShaderParameters SceneTextureShaderParameters;
 	FShaderResourceParameter tAccumInvAlpha;
+	FRWShaderParameter RWGBufferB;
 
 };
 
