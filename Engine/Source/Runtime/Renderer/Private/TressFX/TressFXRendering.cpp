@@ -507,14 +507,6 @@ void SetupDepthsAlphaPassState(FMeshPassProcessorRenderState& DrawRenderState)
 		, BO_Add
 		, BF_One
 		, BF_Zero
-		//gbufferb
-		, CW_RGBA
-		, BO_Add
-		, BF_One
-		, BF_Zero
-		, BO_Add
-		, BF_One
-		, BF_Zero
 	>::GetRHI());
 	DrawRenderState.SetDepthStencilState(
 		TStaticDepthStencilState<
@@ -918,16 +910,13 @@ void ShortcutDepthsResolve_Impl(
 	if(bWriteShadingModel)
 	{
 		check(GBufferB && GBufferB->IsValid());
-		
-		FUnorderedAccessViewRHIParamRef UAVs[] = { GBufferB->GetReference()->GetRenderTargetItem().UAV };
-		RHICmdList.TransitionResources(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
+		RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToGfx, GBufferB->GetReference()->GetRenderTargetItem().UAV);
 		RPInfo = FRHIRenderPassInfo(
-			ARRAY_COUNT(UAVs), UAVs
+			DepthTarget,
+			EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
 		);
-		RPInfo.DepthStencilRenderTarget.Action = EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil;
-		RPInfo.DepthStencilRenderTarget.DepthStencilTarget = DepthTarget;
-		RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
-		RPInfo.bIsMSAA = false;
+		RPInfo.UAVIndex = 1;
+		RPInfo.UAVs[RPInfo.NumUAVs++] = GBufferB->GetReference()->GetRenderTargetItem().UAV;
 	}
 	else
 	{
@@ -974,8 +963,7 @@ void ShortcutDepthsResolve_Impl(
 	);
 	if (bWriteShadingModel)
 	{
-		FUnorderedAccessViewRHIParamRef UAVs[] = { GBufferB->GetReference()->GetRenderTargetItem().UAV };
-		RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
+		RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToGfx, GBufferB->GetReference()->GetRenderTargetItem().UAV);
 	}
 
 	RHICmdList.EndRenderPass();
