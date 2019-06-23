@@ -364,12 +364,28 @@ float4 PointLightDepthBiasAndProjParameters;
 void MainOnePassPointLightPS(
 	in float4 SVPos : SV_POSITION,
 	out float4 OutColor : SV_Target0
+	/*@BEGIN Third party code TressFX*/
+#if TRESSFX_SHADOWS 
+	,out float4 OutTFXColor : SV_Target1
+#endif
+	/*@END Third party code TressFX*/
 	)
 {
 	float2 ScreenUV = float2( SVPos.xy * View.BufferSizeAndInvSize.zw );
 	float SceneW = CalcSceneDepth( ScreenUV );
 	float2 ScreenPosition = ( ScreenUV.xy - View.ScreenPositionScaleBias.wz ) / View.ScreenPositionScaleBias.xy;
 	float3 WorldPosition = mul(float4(ScreenPosition.xy * SceneW, SceneW, 1), View.ScreenToWorld).xyz;
+
+	/*@BEGIN Third party code TressFX*/
+    float4 FinalColor = 0;
+	#if TRESSFX_SHADOWS
+		float4 GBufferB = Texture2DSampleLevel(SceneTexturesStruct.GBufferBTexture, SceneTexturesStruct.GBufferBTextureSampler, ScreenUV, 0);
+		uint SelectiveOutputMask = DecodeSelectiveOutputMask(GBufferB.a);
+		const bool bIsTressFXNonOpaquePixel = (SelectiveOutputMask & IS_TRESSFX_NON_OPAQUE_PIXEL);
+	#else
+		const bool bIsTressFXNonOpaquePixel = false;
+	#endif
+	/*@END Third party code TressFX*/
 
 	// For debugging
 #define OUTPUT_CUBE_SHADOW_DEPTH_NO_FILTERING 0
@@ -392,14 +408,23 @@ void MainOnePassPointLightPS(
 #if FORWARD_SHADING
 	float LightInfluenceMask = GetLightInfluenceMask(WorldPosition);
 	FadedShadow = lerp(1, FadedShadow, LightInfluenceMask);
-	OutColor = EncodeLightAttenuation(FadedShadow);
+	//OutColor = EncodeLightAttenuation(FadedShadow);
+	/*@BEGIN Third party code TressFX*/
+	FinalColor = EncodeLightAttenuation(FadedShadow);
+	/*@END Third party code TressFX*/
 #else
 	// Light attenuation buffer has been remapped. 
 	// Point light shadows now write to the blue channel.
-	OutColor.b = EncodeLightAttenuation(FadedShadow);
-	OutColor.rga = 1;
+	//OutColor.b = EncodeLightAttenuation(FadedShadow);
+	//OutColor.rga = 1;
 	// SSS is not correctly handled but at least it should be shadowed
-	OutColor.a = OutColor.b;
+	//OutColor.a = OutColor.b;
+	/*@BEGIN Third party code TressFX*/
+    FinalColor.b = EncodeLightAttenuation(FadedShadow);
+    FinalColor.rga = 1;
+	// SSS is not correctly handled but at least it should be shadowed
+    FinalColor.a = FinalColor.b;
+	/*@END Third party code TressFX*/
 #endif
 
 #if USE_TRANSMISSION
@@ -412,8 +437,27 @@ void MainOnePassPointLightPS(
 	{
 		Thickness = CalcTransmissionThickness(GBufferData, WorldPosition, LightVector, PointLightDepthBiasAndProjParameters.zw, LightPositionAndInvRadius.w, 0);
 	}
-	OutColor.a = IsSubsurfaceProfile ? EncodeLightAttenuation(Thickness) : OutColor.b;
+	//OutColor.a = IsSubsurfaceProfile ? EncodeLightAttenuation(Thickness) : OutColor.b;
+	/*@BEGIN Third party code TressFX*/
+   	FinalColor.a = IsSubsurfaceProfile ? EncodeLightAttenuation(Thickness) : FinalColor.b;
+	/*@END Third party code TressFX*/
 #endif // USE_TRANSMISSION
+	/*@BEGIN Third party code TressFX*/
+	#if TRESSFX_SHADOWS
+		if(bIsTressFXNonOpaquePixel)
+		{
+			OutTFXColor = FinalColor;
+			OutColor = float4(0,0,1,1);
+		}
+		else
+		{
+			OutColor = FinalColor;
+			OutTFXColor = float4(1,1,1,1);
+		}
+	#else
+		OutColor = FinalColor;
+	#endif
+	/*@END Third party code TressFX*/
 }
  
 #endif

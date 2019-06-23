@@ -1097,6 +1097,10 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 								TressFXScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture
 							};
 							RPInfo = FRHIRenderPassInfo(2, ColorRTs, ERenderTargetActions::Load_Store);
+							if (bClearToWhite)
+							{
+								RPInfo.ColorRenderTargets[1].Action = ERenderTargetActions::Clear_Store;
+							}
 						}
 						else 
 						{
@@ -1132,7 +1136,18 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 								if (ScissorRect.Min.X < ScissorRect.Max.X && ScissorRect.Min.Y < ScissorRect.Max.Y)
 								{
 									RHICmdList.SetViewport(ScissorRect.Min.X, ScissorRect.Min.Y, 0.0f, ScissorRect.Max.X, ScissorRect.Max.Y, 1.0f);
-									DrawClearQuad(RHICmdList, true, FLinearColor(1, 1, 1, 1), false, 0, false, 0);
+									/*@BEGIN Third party code TressFX*/
+									if (bSceneHasTressFX)
+									{
+										FLinearColor Colors[] = { FLinearColor(1, 1, 1, 1), FLinearColor(1, 1, 1, 1) };
+										DrawClearQuadMRT(RHICmdList, true, 2, Colors, false, 0, false, 0);
+									}
+									else 
+									{
+										DrawClearQuad(RHICmdList, true, FLinearColor(1, 1, 1, 1), false, 0, false, 0);
+									}
+									/*@END Third party code TressFX*/
+									//DrawClearQuad(RHICmdList, true, FLinearColor(1, 1, 1, 1), false, 0, false, 0);
 								}
 								else
 								{

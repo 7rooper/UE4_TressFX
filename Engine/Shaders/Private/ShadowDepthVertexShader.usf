@@ -251,16 +251,7 @@ void Main(
 
 #elif ONEPASS_POINTLIGHT_SHADOW
 
-	/*@BEGIN Third party code TressFX*/
-	#if !USE_TRESSFX
-		OutPosition = OutParameters.GSPosition = WorldPos;
-	#else
-		float4 Pos = mul(WorldPos,View.ClipToTranslatedWorld);
-		OutPosition = OutParameters.GSPosition = Pos;
-		//OutPosition = mul(WorldPosition, PassStruct.ProjectionMatrix);
-	#endif
-	/*@END Third party code TressFX*/
-
+	OutPosition = OutParameters.GSPosition = WorldPos;
 
 	#if INTERPOLATE_VF_ATTRIBUTES
 		// Masked materials need texture coords to clip
