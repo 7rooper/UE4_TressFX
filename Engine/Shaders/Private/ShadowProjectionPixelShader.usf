@@ -414,6 +414,22 @@ void MainOnePassPointLightPS(
 	FinalColor = EncodeLightAttenuation(FadedShadow);
 	/*@END Third party code TressFX*/
 #else
+
+	/*@BEGIN Third party code TressFX*/
+    if (bIsTressFXNonOpaquePixel)
+    {
+        float LightInfluenceMask = GetLightInfluenceMask(WorldPosition);
+        FadedShadow = lerp(1, FadedShadow, LightInfluenceMask);
+        FinalColor = EncodeLightAttenuation(FadedShadow);
+    }
+    else
+    {
+        FinalColor.b = EncodeLightAttenuation(FadedShadow);
+        FinalColor.rga = 1;
+		// SSS is not correctly handled but at least it should be shadowed
+        FinalColor.a = FinalColor.b;
+    }
+	/*@END Third party code TressFX*/
 	// Light attenuation buffer has been remapped. 
 	// Point light shadows now write to the blue channel.
 	//OutColor.b = EncodeLightAttenuation(FadedShadow);
@@ -421,10 +437,10 @@ void MainOnePassPointLightPS(
 	// SSS is not correctly handled but at least it should be shadowed
 	//OutColor.a = OutColor.b;
 	/*@BEGIN Third party code TressFX*/
-    FinalColor.b = EncodeLightAttenuation(FadedShadow);
-    FinalColor.rga = 1;
+    //FinalColor.b = EncodeLightAttenuation(FadedShadow);
+    //FinalColor.rga = 1;
 	// SSS is not correctly handled but at least it should be shadowed
-    FinalColor.a = FinalColor.b;
+  //  FinalColor.a = FinalColor.b;
 	/*@END Third party code TressFX*/
 #endif
 

@@ -537,18 +537,69 @@ void FProjectedShadowInfo::SetBlendStateForProjection(
 			{
 				if (bUseFadePlane)
 				{
-					// alpha is used to fade between cascades, we don't don't need to do BO_Min as we leave B and A untouched which has translucency shadow
-					GraphicsPSOInit.BlendState = TStaticBlendState<CW_RG, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_One, BF_Zero
-						,CW_RG, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_One, BF_Zero
-					>::GetRHI();
+					if (ShadowMapChannel == 0)
+					{
+						// alpha is used to fade between cascades
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_RG, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_One, BF_Zero,
+							CW_RED, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha
+						>::GetRHI();
+					}
+					else if (ShadowMapChannel == 1)
+					{
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_RG, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_One, BF_Zero,
+							CW_GREEN, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha
+						>::GetRHI();
+					}
+					else if (ShadowMapChannel == 2)
+					{
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_RG, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_One, BF_Zero,
+							CW_BLUE, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha
+						>::GetRHI();
+					}
+					else if (ShadowMapChannel == 3)
+					{
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_RG, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_One, BF_Zero,
+							CW_ALPHA, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha
+						>::GetRHI();
+					}
+					else {
+						check(0)
+					}
 				}
 				else
 				{
-					// first cascade rendered doesn't require fading (CO_Min is needed to combine multiple shadow passes)
-					// RTDF shadows: CO_Min is needed to combine with far shadows which overlap the same depth range
-					GraphicsPSOInit.BlendState = TStaticBlendState<CW_RG, BO_Min, BF_One, BF_One, BO_Add, BF_One, BF_Zero
-						,CW_RG, BO_Min, BF_One, BF_One, BO_Add, BF_One, BF_Zero
-					>::GetRHI();
+					if (ShadowMapChannel == 0)
+					{
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_RG, BO_Min, BF_One, BF_One, BO_Add, BF_One, BF_Zero,
+							CW_RED, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One
+						>::GetRHI();
+					}
+					else if (ShadowMapChannel == 1)
+					{
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_RG, BO_Min, BF_One, BF_One, BO_Add, BF_One, BF_Zero,
+							CW_GREEN, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One
+						>::GetRHI();
+					}
+					else if (ShadowMapChannel == 2)
+					{
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_RG, BO_Min, BF_One, BF_One, BO_Add, BF_One, BF_Zero,
+							CW_BLUE, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One
+						>::GetRHI();
+					}
+					else if (ShadowMapChannel == 3)
+					{
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_RG, BO_Min, BF_One, BF_One, BO_Add, BF_One, BF_Zero,
+							CW_ALPHA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One
+						>::GetRHI();
+					}
 				}
 			}
 			else 
@@ -591,9 +642,34 @@ void FProjectedShadowInfo::SetBlendStateForProjection(
 				/*@BEGIN third party code TressFX */
 				if (bSceneHasTressFX)
 				{
-					GraphicsPSOInit.BlendState = TStaticBlendState<CW_BA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One
-						,CW_BA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One
-					>::GetRHI();
+					if (ShadowMapChannel == 0)
+					{
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_BA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One,
+							CW_RED, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One
+						>::GetRHI();
+					}
+					else if (ShadowMapChannel == 1)
+					{
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_BA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One,
+							CW_GREEN, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One
+						>::GetRHI();
+					}
+					else if (ShadowMapChannel == 2)
+					{
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_BA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One,
+							CW_BLUE, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One
+						>::GetRHI();
+					}
+					else if (ShadowMapChannel == 3)
+					{
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_BA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One,
+							CW_ALPHA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One
+						>::GetRHI();
+					}
 				}
 				else 
 				{
