@@ -29,7 +29,7 @@ void SetShadowDepthOutputs(float4 WorldPosition, out float4 OutPosition, out flo
 	#if !USE_TRESSFX
 		OutPosition = mul(WorldPosition, PassStruct.ProjectionMatrix);
 	#else
-		OutPosition = mul(WorldPosition,View.ClipToTranslatedWorld);
+		//OutPosition = mul(WorldPosition,View.ClipToTranslatedWorld);
 		OutPosition = mul(WorldPosition, PassStruct.ProjectionMatrix);
 	#endif
 	/*@END Third party code TressFX*/

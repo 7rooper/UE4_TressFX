@@ -292,7 +292,8 @@ void Main(
 	// Write into all channels, the write mask will constrain to the correct one
 	//OutColor = EncodeLightAttenuation(FadedShadow);
 	/*@BEGIN Third party code TressFX*/
-    FinalColor = EncodeLightAttenuation(FadedShadow);
+	FinalColor= EncodeLightAttenuation(FadedShadow);;
+	const bool bIsTressFXNonOpaquePixel = false;
 	/*@END Third party code TressFX*/
 #else
 	float FadedSSSShadow = lerp(1.0f, Square(SSSTransmission), ShadowFadeFraction);
