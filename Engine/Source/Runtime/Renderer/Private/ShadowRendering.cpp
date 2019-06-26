@@ -566,8 +566,12 @@ void FProjectedShadowInfo::SetBlendStateForProjection(
 							CW_ALPHA, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha
 						>::GetRHI();
 					}
-					else {
-						check(0)
+					else 
+					{
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_RG, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_One, BF_Zero,
+							CW_NONE // no channel was assigned (-1)
+						>::GetRHI();
 					}
 				}
 				else
@@ -598,6 +602,14 @@ void FProjectedShadowInfo::SetBlendStateForProjection(
 						GraphicsPSOInit.BlendState = TStaticBlendState<
 							CW_RG, BO_Min, BF_One, BF_One, BO_Add, BF_One, BF_Zero,
 							CW_ALPHA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One
+						>::GetRHI();
+					}
+					else
+					{
+						
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_RG, BO_Min, BF_One, BF_One, BO_Add, BF_One, BF_Zero,
+							CW_NONE // no channel was assigned (-1)
 						>::GetRHI();
 					}
 				}
@@ -668,6 +680,13 @@ void FProjectedShadowInfo::SetBlendStateForProjection(
 						GraphicsPSOInit.BlendState = TStaticBlendState<
 							CW_BA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One,
 							CW_ALPHA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One
+						>::GetRHI();
+					}
+					else
+					{
+						GraphicsPSOInit.BlendState = TStaticBlendState<
+							CW_BA, BO_Min, BF_One, BF_One, BO_Min, BF_One, BF_One,
+							CW_NONE // no channel was assigned (-1)
 						>::GetRHI();
 					}
 				}
