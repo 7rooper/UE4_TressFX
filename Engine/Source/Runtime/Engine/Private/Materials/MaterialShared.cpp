@@ -1181,12 +1181,6 @@ bool FMaterialResource::GetCastDynamicShadowAsMasked() const
 
 EBlendMode FMaterialResource::GetBlendMode() const 
 {
-	/*@BEGIN Third party code TressFX*/
-	if (IsUsedWithTressFX())
-	{
-		return EBlendMode::BLEND_Opaque;
-	}
-	/*@END Third party code TressFX*/
 	return MaterialInstance ? MaterialInstance->GetBlendMode() : Material->GetBlendMode();
 }
 
