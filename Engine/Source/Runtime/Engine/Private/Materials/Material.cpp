@@ -4258,12 +4258,6 @@ bool UMaterial::CanEditChange(const UProperty* InProperty) const
 
 		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, BlendMode))
 		{
-			/*@BEGIN Third party code TressFX*/
-			//if (bUsedWithTressFX) 
-			//{
-			//	return false;
-			//}
-			/*@END Third party code TressFX*/
 			return MaterialDomain == MD_DeferredDecal || MaterialDomain == MD_Surface || MaterialDomain == MD_Volume || MaterialDomain == MD_UI;
 		}
 	
@@ -5825,12 +5819,6 @@ bool UMaterial::GetCastDynamicShadowAsMasked() const
 
 EBlendMode UMaterial::GetBlendMode() const
 {
-	/*@BEGIN Third party code TressFX*/
-	//if (bUsedWithTressFX)
-	//{
-	//	return EBlendMode::BLEND_Opaque;
-	//}
-	/*@END Third party code TressFX*/
 	if (EBlendMode(BlendMode) == BLEND_Masked)
 	{
 		if (bCanMaskedBeAssumedOpaque)

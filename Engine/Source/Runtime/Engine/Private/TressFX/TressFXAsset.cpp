@@ -191,7 +191,7 @@ bool FTressFXRuntimeData::GenerateFollowHairs(int32 numFollowHairsPerGuideHair /
 			int32 indexRootVertFollow = indexStrandFollow * NumVerticesPerStrand;
 
 			StrandUV[indexStrandFollow] = StrandUV[indexGuideStrand];
-			StrandUV[indexStrandFollow].X += ((j - NumFollowStrandsPerGuide / 2) * 1.0f) / NumGuideStrands;
+			//StrandUV[indexStrandFollow].X += ((j - NumFollowStrandsPerGuide / 2) * 1.0f) / NumGuideStrands;
 
 			// offset vector from the guide strand's root vertex position
 			FVector offset = GetRandom(-maxRadiusAroundGuideHair, maxRadiusAroundGuideHair) * t0 + GetRandom(-maxRadiusAroundGuideHair, maxRadiusAroundGuideHair) * t1;

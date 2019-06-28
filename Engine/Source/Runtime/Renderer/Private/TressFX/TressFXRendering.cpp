@@ -277,7 +277,7 @@ void FTressFXDepthsVelocityPassMeshProcessor::Process(
 
 	FMeshPassProcessorRenderState DrawRenderState(PassDrawRenderState);
 
-	if (true)
+	if (bNoDepth)
 	{
 		DrawRenderState.SetDepthStencilState(TStaticDepthStencilState<false, CF_DepthNearOrEqual>::GetRHI());
 	}
@@ -328,11 +328,11 @@ void FTressFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 
 	const EBlendMode BlendMode = MeshBatchMaterial.GetBlendMode();
 	const bool bWantsVelocity = MeshBatchMaterial.TressFXShouldRenderVelocity();
-	const bool bIsTranslucent = IsTranslucentBlendMode(BlendMode);
 	int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
 	TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
 
-	const bool bNoDepth = bIsTranslucent;
+	//blend mode masked will render depth in the regular pass
+	const bool bNoDepth = BlendMode == EBlendMode::BLEND_Masked;
 
 	if (bWantsVelocity == false && bNoDepth == true)
 	{
