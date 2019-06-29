@@ -449,7 +449,7 @@ float3 GetForwardDirectLightingTressFX(
 		// Static shadowing uses ShadowMapChannel, dynamic shadows are packed into light attenuation using PreviewShadowMapChannel
 		LightData.ShadowMapChannelMask = UnpackShadowMapChannelMask(DirectionalLightData.DirectionalLightShadowMapChannelMask);
 
-		#if USING_INSET_SHADOWS
+		#if USING_INSET_SHADOWS && 0
 				//TODO
 			    float4 LightAttenuation = DynamicShadowFactors;
 		#else
