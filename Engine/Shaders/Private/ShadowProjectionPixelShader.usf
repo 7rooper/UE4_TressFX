@@ -292,7 +292,7 @@ void Main(
 	// Write into all channels, the write mask will constrain to the correct one
 	//OutColor = EncodeLightAttenuation(FadedShadow);
 	/*@BEGIN Third party code TressFX*/
-	FinalColor= EncodeLightAttenuation(FadedShadow);;
+	FinalColor= EncodeLightAttenuation(FadedShadow);
 	const bool bIsTressFXNonOpaquePixel = false;
 	/*@END Third party code TressFX*/
 #else
@@ -301,7 +301,21 @@ void Main(
 	// the channel assignment is documented in ShadowRendering.cpp (look for Light Attenuation channel assignment)
 	//OutColor = EncodeLightAttenuation(half4(FadedShadow, FadedSSSShadow, FadedShadow, FadedSSSShadow));
 	/*@BEGIN Third party code TressFX*/
-    FinalColor = EncodeLightAttenuation(half4(FadedShadow, FadedSSSShadow, FadedShadow, FadedSSSShadow));
+	#if TRESSFX_SHADOWS
+		if(bIsTressFXNonOpaquePixel)
+		{
+			float LightInfluenceMask = GetLightInfluenceMask(WorldPosition);
+			FadedShadow = lerp(1, FadedShadow, LightInfluenceMask);
+			FinalColor= EncodeLightAttenuation(FadedShadow);
+		}
+		else
+		{
+			FinalColor = EncodeLightAttenuation(half4(FadedShadow, FadedSSSShadow, FadedShadow, FadedSSSShadow));
+		}
+	#else
+		FinalColor = EncodeLightAttenuation(half4(FadedShadow, FadedSSSShadow, FadedShadow, FadedSSSShadow));
+	#endif
+    //FinalColor = EncodeLightAttenuation(half4(FadedShadow, FadedSSSShadow, FadedShadow, FadedSSSShadow));
 	/*@END Third party code TressFX*/
 #endif
 
