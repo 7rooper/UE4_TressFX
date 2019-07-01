@@ -40,7 +40,7 @@ class FTressFXCopyOpaqueDepthPS : public FGlobalShader
 	FTressFXCopyOpaqueDepthPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 	{
 		DepthTexture.Bind(Initializer.ParameterMap, TEXT("DepthTexture"));
-		tAccumInvAlpha.Bind(Initializer.ParameterMap, TEXT("tAccumInvAlpha"));
+		AccumInvAlpha.Bind(Initializer.ParameterMap, TEXT("AccumInvAlpha"));
 	}
 
 	const TCHAR* GetSourceFilename()
@@ -66,19 +66,19 @@ class FTressFXCopyOpaqueDepthPS : public FGlobalShader
 	virtual bool Serialize(FArchive& Ar)
 	{
 		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-		Ar << DepthTexture << tAccumInvAlpha;
+		Ar << DepthTexture << AccumInvAlpha;
 		return bShaderHasOutdatedParameters;
 	}
 
-	void SetParameters(FRHICommandList& RHICmdList, const FSceneView& View, TRefCountPtr<IPooledRenderTarget> AccumInvAlpha, TRefCountPtr<IPooledRenderTarget> HairSceneDepth)
+	void SetParameters(FRHICommandList& RHICmdList, const FSceneView& View, TRefCountPtr<IPooledRenderTarget> InAccumInvAlpha, TRefCountPtr<IPooledRenderTarget> HairSceneDepth)
 	{
 		FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, GetPixelShader(), View.ViewUniformBuffer);
 		SetTextureParameter(RHICmdList, GetPixelShader(), DepthTexture, HairSceneDepth->GetRenderTargetItem().TargetableTexture);
-		SetTextureParameter(RHICmdList, GetPixelShader(), tAccumInvAlpha, AccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture);
+		SetTextureParameter(RHICmdList, GetPixelShader(), AccumInvAlpha, InAccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture);
 	}
 
 	FShaderResourceParameter DepthTexture;
-	FShaderResourceParameter tAccumInvAlpha;
+	FShaderResourceParameter AccumInvAlpha;
 };
 
 
@@ -397,10 +397,11 @@ public:
 	FTressFXShortCutResolveDepthPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 	{
 		FragmentDepthsTexture.Bind(Initializer.ParameterMap, TEXT("FragmentDepthsTexture"));
+		MinAlphaForSceneDepth.Bind(Initializer.ParameterMap, TEXT("MinAlphaForSceneDepth"));
 		SceneTextureShaderParameters.Bind(Initializer);
 		if(bWriteClosestDepth)
 		{
-			tAccumInvAlpha.Bind(Initializer.ParameterMap, TEXT("tAccumInvAlpha"));
+			AccumInvAlpha.Bind(Initializer.ParameterMap, TEXT("AccumInvAlpha"));
 		}
 		if (bWriteShadingModelToGBuffer) 
 		{
@@ -410,16 +411,16 @@ public:
 
 	FTressFXShortCutResolveDepthPS() {}
 
-	void SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext);
+	void SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext, float MinAlphaForShadow);
 
 	// FShader interface.
 	virtual bool Serialize(FArchive& Ar) override
 	{
 		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-		Ar << FragmentDepthsTexture << SceneTextureShaderParameters;
+		Ar << FragmentDepthsTexture << SceneTextureShaderParameters << MinAlphaForSceneDepth;
 		if (bWriteClosestDepth) 
 		{
-			Ar << tAccumInvAlpha;
+			Ar << AccumInvAlpha;
 		}
 		if(bWriteShadingModelToGBuffer)
 		{
@@ -432,8 +433,9 @@ public:
 
 	FShaderResourceParameter FragmentDepthsTexture;
 	FSceneTextureShaderParameters SceneTextureShaderParameters;
-	FShaderResourceParameter tAccumInvAlpha;
+	FShaderResourceParameter AccumInvAlpha;
 	FRWShaderParameter RWGBufferB;
+	FShaderParameter MinAlphaForSceneDepth;
 
 };
 
@@ -473,7 +475,7 @@ public:
 	FTressFXShortCutResolveColorPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 	{
 		FragmentColorsTexture.Bind(Initializer.ParameterMap, TEXT("FragmentColorsTexture"));
-		tAccumInvAlpha.Bind(Initializer.ParameterMap, TEXT("tAccumInvAlpha"));
+		AccumInvAlpha.Bind(Initializer.ParameterMap, TEXT("AccumInvAlpha"));
 	}
 
 	FTressFXShortCutResolveColorPS() {}
@@ -483,7 +485,7 @@ public:
 	virtual bool Serialize(FArchive& Ar) override
 	{
 		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-		Ar << FragmentColorsTexture << tAccumInvAlpha;
+		Ar << FragmentColorsTexture << AccumInvAlpha;
 		return bShaderHasOutdatedParameters;
 	}
 
@@ -492,7 +494,7 @@ public:
 public:
 
 	FShaderResourceParameter FragmentColorsTexture;
-	FShaderResourceParameter tAccumInvAlpha;
+	FShaderResourceParameter AccumInvAlpha;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -534,7 +536,7 @@ public:
 	FTressFXShortCutResolveColorCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 	{
 		FragmentColorsTexture.Bind(Initializer.ParameterMap, TEXT("FragmentColorsTexture"));
-		tAccumInvAlpha.Bind(Initializer.ParameterMap, TEXT("tAccumInvAlpha"));
+		AccumInvAlpha.Bind(Initializer.ParameterMap, TEXT("AccumInvAlpha"));
 		SceneColorTex.Bind(Initializer.ParameterMap, TEXT("SceneColorTex"));
 		TextureSize.Bind(Initializer.ParameterMap, TEXT("TextureSize"));
 	}
@@ -546,7 +548,7 @@ public:
 	virtual bool Serialize(FArchive& Ar) override
 	{
 		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-		Ar << FragmentColorsTexture << tAccumInvAlpha << TextureSize << SceneColorTex;
+		Ar << FragmentColorsTexture << AccumInvAlpha << TextureSize << SceneColorTex;
 		return bShaderHasOutdatedParameters;
 	}
 
@@ -564,7 +566,7 @@ public:
 public:
 
 	FShaderResourceParameter FragmentColorsTexture;
-	FShaderResourceParameter tAccumInvAlpha;
+	FShaderResourceParameter AccumInvAlpha;
 	FShaderParameter TextureSize;
 	FShaderResourceParameter SceneColorTex;
 

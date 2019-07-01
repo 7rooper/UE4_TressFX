@@ -355,7 +355,7 @@ void Main(
 	if(bIsTressFXNonOpaquePixel)
     {
         OutTFXColor = FinalColor;
-		OutColor = float4(1,1,0,0);
+		OutColor = float4(1,1,1,1);
     }
     else
     {
@@ -478,7 +478,7 @@ void MainOnePassPointLightPS(
 		if(bIsTressFXNonOpaquePixel)
 		{
 			OutTFXColor = FinalColor;
-			OutColor = float4(0,0,1,1);
+			OutColor = float4(1,1,1,1);
 		}
 		else
 		{

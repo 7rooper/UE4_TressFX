@@ -31,11 +31,11 @@
 #endif
 
 Texture2D<float4> FragmentColorsTexture;
-Texture2D<float> tAccumInvAlpha;
+Texture2D<float> AccumInvAlpha;
 
 bool ResolveShortCut(int2 vScreenAddress, out float4 outColor)
 {
-    float fInvAlpha = tAccumInvAlpha[vScreenAddress];
+    float fInvAlpha = AccumInvAlpha[vScreenAddress];
     float fAlpha = saturate(1.0 - fInvAlpha);
 
     if (fAlpha < SHORTCUT_MIN_ALPHA)

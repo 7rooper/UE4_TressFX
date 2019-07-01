@@ -95,8 +95,12 @@ IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(2); //kbuffer
 ////  FTressFXShortCutResolveDepthPS - pixel shader for 2nd pass of shortcut
 //////////////////////////////////////////////////////////////////////////////////
 
-#define IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(bWriteClosestDepth, bWriteShadingModelToGBuffer)																				\
-void FTressFXShortCutResolveDepthPS<bWriteClosestDepth, bWriteShadingModelToGBuffer>::SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext)	\
+#define IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(bWriteClosestDepth, bWriteShadingModelToGBuffer)													\
+void FTressFXShortCutResolveDepthPS<bWriteClosestDepth, bWriteShadingModelToGBuffer>::SetParameters(															\
+	FRHICommandList& RHICmdList																																	\
+	, const FViewInfo& View																																		\
+	, FSceneRenderTargets& SceneContext																															\
+	, float MinAlphaForShadow)																																	\
 {																																								\
 	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();																									\
 																																								\
@@ -105,9 +109,11 @@ void FTressFXShortCutResolveDepthPS<bWriteClosestDepth, bWriteShadingModelToGBuf
 	SceneTextureShaderParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, ESceneTextureSetupMode::All);													\
 	if (bWriteClosestDepth)																																		\
 	{																																							\
-		SetTextureParameter(RHICmdList, ShaderRHI, tAccumInvAlpha, SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture);				\
+		SetTextureParameter(RHICmdList, ShaderRHI, AccumInvAlpha, SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture);				\
 	}																																							\
+	SetShaderValue(RHICmdList, ShaderRHI, MinAlphaForSceneDepth, MinAlphaForShadow);																			\
 }
+
 IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(true, true)
 IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(true, false)
 IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(false, false)
@@ -134,7 +140,7 @@ void FTressFXShortCutResolveColorPS::SetParameters(FRHICommandList& RHICmdList, 
 	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, GetPixelShader(), View.ViewUniformBuffer);
 
 	SetTextureParameter(RHICmdList, GetPixelShader(), FragmentColorsTexture, SceneContext.TressFXFragmentColorsTexture->GetRenderTargetItem().ShaderResourceTexture);
-	SetTextureParameter(RHICmdList, GetPixelShader(), tAccumInvAlpha, SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture);
+	SetTextureParameter(RHICmdList, GetPixelShader(), AccumInvAlpha, SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture);
 }
 
 IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveColorPS, "/Engine/Private/TressFXShortCutResolveColorPS.usf", "ShortcutResolvePS", SF_Pixel);
@@ -157,7 +163,7 @@ void FTressFXShortCutResolveColorCS::SetParameters(
 	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);
 
 	SetTextureParameter(RHICmdList, ShaderRHI, FragmentColorsTexture, InFragmentColorsTextureSRV);
-	SetTextureParameter(RHICmdList, ShaderRHI, tAccumInvAlpha, InAccumInvAlphaSRV);
+	SetTextureParameter(RHICmdList, ShaderRHI, AccumInvAlpha, InAccumInvAlphaSRV);
 	SetUAVParameter(RHICmdList, ShaderRHI, SceneColorTex, SceneColorUAV);
 	SetShaderValue(RHICmdList, ShaderRHI, TextureSize, FVector4((float)TargetSize.X, (float)TargetSize.Y, 0.0f, 0.0f));
 }

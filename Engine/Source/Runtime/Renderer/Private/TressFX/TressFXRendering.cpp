@@ -35,6 +35,8 @@ DEFINE_LOG_CATEGORY(TressFXRenderingLog);
 extern int32 GTressFXRenderType;
 extern int32 GTressFXKBufferSize;
 extern int32 GBTressFXPreferCompute;
+extern float GTressFXMinAlphaForDepth;
+
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXFillColorPS - Pixel shader for Third pass of shortcut, and PPLL build of kbuffer
 ////////////////////////////////////////////////////////////////////////////////
@@ -331,7 +333,7 @@ void FTressFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 	int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
 	TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
 
-	//blend mode masked will render depth in the regular pass
+	//blend mode masked will render depth in the regular pass (pre pass)
 	const bool bNoDepth = BlendMode == EBlendMode::BLEND_Masked;
 
 	if (bWantsVelocity == false && bNoDepth == true)
@@ -945,7 +947,9 @@ void ShortcutDepthsResolve_Impl(
 	SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, EApplyRendertargetOption::ForceApply);
 
 	VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
-	PixelShader->SetParameters(RHICmdList, View, SceneContext);
+	
+	float MinAlphaForShadow = FMath::Clamp(static_cast<float > (GTressFXMinAlphaForDepth), 0.1f, 1.0f);
+	PixelShader->SetParameters(RHICmdList, View, SceneContext, MinAlphaForShadow);
 
 	const FIntPoint BufferSize = SceneContext.GetBufferSizeXY();
 	const FIntPoint DepthTargetSize = DepthTargetDesc.Extent;

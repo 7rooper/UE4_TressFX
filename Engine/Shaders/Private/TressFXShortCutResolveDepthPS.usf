@@ -26,14 +26,14 @@
 #include "DeferredShadingCommon.ush"
 
 Texture2DArray<uint> FragmentDepthsTexture;
-
+float MinAlphaForSceneDepth;
 
 #ifndef WRITE_CLOSEST_DEPTH
 	#define WRITE_CLOSEST_DEPTH 0
 #endif
 
 #if WRITE_CLOSEST_DEPTH
-	Texture2D<float> tAccumInvAlpha;
+	Texture2D<float> AccumInvAlpha;
 #endif
 
 #ifndef WRITE_GBUFFER_SHADING_MODEL
@@ -54,10 +54,10 @@ void main(
     const int2 vScreenAddress = int2(input.Position.xy);
 
 	#if WRITE_CLOSEST_DEPTH
-		float fInvAlpha = tAccumInvAlpha[uint2(input.Position.xy)];
+		float fInvAlpha = AccumInvAlpha[uint2(input.Position.xy)];
 		float fAlpha = saturate(1.0 - fInvAlpha);
 
-		if (fAlpha < TRESSFX_MIN_ALPHA_FOR_SCENE_DEPTH)
+		if (fAlpha < MinAlphaForSceneDepth)
 		{
 			OutDepth = 0;
 			discard;

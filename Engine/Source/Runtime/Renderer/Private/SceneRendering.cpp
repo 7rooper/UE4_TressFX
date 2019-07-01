@@ -377,6 +377,13 @@ FAutoConsoleVariableRef CVarTressFXUseComputeResolves(
 	ECVF_RenderThreadSafe
 );
 
+float GTressFXMinAlphaForDepth = 0.5f;
+FAutoConsoleVariableRef CVarTressFXMinAlphaForSceneDepth(
+	TEXT("tfx.MinAlphaForSceneDepth"),
+	GTressFXMinAlphaForDepth,
+	TEXT("The minimum alpha value for hair to be considered for shadows"),
+	ECVF_RenderThreadSafe
+);
 /*@END Third party code TressFX*/
 
 static FParallelCommandListSet* GOutstandingParallelCommandListSet = nullptr;
