@@ -305,8 +305,8 @@ void Main(
 		if(bIsTressFXNonOpaquePixel)
 		{
 			float LightInfluenceMask = GetLightInfluenceMask(WorldPosition);
-			FadedShadow = lerp(1, FadedShadow, LightInfluenceMask);
-			FinalColor= EncodeLightAttenuation(FadedShadow);
+			FadedShadow = lerp(1, FadedShadow * saturate( FadedSSSShadow ) + .01f, LightInfluenceMask);
+			FinalColor = EncodeLightAttenuation(FadedShadow);
 		}
 		else
 		{
