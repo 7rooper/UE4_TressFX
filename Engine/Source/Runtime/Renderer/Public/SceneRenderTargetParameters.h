@@ -22,6 +22,10 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FSceneTexturesUniformParameters, RENDERER_A
 	SHADER_PARAMETER_TEXTURE(Texture2D, SceneDepthTexture)
 	SHADER_PARAMETER_SAMPLER(SamplerState, SceneDepthTextureSampler)
 	SHADER_PARAMETER_TEXTURE(Texture2D<float>, SceneDepthTextureNonMS)
+	/*@BEGIN Third party code TressFX*/
+	SHADER_PARAMETER_TEXTURE(Texture2D, TressFXSceneDepthTexture)
+	SHADER_PARAMETER_TEXTURE(Texture2D<float>, TressFXSceneDepthTextureNonMS)
+	/*@END Third party code TressFX*/
 
 	// GBuffer
 	SHADER_PARAMETER_TEXTURE(Texture2D, GBufferATexture)
@@ -68,8 +72,10 @@ enum class ESceneTextureSetupMode : uint32
 	SSAO = 4,
 	CustomDepth = 8,
 	/*@BEGIN Third party code TressFX*/
-	TressFXSceneDepth = 16,
-	AllWithTFXSceneDepth = TressFXSceneDepth | GBuffers | SSAO | CustomDepth,
+	TressFXSceneDepth_ReplaceRegularSceneDepth = 16,
+	TressFXSceneDepth_SeparateRegularSceneDepth = 32,
+	AllWithTFXSceneDepthReplace = TressFXSceneDepth_ReplaceRegularSceneDepth | GBuffers | SSAO | CustomDepth,
+	AllWithTFXSceneDepthSeparate = TressFXSceneDepth_SeparateRegularSceneDepth | GBuffers | SSAO | CustomDepth,
 	/*@END Third party code TressFX*/
 	All = SceneDepth | GBuffers | SSAO | CustomDepth
 };

@@ -748,7 +748,7 @@ public:
 };
 
 /** Shadow projection parameters used by multiple shaders. */
-template<bool bModulatedShadows>
+template<bool bModulatedShadows  /*@BEGIN third party code TressFX */ ,bool bTressFXShadows = false /*@End third party code TressFX */>
 class TShadowProjectionShaderParameters
 {
 public:
@@ -771,7 +771,7 @@ public:
 	{
 		const FPixelShaderRHIParamRef ShaderRHI = Shader->GetPixelShader();
 
-		SceneTextureParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, ESceneTextureSetupMode::All);
+		SceneTextureParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel,  /*@BEGIN third party code TressFX */ bTressFXShadows ? ESceneTextureSetupMode::AllWithTFXSceneDepthSeparate : /*@End third party code TressFX */ ESceneTextureSetupMode::All);
 
 		const FIntPoint ShadowBufferResolution = ShadowInfo->GetShadowBufferResolution();
 
@@ -1000,7 +1000,7 @@ public:
 	}
 
 protected:
-	TShadowProjectionShaderParameters<bModulatedShadows> ProjectionParameters;
+	TShadowProjectionShaderParameters<bModulatedShadows /*@BEGIN third party code TressFX */, bTressFXShadows /*@End third party code TressFX */> ProjectionParameters;
 	FShaderParameter ShadowFadeFraction;
 	FShaderParameter ShadowSharpen;
 	FShaderParameter LightPosition;
@@ -1284,7 +1284,7 @@ public:
 
 		FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI,View.ViewUniformBuffer);
 
-		SceneTextureParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, ESceneTextureSetupMode::All);
+		SceneTextureParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, /*@BEGIN third party code TressFX */ bTressFXShadows ? ESceneTextureSetupMode::AllWithTFXSceneDepthSeparate : /*@End third party code TressFX */ ESceneTextureSetupMode::All);
 		OnePassShadowParameters.Set(RHICmdList, ShaderRHI, ShadowInfo);
 
 		const FLightSceneProxy& LightProxy = *(ShadowInfo->GetLightSceneInfo().Proxy);

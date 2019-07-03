@@ -3143,19 +3143,34 @@ void SetupSceneTextureUniformParameters(
 
 	// Scene Color / Depth
 	{
-		/*@BEGIN Third party code TressFX*/
-		const bool bSetupTFXDepth = (SetupMode & ESceneTextureSetupMode::TressFXSceneDepth) != ESceneTextureSetupMode::None;
-		/*@END Third party code TressFX*/
 		const bool bSetupDepth = (SetupMode & ESceneTextureSetupMode::SceneDepth) != ESceneTextureSetupMode::None;
-		SceneTextureParameters.SceneColorTexture = bSetupDepth  /*@BEGIN Third party code TressFX*/ || bSetupTFXDepth /*@END Third party code TressFX*/ ? SceneContext.GetSceneColorTexture().GetReference() : BlackDefault2D;
+		/*@BEGIN Third party code TressFX*/
+		const bool bSetupTFXDepthReplace = (SetupMode & ESceneTextureSetupMode::TressFXSceneDepth_ReplaceRegularSceneDepth) != ESceneTextureSetupMode::None;
+		const bool bSetupTFXDepthSeparate = (SetupMode & ESceneTextureSetupMode::TressFXSceneDepth_SeparateRegularSceneDepth) != ESceneTextureSetupMode::None;
+		check(!(bSetupTFXDepthReplace && bSetupTFXDepthSeparate));
+		check(!((bSetupTFXDepthReplace || bSetupTFXDepthSeparate) && bSetupDepth));
+		/*@END Third party code TressFX*/
+		SceneTextureParameters.SceneColorTexture = bSetupDepth  /*@BEGIN Third party code TressFX*/ || bSetupTFXDepthReplace || bSetupTFXDepthSeparate /*@END Third party code TressFX*/ ? SceneContext.GetSceneColorTexture().GetReference() : BlackDefault2D;
 		SceneTextureParameters.SceneColorTextureSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 		const FTexture2DRHIRef* ActualDepthTexture = SceneContext.GetActualDepthTexture();
 		SceneTextureParameters.SceneDepthTexture = bSetupDepth && ActualDepthTexture ? (*ActualDepthTexture).GetReference() : DepthDefault;
 
 		/*@BEGIN Third party code TressFX*/
-		if(bSetupTFXDepth)
+		if(bSetupTFXDepthReplace)
 		{
 			SceneTextureParameters.SceneDepthTexture = SceneContext.TressFXSceneDepth->GetRenderTargetItem().ShaderResourceTexture;
+			SceneTextureParameters.TressFXSceneDepthTexture = DepthDefault;
+			SceneTextureParameters.TressFXSceneDepthTextureNonMS = DepthDefault;
+		}
+		else if (bSetupTFXDepthSeparate)
+		{
+			SceneTextureParameters.TressFXSceneDepthTexture = SceneContext.TressFXSceneDepth->GetRenderTargetItem().ShaderResourceTexture;
+			SceneTextureParameters.SceneDepthTexture = ActualDepthTexture ? (*ActualDepthTexture).GetReference() : DepthDefault;
+		}
+		else
+		{
+			SceneTextureParameters.TressFXSceneDepthTexture = DepthDefault;
+			SceneTextureParameters.TressFXSceneDepthTextureNonMS = DepthDefault;
 		}
 		/*@END Third party code TressFX*/
 
@@ -3176,9 +3191,14 @@ void SetupSceneTextureUniformParameters(
 			SceneTextureParameters.SceneDepthTextureNonMS = GSupportsDepthFetchDuringDepthTest ? SceneContext.GetSceneDepthTexture() : SceneContext.GetAuxiliarySceneDepthSurface();
 		}
 		/*@BEGIN Third party code TressFX*/
-		else if (bSetupTFXDepth) 
+		else if (bSetupTFXDepthReplace)
 		{
 			SceneTextureParameters.SceneDepthTextureNonMS = SceneContext.TressFXSceneDepth->GetRenderTargetItem().ShaderResourceTexture;
+		}
+		else if(bSetupTFXDepthSeparate)
+		{
+			SceneTextureParameters.TressFXSceneDepthTextureNonMS = SceneContext.TressFXSceneDepth->GetRenderTargetItem().ShaderResourceTexture;
+			SceneTextureParameters.SceneDepthTextureNonMS = GSupportsDepthFetchDuringDepthTest ? SceneContext.GetSceneDepthTexture() : SceneContext.GetAuxiliarySceneDepthSurface();
 		}
 		/*@END Third party code TressFX*/
 		else

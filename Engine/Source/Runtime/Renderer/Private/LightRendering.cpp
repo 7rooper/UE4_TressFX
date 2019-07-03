@@ -280,7 +280,7 @@ private:
 	void SetParametersBase(FRHICommandList& RHICmdList, const FPixelShaderRHIParamRef ShaderRHI, const FSceneView& View, IPooledRenderTarget* ScreenShadowMaskTexture, FTexture* IESTextureResource /*@BEGIN Third party code TressFX*/ , bool bUseTressFXSceneDepth = false /*@END Third party code TressFX*/)
 	{
 		FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI,View.ViewUniformBuffer);
-		SceneTextureParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, /*@BEGIN Third party code TressFX*/ bUseTressFXSceneDepth ? ESceneTextureSetupMode::AllWithTFXSceneDepth : /*@END Third party code TressFX*/ ESceneTextureSetupMode::All);
+		SceneTextureParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, /*@BEGIN Third party code TressFX*/ bUseTressFXSceneDepth ? ESceneTextureSetupMode::AllWithTFXSceneDepthReplace : /*@END Third party code TressFX*/ ESceneTextureSetupMode::All);
 
 		FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
 

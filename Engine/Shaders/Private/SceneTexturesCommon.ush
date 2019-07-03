@@ -41,6 +41,17 @@ float CalcSceneDepth(float2 ScreenUV)
 #endif
 }
 
+/*@BEGIN third party code TressFX */
+float CalcTressFXSceneDepth(float2 ScreenUV)
+{
+#if SCENE_TEXTURES_DISABLED
+	return SCENE_TEXTURES_DISABLED_SCENE_DEPTH_VALUE;
+#else
+	return ConvertFromDeviceZ(Texture2DSampleLevel(SceneTexturesStruct.TressFXSceneDepthTexture, SceneTexturesStruct.SceneDepthTextureSampler, ScreenUV, 0).r);
+#endif
+}
+/*@END third party code TressFX */
+
 /**
 * Returns scene color in rgb, depth in a
 */
@@ -68,6 +79,20 @@ float CalcSceneDepth(uint2 PixelPos)
 	return ConvertFromDeviceZ(DeviceZ);
 #endif
 }
+
+/*@BEGIN third party code TressFX */
+float CalcTressFXSceneDepth(uint2 PixelPos)
+{
+#if SCENE_TEXTURES_DISABLED
+	return SCENE_TEXTURES_DISABLED_SCENE_DEPTH_VALUE;
+#else
+	float DeviceZ = SceneTexturesStruct.TressFXSceneDepthTextureNonMS.Load(int3(PixelPos, 0));
+
+	// Fetch the depth buffer Z / W value, solve for W
+	return ConvertFromDeviceZ(DeviceZ);
+#endif
+}
+/*@END third party code TressFX */
 
 #endif // SHADING_PATH_DEFERRED
 
