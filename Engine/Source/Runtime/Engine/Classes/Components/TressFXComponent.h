@@ -236,6 +236,12 @@ private:
 
 	void SetUpMorphMapping();
 
+	//caching to prevent needless re-calculations
+	FMatrix CachedRelativeTransformMatrix = FMatrix::Identity;
+	FTransform CachedRelativeTransform = FTransform::Identity;
+
+	void UpdateCachedTransformsIfNeeded(bool bForceUpdate = false);
+
 public:
 
 	class FTressFXHairObject* HairObject;

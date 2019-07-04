@@ -18,7 +18,7 @@
 
 
 DEFINE_LOG_CATEGORY(TressFXComponentLog);
-
+#pragma optimize("",off)
 UTressFXComponent::UTressFXComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -38,7 +38,27 @@ bool UTressFXComponent::ShouldCreateRenderState() const
 void UTressFXComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	UpdateCachedTransformsIfNeeded();
+
 	MarkRenderDynamicDataDirty();
+}
+
+void UTressFXComponent::UpdateCachedTransformsIfNeeded(bool bForceUpdate /*= false*/)
+{
+	FTransform CurrentRelativeTransform = this->GetRelativeTransform();
+
+	if 
+	(
+		bForceUpdate
+		|| CachedRelativeTransform.GetTranslation() != CurrentRelativeTransform.GetTranslation()
+		|| CachedRelativeTransform.GetRotation() != CurrentRelativeTransform.GetRotation()
+		|| CachedRelativeTransform.GetScale3D() != CurrentRelativeTransform.GetScale3D()
+	)
+	{
+		CachedRelativeTransform = CurrentRelativeTransform;
+		CachedRelativeTransformMatrix = CachedRelativeTransform.ToMatrixWithScale();
+	}
 }
 
 FBoxSphereBounds UTressFXComponent::CalcBounds(const FTransform& LocalToWorld) const
@@ -72,6 +92,7 @@ void UTressFXComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 	const FName MemberName = (PropertyChangedEvent.MemberProperty != nullptr) ? PropertyChangedEvent.MemberProperty->GetFName() : NAME_None;
 	if(Name == GET_MEMBER_NAME_CHECKED(UTressFXComponent, bEnableMorphTargets) && this->bEnableMorphTargets == true)
 	{
+		UpdateCachedTransformsIfNeeded(true);
 		this->SetUpMorphMapping();
 		this->MarkRenderDynamicDataDirty();
 	}
@@ -87,6 +108,7 @@ void UTressFXComponent::OnAttachmentChanged()
 {
 	Super::OnAttachmentChanged();
 	ParentSkeletalMeshComponent = Cast<USkeletalMeshComponent>(GetAttachParent());
+	UpdateCachedTransformsIfNeeded(true);
 	SetUpMorphMapping();
 	MarkRenderDynamicDataDirty();
 }
@@ -197,7 +219,7 @@ void UTressFXComponent::SetUpMorphMapping()
 		TArray<FVector> GuideRootVertices = this->Asset->ImportData->GetRootPositions();
 
 		// Find closest skeletal mesh vertex for each vertex of mesh
-		const FTransform RelativeTransform = GetRelativeTransform();
+		const FTransform RelativeTransform = CachedRelativeTransform;
 
 		MorphIndices.SetNumUninitialized(GuideNum, true);
 
@@ -294,8 +316,7 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 		float WindMaxGust;
 		World->Scene->GetWindParameters_GameThread(Position, OutWindDirection, OutWindSpeed, WindMinGust, WindMaxGust);
 		//OutWindSpeed *= -1; // not sure why this was here...
-		//adjust windspeed, tressfx seems to needs much stronger wind to have any effect, 1000 seems to be a good number for now
-		OutWindSpeed *= 1000;
+		//adjust windspeed, tressfx seems to needs much stronger wind to have any effect
 		OutWindSpeed *= TressFXSimulationSettings.WindMagnitude;
 	}
 
@@ -401,6 +422,7 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 			}
 
 			FMatrix Result = (RefBase * ParentSkel);
+			Result = CachedRelativeTransformMatrix * Result;
 
 			if (Result.ContainsNaN())
 			{
@@ -444,3 +466,4 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 		}
 	);
 }
+#pragma optimize("",on)
