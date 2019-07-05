@@ -649,7 +649,7 @@ void FTressFXRuntimeData::ComputeStrandTangent()
 		}
 
 		// vertex 1 through n-1
-		for (int32 i = 1; i < (int)NumVerticesPerStrand - 1; i++)
+		for (int32 i = 1; i < (int32)NumVerticesPerStrand - 1; i++)
 		{
 			FVector4& vert_i_minus_1 = pos[indexRootVertMaster + i - 1];
 			FVector4& vert_i = pos[indexRootVertMaster + i];

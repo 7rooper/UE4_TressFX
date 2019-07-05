@@ -193,7 +193,6 @@ class ENGINE_API FTressFXRuntimeData : public FTressFXImportData
 {
 public:
 
-	//explicit FTressFXRuntimeData(const FTressFXImportData& ImportData);
 	virtual ~FTressFXRuntimeData();
 
 	TArray<FVector4>	RefVectors;
