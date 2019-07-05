@@ -356,7 +356,7 @@ FAutoConsoleVariableRef CVarTressFXType(
 	TEXT("tfx.type"),
 	GTressFXRenderType,
 	TEXT("0: Opaque")
-	TEXT("1: ShortCut")
+	TEXT("1: ShortCut"),
 	ECVF_RenderThreadSafe
 );
 

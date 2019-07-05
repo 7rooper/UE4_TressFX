@@ -444,7 +444,7 @@ void FDeferredShadingSceneRenderer::ComputeLightGrid(FRHICommandListImmediate& R
 				extern int32 GTressFXRenderType;
 				int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
 				TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
-				bAnyViewUsesForwardLighting |= (TFXRenderType == ETressFXRenderType::ShortCut || TFXRenderType == ETressFXRenderType::KBuffer);
+				bAnyViewUsesForwardLighting |= (TFXRenderType == ETressFXRenderType::ShortCut);
 			}
 			//@END third party code TRESSFX
 		}
