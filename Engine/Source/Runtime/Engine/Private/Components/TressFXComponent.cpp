@@ -18,7 +18,7 @@
 
 
 DEFINE_LOG_CATEGORY(TressFXComponentLog);
-#pragma optimize("",off)
+
 UTressFXComponent::UTressFXComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -466,4 +466,3 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 		}
 	);
 }
-#pragma optimize("",on)
