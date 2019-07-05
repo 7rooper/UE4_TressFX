@@ -655,13 +655,13 @@ void main(
     float DiffOcclusion = MaterialAO;
     float SpecOcclusion = MaterialAO;
     GBuffer.GBufferAO = AOMultiBounce(Luminance(GBuffer.SpecularColor), SpecOcclusion).g;
-    GBuffer.WorldNormal = MaterialParameters.WorldNormal;
+    GBuffer.WorldNormal = MaterialParameters.WorldNormal;// * 0.5 + float3(0.5, 0.5, 0.5); // that multiply may actually be correct
 
 
 	float3 DiffuseDir = BentNormal;
 	float3 DiffuseColorForIndirect = GBuffer.DiffuseColor;
 	{
-		float3 N = MaterialParameters.WorldNormal;
+        float3 N = GBuffer.WorldNormal;
 		float3 V = MaterialParameters.CameraVector;
 		float3 L = normalize( V - N * dot(V,N) );
 		DiffuseDir = L;
