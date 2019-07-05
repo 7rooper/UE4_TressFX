@@ -1,12 +1,4 @@
 
-#ifndef TFX_SHORTCUT
-	#define TFX_SHORTCUT 1
-#endif
-
-#ifndef TFX_PPLL
-	#define TFX_PPLL 0
-#endif
-
 #ifndef USING_INSET_SHADOWS
 	#define USING_INSET_SHADOWS 0
 #endif
@@ -538,15 +530,10 @@ float3 GetForwardDirectLightingTressFX(
 	return DirectLighting;
 }
 
-#if TFX_PPLL
-	#include "TressFXPPLL.ush"
-#endif
 EARLYDEPTHSTENCIL
 void main(
 	PS_INPUT_HAIR_AA In OPTIONAL_IsFrontFace
-#if TFX_SHORTCUT
 	,out float4 OutColor : SV_Target0
-#endif
 )
 {
 	//final color
@@ -592,11 +579,7 @@ void main(
 	BRANCH
     if (TFXAlpha < SHORTCUT_MIN_ALPHA)
     {
-		#if TFX_PPLL
-
-		#elif TFX_SHORTCUT
-			OutColor = float4(0, 0, 0, 0);
-		#endif
+		OutColor = float4(0, 0, 0, 0);
         return;
     }
 	   
@@ -693,11 +676,7 @@ void main(
     const uint EyeIndex = 0;
     Color += GetForwardDirectLightingTressFX(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither, TFXAlpha);
     
-	#if TFX_PPLL
-		//color will be multipled be TFXAlpha during resolve pass
-		BuildPPLL(float4(Color, TFXAlpha), int2(In.Position.xy), GBuffer.Depth);
-	#elif TFX_SHORTCUT		
-		OutColor = float4(Color * TFXAlpha, TFXAlpha);
-	#endif
+	
+	OutColor = float4(Color * TFXAlpha, TFXAlpha);
 	return;
 }

@@ -16,8 +16,6 @@ struct ETressFXPass
 		ResolveVelocity,
 		FillColor_Shortcut,
 		Resolve_Shortcut,
-		FillColor_KBuffer,
-		Resolve_KBuffer,
 		////
 		Num,
 		Max = (Num - 1)
@@ -202,7 +200,6 @@ public:
 	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		OutEnvironment.SetDefine(TEXT("NEEDS_VELOCITY"), bCalcVelocity ? 1 : 0 );
-		OutEnvironment.SetDefine(TEXT("TFX_PPLL"), TFXRenderType == ETressFXRenderType::KBuffer ? 1 : 0);
 		FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
 	}
 
@@ -570,117 +567,4 @@ public:
 	FShaderParameter TextureSize;
 	FShaderResourceParameter SceneColorTex;
 
-};
-
-///////////////////////////////////////////////////////////////////////////////
-// TressFXFKBufferResolvePS
-//////////////////////////////////////////////////////////////////////////////
-
-class FTressFXFKBufferResolvePS : public FGlobalShader
-{
-	DECLARE_GLOBAL_SHADER(FTressFXFKBufferResolvePS);
-
-public:
-
-	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
-	{
-		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
-	}
-
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
-
-	static const TCHAR* GetSourceFilename()
-	{
-		return TEXT("/Engine/Private/TressFXPPLLResolve.usf");
-	}
-
-	static const TCHAR* GetFunctionName()
-	{
-		return TEXT("ResolvePPLL");
-	}
-
-	FTressFXFKBufferResolvePS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FGlobalShader(Initializer)
-	{
-		FragmentListHead.Bind(Initializer.ParameterMap, TEXT("FragmentListHead"));
-		LinkedListSRV.Bind(Initializer.ParameterMap, TEXT("LinkedListSRV"));
-	}
-
-
-	FTressFXFKBufferResolvePS() {}
-
-	virtual bool Serialize(FArchive& Ar) override
-	{
-		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-		Ar << FragmentListHead;
-		Ar << LinkedListSRV;
-		return bShaderHasOutdatedParameters;
-	}
-
-
-	void SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FShaderResourceViewRHIParamRef InLinkedListSRV, FTextureRHIParamRef InHeadListSRV);
-
-
-public:
-	FShaderResourceParameter FragmentListHead;
-	FShaderResourceParameter LinkedListSRV;
-
-};
-
-///////////////////////////////////////////////////////////////////////////////
-// TressFXFKBufferResolveCS
-//////////////////////////////////////////////////////////////////////////////
-
-
-class FTressFXFKBufferResolveCS : public FGlobalShader
-{
-	DECLARE_GLOBAL_SHADER(FTressFXFKBufferResolveCS);
-
-	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
-	{
-		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
-	}
-
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
-
-	/** Default constructor. */
-	FTressFXFKBufferResolveCS() {}
-
-public:
-	FShaderResourceParameter SceneColorTex;
-	FShaderResourceParameter FragmentListHead;
-	FShaderResourceParameter LinkedListSRV;
-	FShaderParameter TextureSize;
-
-	static const uint8 ThreadSizeX = 32;
-	static const uint8 ThreadSizeY = 32;
-
-	/** Initialization constructor. */
-	FTressFXFKBufferResolveCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FGlobalShader(Initializer)
-	{
-		SceneColorTex.Bind(Initializer.ParameterMap, TEXT("SceneColorTex"));
-		FragmentListHead.Bind(Initializer.ParameterMap, TEXT("FragmentListHead"));
-		LinkedListSRV.Bind(Initializer.ParameterMap, TEXT("LinkedListSRV"));
-		TextureSize.Bind(Initializer.ParameterMap, TEXT("TextureSize"));
-	}
-
-	// FShader interface.
-	virtual bool Serialize(FArchive& Ar) override
-	{
-		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-		Ar << LinkedListSRV << FragmentListHead << SceneColorTex << TextureSize;
-		return bShaderHasOutdatedParameters;
-	}
-
-	void SetParameters(
-		FRHICommandList& RHICmdList,
-		const FViewInfo& View,
-		const FShaderResourceViewRHIParamRef InLinkedListSRV,
-		const FTextureRHIParamRef InHeadListSRV,
-		const FUnorderedAccessViewRHIRef SceneColorUAV,
-		FIntPoint TargetSize
-	);
-
-	void UnsetParameters(FRHICommandList& RHICmdList);
 };

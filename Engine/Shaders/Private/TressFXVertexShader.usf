@@ -32,7 +32,7 @@
 	#include "/Engine/Generated/VertexFactory.ush"
 #endif
 
-struct FTressFXPPLLBuildVSOutput
+struct FTressFXVSOutput
 {
 	float4 Position : SV_Position;
 	FVertexFactoryInterpolantsVSToPS FactoryInterpolants;
@@ -41,7 +41,7 @@ struct FTressFXPPLLBuildVSOutput
 
 void VF_MainVS(
 	FVertexFactoryInput Input,
-	out FTressFXPPLLBuildVSOutput Output
+	out FTressFXVSOutput Output
 #if USE_GLOBAL_CLIP_PLANE && !USING_TESSELLATION
 	, out float OutGlobalClipPlaneDistance : SV_ClipDistance
 #endif

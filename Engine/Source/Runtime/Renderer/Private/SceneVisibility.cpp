@@ -2682,14 +2682,6 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 			PassMask.Set(EMeshPass::TressFX_FillColors);
 			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
 		}
-		else if (TFXRenderType == ETressFXRenderType::KBuffer) 
-		{
-			PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
-			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
-
-			PassMask.Set(EMeshPass::TressFX_FillColors);
-			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
-		}
 		
 		View.TressFXMeshBatches.AddUninitialized(1);
 		FTressFXMeshBatch& BatchAndProxy = View.TressFXMeshBatches.Last();

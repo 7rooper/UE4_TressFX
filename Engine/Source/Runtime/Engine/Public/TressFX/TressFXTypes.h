@@ -105,7 +105,6 @@ struct ETressFXRenderType
 	{
 		Opaque,
 		ShortCut,
-		KBuffer,
 		///////
 		Num,
 		Max = (Num - 1)
