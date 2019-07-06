@@ -243,8 +243,7 @@ public:
 	void ComputeStrandTangent();
 	void ComputeRestLengths();
 	void FillTriangleIndexArray();
-	// Return true if even at least one bone is a match
-	bool IsCompatibleSkeleton(const USkeletalMesh* InSkelMesh, TMap<int32,FName>& InBoneNameIndexMap);
+
 	TArray<FVector> GetRootPositions();
 	FTressFXRuntimeData();
 

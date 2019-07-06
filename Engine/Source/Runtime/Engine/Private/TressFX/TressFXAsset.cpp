@@ -5,8 +5,8 @@
 #include "Animation/Skeleton.h"
 #include "Engine/TressFXBoneSkinningAsset.h"
 #include "Uobject/UObjectIterator.h"
+#include "TressFX/TressFXUtils.h"
 
-//#pragma optimize("", off)
 
 DEFINE_LOG_CATEGORY(TressFXAssetLog);
 
@@ -319,26 +319,6 @@ FBoxSphereBounds FTressFXRuntimeData::CalcBounds()
 	return FBoxSphereBounds(Box);
 }
 
-
-bool FTressFXRuntimeData::IsCompatibleSkeleton(const USkeletalMesh* InSkelMesh, TMap<int32, FName>& InBoneNameIndexMap)
-{
-	const FReferenceSkeleton& MeshRefSkel = InSkelMesh->RefSkeleton;
-	const int32 NumBones = MeshRefSkel.GetRawBoneNum();
-
-	for (int32 MeshBoneIndex = 0; MeshBoneIndex < NumBones; MeshBoneIndex++)
-	{
-		FName MeshBoneName = MeshRefSkel.GetBoneName(MeshBoneIndex);
-		const int32 *TFXBoneIndex = InBoneNameIndexMap.FindKey(MeshBoneName);
-
-		// if even one bone matches, just return true for now
-		if (TFXBoneIndex && *TFXBoneIndex != INDEX_NONE)
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
 TArray<FVector> FTressFXRuntimeData::GetRootPositions()
 {
 	int32 VertsPerGuide = this->NumVerticesPerStrand;
@@ -395,7 +375,7 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 				BoneNameIndexMap.Add(i, *BoneNames[i]);
 			}
 
-			const bool bIsCompatable = IsCompatibleSkeleton(SkeletalMesh, BoneNameIndexMap);
+			const bool bIsCompatable = FTressFXUtils::IsCompatibleSkeleton(SkeletalMesh, BoneNameIndexMap);
 			if (!bIsCompatable)
 			{
 				UE_LOG(TressFXAssetLog, Warning, TEXT("Input skeletal mesh not compatable with BoneSkinning Asset. Mesh:  %s"), *SkeletalMesh->GetFName().ToString());
@@ -449,8 +429,6 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 				SkinData.BoneIndex[2] = SkinData.BoneIndex[2] == -1.f ? 0 : SkinData.BoneIndex[2];
 				SkinData.BoneIndex[3] = SkinData.BoneIndex[3] == -1.f ? 0 : SkinData.BoneIndex[3];
 
-				//Result->BoneSkinningData.Add(SkinData);
-
 				SkinningData[i * (NumFollowStrandsPerGuide + 1)] = SkinData;
 			}
 			return true;
@@ -466,7 +444,7 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 				BoneNameIndexMap.Add(i, Asset->JsonVersionImportData.BoneNames[i]);
 			}
 
-			const bool bIsCompatable = IsCompatibleSkeleton(SkeletalMesh, BoneNameIndexMap);
+			const bool bIsCompatable = FTressFXUtils::IsCompatibleSkeleton(SkeletalMesh, BoneNameIndexMap);
 			if (!bIsCompatable)
 			{
 				UE_LOG(TressFXAssetLog, Warning, TEXT("Input skeletal mesh not compatable with BoneSkinning Asset. Mesh:  %s"), *SkeletalMesh->GetFName().ToString());
@@ -487,8 +465,10 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 					if (DataIndex < Asset->JsonVersionImportData.JsonSkinningData.Num())
 					{
 						FTressFXBoneSkinningJSONImportData ImportedSkinData = Asset->JsonVersionImportData.JsonSkinningData[DataIndex];
-						int32 EngineBoneIndex = SkeletalMesh->Skeleton->GetReferenceSkeleton().FindBoneIndex(ImportedSkinData.BoneName);
-						SkinData.BoneIndex[j] = (float)EngineBoneIndex; // Change the joint index to be what the engine wants
+						int32 EngineBoneIndex = FTressFXUtils::FindEngineBoneIndex(SkeletalMesh, ImportedSkinData.BoneName);
+
+						// Change the joint index to be what the engine wants
+						SkinData.BoneIndex[j] = (float)EngineBoneIndex; 
 						SkinData.Weight[j] = ImportedSkinData.Weight;
 						if (SkinData.BoneIndex[j] == -1.f && ImportedSkinData.BoneName != NAME_None)
 						{
@@ -721,5 +701,3 @@ void FTressFXRuntimeData::FillTriangleIndexArray()
 
 	check(iCount == 6 * NumTotalStrands * (NumVerticesPerStrand - 1));
 }
-
-//#pragma optimize("", on)

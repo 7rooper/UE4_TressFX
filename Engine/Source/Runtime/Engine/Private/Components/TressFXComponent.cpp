@@ -13,8 +13,9 @@
 #include "Materials/Material.h"
 #include "DrawDebugHelpers.h"
 #include "Components/CapsuleComponent.h"
-#include "Runtime\Engine\Classes\Animation\AnimInstance.h"
+#include "Runtime/Engine/Classes/Animation/AnimInstance.h"
 #include "Engine/Texture2D.h"
+#include "TressFX/TressFXUtils.h"
 
 
 DEFINE_LOG_CATEGORY(TressFXComponentLog);
@@ -403,12 +404,15 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 		FName TFXBoneName = It.Value();
 		int32 TFXIndex = It.Key();
 
-		FTransform BoneTransform = FTransform::Identity;
-		if (ParentSkeletalMeshComponent && ParentSkeletalMeshComponent->GetBoneIndex(TFXBoneName) != INDEX_NONE)
+		// find the bone index to use, rather than relying on the one that was imported with the TFX file
+		// this way, we can use different skeletons with the same bones names and have it still work
+		const USkeletalMesh* ParentSkelMesh = ParentSkeletalMeshComponent ? ParentSkeletalMeshComponent->SkeletalMesh : nullptr;
+		//TODO: maybe cache this instead for faster lookups?
+		const int32 SkelBoneIndex = ParentSkelMesh ? FTressFXUtils::FindEngineBoneIndex(ParentSkelMesh, TFXBoneName) : INDEX_NONE;
+
+		if (SkelBoneIndex != INDEX_NONE)
 		{
-			// find the bone index to use, rather than relying on the one that was imported with the TFX file
-			// this way, we can use different skeletons with the same bones names and have it still work
-			int32 SkelBoneIndex = ParentSkeletalMeshComponent->GetBoneIndex(TFXBoneName);
+
 			FMatrix RefBase = ParentSkeletalMeshComponent->SkeletalMesh->RefBasesInvMatrix[SkelBoneIndex];
 			FMatrix ParentSkel = ParentSkeletalMeshComponent->GetBoneMatrix(SkelBoneIndex);
 
