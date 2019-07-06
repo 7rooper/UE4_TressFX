@@ -408,7 +408,7 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 		// this way, we can use different skeletons with the same bones names and have it still work
 		const USkeletalMesh* ParentSkelMesh = ParentSkeletalMeshComponent ? ParentSkeletalMeshComponent->SkeletalMesh : nullptr;
 		//TODO: maybe cache this instead for faster lookups?
-		const int32 SkelBoneIndex = ParentSkelMesh ? FTressFXUtils::FindEngineBoneIndex(ParentSkelMesh, TFXBoneName) : INDEX_NONE;
+		const int32 SkelBoneIndex = ParentSkelMesh ? FTressFXUtils::FindEngineBoneIndex(ParentSkelMesh, TFXBoneName, true) : INDEX_NONE;
 
 		if (SkelBoneIndex != INDEX_NONE)
 		{

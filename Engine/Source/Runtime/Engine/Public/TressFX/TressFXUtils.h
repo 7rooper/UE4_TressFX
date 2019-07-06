@@ -12,9 +12,9 @@ class ENGINE_API FTressFXUtils
 {
 public:
 
-	// finds engine bone engine, supports virtual bones
-	static int32 FindEngineBoneIndex(const USkeletalMesh* SkelMesh, const FName BoneName);
+	// finds engine bone index, supports virtual bones if passed
+	static int32 FindEngineBoneIndex(const USkeletalMesh* SkelMesh, const FName BoneName, bool bSuppportVirtualBones);
 
-	// Return true if even at least one bone is a match
-	static bool IsCompatibleSkeleton(const USkeletalMesh* InSkelMesh, TMap<int32, FName>& InBoneNameIndexMap);
+	// Return true if even at least one bone is a match  supports virtual bones if passed
+	static bool IsCompatibleSkeleton(const USkeletalMesh* InSkelMesh, TMap<int32, FName>& InBoneNameIndexMap, bool bSuppportVirtualBones);
 };

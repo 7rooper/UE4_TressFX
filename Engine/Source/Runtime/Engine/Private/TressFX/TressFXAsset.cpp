@@ -375,7 +375,7 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 				BoneNameIndexMap.Add(i, *BoneNames[i]);
 			}
 
-			const bool bIsCompatable = FTressFXUtils::IsCompatibleSkeleton(SkeletalMesh, BoneNameIndexMap);
+			const bool bIsCompatable = FTressFXUtils::IsCompatibleSkeleton(SkeletalMesh, BoneNameIndexMap, true);
 			if (!bIsCompatable)
 			{
 				UE_LOG(TressFXAssetLog, Warning, TEXT("Input skeletal mesh not compatable with BoneSkinning Asset. Mesh:  %s"), *SkeletalMesh->GetFName().ToString());
@@ -444,7 +444,7 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 				BoneNameIndexMap.Add(i, Asset->JsonVersionImportData.BoneNames[i]);
 			}
 
-			const bool bIsCompatable = FTressFXUtils::IsCompatibleSkeleton(SkeletalMesh, BoneNameIndexMap);
+			const bool bIsCompatable = FTressFXUtils::IsCompatibleSkeleton(SkeletalMesh, BoneNameIndexMap, true);
 			if (!bIsCompatable)
 			{
 				UE_LOG(TressFXAssetLog, Warning, TEXT("Input skeletal mesh not compatable with BoneSkinning Asset. Mesh:  %s"), *SkeletalMesh->GetFName().ToString());
@@ -465,7 +465,7 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 					if (DataIndex < Asset->JsonVersionImportData.JsonSkinningData.Num())
 					{
 						FTressFXBoneSkinningJSONImportData ImportedSkinData = Asset->JsonVersionImportData.JsonSkinningData[DataIndex];
-						int32 EngineBoneIndex = FTressFXUtils::FindEngineBoneIndex(SkeletalMesh, ImportedSkinData.BoneName);
+						int32 EngineBoneIndex = FTressFXUtils::FindEngineBoneIndex(SkeletalMesh, ImportedSkinData.BoneName, true);
 
 						// Change the joint index to be what the engine wants
 						SkinData.BoneIndex[j] = (float)EngineBoneIndex; 
