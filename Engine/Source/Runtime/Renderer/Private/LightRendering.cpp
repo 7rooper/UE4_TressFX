@@ -1501,7 +1501,7 @@ void FDeferredShadingSceneRenderer::RenderLight(FRHICommandList& RHICmdList, con
 				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
 
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
-				PixelShader->SetParameters(RHICmdList, View, LightSceneInfo, ScreenShadowMaskTexture);
+				PixelShader->SetParameters(RHICmdList, View, LightSceneInfo, ScreenShadowMaskTexture /*@BEGIN Third party code TressFX*/, bUseTressFXSceneDepth /*@END Third party code TressFX*/);
 			}
 
 			VertexShader->SetParameters(RHICmdList, View, LightSceneInfo);
