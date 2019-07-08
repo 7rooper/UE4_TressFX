@@ -123,7 +123,6 @@ private:
 		ERasterizerCullMode MeshCullMode
 	);
 
-	template<bool bInsetShadows>
 	void ProcessShortcut(
 		const FMeshBatch& RESTRICT MeshBatch,
 		uint64 BatchElementMask,

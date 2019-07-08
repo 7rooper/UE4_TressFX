@@ -40,7 +40,7 @@ extern float GTressFXMinAlphaForDepth;
 //  FTressFXFillColorPS - Pixel shader for Third pass of shortcut
 ////////////////////////////////////////////////////////////////////////////////
 
-template <bool bInsetShadows>
+template<bool Dummy = true>
 class FTressFXFillColorPS : public FMeshMaterialShader
 {
 	DECLARE_SHADER_TYPE(FTressFXFillColorPS, MeshMaterial)
@@ -59,7 +59,6 @@ public:
 	{
 		FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
 		FForwardLightingParameters::ModifyCompilationEnvironment(Platform, OutEnvironment);
-		OutEnvironment.SetDefine(TEXT("USING_INSET_SHADOWS"), bInsetShadows ? TEXT("1") : TEXT("0"));
 		FShaderUniformBufferParameter::ModifyCompilationEnvironment(
 			FTressFXColorPassUniformParameters::StaticStructMetadata.GetShaderVariableName(),
 			FTressFXColorPassUniformParameters::StaticStructMetadata,
@@ -110,10 +109,8 @@ public:
 	FShaderUniformBufferParameter TressfxShadeParameters;
 };
 
-typedef FTressFXFillColorPS<false> FTressFXFillColorPS_ShortcutNoInsetShadows;
-typedef FTressFXFillColorPS<true> FTressFXFillColorPS_ShortcutWithInsetShadows;
-IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_ShortcutNoInsetShadows, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
-IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_ShortcutWithInsetShadows, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
+typedef FTressFXFillColorPS<true> FTressFXFillColorPS_Shortcut;
+IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_Shortcut, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
 
 //#pragma optimize("", off)
 void TressFXCopySceneDepth(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext, TRefCountPtr<IPooledRenderTarget> Destination)
@@ -473,7 +470,6 @@ FMeshPassProcessor* CreateTRessFXDepthsAlphaPassProcessor(const FScene* Scene, c
 //FTressFXFillColorPassMeshProcessor
 /////////////////////////////////////////////////////////////////////////
 
-template<bool bInsetShadows>
 void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
@@ -513,9 +509,9 @@ void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 		FTressFXVS<false>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
-		FTressFXFillColorPS<bInsetShadows>> TFXShaders;
+		FTressFXFillColorPS<true>> TFXShaders;
 
-	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<bInsetShadows>>(VertexFactory->GetType());
+	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<true>>(VertexFactory->GetType());
 	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<false>>(VertexFactory->GetType());
 
 	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
@@ -548,32 +544,17 @@ void FTressFXFillColorPassMeshProcessor::Process(
 {	   
 	const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
 
-	if (TFXProxy->CastsInsetShadow())
-	{
-		ProcessShortcut<true>(
-			MeshBatch,
-			BatchElementMask,
-			StaticMeshId,
-			PrimitiveSceneProxy,
-			MaterialRenderProxy,
-			MaterialResource,
-			MeshFillMode,
-			MeshCullMode
-		);
-	}
-	else
-	{
-		ProcessShortcut<false>(
-			MeshBatch,
-			BatchElementMask,
-			StaticMeshId,
-			PrimitiveSceneProxy,
-			MaterialRenderProxy,
-			MaterialResource,
-			MeshFillMode,
-			MeshCullMode
-			);
-	}	
+	ProcessShortcut(
+		MeshBatch,
+		BatchElementMask,
+		StaticMeshId,
+		PrimitiveSceneProxy,
+		MaterialRenderProxy,
+		MaterialResource,
+		MeshFillMode,
+		MeshCullMode
+	);
+	
 }
 
 void FTressFXFillColorPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId)
