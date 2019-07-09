@@ -217,6 +217,7 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 	ShadeParametersUniformBuffer.g_FiberSpacing = DynamicData.TressFXShadeSettings.FiberSpacing;
 	ShadeParametersUniformBuffer.g_NumVerticesPerStrand = TressFXHairObject->NumVerticePerStrand;
 	ShadeParametersUniformBuffer.g_ratio = DynamicData.TressFXShadeSettings.HairThickness;
+	ShadeParametersUniformBuffer.TFXShadowParams = FVector4(DynamicData.TressFXShadeSettings.ShadowStrength,0,0,0);
 
 	TressFXHairObject->SimParametersUniformBuffer = TUniformBufferRef<FTressFXSimParametersUniformBuffer>::CreateUniformBufferImmediate(SimParamsUniformBuffer, UniformBuffer_SingleFrame);
 	TressFXHairObject->ShadeParametersUniformBuffer = TUniformBufferRef<FTressFXShadeParametersUniformBuffer>::CreateUniformBufferImmediate(ShadeParametersUniformBuffer, UniformBuffer_SingleFrame);
@@ -225,7 +226,7 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 	if (CVarTFXSDFDisable.GetValueOnAnyThread() == 0 && CollisionType == ETressFXCollisionType::TFXCollsion_SDF && this->SDFMeshResources)
 	{
 		FTressFXBoneSkinningUniformBuffer BoneSkinBuffer;
-		BoneSkinBuffer.g_BoneSkinningMatrix = DynamicData.BoneTransforms; //kind of redundant with above
+		BoneSkinBuffer.g_BoneSkinningMatrix = DynamicData.BoneTransforms; 
 		BoneSkinBuffer.g_NumMeshVertices = DynamicData.SDFMeshResources->MeshData.Vertices.Num();
 		TressFXHairObject->BoneSkinningUniformBuffer = TUniformBufferRef<FTressFXBoneSkinningUniformBuffer>::CreateUniformBufferImmediate(BoneSkinBuffer, UniformBuffer_SingleFrame);
 

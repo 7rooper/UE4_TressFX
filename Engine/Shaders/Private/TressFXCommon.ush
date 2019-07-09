@@ -30,4 +30,7 @@ cbuffer TressfxShadeParameters
     float g_FiberSpacing;
     int g_NumVerticesPerStrand;
     float g_ratio;
+    float4 TFXShadowParams;
 };
+
+#define TressFXShadowStrength TFXShadowParams.x

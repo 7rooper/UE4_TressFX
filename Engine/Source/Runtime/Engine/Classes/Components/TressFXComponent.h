@@ -136,12 +136,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
 	float HairThickness;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
+	float ShadowStrength;
+
 	FTressFXShadeSettings()
 	{
 		//sensible defaults
 		FiberRadius = 0.25;
 		FiberSpacing = 0.1;
 		HairThickness = 0.2f;
+		ShadowStrength = 1.0f;
 	}
 
 

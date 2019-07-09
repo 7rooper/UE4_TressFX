@@ -389,7 +389,6 @@ float3 AOMultiBounce(float3 BaseColor, float AO)
     return max(AO, ((AO * a + b) * AO + c) * AO);
 }
 
-
 float3 GetForwardDirectLightingTressFX(
 	uint GridIndex
 	, float3 WorldPosition
@@ -461,7 +460,8 @@ float3 GetForwardDirectLightingTressFX(
 			float4 LightAttenuation = float4(DynamicShadowFactor.x, DynamicShadowFactor.x, 1, 1);
 		#endif
 
-
+        LightAttenuation = saturate((LightAttenuation - TressFXShadowStrength) / (1 - TressFXShadowStrength));
+        LightAttenuation = Square(LightAttenuation);
 		// LightAttenuation: Light function + per-object shadows in z, per-object SSS shadowing in w, 
 		// Whole scene directional light shadows in x, whole scene directional light SSS shadows in y
         float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
@@ -508,6 +508,8 @@ float3 GetForwardDirectLightingTressFX(
 		float4 PreviewShadowMapChannelMask = UnpackShadowMapChannelMask(PackedShadowMapChannelMask >> 4);
 		float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
 		float4 LightAttenuation = float4(1, 1, DynamicShadowing.x, DynamicShadowing.x);
+        LightAttenuation = saturate((LightAttenuation - TressFXShadowStrength) / (1 - TressFXShadowStrength));
+        LightAttenuation = Square(LightAttenuation);
 		float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0,0), RectTexture).xyz;
 
 		FLATTEN
