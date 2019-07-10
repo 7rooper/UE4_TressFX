@@ -122,6 +122,7 @@ struct TressFXVertex
 #endif
     float4 Position;// screen space position
     float4 Tangent;
+    float4 TangentZ; // todo, combine with p0p1
     float4 p0p1;
     float2 strandUV;
     float Root2Tip;// 0 to 1
@@ -185,6 +186,7 @@ TressFXVertex GetExpandedTressFXVert(
 
     Output.Position = ((vertexId & 0x01) ? hairEdgePositions[0] : hairEdgePositions[1]) + fDirIndex * float4(proj_right * expandPixels / winSize.y, 0.0f, 0.0f) * ((vertexId & 0x01) ? hairEdgePositions[0].w : hairEdgePositions[1].w);
     Output.Tangent = float4(t, ratio);
+    Output.TangentZ = float4(proj_right.x, proj_right.y, 0, 1);
     Output.p0p1 = float4(hairEdgePositions[0].xy / max(hairEdgePositions[0].w, TRESSFX_FLOAT_EPSILON), hairEdgePositions[1].xy / max(hairEdgePositions[1].w, TRESSFX_FLOAT_EPSILON));
     Output.strandUV = GetStrandUV(index);
     Output.Root2Tip = g_GuideHairVertexPositions[index].w;
