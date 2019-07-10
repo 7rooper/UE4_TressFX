@@ -389,6 +389,208 @@ float3 AOMultiBounce(float3 BaseColor, float AO)
     return max(AO, ((AO * a + b) * AO + c) * AO);
 }
 
+float TFXComputeHairDiffuseShading(
+	float3 Ldir, // light direction
+	float3 T,
+	float3 N,
+	float diffuseScale,
+	float diffuseBlend
+	)
+{
+	// diffuse hair shading
+    float TdotL = clamp(dot(T, Ldir), -1.0f, 1.0f);
+
+    float diffuseSkin = max(0, dot(N, Ldir));
+    float diffuseHair = sqrt(1.0f - TdotL * TdotL);
+
+    float diffuse = lerp(diffuseHair, diffuseSkin, diffuseBlend);
+    float result = diffuseScale * saturate(diffuse);
+
+    return max(0, result);
+}
+
+float3 GetTressFXDynamicLighting(
+	float3 ScreenVector
+	, FGBufferData HairScreenSpaceData
+	, FDeferredLightData LightData
+	, float Dither
+	, float4 DynamicShadowFactorsRaw
+	, float4 TFXTangent
+)
+{
+	// Check lighting channels
+//#if USE_LIGHTING_CHANNELS
+//	if((HairScreenSpaceData.LightingChannelMask & DeferredLightUniforms.LightingChannelMask) == 0)
+//		return 0;
+//#endif
+    float DiffuseBlend = .5f;
+	// Use 1 for diffuse blend for un-shadowed light, to darken hairs at back faces. 
+	if(!LightData.ShadowedBits)
+		DiffuseBlend = 1;
+
+	// Setup light
+	float3 WorldPosition = ScreenVector * HairScreenSpaceData.Depth + View.WorldCameraOrigin.xyz;
+
+	//float3 V = -CameraVector;
+	float3 N = HairScreenSpaceData.WorldNormal; //JAKETODO note this is wrong
+	float3 ToLight = LightData.Direction;
+	float3 L = ToLight;	// no need to normalize
+	float NoL = saturate(dot(N, L));
+	float DistanceAttenuation = 1;
+	float LightRadiusMask = 1;
+	float SpotFalloff = 1;
+
+	if(LightData.bRadialLight)
+	{
+		ToLight = LightData.Position.xyz - WorldPosition;
+
+		float DistanceSqr = dot(ToLight, ToLight);
+		L = ToLight * rsqrt(DistanceSqr);
+
+		if(LightData.bInverseSquared)
+		{
+			//const float SourceLength = LightData.SpotAnglesAndSourceRadius.w;
+            const float SourceLength = LightData.SourceLength;
+			BRANCH
+			if(SourceLength > 0)
+			{
+				// Line segment irradiance
+				float3 L01 = LightData.Direction * SourceLength;
+				float3 L0 = ToLight - 0.5 * L01;
+				float3 L1 = ToLight + 0.5 * L01;
+				float LengthL0 = length(L0);
+				float LengthL1 = length(L1);
+
+				DistanceAttenuation = rcp((LengthL0 * LengthL1 + dot(L0, L1)) * 0.5 + 1);
+				NoL = saturate(0.5 * (dot(N, L0) / LengthL0 + dot(N, L1) / LengthL1));
+			}
+			else
+			{
+				// Sphere irradiance (technically just 1/d^2 but this avoids inf)
+				DistanceAttenuation = 1 / (DistanceSqr + 1);
+				NoL = saturate(dot(N, L));
+			}
+
+			// TODO optimize
+			LightRadiusMask = Square(saturate(1 - Square(DistanceSqr * Square(LightData.InvRadius))));
+		}
+		else
+		{
+			DistanceAttenuation = 1;
+			NoL = saturate(dot(N, L));
+
+            LightRadiusMask = RadialAttenuation(ToLight * LightData.InvRadius, LightData.FalloffExponent);
+        }
+
+		if(LightData.bSpotLight)
+		{
+			SpotFalloff = SpotAttenuation(L, -LightData.Direction, LightData.SpotAngles);
+		}
+	}
+
+	if(LightRadiusMask <= 0 || SpotFalloff <= 0)
+		return 0;
+
+	// Setup shadow
+    float4 LightAttenuation = DynamicShadowFactorsRaw;
+    LightAttenuation = saturate((LightAttenuation - TressFXShadowStrength) / (1 - TressFXShadowStrength));
+	LightAttenuation = Square(LightAttenuation);
+
+
+    FShadowTerms ShadowTerms;
+    ShadowTerms.SurfaceShadow = 1;
+
+	//JAKETODO, try real gbuffer here
+	FGBufferData GBuffer = (FGBufferData)0;
+
+	if(LightData.ShadowedBits)
+	{
+		GBuffer.PrecomputedShadowFactors = 1;
+		GBuffer.Depth = HairScreenSpaceData.Depth;
+		//not sure if hardcoding 0.5 for dither is right
+        GetShadowTerms(GBuffer, LightData, WorldPosition, L, LightAttenuation, Dither, ShadowTerms);
+
+		// greatly reduces shadow mapping artifacts
+        ShadowTerms.SurfaceShadow *= saturate(dot(N, L) * 6 - 0.2);
+    }
+	else
+	{
+		//float4 ScreenSpaceAO = Texture2DSampleLevel(ScreenSpaceAOTexture, ScreenSpaceAOTextureSampler, InUV, 0);
+		//ScreenSpaceData.AmbientOcclusion = ScreenSpaceAO.r;
+
+		//SurfaceShadow = ScreenSpaceData.AmbientOcclusion;
+	}
+
+    float SurfaceAttenuation = (DistanceAttenuation * LightRadiusMask * SpotFalloff) * ShadowTerms.SurfaceShadow;
+
+	// Diffuse
+    float HairDiffuse = TFXComputeHairDiffuseShading(
+		L,
+		TFXTangent.xyz,
+		HairScreenSpaceData.WorldNormal, //JAKETODO wrong
+		1,
+		DiffuseBlend
+		);
+
+	// Add glint JAKETODO ?
+	float GlintAmbient = 0;
+	//if(HairScreenSpaceData.GlintStrength > 0)
+	//{
+	//	float Luminance = dot(LightData.LightColorAndFalloffExponent.rgb, float3(0.3, 0.5, 0.2));	// Copied from HairWorks viewer.
+	//	GlintAmbient = HairScreenSpaceData.GlintStrength * HairScreenSpaceData.Glint * Luminance;
+	//}
+
+	// Specular
+	float HairSpecular = 0;
+	{
+		float3 Ldir = L;
+		float3 V = -normalize(ScreenVector);
+        float3 T = TFXTangent;
+		float3 N = HairScreenSpaceData.WorldNormal; //JAKETODO note this is wrong
+        float primaryScale = .31f;
+        float primaryShininess = 214.330002f;
+        float secondaryScale = .22f;
+        float secondaryShininess = 133.6f;
+        float secondaryOffset = -.04;
+		//float diffuseBlend = HairScreenSpaceData.DiffuseBlend;
+
+		float specPrimaryOffset = HairScreenSpaceData.Specular;	// JAKETODO i think this is wrong
+
+		// primary specular
+		float3 H = normalize(V + L);
+		float TdotH = clamp(dot(T, H), -1.0f, 1.0f);
+
+		float TdotHshifted = clamp(TdotH + specPrimaryOffset, -1.0f, 1.0f);
+		float specPrimary = sqrt(1.0f - TdotHshifted*TdotHshifted);
+
+		specPrimary = pow(max(0, specPrimary), primaryShininess);
+
+		// secondary
+		TdotH = clamp(TdotH + secondaryOffset, -1.0, 1.0);
+		float specSecondary = sqrt(1 - TdotH*TdotH);
+		specSecondary = pow(max(0, specSecondary), secondaryShininess);
+
+		// specular sum
+		float specularSum = primaryScale * specPrimary + secondaryScale * specSecondary;
+
+		// visibility due to diffuse normal
+		float visibilityScale = lerp(1.0f, saturate(dot(N, Ldir)), DiffuseBlend);
+		specularSum *= visibilityScale;
+
+		HairSpecular = max(0, specularSum);
+	}
+
+	// Sum lighting
+    float3 OutColor = (HairDiffuse * HairScreenSpaceData.BaseColor + HairSpecular * HairScreenSpaceData.Specular) * SurfaceAttenuation * LightData.Color.rgb + GlintAmbient * SurfaceAttenuation * HairScreenSpaceData.BaseColor;
+
+	// IES lighting
+	if(LightData.bRadialLight)
+		OutColor *= ComputeLightProfileMultiplier(WorldPosition, DeferredLightUniforms.Position, DeferredLightUniforms.Direction, DeferredLightUniforms.Tangent);
+
+	return OutColor;
+}
+
+
 float3 GetForwardDirectLightingTressFX(
 	uint GridIndex
 	, float3 WorldPosition
@@ -399,6 +601,7 @@ float3 GetForwardDirectLightingTressFX(
 	, uint EyeIndex
 	, float Dither
 	, float TFXAlpha
+	, float4 TFXTangent
 )
 {
 
@@ -460,12 +663,12 @@ float3 GetForwardDirectLightingTressFX(
 			float4 LightAttenuation = float4(DynamicShadowFactor.x, DynamicShadowFactor.x, 1, 1);
 		#endif
 
-        LightAttenuation = saturate((LightAttenuation - TressFXShadowStrength) / (1 - TressFXShadowStrength));
-        LightAttenuation = Square(LightAttenuation);
+        //LightAttenuation = saturate((LightAttenuation - TressFXShadowStrength) / (1 - TressFXShadowStrength));
+        //LightAttenuation = Square(LightAttenuation);
 		// LightAttenuation: Light function + per-object shadows in z, per-object SSS shadowing in w, 
 		// Whole scene directional light shadows in x, whole scene directional light SSS shadows in y
-        float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
-
+        //float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
+        float3 NewLighting = GetTressFXDynamicLighting(CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent);
 		FLATTEN
 		if ((DirectionalLightData.DirectionalLightShadowMapChannelMask >> 8) & LightingChannelMask)
 		{
@@ -508,10 +711,10 @@ float3 GetForwardDirectLightingTressFX(
 		float4 PreviewShadowMapChannelMask = UnpackShadowMapChannelMask(PackedShadowMapChannelMask >> 4);
 		float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
 		float4 LightAttenuation = float4(1, 1, DynamicShadowing.x, DynamicShadowing.x);
-        LightAttenuation = saturate((LightAttenuation - TressFXShadowStrength) / (1 - TressFXShadowStrength));
-        LightAttenuation = Square(LightAttenuation);
-		float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0,0), RectTexture).xyz;
-
+        //LightAttenuation = saturate((LightAttenuation - TressFXShadowStrength) / (1 - TressFXShadowStrength));
+        //LightAttenuation = Square(LightAttenuation);
+		//float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0,0), RectTexture).xyz;
+        float3 NewLighting = GetTressFXDynamicLighting(CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent);
 		FLATTEN
 		if ((PackedShadowMapChannelMask >> 8) & LightingChannelMask)
 		{
@@ -569,7 +772,8 @@ void main(
     float TFXCoverage = ComputeCoverage(In.FactoryInterpolants.p0p1.xy, In.FactoryInterpolants.p0p1.zw, NDC, viewport, In.Position.z);
     half Opacity = GetMaterialOpacity(PixelMaterialInputs);
     float TFXAlpha = TFXCoverage * Opacity;
-	
+    const float4 TFXTangent = In.FactoryInterpolants.Tangent;
+
 	BRANCH
     if (TFXAlpha < SHORTCUT_MIN_ALPHA)
     {
@@ -668,7 +872,7 @@ void main(
     uint GridIndex = ComputeLightGridCellIndex((uint2) (In.Position.xy - ResolvedView.ViewRectMin.xy), In.Position.w, 0);
     const float Dither = InterleavedGradientNoise(MaterialParameters.SvPosition.xy, View.StateFrameIndexMod8);
     const uint EyeIndex = 0;
-    Color += GetForwardDirectLightingTressFX(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither, TFXAlpha);
+    Color += GetForwardDirectLightingTressFX(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither, TFXAlpha, TFXTangent);
 	
 	OutColor = float4(Color * TFXAlpha, TFXAlpha);
 	return;
