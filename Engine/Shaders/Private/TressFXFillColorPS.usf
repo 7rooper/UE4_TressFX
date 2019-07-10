@@ -667,8 +667,8 @@ float3 GetForwardDirectLightingTressFX(
         //LightAttenuation = Square(LightAttenuation);
 		// LightAttenuation: Light function + per-object shadows in z, per-object SSS shadowing in w, 
 		// Whole scene directional light shadows in x, whole scene directional light SSS shadows in y
-        //float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
-        float3 NewLighting = GetTressFXDynamicLighting(CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent);
+        float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
+        //float3 NewLighting = GetTressFXDynamicLighting(CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent);
 		FLATTEN
 		if ((DirectionalLightData.DirectionalLightShadowMapChannelMask >> 8) & LightingChannelMask)
 		{
@@ -713,8 +713,8 @@ float3 GetForwardDirectLightingTressFX(
 		float4 LightAttenuation = float4(1, 1, DynamicShadowing.x, DynamicShadowing.x);
         //LightAttenuation = saturate((LightAttenuation - TressFXShadowStrength) / (1 - TressFXShadowStrength));
         //LightAttenuation = Square(LightAttenuation);
-		//float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0,0), RectTexture).xyz;
-        float3 NewLighting = GetTressFXDynamicLighting(CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent);
+		float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0,0), RectTexture).xyz;
+        //float3 NewLighting = GetTressFXDynamicLighting(CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent);
 		FLATTEN
 		if ((PackedShadowMapChannelMask >> 8) & LightingChannelMask)
 		{
