@@ -1033,16 +1033,6 @@ bool FNDISkeletalMesh_InstanceData::Init(UNiagaraDataInterfaceSkeletalMesh* Inte
 		{
 			LODIndex = FMath::Clamp(Interface->WholeMeshLOD, 0, Mesh->GetLODNum() - 1);
 		}
-
-		if (!Mesh->GetLODInfo(LODIndex)->bAllowCPUAccess && (Interface->bUseTriangleSampling || Interface->bUseVertexSampling))
-		{
-			UE_LOG(LogNiagara, Warning, TEXT("Skeletal Mesh Data Interface is trying to spawn from a whole mesh that does not allow CPU Access.\nInterface: %s\nMesh: %s\nLOD: %d"),
-				*Interface->GetFullName(),
-				*Mesh->GetFullName(),
-				LODIndex);
-
-			return false;
-		}
 	}
 	else
 	{
@@ -1146,6 +1136,16 @@ bool FNDISkeletalMesh_InstanceData::Init(UNiagaraDataInterfaceSkeletalMesh* Inte
 	//Check for the validity of the Mesh's cpu data.
 	if ( Interface->bUseTriangleSampling || Interface->bUseVertexSampling )
 	{
+		if ( !Mesh->GetLODInfo(LODIndex)->bAllowCPUAccess )
+		{
+			UE_LOG(LogNiagara, Warning, TEXT("Skeletal Mesh Data Interface is trying to spawn from a whole mesh that does not allow CPU Access.\nInterface: %s\nMesh: %s\nLOD: %d"),
+				*Interface->GetFullName(),
+				*Mesh->GetFullName(),
+				LODIndex);
+
+			return false;
+		}
+
 		bool LODDataNumVerticesCorrect = LODData.GetNumVertices() > 0;
 		bool LODDataPositonNumVerticesCorrect = LODData.StaticVertexBuffers.PositionVertexBuffer.GetNumVertices() > 0;
 		bool bSkinWeightBuffer = SkinWeightBuffer != nullptr;
