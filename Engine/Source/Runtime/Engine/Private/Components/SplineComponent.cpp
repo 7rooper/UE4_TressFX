@@ -373,7 +373,8 @@ FVector USplineComponent::GetDirectionAtSplineInputKey(float InKey, ESplineCoord
 
 	if (CoordinateSpace == ESplineCoordinateSpace::World)
 	{
-		Direction = GetComponentTransform().TransformVectorNoScale(Direction);
+		Direction = GetComponentTransform().TransformVector(Direction);
+		Direction.Normalize();
 	}
 
 	return Direction;
