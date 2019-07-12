@@ -432,7 +432,7 @@ float3 GetTressFXDynamicLighting(
 	float3 WorldPosition = ScreenVector * HairScreenSpaceData.Depth + View.WorldCameraOrigin.xyz;
 
 	//float3 V = -CameraVector;
-	float3 N = HairScreenSpaceData.WorldNormal; //JAKETODO note this is wrong
+	float3 N = HairScreenSpaceData.WorldNormal;
 	float3 ToLight = LightData.Direction;
 	float3 L = ToLight;	// no need to normalize
 	float NoL = saturate(dot(N, L));
@@ -527,7 +527,7 @@ float3 GetTressFXDynamicLighting(
     float HairDiffuse = TFXComputeHairDiffuseShading(
 		L,
 		TFXTangent.xyz,
-		HairScreenSpaceData.WorldNormal, //JAKETODO wrong
+		HairScreenSpaceData.WorldNormal,
 		1,
 		DiffuseBlend
 		);
@@ -546,7 +546,7 @@ float3 GetTressFXDynamicLighting(
 		float3 Ldir = L;
 		float3 V = -normalize(ScreenVector);
         float3 T = TFXTangent;
-		float3 N = HairScreenSpaceData.WorldNormal; //JAKETODO note this is wrong
+		float3 N = HairScreenSpaceData.WorldNormal;
         float primaryScale = .31f;
         float primaryShininess = 214.330002f;
         float secondaryScale = .22f;
@@ -663,12 +663,24 @@ float3 GetForwardDirectLightingTressFX(
 			float4 LightAttenuation = float4(DynamicShadowFactor.x, DynamicShadowFactor.x, 1, 1);
 		#endif
 
-        //LightAttenuation = saturate((LightAttenuation - TressFXShadowStrength) / (1 - TressFXShadowStrength));
-        //LightAttenuation = Square(LightAttenuation);
 		// LightAttenuation: Light function + per-object shadows in z, per-object SSS shadowing in w, 
 		// Whole scene directional light shadows in x, whole scene directional light SSS shadows in y
         float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
         //float3 NewLighting = GetTressFXDynamicLighting(CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent);
+  //      FShadowTerms ShadowTerms;
+		//ShadowTerms.SurfaceShadow = 1;
+  //      GetShadowTerms(GBufferData, LightData, WorldPosition, LightData.Direction, LightAttenuation, Dither, ShadowTerms);
+		//// greatly reduces shadow mapping artifacts
+  //      ShadowTerms.SurfaceShadow *= saturate(dot(GBufferData.WorldNormal, LightData.Direction) * 6 - 0.2);
+
+  //      float3 L = normalize(LightData.Direction);
+  //      float3 reflection = TressFX_ComputeDiffuseSpecFactors(View.ViewForward, L, TFXTangent);
+  //      float3 cReflectedLight = reflection.x * LightData.Color * GBufferData.BaseColor;
+  //      cReflectedLight += reflection.y * LightData.Color * SpecularScale;
+  //      cReflectedLight += reflection.z * LightData.Color * SpecularScale * GBufferData.BaseColor;
+  //      cReflectedLight *= ShadowTerms.SurfaceShadow * 1; // * 0.16;
+  //      float3 NewLighting = max(float3(0, 0, 0), cReflectedLight);
+
 		FLATTEN
 		if ((DirectionalLightData.DirectionalLightShadowMapChannelMask >> 8) & LightingChannelMask)
 		{

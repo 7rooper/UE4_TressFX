@@ -116,6 +116,44 @@ public:
 
 };
 
+USTRUCT(BlueprintType)
+struct FTressFXSpecularSettings {
+
+	GENERATED_USTRUCT_BODY()
+public:
+	/** Specular color. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Color"))
+		FLinearColor SpecularColor;
+
+	/** Primary specular scale. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Primary Scale", ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
+		float SpecularPrimaryScale = 0.1;
+
+	/** Primary specular power exponent. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Primary Exponent", ClampMin = "1.0", ClampMax = "1000.0", UIMin = "1.0", UIMax = "1000.0"))
+		float SpecularPrimaryExponent = 100;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Primary Offset", ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
+		float SpecularPrimaryOffset = 0;
+
+	/** Secondary specular scale. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Secondary Scale", ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
+		float SpecularSecondaryScale = 0.05;
+
+	/** Secondary specular power exponent. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Secondary Exponent", ClampMin = "1.0", ClampMax = "1000.0", UIMin = "1.0", UIMax = "1000.0"))
+		float SpecularSecondaryExponent = 20.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Secondary Offset", ClampMin = "-1.0", ClampMax = "1.0", UIMin = "-1.0", UIMax = "1.0"))
+		float SpecularSecondaryOffset = 0.1f;
+
+
+	FTressFXSpecularSettings()
+	{
+
+	}
+};
+
 
 USTRUCT(BlueprintType)
 struct FTressFXShadeSettings
@@ -136,8 +174,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
 	float HairThickness;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
-	float ShadowStrength;
+	/** Blend factor between Kajiya hair lighting vs normal skin lighting. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0", ClampMax = "1"))
+		float DiffuseBlend;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0", ClampMax = "1"))
+		float ShadowAttenuation;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+	FTressFXSpecularSettings Specular;
 
 	FTressFXShadeSettings()
 	{
@@ -145,7 +191,8 @@ public:
 		FiberRadius = 0.25;
 		FiberSpacing = 0.1;
 		HairThickness = 0.2f;
-		ShadowStrength = 1.0f;
+		DiffuseBlend = 0.5;
+		ShadowAttenuation = 0.8;
 	}
 
 
@@ -194,7 +241,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 		class UMaterialInterface* HairMaterial;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (DisplayName = "Simulation Settings"))
 		FTressFXSimulationSettings TressFXSimulationSettings;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
