@@ -3886,6 +3886,11 @@ void UParticleSystemComponent::OnUnregister()
 	check(FXSystem == NULL);
 }
 
+void UParticleSystemComponent::OnEndOfFrameUpdateDuringTick()
+{
+	WaitForAsyncAndFinalize(STALL);
+}
+
 void UParticleSystemComponent::CreateRenderState_Concurrent()
 {
 	LLM_SCOPE(ELLMTag::Particles);
