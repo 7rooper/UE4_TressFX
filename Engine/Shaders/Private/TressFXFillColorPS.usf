@@ -389,6 +389,14 @@ float3 AOMultiBounce(float3 BaseColor, float AO)
     return max(AO, ((AO * a + b) * AO + c) * AO);
 }
 
+//// Hack approximation for multiple scattering.
+//float Wrap = 1;
+//float NoL = saturate( ( dot(N, L) + Wrap ) / Square( 1 + Wrap ) );
+//float DiffuseScatter = (1 / PI) * lerp( NoL, KajiyaDiffuse, 0.33 ) * GBuffer.Metallic;
+//float Luma = Luminance( GBuffer.BaseColor );
+//float3 ScatterTint = pow( GBuffer.BaseColor / Luma, 1 - Shadow );
+//S += sqrt( GBuffer.BaseColor ) * DiffuseScatter * ScatterTint;
+
 float TFXComputeHairDiffuseShading(
 	float3 Ldir, // light direction
 	float3 T,
@@ -589,6 +597,69 @@ float3 GetTressFXDynamicLighting(
 
 	return OutColor;
 }
+
+// ComputeHairShading
+//
+// Hair shading using dual highlight approach and Kajiya lighting model
+// dual highlight: marschner 03
+// kajiya model: kajiya 84
+//--------------------------------------------------------------------------------------
+float3 ComputeHairShading(
+	float3 FragWorldPos
+	, float3 iTangent
+	, float Random
+	, float Shadow
+	, float3 baseColor
+	, float3 lightPos
+	, float3 LightColor)
+{
+    float rand_value = Random;
+
+    // define baseColor and Ka Kd Ks coefficient for hair
+    float Ka = g_MatKValue.x, Kd = g_MatKValue.y,
+          Ks1 = g_MatKValue.z, Ex1 = g_MatKValue.w,
+          Ks2 = g_fHairKs2, Ex2 = g_fHairEx2;
+
+    float3 lightPos = lightPos;
+    float3 vLightDir = normalize(lightPos - FragWorldPos.xyz);
+    float3 vEyeDir = normalize(g_vEye.xyz - FragWorldPos.xyz);
+    float3 tangent = normalize(iTangent);
+
+    // in Kajiya's model: diffuse component: sin(t, l)
+    float cosTL = (dot(tangent, vLightDir));
+    float sinTL = sqrt(1 - cosTL * cosTL);
+    float diffuse = sinTL; // here sinTL is apparently larger than 0
+
+    float alpha = (rand_value * 10) * PI / 180; // tiled angle (5-10 dgree)
+
+    // in Kajiya's model: specular component: cos(t, rl) * cos(t, e) + sin(t, rl)sin(t, e)
+    float cosTRL = -cosTL;
+    float sinTRL = sinTL;
+    float cosTE = (dot(tangent, vEyeDir));
+    float sinTE = sqrt(1 - cosTE * cosTE);
+
+    // primary highlight: reflected direction shift towards root (2 * Alpha)
+    float cosTRL_root = cosTRL * cos(2 * alpha) - sinTRL * sin(2 * alpha);
+    float sinTRL_root = sqrt(1 - cosTRL_root * cosTRL_root);
+    float specular_root = max(0, cosTRL_root * cosTE + sinTRL_root * sinTE);
+
+    // secondary highlight: reflected direction shifted toward tip (3*Alpha)
+    float cosTRL_tip = cosTRL * cos(-3 * alpha) - sinTRL * sin(-3 * alpha);
+    float sinTRL_tip = sqrt(1 - cosTRL_tip * cosTRL_tip);
+    float specular_tip = max(0, cosTRL_tip * cosTE + sinTRL_tip * sinTE);
+
+    // completely in shadow looks very flat, so don't go below some min value
+    Shadow = max(Shadow, 0.15f);
+
+    float3 vColor = Ka * g_AmbientLightColor.xyz * baseColor + // ambient
+                    Shadow * LightColor * (
+                    Kd * diffuse * baseColor + // diffuse
+                    Ks1 * pow(specular_root, Ex1) + // primary hightlight r
+                    Ks2 * pow(specular_tip, Ex2) * baseColor); // secondary highlight rtr
+
+    return vColor;
+}
+
 
 
 float3 GetForwardDirectLightingTressFX(
@@ -863,7 +934,7 @@ void main(
 
 	float3 DiffuseIndirectLighting;
 	float3 SubsurfaceIndirectLighting;
-	half3 DiffuseColor = 0;
+	float3 DiffuseColor = 0;
 	float IndirectIrradiance = 0;
 	GetPrecomputedIndirectLightingAndSkyLight(MaterialParameters, In.FactoryInterpolants, DiffuseDir, VolumetricLightmapBrickTextureUVs, DiffuseIndirectLighting, SubsurfaceIndirectLighting, IndirectIrradiance);
 	DiffuseColor += (DiffuseIndirectLighting * DiffuseColorForIndirect + SubsurfaceIndirectLighting * SubsurfaceColor) * AOMultiBounce(GBuffer.BaseColor, DiffOcclusion);
