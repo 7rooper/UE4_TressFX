@@ -417,13 +417,85 @@ float TFXComputeHairDiffuseShading(
     return max(0, result);
 }
 
+
+// ComputeHairLighting
+//
+// Hair shading using dual highlight approach and Kajiya lighting model
+// dual highlight: marschner 03
+// kajiya model: kajiya 84
+//--------------------------------------------------------------------------------------
+float3 ComputeHairLighting(
+	  float3 iTangent
+	, float3 AbsoluteWorldPosition
+	, float3 CameraPos
+	, float Random
+	, float Shadow
+	, float3 baseColor
+	, FDeferredLightData LightData
+)
+{
+    float rand_value = Random;
+
+    // define baseColor and Ka Kd Ks coefficient for hair
+    float Kd = TressFXDiffuseBlend;
+    float Ks1 = TressFXPrimarySpecScale;
+    float Ka = .75f;//todo
+    float Ex1 = TressFXPrimarySpecExp;
+    float Ks2 = TressFXSecondarySpecScale;
+    float Ex2 = TressFXSecondarySpecExp;
+
+    //float3 lightPos = lightPos;
+    float3 vLightDir = -normalize(LightData.Position - AbsoluteWorldPosition);
+    //float3 vLightDir = normalize(lightPos - FragWorldPos.xyz);
+    //float3 vEyeDir = normalize(g_vEye.xyz - FragWorldPos.xyz);
+    float3 vEyeDir = normalize(CameraPos - AbsoluteWorldPosition);
+    float3 tangent = normalize(iTangent);
+
+    // in Kajiya's model: diffuse component: sin(t, l)
+    float cosTL = (dot(tangent, vLightDir));
+    float sinTL = sqrt(1 - cosTL * cosTL);
+    float diffuse = sinTL; // here sinTL is apparently larger than 0
+
+    float alpha = (rand_value * 10) * PI / 180; // tiled angle (5-10 dgree)
+
+    // in Kajiya's model: specular component: cos(t, rl) * cos(t, e) + sin(t, rl)sin(t, e)
+    float cosTRL = -cosTL;
+    float sinTRL = sinTL;
+    float cosTE = (dot(tangent, vEyeDir));
+    float sinTE = sqrt(1 - cosTE * cosTE);
+
+    // primary highlight: reflected direction shift towards root (2 * Alpha)
+    float cosTRL_root = cosTRL * cos(2 * alpha) - sinTRL * sin(2 * alpha);
+    float sinTRL_root = sqrt(1 - cosTRL_root * cosTRL_root);
+    float specular_root = max(0, cosTRL_root * cosTE + sinTRL_root * sinTE);
+
+    // secondary highlight: reflected direction shifted toward tip (3*Alpha)
+    float cosTRL_tip = cosTRL * cos(-3 * alpha) - sinTRL * sin(-3 * alpha);
+    float sinTRL_tip = sqrt(1 - cosTRL_tip * cosTRL_tip);
+    float specular_tip = max(0, cosTRL_tip * cosTE + sinTRL_tip * sinTE);
+
+    // completely in shadow looks very flat, so don't go below some min value
+    Shadow = max(Shadow, 0.1f);
+
+    float3 g_AmbientLightColor = TressFXSpecularColor.xyz; // ambient, todo
+    float3 vColor = Ka * g_AmbientLightColor.xyz * baseColor + // ambient, todo
+                    Shadow * LightData.Color * (
+                    Kd * diffuse * baseColor + // diffuse
+                    Ks1 * pow(specular_root, Ex1) + // primary hightlight r
+                    Ks2 * pow(specular_tip, Ex2) * baseColor); // secondary highlight rtr
+
+    return vColor;
+}
+
+
 float3 GetTressFXDynamicLighting(
-	float3 ScreenVector
+	  float3 ScreenVector
 	, FGBufferData HairScreenSpaceData
 	, FDeferredLightData LightData
 	, float Dither
-	, float4 DynamicShadowFactorsRaw
-	, float4 TFXTangent
+	, float4 LightAttenuation
+	, float3 TFXTangent
+	, float3 AbsoluteWorldPosition
 )
 {
 	// Check lighting channels
@@ -431,13 +503,13 @@ float3 GetTressFXDynamicLighting(
 //	if((HairScreenSpaceData.LightingChannelMask & DeferredLightUniforms.LightingChannelMask) == 0)
 //		return 0;
 //#endif
-    float DiffuseBlend = .5f;
-	// Use 1 for diffuse blend for un-shadowed light, to darken hairs at back faces. 
-	if(!LightData.ShadowedBits)
-		DiffuseBlend = 1;
+ //   float DiffuseBlend = .5f;
+	//// Use 1 for diffuse blend for un-shadowed light, to darken hairs at back faces. 
+	//if(!LightData.ShadowedBits)
+	//	DiffuseBlend = 1;
 
 	// Setup light
-	float3 WorldPosition = ScreenVector * HairScreenSpaceData.Depth + View.WorldCameraOrigin.xyz;
+    float3 WorldPosition = AbsoluteWorldPosition;
 
 	//float3 V = -CameraVector;
 	float3 N = HairScreenSpaceData.WorldNormal;
@@ -500,48 +572,41 @@ float3 GetTressFXDynamicLighting(
 		return 0;
 
 	// Setup shadow
-    float4 LightAttenuation = DynamicShadowFactorsRaw;
-    LightAttenuation = saturate((LightAttenuation - TressFXShadowStrength) / (1 - TressFXShadowStrength));
-	LightAttenuation = Square(LightAttenuation);
+ //   LightAttenuation = saturate((LightAttenuation - TressFXShadowStrength) / (1 - TressFXShadowStrength));
+	//LightAttenuation = Square(LightAttenuation);
 
 
     FShadowTerms ShadowTerms;
     ShadowTerms.SurfaceShadow = 1;
 
-	//JAKETODO, try real gbuffer here
-	FGBufferData GBuffer = (FGBufferData)0;
-
 	if(LightData.ShadowedBits)
 	{
-		GBuffer.PrecomputedShadowFactors = 1;
-		GBuffer.Depth = HairScreenSpaceData.Depth;
-		//not sure if hardcoding 0.5 for dither is right
-        GetShadowTerms(GBuffer, LightData, WorldPosition, L, LightAttenuation, Dither, ShadowTerms);
+        GetShadowTerms(HairScreenSpaceData, LightData, WorldPosition, L, LightAttenuation, Dither, ShadowTerms);
 
 		// greatly reduces shadow mapping artifacts
-        ShadowTerms.SurfaceShadow *= saturate(dot(N, L) * 6 - 0.2);
+        //ShadowTerms.SurfaceShadow *= saturate(dot(N, L) * 6 - 0.2);
     }
 	else
 	{
 		//float4 ScreenSpaceAO = Texture2DSampleLevel(ScreenSpaceAOTexture, ScreenSpaceAOTextureSampler, InUV, 0);
 		//ScreenSpaceData.AmbientOcclusion = ScreenSpaceAO.r;
 
-		//SurfaceShadow = ScreenSpaceData.AmbientOcclusion;
-	}
+        ShadowTerms.SurfaceShadow = HairScreenSpaceData.GBufferAO;
+    }
 
     float SurfaceAttenuation = (DistanceAttenuation * LightRadiusMask * SpotFalloff) * ShadowTerms.SurfaceShadow;
 
-	// Diffuse
-    float HairDiffuse = TFXComputeHairDiffuseShading(
-		L,
-		TFXTangent.xyz,
-		HairScreenSpaceData.WorldNormal,
-		1,
-		DiffuseBlend
-		);
+	//// Diffuse
+ //   float HairDiffuse = TFXComputeHairDiffuseShading(
+	//	L,
+	//	TFXTangent.xyz,
+	//	HairScreenSpaceData.WorldNormal,
+	//	1,
+	//	DiffuseBlend
+	//	);
 
 	// Add glint JAKETODO ?
-	float GlintAmbient = 0;
+	//float GlintAmbient = 0;
 	//if(HairScreenSpaceData.GlintStrength > 0)
 	//{
 	//	float Luminance = dot(LightData.LightColorAndFalloffExponent.rgb, float3(0.3, 0.5, 0.2));	// Copied from HairWorks viewer.
@@ -549,118 +614,54 @@ float3 GetTressFXDynamicLighting(
 	//}
 
 	// Specular
-	float HairSpecular = 0;
-	{
-		float3 Ldir = L;
-		float3 V = -normalize(ScreenVector);
-        float3 T = TFXTangent;
-		float3 N = HairScreenSpaceData.WorldNormal;
-        float primaryScale = .31f;
-        float primaryShininess = 214.330002f;
-        float secondaryScale = .22f;
-        float secondaryShininess = 133.6f;
-        float secondaryOffset = -.04;
-		//float diffuseBlend = HairScreenSpaceData.DiffuseBlend;
+	//float HairSpecular = 0;
+	//{
+	//	float3 Ldir = L;
+	//	float3 V = -normalize(ScreenVector);
+ //       float3 T = TFXTangent;
+	//	float3 N = HairScreenSpaceData.WorldNormal;
+ //       float primaryScale = .31f;
+ //       float primaryShininess = 214.330002f;
+ //       float secondaryScale = .22f;
+ //       float secondaryShininess = 133.6f;
+ //       float secondaryOffset = -.04;
+	//	//float diffuseBlend = HairScreenSpaceData.DiffuseBlend;
 
-		float specPrimaryOffset = HairScreenSpaceData.Specular;	// JAKETODO i think this is wrong
+	//	float specPrimaryOffset = HairScreenSpaceData.Specular;	// JAKETODO i think this is wrong
 
-		// primary specular
-		float3 H = normalize(V + L);
-		float TdotH = clamp(dot(T, H), -1.0f, 1.0f);
+	//	// primary specular
+	//	float3 H = normalize(V + L);
+	//	float TdotH = clamp(dot(T, H), -1.0f, 1.0f);
 
-		float TdotHshifted = clamp(TdotH + specPrimaryOffset, -1.0f, 1.0f);
-		float specPrimary = sqrt(1.0f - TdotHshifted*TdotHshifted);
+	//	float TdotHshifted = clamp(TdotH + specPrimaryOffset, -1.0f, 1.0f);
+	//	float specPrimary = sqrt(1.0f - TdotHshifted*TdotHshifted);
 
-		specPrimary = pow(max(0, specPrimary), primaryShininess);
+	//	specPrimary = pow(max(0, specPrimary), primaryShininess);
 
-		// secondary
-		TdotH = clamp(TdotH + secondaryOffset, -1.0, 1.0);
-		float specSecondary = sqrt(1 - TdotH*TdotH);
-		specSecondary = pow(max(0, specSecondary), secondaryShininess);
+	//	// secondary
+	//	TdotH = clamp(TdotH + secondaryOffset, -1.0, 1.0);
+	//	float specSecondary = sqrt(1 - TdotH*TdotH);
+	//	specSecondary = pow(max(0, specSecondary), secondaryShininess);
 
-		// specular sum
-		float specularSum = primaryScale * specPrimary + secondaryScale * specSecondary;
+	//	// specular sum
+	//	float specularSum = primaryScale * specPrimary + secondaryScale * specSecondary;
 
-		// visibility due to diffuse normal
-		float visibilityScale = lerp(1.0f, saturate(dot(N, Ldir)), DiffuseBlend);
-		specularSum *= visibilityScale;
+	//	// visibility due to diffuse normal
+	//	float visibilityScale = lerp(1.0f, saturate(dot(N, Ldir)), DiffuseBlend);
+	//	specularSum *= visibilityScale;
 
-		HairSpecular = max(0, specularSum);
-	}
+	//	HairSpecular = max(0, specularSum);
+	//}
 
 	// Sum lighting
-    float3 OutColor = (HairDiffuse * HairScreenSpaceData.BaseColor + HairSpecular * HairScreenSpaceData.Specular) * SurfaceAttenuation * LightData.Color.rgb + GlintAmbient * SurfaceAttenuation * HairScreenSpaceData.BaseColor;
-
+    //float3 OutColor = (HairDiffuse * HairScreenSpaceData.BaseColor + HairSpecular * HairScreenSpaceData.Specular) * SurfaceAttenuation * LightData.Color.rgb + GlintAmbient * SurfaceAttenuation * HairScreenSpaceData.BaseColor;
+    float3 OutColor = ComputeHairLighting(TFXTangent.xyz, AbsoluteWorldPosition, ResolvedView.WorldViewOrigin, Dither, SurfaceAttenuation, HairScreenSpaceData.BaseColor, LightData);
 	// IES lighting
 	if(LightData.bRadialLight)
 		OutColor *= ComputeLightProfileMultiplier(WorldPosition, DeferredLightUniforms.Position, DeferredLightUniforms.Direction, DeferredLightUniforms.Tangent);
 
 	return OutColor;
 }
-
-// ComputeHairShading
-//
-// Hair shading using dual highlight approach and Kajiya lighting model
-// dual highlight: marschner 03
-// kajiya model: kajiya 84
-//--------------------------------------------------------------------------------------
-float3 ComputeHairShading(
-	float3 FragWorldPos
-	, float3 iTangent
-	, float Random
-	, float Shadow
-	, float3 baseColor
-	, float3 lightPos
-	, float3 LightColor)
-{
-    float rand_value = Random;
-
-    // define baseColor and Ka Kd Ks coefficient for hair
-    float Ka = g_MatKValue.x, Kd = g_MatKValue.y,
-          Ks1 = g_MatKValue.z, Ex1 = g_MatKValue.w,
-          Ks2 = g_fHairKs2, Ex2 = g_fHairEx2;
-
-    float3 lightPos = lightPos;
-    float3 vLightDir = normalize(lightPos - FragWorldPos.xyz);
-    float3 vEyeDir = normalize(g_vEye.xyz - FragWorldPos.xyz);
-    float3 tangent = normalize(iTangent);
-
-    // in Kajiya's model: diffuse component: sin(t, l)
-    float cosTL = (dot(tangent, vLightDir));
-    float sinTL = sqrt(1 - cosTL * cosTL);
-    float diffuse = sinTL; // here sinTL is apparently larger than 0
-
-    float alpha = (rand_value * 10) * PI / 180; // tiled angle (5-10 dgree)
-
-    // in Kajiya's model: specular component: cos(t, rl) * cos(t, e) + sin(t, rl)sin(t, e)
-    float cosTRL = -cosTL;
-    float sinTRL = sinTL;
-    float cosTE = (dot(tangent, vEyeDir));
-    float sinTE = sqrt(1 - cosTE * cosTE);
-
-    // primary highlight: reflected direction shift towards root (2 * Alpha)
-    float cosTRL_root = cosTRL * cos(2 * alpha) - sinTRL * sin(2 * alpha);
-    float sinTRL_root = sqrt(1 - cosTRL_root * cosTRL_root);
-    float specular_root = max(0, cosTRL_root * cosTE + sinTRL_root * sinTE);
-
-    // secondary highlight: reflected direction shifted toward tip (3*Alpha)
-    float cosTRL_tip = cosTRL * cos(-3 * alpha) - sinTRL * sin(-3 * alpha);
-    float sinTRL_tip = sqrt(1 - cosTRL_tip * cosTRL_tip);
-    float specular_tip = max(0, cosTRL_tip * cosTE + sinTRL_tip * sinTE);
-
-    // completely in shadow looks very flat, so don't go below some min value
-    Shadow = max(Shadow, 0.15f);
-
-    float3 vColor = Ka * g_AmbientLightColor.xyz * baseColor + // ambient
-                    Shadow * LightColor * (
-                    Kd * diffuse * baseColor + // diffuse
-                    Ks1 * pow(specular_root, Ex1) + // primary hightlight r
-                    Ks2 * pow(specular_tip, Ex2) * baseColor); // secondary highlight rtr
-
-    return vColor;
-}
-
-
 
 float3 GetForwardDirectLightingTressFX(
 	uint GridIndex
@@ -672,7 +673,7 @@ float3 GetForwardDirectLightingTressFX(
 	, uint EyeIndex
 	, float Dither
 	, float TFXAlpha
-	, float4 TFXTangent
+	, float3 TFXTangent
 )
 {
 
@@ -736,8 +737,8 @@ float3 GetForwardDirectLightingTressFX(
 
 		// LightAttenuation: Light function + per-object shadows in z, per-object SSS shadowing in w, 
 		// Whole scene directional light shadows in x, whole scene directional light SSS shadows in y
-        float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
-        //float3 NewLighting = GetTressFXDynamicLighting(CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent);
+        //float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
+        float3 NewLighting = GetTressFXDynamicLighting(CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent, WorldPosition);
   //      FShadowTerms ShadowTerms;
 		//ShadowTerms.SurfaceShadow = 1;
   //      GetShadowTerms(GBufferData, LightData, WorldPosition, LightData.Direction, LightAttenuation, Dither, ShadowTerms);
@@ -796,8 +797,8 @@ float3 GetForwardDirectLightingTressFX(
 		float4 LightAttenuation = float4(1, 1, DynamicShadowing.x, DynamicShadowing.x);
         //LightAttenuation = saturate((LightAttenuation - TressFXShadowStrength) / (1 - TressFXShadowStrength));
         //LightAttenuation = Square(LightAttenuation);
-		float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0,0), RectTexture).xyz;
-        //float3 NewLighting = GetTressFXDynamicLighting(CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent);
+		//float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0,0), RectTexture).xyz;
+        float3 NewLighting = GetTressFXDynamicLighting(CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent, WorldPosition);
 		FLATTEN
 		if ((PackedShadowMapChannelMask >> 8) & LightingChannelMask)
 		{
@@ -855,8 +856,8 @@ void main(
     float TFXCoverage = ComputeCoverage(In.FactoryInterpolants.p0p1.xy, In.FactoryInterpolants.p0p1.zw, NDC, viewport, In.Position.z);
     half Opacity = GetMaterialOpacity(PixelMaterialInputs);
     float TFXAlpha = TFXCoverage * Opacity;
-    const float4 TFXTangent = In.FactoryInterpolants.Tangent;
-
+    const float3 TFXTangentInWorldSpace = mul(In.FactoryInterpolants.Tangent.xyz, MaterialParameters.TangentToWorld);
+    const float3 TFXTangent = In.FactoryInterpolants.Tangent.xyz;
 	BRANCH
     if (TFXAlpha < SHORTCUT_MIN_ALPHA)
     {
