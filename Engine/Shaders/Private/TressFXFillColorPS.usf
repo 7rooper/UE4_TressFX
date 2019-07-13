@@ -499,10 +499,10 @@ float3 GetTressFXDynamicLighting(
 )
 {
 	// Check lighting channels
-//#if USE_LIGHTING_CHANNELS
-//	if((GbufferData.LightingChannelMask & DeferredLightUniforms.LightingChannelMask) == 0)
-//		return 0;
-//#endif
+#if USE_LIGHTING_CHANNELS
+	if((GetPrimitiveData(PrimitiveId).LightingChannelMask & DeferredLightUniforms.LightingChannelMask) == 0)
+		return 0;
+#endif
     float DiffuseBlend = TressFXDiffuseBlend;
 	// Use 1 for diffuse blend for un-shadowed light, to darken hairs at back faces. 
     if (!LightData.ShadowedBits)
@@ -577,8 +577,8 @@ float3 GetTressFXDynamicLighting(
 
 
 	// Setup shadow
- //   LightAttenuation = saturate((LightAttenuation - TressFXShadowStrength) / (1 - TressFXShadowStrength));
-	//LightAttenuation = Square(LightAttenuation);
+    LightAttenuation = saturate((LightAttenuation - TressFXShadowAttenuation) / (1 - TressFXShadowAttenuation));
+	LightAttenuation = Square(LightAttenuation);
 
 
     FShadowTerms ShadowTerms;
@@ -589,12 +589,11 @@ float3 GetTressFXDynamicLighting(
         GetShadowTerms(GbufferData, LightData, WorldPosition, L, LightAttenuation, Dither, ShadowTerms);
 
 		// greatly reduces shadow mapping artifacts
+		// JAKE note: seems to actually cause wierd artifacts...
         //ShadowTerms.SurfaceShadow *= saturate(dot(N, L) * 6 - 0.2);
     }
 	else
 	{
-		//float4 ScreenSpaceAO = Texture2DSampleLevel(ScreenSpaceAOTexture, ScreenSpaceAOTextureSampler, InUV, 0);
-		//ScreenSpaceData.AmbientOcclusion = ScreenSpaceAO.r;
         ShadowTerms.SurfaceShadow = GbufferData.GBufferAO;
     }
 
@@ -607,7 +606,7 @@ float3 GetTressFXDynamicLighting(
 		GbufferData.WorldNormal,
 		1,
 		DiffuseBlend
-		);
+	);
 
 
 	// Add glint JAKETODO ?
@@ -659,8 +658,7 @@ float3 GetTressFXDynamicLighting(
 
 
 	// Sum lighting
-    float3 OutColor = (HairDiffuse * GbufferData.BaseColor + HairSpecular * GbufferData.Specular) * SurfaceAttenuation * LightData.Color.rgb + GlintAmbient * SurfaceAttenuation * GbufferData.BaseColor;
-    //float3 OutColor = ComputeHairLighting(TFXTangent.xyz, AbsoluteWorldPosition, ResolvedView.WorldViewOrigin, Dither, SurfaceAttenuation, GbufferData.BaseColor, LightData);
+    float3 OutColor = (HairDiffuse * GbufferData.BaseColor + HairSpecular * TressFXSpecularColor.xyz) * SurfaceAttenuation * LightData.Color.rgb + GlintAmbient * SurfaceAttenuation * GbufferData.BaseColor;
 	// IES lighting
 	if(LightData.bRadialLight)
     {
@@ -751,14 +749,6 @@ float3 GetForwardDirectLightingTressFX(
 		#else
 			float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
 		#endif
-
-        //float3 L = normalize(LightData.Direction);
-        //float3 reflection = TressFX_ComputeDiffuseSpecFactors(View.ViewForward, L, TFXTangent);
-        //float3 cReflectedLight = reflection.x * LightData.Color * GBufferData.BaseColor;
-        //cReflectedLight += reflection.y * LightData.Color * SpecularScale;
-        //cReflectedLight += reflection.z * LightData.Color * SpecularScale * GBufferData.BaseColor;
-        //cReflectedLight *= ShadowTerms.SurfaceShadow * 1; // * 0.16;
-        //float3 NewLighting = max(float3(0, 0, 0), cReflectedLight);
 
 		FLATTEN
 		if ((DirectionalLightData.DirectionalLightShadowMapChannelMask >> 8) & LightingChannelMask)

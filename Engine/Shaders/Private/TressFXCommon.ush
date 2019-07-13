@@ -47,5 +47,3 @@ cbuffer TressfxShadeParameters
 #define TressFXShadowAttenuation Settings2.w
 
 #define TressFXSpecularColor SpecularColor
-
-#define TressFXShadowStrength 0

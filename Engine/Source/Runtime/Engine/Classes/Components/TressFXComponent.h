@@ -123,7 +123,7 @@ struct FTressFXSpecularSettings {
 public:
 	/** Specular color. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Color"))
-		FLinearColor SpecularColor;
+		FLinearColor SpecularColor = FLinearColor(0.65f, 0.65f, 0.65f);
 
 	/** Primary specular scale. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Primary Scale", ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
