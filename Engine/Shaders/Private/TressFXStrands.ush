@@ -126,6 +126,7 @@ struct TressFXVertex
     float4 p0p1;
     float2 strandUV;
     float Root2Tip;// 0 to 1
+    float HairId;
 };
 
 TressFXVertex GetExpandedTressFXVert(
@@ -190,6 +191,7 @@ TressFXVertex GetExpandedTressFXVert(
     Output.p0p1 = float4(hairEdgePositions[0].xy / max(hairEdgePositions[0].w, TRESSFX_FLOAT_EPSILON), hairEdgePositions[1].xy / max(hairEdgePositions[1].w, TRESSFX_FLOAT_EPSILON));
     Output.strandUV = GetStrandUV(index);
     Output.Root2Tip = g_GuideHairVertexPositions[index].w;
+    Output.HairId = floor(Output.strandUV.x * 2048 * 2048 + 2048 * Output.strandUV.y);
     //Output.PosCheck = MatrixMult(g_mView, float4(v,1));
     return Output;
 

@@ -15,6 +15,8 @@ struct FVertexFactoryInterpolantsVSToPS
 #endif
     float4 p0p1 : TEXCOORD1;
     float2 strandUV : TEXCOORD3;
+    float Root2Tip : TEXCOORD4;
+    float HairId : TEXCOORD5;
 #if NEEDS_VELOCITY
 	// .xy is clip position, pre divide by w; .w is clip W; .z is 0 or 1 to mask out the velocity output
     float4 VelocityPrevScreenPosition : VELOCITY_PREV_POS;
@@ -84,6 +86,8 @@ FVertexFactoryInterpolantsVSToPS VertexFactoryGetInterpolantsVSToPS(FVertexFacto
     Interpolants.TangentToWorld2 = float4(Intermediates.TangentToWorld[2], Intermediates.TangentToWorldSign);
     Interpolants.p0p1 = tressfxVert.p0p1;
     Interpolants.strandUV = tressfxVert.strandUV;
+    Interpolants.Root2Tip = tressfxVert.Root2Tip;
+    Interpolants.HairId = tressfxVert.HairId;
 #if NUM_MATERIAL_TEXCOORDS
 	Interpolants.TexCoords[0] = tressfxVert.strandUV;
     #if NUM_MATERIAL_TEXCOORDS > 1

@@ -409,6 +409,41 @@ float TFXComputeHairDiffuseShading(
     return max(0, result);
 }
 
+float ComputeHairGlint(
+	float glintSize, //strength
+	float glintPower, //exponent
+	float Root2Tip,
+	float HairId
+)
+{
+
+	// seed along hair length
+    float lengthHash = glintSize * Root2Tip;
+    float lengthSeed = floor(lengthHash);
+    float lengthFrac = lengthHash - lengthSeed - 0.5f;
+	
+	// seed for neighboring sample
+    float lengthSeedNeighbor = (lengthFrac < 0) ? lengthSeed - 1.0f : lengthSeed + 1.0f;
+    lengthSeedNeighbor = max(0, lengthSeedNeighbor);
+
+	// sample 4 noise values for bilinear interpolation
+    float seedSample0 = HairId + lengthSeed;
+    float seedSample1 = HairId + lengthSeedNeighbor;
+
+    float noise0 = RandBBSfloat(seedSample0);
+    float noise1 = RandBBSfloat(seedSample1);
+
+	// interpolated noise sample
+    float noise = lerp(noise0, noise1, abs(lengthFrac));
+
+	// apply gamma like power function
+    noise = pow(noise, glintPower);
+
+	// scale noise by user param
+    return noise;
+}
+
+
 //modified from hairworks
 float3 GetTressFXDynamicLighting(
 	  float3 ScreenVector
@@ -418,6 +453,8 @@ float3 GetTressFXDynamicLighting(
 	, float4 LightAttenuation
 	, float3 TFXTangent
 	, float3 AbsoluteWorldPosition
+	, float Root2Tip
+	, float HairId
 )
 {
 	// Check lighting channels
@@ -431,6 +468,8 @@ float3 GetTressFXDynamicLighting(
     {
         DiffuseBlend = 1;
     }
+
+    float3 TFXSpecularColor = TressFXSpecularColor.xyz;
 
 	// Setup light
     float3 WorldPosition = AbsoluteWorldPosition;
@@ -472,7 +511,6 @@ float3 GetTressFXDynamicLighting(
 			{
 				// Sphere irradiance (technically just 1/d^2 but this avoids inf)
 				DistanceAttenuation = 1 / (DistanceSqr + 1);
-				NoL = saturate(dot(N, L));
 			}
 
 			// TODO optimize
@@ -481,8 +519,6 @@ float3 GetTressFXDynamicLighting(
 		else
 		{
 			DistanceAttenuation = 1;
-			NoL = saturate(dot(N, L));
-
             LightRadiusMask = RadialAttenuation(ToLight * LightData.InvRadius, LightData.FalloffExponent);
         }
 
@@ -496,7 +532,6 @@ float3 GetTressFXDynamicLighting(
     {
         return 0;
     }
-
 
 	// Setup shadow
     LightAttenuation = saturate((LightAttenuation - TressFXShadowAttenuation) / (1 - TressFXShadowAttenuation));
@@ -533,11 +568,21 @@ float3 GetTressFXDynamicLighting(
 
 	// Add glint JAKETODO ?
 	float GlintAmbient = 0;
-	//if(GbufferData.GlintStrength > 0)
-	//{
-	//	float Luminance = dot(LightData.LightColorAndFalloffExponent.rgb, float3(0.3, 0.5, 0.2));	// Copied from HairWorks viewer.
-	//	GlintAmbient = GbufferData.GlintStrength * GbufferData.Glint * Luminance;
-	//}
+    float GlintStrength = 0.5f;
+    if (GlintStrength > 0)
+    {
+		// 0 .. 1
+        float GlintSize = 256;
+
+        float GlintExponent = 2;
+        float GlintComputed = ComputeHairGlint(GlintSize, GlintExponent, Root2Tip, HairId);
+
+        //float Luma = dot(LightData.Color.rgb, float3(0.3, 0.5, 0.2)); // Copied from HairWorks viewer.
+        float Luma = Luminance(LightData.Color.rgb);
+        GlintAmbient = GlintStrength * GlintComputed * Luma;
+        
+		TFXSpecularColor *= lerp(1.0, GlintComputed, GlintStrength);
+    }
 
 	// Specular
     float3 V = -normalize(ScreenVector);
@@ -580,89 +625,15 @@ float3 GetTressFXDynamicLighting(
 
 
 	// Sum lighting
-    float3 OutColor = (HairDiffuse * GbufferData.BaseColor + HairSpecular * TressFXSpecularColor.xyz) * SurfaceAttenuation * LightData.Color.rgb + GlintAmbient * SurfaceAttenuation * GbufferData.BaseColor;
+    float3 OutColor = (HairDiffuse * GbufferData.BaseColor + HairSpecular * TFXSpecularColor) * SurfaceAttenuation * LightData.Color.rgb + GlintAmbient * SurfaceAttenuation * GbufferData.BaseColor;
 
-
-
-	//TODO optimize
-    float Area = 0;
-    float Backlit = 1;
-    const float VoL = dot(V, L);
-    const float SinThetaL = dot(N, L);
-    const float SinThetaV = dot(N, V);
-    float CosThetaD = cos(0.5 * abs(asinFast(SinThetaV) - asinFast(SinThetaL)));
-	
-    const float3 Lp = L - SinThetaL * N;
-    const float3 Vp = V - SinThetaV * N;
-    const float CosPhi = dot(Lp, Vp) * rsqrt(dot(Lp, Lp) * dot(Vp, Vp) + 1e-4);
-    const float CosHalfPhi = sqrt(saturate(0.5 + 0.5 * CosPhi));
-	float n = 1.55;
-	float n_prime = 1.19 / CosThetaD + 0.36 * CosThetaD;
-
-	float Shift = 0.035;
-	float Alpha[] =
-	{
-		-Shift * 2,
-		Shift,
-		Shift * 4,
-	};
-	float B[] =
-	{
-		Area + Pow2( ClampedRoughness ),
-		Area + Pow2( ClampedRoughness ) / 2,
-		Area + Pow2( ClampedRoughness ) * 2,
-	};
-
-	// R, JAKE note: this one seems to cause the crazyness
-	if(0)
-    {
-        const float sa = sin(Alpha[0]);
-        const float ca = cos(Alpha[0]);
-        float Shift = 2 * sa * (ca * CosHalfPhi * sqrt(1 - SinThetaV * SinThetaV) + sa * SinThetaV);
-
-        float Mp = Hair_g(B[0] * sqrt(2.0) * CosHalfPhi, SinThetaL + SinThetaV - Shift);
-        float Np = 0.25 * CosHalfPhi;
-        float Fp = Hair_F(sqrt(saturate(0.5 + 0.5 * VoL)));
-        OutColor += Mp * Np * Fp * (GbufferData.Specular * 2) * lerp(1, Backlit, saturate(-VoL));
-    }
-
-	// TT
-    if (0)
-    {
-        float Mp = Hair_g(B[1], SinThetaL + SinThetaV - Alpha[1]);
-
-        float a = 1 / n_prime;
-		//float h = CosHalfPhi * rsqrt( 1 + a*a - 2*a * sqrt( 0.5 - 0.5 * CosPhi ) );
-		//float h = CosHalfPhi * ( ( 1 - Pow2( CosHalfPhi ) ) * a + 1 );
-        float h = CosHalfPhi * (1 + a * (0.6 - 0.8 * CosPhi));
-		//float h = 0.4;
-		//float yi = asinFast(h);
-		//float yt = asinFast(h / n_prime);
-		
-        float f = Hair_F(CosThetaD * sqrt(saturate(1 - h * h)));
-        float Fp = Pow2(1 - f);
-		//float3 Tp = pow( GBuffer.BaseColor, 0.5 * ( 1 + cos(2*yt) ) / CosThetaD );
-		//float3 Tp = pow( GBuffer.BaseColor, 0.5 * cos(yt) / CosThetaD );
-        float3 Tp = pow(GbufferData.BaseColor, 0.5 * sqrt(1 - Pow2(h * a)) / CosThetaD);
-
-		//float t = asin( 1 / n_prime );
-		//float d = ( sqrt(2) - t ) / ( 1 - t );
-		//float s = -0.5 * PI * (1 - 1 / n_prime) * log( 2*d - 1 - 2 * sqrt( d * (d - 1) ) );
-		//float s = 0.35;
-		//float Np = exp( (Phi - PI) / s ) / ( s * Pow2( 1 + exp( (Phi - PI) / s ) ) );
-		//float Np = 0.71 * exp( -1.65 * Pow2(Phi - PI) );
-        float Np = exp(-3.65 * CosPhi - 3.98);
-
-        OutColor += Mp * Np * Fp * Tp * Backlit;
-    }
-
-	// Hack approximation for multiple scattering. from ue4 hair shader
+	// Hack approximation for multiple scattering. copied from ue4 hair shader
     if (1)
     {
         float3 FakeNormal = normalize(V - N * dot(V, N));
         N = FakeNormal;
         float Wrap = 1;
-        //float KajiyaDiffuse = 1 - abs(dot(N, L));
+		//float KajiyaDiffuse = 1 - abs(dot(N, L));
         float KajiyaDiffuse = HairDiffuse;
         float DiffuseScatter = (1 / PI) * lerp(NoL, KajiyaDiffuse, 0.33) * GbufferData.Metallic;
         float Luma = Luminance(GbufferData.BaseColor);
@@ -690,6 +661,8 @@ float3 GetForwardDirectLightingTressFX(
 	, float Dither
 	, float TFXAlpha
 	, float3 TFXTangent
+	, float Root2Tip
+	, float HairId
 )
 {
 
@@ -755,7 +728,7 @@ float3 GetForwardDirectLightingTressFX(
 		// Whole scene directional light shadows in x, whole scene directional light SSS shadows in y
         //f
         #if MATERIAL_SHADINGMODEL_TRESSFX
-			float3 NewLighting = GetTressFXDynamicLighting(-CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent, WorldPosition);
+			float3 NewLighting = GetTressFXDynamicLighting(-CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent, WorldPosition, Root2Tip	, HairId);
 		#else
 			float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
 		#endif
@@ -803,7 +776,7 @@ float3 GetForwardDirectLightingTressFX(
 		float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
 		float4 LightAttenuation = float4(1, 1, DynamicShadowing.x, DynamicShadowing.x);
         #if MATERIAL_SHADINGMODEL_TRESSFX
-			float3 NewLighting = GetTressFXDynamicLighting(-CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent, WorldPosition);
+			float3 NewLighting = GetTressFXDynamicLighting(-CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent, WorldPosition, Root2Tip	, HairId);
 		#else
 			float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
 		#endif
@@ -866,7 +839,6 @@ void main(
     float TFXCoverage = ComputeCoverage(In.FactoryInterpolants.p0p1.xy, In.FactoryInterpolants.p0p1.zw, NDC, viewport, In.Position.z);
     half Opacity = GetMaterialOpacity(PixelMaterialInputs);
     float TFXAlpha = TFXCoverage * Opacity;
-    const float3 TFXTangentInWorldSpace = mul(In.FactoryInterpolants.Tangent.xyz, MaterialParameters.TangentToWorld);
     const float3 TFXTangent = In.FactoryInterpolants.Tangent.xyz;
 	BRANCH
     if (TFXAlpha < SHORTCUT_MIN_ALPHA)
@@ -962,11 +934,10 @@ void main(
 	SubsurfaceIndirectLighting *= IndirectOcclusion;
 	IndirectIrradiance *= IndirectOcclusion; 
 
-
     uint GridIndex = ComputeLightGridCellIndex((uint2) (In.Position.xy - ResolvedView.ViewRectMin.xy), In.Position.w, 0);
     const float Dither = InterleavedGradientNoise(MaterialParameters.SvPosition.xy, View.StateFrameIndexMod8);
     const uint EyeIndex = 0;
-    Color += GetForwardDirectLightingTressFX(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither, TFXAlpha, TFXTangent);
+    Color += GetForwardDirectLightingTressFX(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither, TFXAlpha, TFXTangent, In.FactoryInterpolants.Root2Tip, In.FactoryInterpolants.HairId);
 	
 	OutColor = float4(Color * TFXAlpha, TFXAlpha);
 	return;
