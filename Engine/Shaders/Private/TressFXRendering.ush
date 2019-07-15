@@ -126,11 +126,11 @@ float3 TressFX_ComputeDiffuseSpecFactors(float3 vEyeDir, float3 vLightDir, float
     //float Ex1 = g_MatKValue.w;
     //float Ks2 = g_fHairKs2;
     //float Ex2 = g_fHairEx2;
-    float Kd = 0.78f; // diffuse
-    float Ks1 = 0.178f;  // specular intensity 1
-    float Ex1 = 14.8f; // specular exponent 1
-    float Ks2 = 0.728f; //specular intensity 2
-    float Ex2 = 1.8f; // specular exponent 2
+    float Kd = TFXDiffuseBlend; // diffuse
+    float Ks1 = TFXPrimarySpecScale; // specular intensity 1
+    float Ex1 = TFXPrimarySpecExp; // specular exponent 1
+    float Ks2 = TFXSecondarySpecScale; //specular intensity 2
+    float Ex2 = TFXSecondarySpecExp; // specular exponent 2
 
     // in Kajiya's model: diffuse component: sin(t, l)
     float cosTL = (dot(vTangentDir, vLightDir));

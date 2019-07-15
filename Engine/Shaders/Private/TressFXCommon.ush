@@ -30,20 +30,20 @@ cbuffer TressfxShadeParameters
     float g_FiberSpacing;
     int g_NumVerticesPerStrand;
     float g_ratio;
-    float4 Settings1;
-    float4 Settings2;
-    float4 SpecularColor;
+    float4 TressFXSettings1;
+    float4 TressFXSettings2;
+    float4 TressFXSpecularColor;
 };
 
-#define TressFXPrimarySpecScale Settings1.x
-#define TressFXPrimarySpecExp Settings1.y
-#define TressFXPrimarySpecOffset Settings1.z
+#define TFXPrimarySpecScale TressFXSettings1.x
+#define TFXPrimarySpecExp TressFXSettings1.y
+#define TFXPrimarySpecOffset TressFXSettings1.z
 
-#define TressFXSecondarySpecScale Settings1.w
-#define TressFXSecondarySpecExp Settings2.x
-#define TressFXSecondarySpecOffset Settings2.y
+#define TFXSecondarySpecScale TressFXSettings1.w
+#define TFXSecondarySpecExp TressFXSettings2.x
+#define TFXSecondarySpecOffset TressFXSettings2.y
 
-#define TressFXDiffuseBlend Settings2.z;
-#define TressFXShadowAttenuation Settings2.w
+#define TFXDiffuseBlend TressFXSettings2.z;
+#define TFXShadowAttenuation TressFXSettings2.w
 
-#define TressFXSpecularColor SpecularColor
+#define TFXSpecularColor TressFXSpecularColor

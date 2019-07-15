@@ -179,7 +179,7 @@ public:
 		float DiffuseBlend;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0", ClampMax = "1"))
-		float ShadowAttenuation;
+		float ShadowMultiplier;
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
@@ -191,8 +191,8 @@ public:
 		FiberRadius = 0.25;
 		FiberSpacing = 0.1;
 		HairThickness = 0.2f;
-		DiffuseBlend = 0.5;
-		ShadowAttenuation = 0.8;
+		DiffuseBlend = 0.25;
+		ShadowMultiplier = 0.0f;
 	}
 
 
