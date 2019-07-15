@@ -120,12 +120,6 @@ float ComputeHairShadowAttenuation(float fDepthDistanceWS)
 float3 TressFX_ComputeDiffuseSpecFactors(float3 vEyeDir, float3 vLightDir, float3 vTangentDir, float coneAngleRadians = 10 * AMD_PI / 180)
 {
 
-    // From old code.
-    //float Kd = g_MatKValue.y;
-    //float Ks1 = g_MatKValue.z;
-    //float Ex1 = g_MatKValue.w;
-    //float Ks2 = g_fHairKs2;
-    //float Ex2 = g_fHairEx2;
     float Kd = TFXDiffuseBlend; // diffuse
     float Ks1 = TFXPrimarySpecScale; // specular intensity 1
     float Ex1 = TFXPrimarySpecExp; // specular exponent 1
