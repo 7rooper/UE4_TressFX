@@ -431,7 +431,7 @@ void SSequencer::Construct(const FArguments& InArgs, TSharedRef<FSequencer> InSe
 				+ SVerticalBox::Slot()
 				.AutoHeight()
 				[
-					SNew(SCurveEditorTreeTextFilter, InSequencer->GetCurveEditor())
+					SAssignNew(CurveEditorSearchBox, SCurveEditorTreeTextFilter, InSequencer->GetCurveEditor())
 				]
 
 				+ SVerticalBox::Slot()
@@ -884,6 +884,17 @@ void SSequencer::BindCommands(TSharedRef<FUICommandList> SequencerCommandBinding
 	SequencerCommandBindings->MapAction(
 		FSequencerCommands::Get().ToggleShowStretchBox,
 		FExecuteAction::CreateLambda([this] { StretchBox->ToggleVisibility(); })
+	);
+	// Allow jumping to the Sequencer tree search if you have Sequencer focused
+	SequencerCommandBindings->MapAction(
+		FSequencerCommands::Get().QuickTreeSearch,
+		FExecuteAction::CreateLambda([this] { FSlateApplication::Get().SetKeyboardFocus(SearchBox, EFocusCause::SetDirectly); })
+	);
+
+	// And jump to the Curve Editor tree search if you have the Curve Editor focused
+	SequencerPtr.Pin()->GetCurveEditor()->GetCommands()->MapAction(
+		FSequencerCommands::Get().QuickTreeSearch,
+		FExecuteAction::CreateLambda([this] { FSlateApplication::Get().SetKeyboardFocus(CurveEditorSearchBox, EFocusCause::SetDirectly); })
 	);
 }
 

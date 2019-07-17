@@ -521,6 +521,9 @@ private:
 	/** The search box for filtering tracks. */
 	TSharedPtr<SSearchBox> SearchBox;
 
+	/** The search widget for filtering curves in the Curve Editor tree. */
+	TSharedPtr<SWidget> CurveEditorSearchBox;
+
 	/** The current playback time display.*/
 	TSharedPtr<SSpinBox<double>> PlayTimeDisplay;
 
