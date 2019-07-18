@@ -530,7 +530,8 @@ void CreateTressFXColorPassUniformBuffer(
 	const FViewInfo& View,
 	IPooledRenderTarget* ForwardScreenSpaceShadowMask,
 	TUniformBufferRef<FTressFXColorPassUniformParameters>& TFXColorPassUniformBuffer,
-	int32 NodePoolSize
+	int32 NodePoolSize,
+	const FSortedShadowMaps& SortedShadowsForShadowDepthPass
 )
 {
 	FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
@@ -538,7 +539,8 @@ void CreateTressFXColorPassUniformBuffer(
 	FTressFXColorPassUniformParameters ColorPassParams;
 	SetupSharedBasePassParameters(RHICmdList, View, SceneRenderTargets, ColorPassParams.Shared);
 	ColorPassParams.NodePoolSize = NodePoolSize;
-
+	const FSortedShadowMapAtlas& ShadowMapAtlas = SortedShadowsForShadowDepthPass.ShadowMapAtlases.Last();
+	ColorPassParams.ShadowDepthTex = ShadowMapAtlas.RenderTargets.DepthTarget->GetRenderTargetItem().ShaderResourceTexture;
 	ColorPassParams.UseForwardScreenSpaceShadowMask = 1;
 
 	if (ForwardScreenSpaceShadowMask && ForwardScreenSpaceShadowMask->GetRenderTargetItem().IsValid())
@@ -572,7 +574,7 @@ void CreateTressFXColorPassUniformBuffer(
 	ColorPassParams.EyeAdaptation = GetEyeAdaptation(View);
 
 	FScene* Scene = View.Family->Scene ? View.Family->Scene->GetRenderScene() : nullptr;
-
+	SortedShadowsForShadowDepthPass;
 	if (Scene)
 	{
 		Scene->UniformBuffers.TressFXColorPassUniformBuffer.UpdateUniformBufferImmediate(ColorPassParams);

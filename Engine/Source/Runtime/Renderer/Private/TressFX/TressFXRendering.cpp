@@ -40,6 +40,8 @@ extern float GTressFXMinAlphaForDepth;
 //  FTressFXFillColorPS - Pixel shader for Third pass of shortcut
 ////////////////////////////////////////////////////////////////////////////////
 
+#pragma optimize("",off)
+
 template<bool Dummy = true>
 class FTressFXFillColorPS : public FMeshMaterialShader
 {
@@ -96,7 +98,6 @@ public:
 		const FTressFXShaderElementData& ShaderElementData,
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
-
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
 		const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
 		const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)PrimitiveSceneProxy;
@@ -838,7 +839,8 @@ void RenderShortcutResolvePass(
 	TArray<FViewInfo>& Views, 
 	FScene* Scene, 
 	TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture,
-	const bool bUseComputeResolve
+	const bool bUseComputeResolve,
+	FSortedShadowMaps SortedShadowsForShadowDepthPass
 )
 {
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
@@ -879,7 +881,7 @@ void RenderShortcutResolvePass(
 
 			TUniformBufferRef<FTressFXColorPassUniformParameters> TFXColorPassUniformBuffer;
 
-			CreateTressFXColorPassUniformBuffer(RHICmdList, View, ScreenShadowMaskTexture, TFXColorPassUniformBuffer, 0);
+			CreateTressFXColorPassUniformBuffer(RHICmdList, View, ScreenShadowMaskTexture, TFXColorPassUniformBuffer, 0, SortedShadowsForShadowDepthPass);
 			FMeshPassProcessorRenderState DrawRenderState(View, TFXColorPassUniformBuffer);
 			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 			
@@ -1038,7 +1040,7 @@ void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdLi
 		{
 			if (ShouldRenderTressFX(ETressFXPass::FillColor_Shortcut)) 
 			{
-				RenderShortcutResolvePass(RHICmdList, Views, Scene, ScreenShadowMaskTexture, TressFXCanUseComputeResolves(FSceneRenderTargets::Get(RHICmdList)));
+				RenderShortcutResolvePass(RHICmdList, Views, Scene, ScreenShadowMaskTexture, TressFXCanUseComputeResolves(FSceneRenderTargets::Get(RHICmdList)), SortedShadowsForShadowDepthPass);
 			}
 			break;
 		}
@@ -1108,4 +1110,4 @@ void FSceneRenderer::RenderTressFXResolveVelocity(FRHICommandListImmediate& RHIC
 FRegisterPassProcessorCreateFunction RegisterTRessFXDepthsVelocityPass(&CreateTRessFXDepthsVelocityPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_DepthsVelocity, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
 FRegisterPassProcessorCreateFunction RegisterTRessFXDepthsAlphaPass(&CreateTRessFXDepthsAlphaPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_DepthsAlpha, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
 FRegisterPassProcessorCreateFunction RegisterTRessFXFillColorPass(&CreateTRessFXFillColorPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_FillColors, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
-//#pragma optimize("", on)
+#pragma optimize("", on)
