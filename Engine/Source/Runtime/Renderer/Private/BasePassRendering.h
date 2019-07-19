@@ -102,6 +102,7 @@ END_GLOBAL_SHADER_PARAMETER_STRUCT()
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, )
 	SHADER_PARAMETER_STRUCT(FSharedBasePassUniformParameters, Shared)
 	SHADER_PARAMETER(uint32, NodePoolSize)
+	SHADER_PARAMETER(FMatrix, DirectionalLightScreenToShadowMatrix)
 	// Forward shading 
 	SHADER_PARAMETER(int32, UseForwardScreenSpaceShadowMask)
 	SHADER_PARAMETER_TEXTURE(Texture2D, ForwardScreenSpaceShadowMaskTexture)
@@ -119,7 +120,8 @@ extern void CreateTressFXColorPassUniformBuffer(
 	IPooledRenderTarget* ForwardScreenSpaceShadowMask,
 	TUniformBufferRef<FTressFXColorPassUniformParameters>& TFXColorPassUniformBuffer,
 	int32 NodePoolSize,
-	const FSortedShadowMaps& SortedShadowsForShadowDepthPass
+	const FSortedShadowMaps& SortedShadowsForShadowDepthPass,
+	const TArray<FProjectedShadowInfo*>& TressFXPerObjectShadowInfos
 );
 /*  @END third party code TressFX */
 

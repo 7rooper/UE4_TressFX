@@ -840,7 +840,8 @@ void RenderShortcutResolvePass(
 	FScene* Scene, 
 	TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture,
 	const bool bUseComputeResolve,
-	FSortedShadowMaps SortedShadowsForShadowDepthPass
+	FSortedShadowMaps SortedShadowsForShadowDepthPass,
+	TArray<FVisibleLightInfo, SceneRenderingAllocator> VisibleLightInfos
 )
 {
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
@@ -867,6 +868,32 @@ void RenderShortcutResolvePass(
 				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture,
 				SceneContext.TressFXSceneDepth->GetDesc()
 				);
+		}
+
+
+		TArray<FProjectedShadowInfo*> TressFXPerObjectShadowInfos;
+		//gather shadow infos for tressfx, just using single directional light ATM for testing.
+		{
+			//for testing, just assuming a single direction light in the scene, take the first one
+			const TArray<FVisibleLightInfo> DirectionalLightShadows = VisibleLightInfos.FilterByPredicate([](FVisibleLightInfo& Info)
+			{
+				auto HasDirectional = Info.ShadowsToProject.FilterByPredicate([](FProjectedShadowInfo& ProjectedInfo) 
+				{  
+					return ProjectedInfo.bDirectionalLight;
+				});
+				return HasDirectional.Num() > 0;
+			});
+
+			if (DirectionalLightShadows.Num() > 0)
+			{
+				TressFXPerObjectShadowInfos = DirectionalLightShadows[0].ShadowsToProject.FilterByPredicate([](FProjectedShadowInfo& ShadowInfo)
+				{
+					return ShadowInfo.bIsPerObjectTressFX;
+				});
+			}
+
+			//TODO, we can get match the shadow info to the proxy with ShadowInfo.GetParentSceneInfo()->Proxy == the Tressfxproxy
+
 		}
 
 		// shortcut pass 3, fill colors
@@ -1040,7 +1067,15 @@ void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdLi
 		{
 			if (ShouldRenderTressFX(ETressFXPass::FillColor_Shortcut)) 
 			{
-				RenderShortcutResolvePass(RHICmdList, Views, Scene, ScreenShadowMaskTexture, TressFXCanUseComputeResolves(FSceneRenderTargets::Get(RHICmdList)), SortedShadowsForShadowDepthPass);
+				RenderShortcutResolvePass(
+					RHICmdList, 
+					Views, 
+					Scene, 
+					ScreenShadowMaskTexture, 
+					TressFXCanUseComputeResolves(FSceneRenderTargets::Get(RHICmdList)), 
+					SortedShadowsForShadowDepthPass,
+					VisibleLightInfos
+				);
 			}
 			break;
 		}

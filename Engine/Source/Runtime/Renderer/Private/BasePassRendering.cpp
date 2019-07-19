@@ -531,7 +531,8 @@ void CreateTressFXColorPassUniformBuffer(
 	IPooledRenderTarget* ForwardScreenSpaceShadowMask,
 	TUniformBufferRef<FTressFXColorPassUniformParameters>& TFXColorPassUniformBuffer,
 	int32 NodePoolSize,
-	const FSortedShadowMaps& SortedShadowsForShadowDepthPass
+	const FSortedShadowMaps& SortedShadowsForShadowDepthPass,
+	const TArray<FProjectedShadowInfo*>& TressFXPerObjectShadowInfos
 )
 {
 	FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
@@ -539,8 +540,27 @@ void CreateTressFXColorPassUniformBuffer(
 	FTressFXColorPassUniformParameters ColorPassParams;
 	SetupSharedBasePassParameters(RHICmdList, View, SceneRenderTargets, ColorPassParams.Shared);
 	ColorPassParams.NodePoolSize = NodePoolSize;
-	const FSortedShadowMapAtlas& ShadowMapAtlas = SortedShadowsForShadowDepthPass.ShadowMapAtlases.Last();
-	ColorPassParams.ShadowDepthTex = ShadowMapAtlas.RenderTargets.DepthTarget->GetRenderTargetItem().ShaderResourceTexture;
+
+	//first atlas is for whole scene shadows, second one holds per-object shadows
+	if (SortedShadowsForShadowDepthPass.ShadowMapAtlases.Num() > 1)
+	{
+		//TODO implement more than 1 light in the scene, need to figure out how to map the shadowproj/light to the proxy
+		const FSortedShadowMapAtlas& ShadowMapAtlas = SortedShadowsForShadowDepthPass.ShadowMapAtlases.Last();
+		ColorPassParams.ShadowDepthTex = ShadowMapAtlas.RenderTargets.DepthTarget->GetRenderTargetItem().ShaderResourceTexture;
+		if (TressFXPerObjectShadowInfos.Num() > 0)
+		{
+			ColorPassParams.DirectionalLightScreenToShadowMatrix = TressFXPerObjectShadowInfos[0]->GetScreenToShadowMatrix(View);
+		}
+		else 
+		{
+			ColorPassParams.DirectionalLightScreenToShadowMatrix = FMatrix::Identity;
+		}
+	}
+	else 
+	{
+		ColorPassParams.ShadowDepthTex = GWhiteTexture->TextureRHI;
+	}
+	
 	ColorPassParams.UseForwardScreenSpaceShadowMask = 1;
 
 	if (ForwardScreenSpaceShadowMask && ForwardScreenSpaceShadowMask->GetRenderTargetItem().IsValid())

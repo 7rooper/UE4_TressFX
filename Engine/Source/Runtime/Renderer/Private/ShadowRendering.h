@@ -320,7 +320,6 @@ public:
 	uint32 bTransmission : 1;
 
 	/*@BEGIN Third party code TressFX*/
-	//unused currently, but i will be needing it
 	uint32 bIsPerObjectTressFX : 1;
 	/*@END Third party code TressFX*/
 
