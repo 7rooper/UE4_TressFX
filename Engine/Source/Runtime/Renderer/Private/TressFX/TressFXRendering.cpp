@@ -892,8 +892,21 @@ void RenderShortcutResolvePass(
 				});
 			}
 
-			//TODO, we can get match the shadow info to the proxy with ShadowInfo.GetParentSceneInfo()->Proxy == the Tressfxproxy
+			//TODO, we can get match the shadow info to the proxy with ShadowInfo.GetParentSceneInfo()->Proxy->GetPrimitiveComponentID == the Tressfxproxy->GetPrimitiveComponentID
+			// use tfxproxy->GetPrimitiveComponentID to sort the components, and order the shadows the same way
+			// example
+			// componentIds [54, 98, 80]
+			// sort asc [54, 80, 90]
+			// so the screentoshadowmatrixes for the proxy with ID 54 will be stored at index 0, 80 will be at 1 etc
+			// fill colors shader needs to write the correct index(es) to the shader so it knows what matrices to use for each proxy being rendered
+			/*
+				const TArray<FProjectedShadowInfo*, SceneRenderingAllocator>& DirectionalLightShadowInfos = VisibleLightInfos[LightSceneInfo->Id].AllProjectedShadows;
 
+				for (int32 ShadowIndex = 0; ShadowIndex < DirectionalLightShadowInfos.Num(); ShadowIndex++)
+				{
+					const FProjectedShadowInfo* ShadowInfo = DirectionalLightShadowInfos[ShadowIndex];
+					see lightgridinjection line 474
+			*/
 		}
 
 		// shortcut pass 3, fill colors
