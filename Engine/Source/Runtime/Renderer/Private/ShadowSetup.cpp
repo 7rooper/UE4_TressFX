@@ -1998,6 +1998,12 @@ void FSceneRenderer::CreatePerObjectProjectedShadow(
 					ProjectedShadowInfo->bPerObjectOpaqueShadow = true;
 					//@BEGIN third party code TressFX
 					ProjectedShadowInfo->bIsPerObjectTressFX = bTressFXInScene && PrimitiveSceneInfo->Proxy->IsTressFX();
+					if (ProjectedShadowInfo->bIsPerObjectTressFX) 
+					{
+						FTressFXSceneProxy* TFXProxy = (FTressFXSceneProxy*)PrimitiveSceneInfo->Proxy;
+						//TODO, add shadow info here, so tressfx knows which part of the shadow map to use, per light
+						//OR try it in tressfxrendering.cpp line 1043 first..
+					}
 					//@END third party code TressFX
 					ProjectedShadowInfo->FadeAlphas = ResolutionFadeAlphas;
 					VisibleLightInfo.MemStackProjectedShadows.Add(ProjectedShadowInfo);

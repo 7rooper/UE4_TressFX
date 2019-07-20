@@ -873,25 +873,24 @@ void RenderShortcutResolvePass(
 
 		TArray<FProjectedShadowInfo*> TressFXPerObjectShadowInfos;
 		//gather shadow infos for tressfx, just using single directional light ATM for testing.
+		//for testing, just assuming a single direction light in the scene, take the first one
 		{
-			//for testing, just assuming a single direction light in the scene, take the first one
-			const TArray<FVisibleLightInfo> DirectionalLightShadows = VisibleLightInfos.FilterByPredicate([](FVisibleLightInfo& Info)
+			for(int32 VisibleLightIndex = 0; VisibleLightIndex < VisibleLightInfos.Num(); VisibleLightIndex++)
 			{
-				auto HasDirectional = Info.ShadowsToProject.FilterByPredicate([](FProjectedShadowInfo& ProjectedInfo) 
-				{  
-					return ProjectedInfo.bDirectionalLight;
-				});
-				return HasDirectional.Num() > 0;
-			});
-
-			if (DirectionalLightShadows.Num() > 0)
-			{
-				TressFXPerObjectShadowInfos = DirectionalLightShadows[0].ShadowsToProject.FilterByPredicate([](FProjectedShadowInfo& ShadowInfo)
+				for(int32 ShadowsToProjectIndex = 0; ShadowsToProjectIndex < VisibleLightInfos[VisibleLightIndex].ShadowsToProject.Num(); ShadowsToProjectIndex++)
 				{
-					return ShadowInfo.bIsPerObjectTressFX;
-				});
+					FProjectedShadowInfo* Shadow = VisibleLightInfos[VisibleLightIndex].ShadowsToProject[ShadowsToProjectIndex];
+					const bool bIsPerObjectTressFX = Shadow->bIsPerObjectTressFX;
+					const bool bIsDirectional = Shadow->bDirectionalLight;
+					if( bIsPerObjectTressFX && bIsDirectional )
+					{
+						TressFXPerObjectShadowInfos.Add(Shadow);
+					}
+				}
 			}
+			//for testing, just assuming a single direction light in the scene, take the first one
 
+			//View.TressFXMeshBatches[0].Proxy->IsTressFX(); // to get all tfx proxies.
 			//TODO, we can get match the shadow info to the proxy with ShadowInfo.GetParentSceneInfo()->Proxy->GetPrimitiveComponentID == the Tressfxproxy->GetPrimitiveComponentID
 			// use tfxproxy->GetPrimitiveComponentID to sort the components, and order the shadows the same way
 			// example
@@ -921,7 +920,7 @@ void RenderShortcutResolvePass(
 
 			TUniformBufferRef<FTressFXColorPassUniformParameters> TFXColorPassUniformBuffer;
 
-			CreateTressFXColorPassUniformBuffer(RHICmdList, View, ScreenShadowMaskTexture, TFXColorPassUniformBuffer, 0, SortedShadowsForShadowDepthPass);
+			CreateTressFXColorPassUniformBuffer(RHICmdList, View, ScreenShadowMaskTexture, TFXColorPassUniformBuffer, SortedShadowsForShadowDepthPass, TressFXPerObjectShadowInfos);
 			FMeshPassProcessorRenderState DrawRenderState(View, TFXColorPassUniformBuffer);
 			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 			

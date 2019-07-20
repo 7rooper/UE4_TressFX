@@ -530,7 +530,6 @@ void CreateTressFXColorPassUniformBuffer(
 	const FViewInfo& View,
 	IPooledRenderTarget* ForwardScreenSpaceShadowMask,
 	TUniformBufferRef<FTressFXColorPassUniformParameters>& TFXColorPassUniformBuffer,
-	int32 NodePoolSize,
 	const FSortedShadowMaps& SortedShadowsForShadowDepthPass,
 	const TArray<FProjectedShadowInfo*>& TressFXPerObjectShadowInfos
 )
@@ -539,7 +538,6 @@ void CreateTressFXColorPassUniformBuffer(
 
 	FTressFXColorPassUniformParameters ColorPassParams;
 	SetupSharedBasePassParameters(RHICmdList, View, SceneRenderTargets, ColorPassParams.Shared);
-	ColorPassParams.NodePoolSize = NodePoolSize;
 
 	//first atlas is for whole scene shadows, second one holds per-object shadows
 	if (SortedShadowsForShadowDepthPass.ShadowMapAtlases.Num() > 1)
@@ -581,14 +579,7 @@ void CreateTressFXColorPassUniformBuffer(
 
 	ColorPassParams.IndirectOcclusionTexture = IndirectOcclusion->GetRenderTargetItem().ShaderResourceTexture;
 
-	FTextureRHIParamRef ResolvedSceneDepthTextureValue = GSystemTextures.WhiteDummy->GetRenderTargetItem().ShaderResourceTexture;
-
-	if (SceneRenderTargets.GetMSAACount() > 1)
-	{
-		ResolvedSceneDepthTextureValue = SceneRenderTargets.SceneDepthZ->GetRenderTargetItem().ShaderResourceTexture;
-	}
-
-	ColorPassParams.ResolvedSceneDepthTexture = ResolvedSceneDepthTextureValue;
+	ColorPassParams.ResolvedSceneDepthTexture = SceneRenderTargets.SceneDepthZ->GetRenderTargetItem().ShaderResourceTexture;
 
 	// Misc
 	ColorPassParams.EyeAdaptation = GetEyeAdaptation(View);

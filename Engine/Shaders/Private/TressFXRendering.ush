@@ -117,7 +117,7 @@ float ComputeHairShadowAttenuation(float fDepthDistanceWS)
 //
 // The angle of the cone is the last argument, in radians.  
 // It's typically in the range of 5 to 10 degrees
-float3 TressFX_ComputeDiffuseSpecFactors(float3 vEyeDir, float3 vLightDir, float3 vTangentDir, float coneAngleRadians = 10 * AMD_PI / 180)
+float3 TressFX_ComputeDiffuseSpecFactors(float3 eyeDir, float3 lightDir, float3 tangentDir)
 {
 
     float Kd = TFXDiffuseBlend; // diffuse
@@ -126,27 +126,32 @@ float3 TressFX_ComputeDiffuseSpecFactors(float3 vEyeDir, float3 vLightDir, float
     float Ks2 = TFXSecondarySpecScale; //specular intensity 2
     float Ex2 = TFXSecondarySpecExp; // specular exponent 2
 
-    // in Kajiya's model: diffuse component: sin(t, l)
-    float cosTL = (dot(vTangentDir, vLightDir));
-    float sinTL = sqrt(1 - cosTL * cosTL);
-    float diffuse = sinTL; // here sinTL is apparently larger than 0
+    float coneAngleRadians = 10.0f * PI / 180.0f;
+
+	// Kajiya's model
+    float cosTL = dot(tangentDir, lightDir);
+    float sinTL = sqrt(1.0f - cosTL * cosTL);
+    float diffuse = sinTL;
 
     float cosTRL = -cosTL;
     float sinTRL = sinTL;
-    float cosTE = (dot(vTangentDir, vEyeDir));
-    float sinTE = sqrt(1 - cosTE * cosTE);
+    float cosTE = dot(tangentDir, eyeDir);
+    float sinTE = sqrt(1.0f - cosTE * cosTE);
 
-    // primary highlight: reflected direction shift towards root (2 * coneAngleRadians)
-    float cosTRL_root = cosTRL * cos(2 * coneAngleRadians) - sinTRL * sin(2 * coneAngleRadians);
-    float sinTRL_root = sqrt(1 - cosTRL_root * cosTRL_root);
-    float specular_root = max(0, cosTRL_root * cosTE + sinTRL_root * sinTE);
+	// Primary highlight
+    float primaryCosTRL = cosTRL * cos(2.0f * coneAngleRadians) - sinTRL * sin(2.0f * coneAngleRadians);
+    float primarySinTRL = sqrt(1.0f - primaryCosTRL * primaryCosTRL);
+    float primarySpecular = max(0.0f, primaryCosTRL * cosTE + primarySinTRL * sinTE);
 
-    // secondary highlight: reflected direction shifted toward tip (3*coneAngleRadians)
-    float cosTRL_tip = cosTRL * cos(-3 * coneAngleRadians) - sinTRL * sin(-3 * coneAngleRadians);
-    float sinTRL_tip = sqrt(1 - cosTRL_tip * cosTRL_tip);
-    float specular_tip = max(0, cosTRL_tip * cosTE + sinTRL_tip * sinTE);
+	// Secundary highlight
+    float secundaryCosTRL = cosTRL * cos(-3.0f * coneAngleRadians) - sinTRL * sin(-3.0f * coneAngleRadians);
+    float secundarySinTRL = sqrt(1.0f - secundaryCosTRL * secundaryCosTRL);
+    float secundarySpecular = max(0.0f, secundaryCosTRL * cosTE + secundarySinTRL * sinTE);
 
-    return float3(Kd * diffuse, Ks1 * pow(specular_root, Ex1), Ks2 * pow(specular_tip, Ex2));
+
+    float3 diffuseSpecular = float3(Kd * diffuse, Ks1 * pow(primarySpecular, Ex1), Ks2 * pow(secundarySpecular, Ex2));
+ //   diffuseSpecular *= 0.07f; // Reduce light intensity to account for extremely bright lights used in PBR
+    return diffuseSpecular;
 }
 
 #ifndef MODULATE_COVERAGE_BY_DEPTH
