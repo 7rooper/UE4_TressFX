@@ -178,6 +178,7 @@ FVertexFactoryIntermediates GetVertexFactoryIntermediates(FVertexFactoryInput In
     Intermediates.TangentToLocal = CalcTangentToLocal(Intermediates.tfxVer.Tangent.xyz, Intermediates.tfxVer.TangentZ, TangentSign);
     Intermediates.TangentToWorld = CalcTangentToWorld(Intermediates, Intermediates.TangentToLocal);
     Intermediates.TangentToWorldSign = TangentSign * Primitive.InvNonUniformScaleAndDeterminantSign.w;
+    //Intermediates.tfxVer.Tangent = mul(Intermediates.tfxVer.Tangent, Primitive.LocalToWorld);
 
     return Intermediates;
 }
