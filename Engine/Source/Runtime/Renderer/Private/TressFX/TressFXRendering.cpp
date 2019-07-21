@@ -623,7 +623,7 @@ bool FSceneRenderer::GetAnyViewHasTressFX()
 
 bool FSceneRenderer::ShouldRenderTressFX(int32 TressFXPass)
 {
-	if (TressFXPass < 0 || TressFXPass > ETressFXPass::Max)
+	if (TressFXPass < 0 || TressFXPass > ETressFXPass::Max || !GetAnyViewHasTressFX())
 	{
 		return false;
 	}
