@@ -117,10 +117,9 @@ float ComputeHairShadowAttenuation(float fDepthDistanceWS)
 //
 // The angle of the cone is the last argument, in radians.  
 // It's typically in the range of 5 to 10 degrees
-float3 TressFX_ComputeDiffuseSpecFactors(float3 eyeDir, float3 lightDir, float3 tangentDir)
+float3 TressFX_ComputeDiffuseSpecFactors(float3 eyeDir, float3 lightDir, float3 tangentDir, float Kd)
 {
 
-    float Kd = TFXDiffuseBlend; // diffuse
     float Ks1 = TFXPrimarySpecScale; // specular intensity 1
     float Ex1 = TFXPrimarySpecExp; // specular exponent 1
     float Ks2 = TFXSecondarySpecScale; //specular intensity 2
