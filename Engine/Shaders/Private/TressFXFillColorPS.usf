@@ -444,10 +444,23 @@ float ComputeHairGlint(
     return noise;
 }
 
-float GetWSDepth_D3D(float depthNDC, float fNear, float fFar)
+static const int samples = 5;
+
+float4 dirBlur(float2 _2dDirection, float2 UV)
 {
-    return fNear * fFar / (fFar - depthNDC * (fFar - fNear));
+    float4 acc = 0;
+    
+    const float delta = 2.0 / (float)samples;
+    
+    for(float i = -1.0; i <= 1.0; i += delta)
+    {
+        acc += OpaqueBasePass.ForwardScreenSpaceShadowMaskTexture.Load(int3(UV - float2(_2dDirection.x * i, _2dDirection.y * i), 0)).rgba;
+    }   
+    
+    return float4(delta * acc);
+    
 }
+
 
 float3 ComputeShadowUV(float3 WorldPosition, uint CascadeIndex)
 {
@@ -485,52 +498,7 @@ float3 ComputeDepthBasedAttenuation(
     Settings.ProjectionDepthBiasParameters = 0;
     float shadowMapDepth = ManualPCF(shadowPos.xy, Settings);
     float shadowRange = max(0.0f, abs((1 - SceneDepth) - shadowMapDepth));
-
     return ComputeHairShadowAttenuation(shadowRange, g_FiberSpacing ,g_FiberRadius, .1f);
-    //const int kernelSize = 5;
-    //const float size = 2.4f;
-    //const float sigma = (kernelSize / 2.0f) / size;
-    //const float hairAlpha = 0.99998f;
-	//[unroll]
- //   for (int x = (1 - kernelSize) / 2; x <= kernelSize / 2; ++x)
- //   {
-	//	[unroll]
- //       for (int y = (1 - kernelSize) / 2; y <= kernelSize / 2; ++y)
- //       {
- //           float exp = 1.0f - (x * x + y * y) / (2.0f * sigma * sigma);
- //           float weight = 1.0f / (2.0f * PI * sigma * sigma) * pow(e, exp);
-
- //           //float shadowMapDepth = DirectionalLightShadowMaps[light.shadowMap].SampleLevel(PointSampler, shadowPos.xy, 0, int2(x, y)).r;
- //           //float shadowMapDepth = Texture2DSampleLevel(TressFXColorFillPass.ShadowDepthTex, ForwardLightData.ShadowmapSampler, shadowPos.xy, int2(x, y)).r;
- //           FPCFSamplerSettings Settings;
-		
- //           Settings.ShadowDepthTexture = TressFXColorFillPass.ShadowDepthTex;
- //           Settings.ShadowDepthTextureSampler = ForwardLightData.ShadowmapSampler;
- //           Settings.ShadowBufferSize = float4(2048, 2048, .00049, .00049); //ShadowBufferSize;
- //           Settings.TransitionScale = 60.f; //SoftTransitionScale.z;
- //           Settings.SceneDepth = LightSpacePixelDepthForOpaque;
- //           Settings.bSubsurface = false;
- //           Settings.bTreatMaxDepthUnshadowed = false;
- //           Settings.DensityMulConstant = 0;
- //           Settings.ProjectionDepthBiasParameters = 0;
- //           float shadowMapDepth = ManualPCF(shadowPos.xy, Settings);
-	//		//float shadowMapDepth = TressFXColorFillPass.ShadowDepthTex.SampleLevel(ForwardLightData.ShadowmapSampler, shadowPos.xy, int2(x, y)).r;
- //           //float shadowRange = max(0.0f, light.shadowRange * (shadowZ - shadowMapDepth));
- //           //float shadowRange = max(0.0f, 6 * (shadowPos.z - shadowMapDepth));
- //           float shadowRange = max(0.0f, 6 * ((1 - SceneDepth) - shadowMapDepth));
- //           float numFibers = shadowRange / (g_FiberSpacing * g_FiberRadius );
-
-	//		[flatten]
- //           if (shadowRange > EPSILON)
- //               numFibers += 1;
-
- //           shadowFactor += pow(hairAlpha, numFibers) * weight;
- //           totalWeight += weight;
- //       }
- //   }
-
- //   shadowFactor /= totalWeight;	
- //   return saturate(shadowFactor);
 }
 
 
@@ -548,6 +516,7 @@ float3 GetTressFXDynamicLighting(
 	, float FragmentDepth
 	, float4 ScreenPosition
 	, bool bDirectionalLight
+	, float2 ScreenUV
 )
 {
 	// Check lighting channels
@@ -626,19 +595,30 @@ float3 GetTressFXDynamicLighting(
     }
 
 	// Setup shadow
+    //LightAttenuation = dirBlur(LightData.Direction.xy, ScreenUV );
     LightAttenuation = saturate((LightAttenuation - TFXShadowAttenuation) / (1 - TFXShadowAttenuation));
-    //LightAttenuation.xyzw = (LightAttenuation.x + LightAttenuation.y + LightAttenuation.z + LightAttenuation.w) / 4;
     LightAttenuation = Square(LightAttenuation);
     FShadowTerms ShadowTerms;
     ShadowTerms.SurfaceShadow = 1;
 
 	if(LightData.ShadowedBits)
-	{
-        GetShadowTerms(GbufferData, LightData, WorldPosition, L, LightAttenuation, Dither, ShadowTerms);
+    {
+        
+		#if 0		
+			ShadowTerms.SurfaceShadow = LightAttenuation[0];
+			float Count = LightAttenuation[0] < .9f ? 1.0f : 0;
+			for (int i = 1; i < 4; i++)
+			{
+				ShadowTerms.SurfaceShadow += LightAttenuation[i];
+				Count += LightAttenuation[i] < .9f ? 1.0f : 0;
+			}
+			ShadowTerms.SurfaceShadow = ShadowTerms.SurfaceShadow / max(1.f, Count);
+		#else
+				GetShadowTerms(GbufferData, LightData, WorldPosition, L, LightAttenuation, Dither, ShadowTerms);
+		#endif
 
 		// greatly reduces shadow mapping artifacts
-		// JAKE note: seems to actually cause wierd artifacts...
-        //ShadowTerms.SurfaceShadow *= saturate(dot(N, L) * 6 - 0.2);
+        ShadowTerms.SurfaceShadow *= saturate(dot(N, L) * 6 - 0.2);
     }
 	else
 	{
@@ -667,14 +647,14 @@ float3 GetTressFXDynamicLighting(
 	//	// Sum lighting, hairworks version
  //       OutColor = (HairWorksDiffuse * GbufferData.BaseColor + HairWorksSpecular * SpecularColor) * SurfaceAttenuation * LightData.Color.rgb 
 	//		+ 
-	//	GlintAmbient * SurfaceAttenuation * GbufferData.BaseColor;
+	//	GlintAmbient * Shadow * GbufferData.BaseColor;
  //   }
 
 
-    float3 reflection = TressFX_ComputeDiffuseSpecFactors(V, LightData.Direction, TFXTangent, DiffuseBlend);
-    float3 reflectedLight = reflection.x * LightData.Color * GbufferData.BaseColor; // diffuse
-    reflectedLight += reflection.y * LightData.Color; // 1st specular highlight
-    reflectedLight += reflection.z * LightData.Color; // 2nd specular highlight
+    float3 SpecDiffuse = TressFX_ComputeDiffuseSpecFactors(V, LightData.Direction, TFXTangent, DiffuseBlend);
+    float3 reflectedLight = SpecDiffuse.x * LightData.Color * GbufferData.BaseColor; // diffuse
+    reflectedLight += SpecDiffuse.y * LightData.Color; // 1st specular highlight
+    reflectedLight += SpecDiffuse.z * LightData.Color; // 2nd specular highlight
     float DepthBasedAttenuation = 1.0f;
     if (bDirectionalLight)
     {
@@ -682,18 +662,18 @@ float3 GetTressFXDynamicLighting(
     }
     float AttenuationAndFalloff = (DistanceAttenuation * LightRadiusMask * SpotFalloff);
     float SurfaceAttenuation = ShadowTerms.SurfaceShadow;
-    float Shadow = AttenuationAndFalloff * DepthBasedAttenuation; //* SurfaceAttenuation;
+    float Shadow = AttenuationAndFalloff * DepthBasedAttenuation * SurfaceAttenuation;
     OutColor += reflectedLight * Shadow;
-	// Hack approximation for multiple scattering. copied from ue4 hair shader
+	// Hack approximation for multiple scattering. copied and slightly modified from ue4 hair shader
     if (1)
     {
         float3 FakeNormal = normalize(V - N * dot(V, N));
         N = FakeNormal;
         float Wrap = 1;
-        float KajiyaDiffuse = reflection.x; //1 - abs(dot(N, L));
+        float KajiyaDiffuse = SpecDiffuse.x;
         float DiffuseScatter = (1 / PI) * lerp(NoL, KajiyaDiffuse, 0.33) * GbufferData.Metallic;
         float Luma = Luminance(GbufferData.BaseColor);
-        float3 ScatterTint = pow((GbufferData.BaseColor) / Luma, 1 - Shadow);
+        float3 ScatterTint = pow((GbufferData.BaseColor) / Luma, 1 - AttenuationAndFalloff /* Shadow */ );
         OutColor += sqrt(GbufferData.BaseColor) * DiffuseScatter * ScatterTint;
     }
 
@@ -786,7 +766,7 @@ float3 GetForwardDirectLightingTressFX(
 		// Whole scene directional light shadows in x, whole scene directional light SSS shadows in y
         //f
         #if MATERIAL_SHADINGMODEL_TRESSFX
-			float3 NewLighting = GetTressFXDynamicLighting(-CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent, WorldPosition, Root2Tip	, HairId, FragmentDepth, ScreenPosition, true);
+			float3 NewLighting = GetTressFXDynamicLighting(-CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent, WorldPosition, Root2Tip	, HairId, FragmentDepth, ScreenPosition, true, ScreenUV);
 		#else
 			float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
 		#endif
@@ -834,7 +814,7 @@ float3 GetForwardDirectLightingTressFX(
 		float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
 		float4 LightAttenuation = float4(1, 1, DynamicShadowing.x, DynamicShadowing.x);
         #if MATERIAL_SHADINGMODEL_TRESSFX
-			float3 NewLighting = GetTressFXDynamicLighting(-CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent, WorldPosition, Root2Tip	, HairId, FragmentDepth, ScreenPosition, false);
+			float3 NewLighting = GetTressFXDynamicLighting(-CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent, WorldPosition, Root2Tip	, HairId, FragmentDepth, ScreenPosition, false, ScreenUV);
 		#else
 			float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
 		#endif
