@@ -37,13 +37,11 @@ cbuffer TressfxShadeParameters
 
 #define TFXPrimarySpecScale TressFXSettings1.x
 #define TFXPrimarySpecExp TressFXSettings1.y
-#define TFXPrimarySpecOffset TressFXSettings1.z
 
-#define TFXSecondarySpecScale TressFXSettings1.w
-#define TFXSecondarySpecExp TressFXSettings2.x
-#define TFXSecondarySpecOffset TressFXSettings2.y
+#define TFXSecondarySpecScale TressFXSettings1.z
+#define TFXSecondarySpecExp TressFXSettings1.w
 
-#define TFXDiffuseBlend TressFXSettings2.z;
-#define TFXShadowAttenuation TressFXSettings2.w
+#define TFXDiffuseBlend TressFXSettings2.x;
+#define TFXShadowAttenuation TressFXSettings2.y
 
 #define TFXSpecularColor TressFXSpecularColor

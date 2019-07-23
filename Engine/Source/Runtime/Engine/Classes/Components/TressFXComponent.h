@@ -127,25 +127,20 @@ public:
 
 	/** Primary specular scale. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Primary Scale", ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
-		float SpecularPrimaryScale = 0.1;
+		float SpecularPrimaryScale = 0.3f;
 
 	/** Primary specular power exponent. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Primary Exponent", ClampMin = "1.0", ClampMax = "1000.0", UIMin = "1.0", UIMax = "1000.0"))
-		float SpecularPrimaryExponent = 100;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Primary Offset", ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
-		float SpecularPrimaryOffset = 0;
+		float SpecularPrimaryExponent = 30.f;
 
 	/** Secondary specular scale. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Secondary Scale", ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
-		float SpecularSecondaryScale = 0.05;
+		float SpecularSecondaryScale = 0.25;
 
 	/** Secondary specular power exponent. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Secondary Exponent", ClampMin = "1.0", ClampMax = "1000.0", UIMin = "1.0", UIMax = "1000.0"))
 		float SpecularSecondaryExponent = 20.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Secondary Offset", ClampMin = "-1.0", ClampMax = "1.0", UIMin = "-1.0", UIMax = "1.0"))
-		float SpecularSecondaryOffset = 0.1f;
 
 
 	FTressFXSpecularSettings()
@@ -188,10 +183,10 @@ public:
 	FTressFXShadeSettings()
 	{
 		//sensible defaults
-		FiberRadius = 0.25;
+		FiberRadius = 0.1f;
 		FiberSpacing = 0.1;
-		HairThickness = 0.2f;
-		DiffuseBlend = 0.25;
+		HairThickness = 0.1f;
+		DiffuseBlend = 0.70f;
 		ShadowMultiplier = 0.0f;
 	}
 
