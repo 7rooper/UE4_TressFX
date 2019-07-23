@@ -655,11 +655,13 @@ float3 GetTressFXDynamicLighting(
     float3 reflectedLight = SpecDiffuse.x * LightData.Color * GbufferData.BaseColor; // diffuse
     reflectedLight += SpecDiffuse.y * LightData.Color; // 1st specular highlight
     reflectedLight += SpecDiffuse.z * LightData.Color; // 2nd specular highlight
-    float DepthBasedAttenuation = 1.0f;
+    
+	float DepthBasedAttenuation = 1.0f;
     if (bDirectionalLight)
     {
         DepthBasedAttenuation = ComputeDepthBasedAttenuation(FragmentDepth, ScreenPosition);
     }
+
     float AttenuationAndFalloff = (DistanceAttenuation * LightRadiusMask * SpotFalloff);
     float SurfaceAttenuation = saturate(ShadowTerms.SurfaceShadow);
     float Shadow = AttenuationAndFalloff * DepthBasedAttenuation * SurfaceAttenuation;
@@ -877,7 +879,7 @@ void main(
     float TFXCoverage = ComputeCoverage(In.FactoryInterpolants.p0p1.xy, In.FactoryInterpolants.p0p1.zw, NDC, viewport, In.Position.z);
     half Opacity = GetMaterialOpacity(PixelMaterialInputs);
     float TFXAlpha = TFXCoverage * Opacity;
-    const float3 TFXTangent = In.FactoryInterpolants.Tangent.xyz;
+    float3 TFXTangent = In.FactoryInterpolants.Tangent.xyz;
 	BRANCH
     if (TFXAlpha < SHORTCUT_MIN_ALPHA)
     {

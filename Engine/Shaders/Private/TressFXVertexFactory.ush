@@ -153,6 +153,16 @@ half3x3 CalcTangentToWorld(FVertexFactoryIntermediates Intermediates, half3x3 Ta
     return mul(TangentToLocal, LocalToWorld);
 }
 
+half3x3 GetLocalToWorld()
+{
+    half3x3 LocalToWorld = Primitive.LocalToWorld;
+    half3 InvScale = Primitive.InvNonUniformScaleAndDeterminantSign.xyz;
+    LocalToWorld[0] *= InvScale.x;
+    LocalToWorld[1] *= InvScale.y;
+    LocalToWorld[2] *= InvScale.z;
+    return LocalToWorld;
+}
+
 
 FVertexFactoryIntermediates GetVertexFactoryIntermediates(FVertexFactoryInput Input)
 {
@@ -178,7 +188,7 @@ FVertexFactoryIntermediates GetVertexFactoryIntermediates(FVertexFactoryInput In
     Intermediates.TangentToLocal = CalcTangentToLocal(Intermediates.tfxVer.Tangent.xyz, Intermediates.tfxVer.TangentZ, TangentSign);
     Intermediates.TangentToWorld = CalcTangentToWorld(Intermediates, Intermediates.TangentToLocal);
     Intermediates.TangentToWorldSign = TangentSign * Primitive.InvNonUniformScaleAndDeterminantSign.w;
-    //Intermediates.tfxVer.Tangent = mul(Intermediates.tfxVer.Tangent, Primitive.LocalToWorld);
+    Intermediates.tfxVer.Tangent.xyz = mul(Intermediates.tfxVer.Tangent.xyz, GetLocalToWorld());
 
     return Intermediates;
 }

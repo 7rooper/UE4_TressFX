@@ -149,7 +149,7 @@ float3 TressFX_ComputeDiffuseSpecFactors(float3 eyeDir, float3 lightDir, float3 
 
 
     float3 diffuseSpecular = float3(Kd * diffuse, Ks1 * pow(primarySpecular, Ex1), Ks2 * pow(secundarySpecular, Ex2));
-    diffuseSpecular *= 0.07f; // Reduce light intensity to account for extremely bright lights used in PBR
+    diffuseSpecular *= 0.20f; // Reduce light intensity to account for extremely bright lights used in PBR
     return diffuseSpecular;
 }
 
