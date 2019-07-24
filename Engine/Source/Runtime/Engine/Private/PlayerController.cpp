@@ -4843,7 +4843,6 @@ void APlayerController::DestroySpectatorPawn()
 			SetViewTarget(this);
 		}
 
-		GetSpectatorPawn()->UnPossessed();
 		GetWorld()->DestroyActor(GetSpectatorPawn());
 		SetSpectatorPawn(NULL);
 	}
