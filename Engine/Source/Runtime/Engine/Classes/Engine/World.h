@@ -3610,6 +3610,7 @@ public:
 	// Global Callback after actors have been initialized (on any world)
 	static UWorld::FOnWorldInitializedActors OnWorldInitializedActors;
 
+	static FWorldEvent OnWorldBeginTearDown;
 private:
 	FWorldDelegates() {}
 };
