@@ -186,7 +186,7 @@ public:
 		FiberRadius = 0.1f;
 		FiberSpacing = 0.1;
 		HairThickness = 0.1f;
-		DiffuseBlend = 0.70f;
+		DiffuseBlend = 0.40f;
 		ShadowMultiplier = 0.0f;
 	}
 

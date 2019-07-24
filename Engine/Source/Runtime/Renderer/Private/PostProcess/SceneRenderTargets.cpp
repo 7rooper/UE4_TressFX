@@ -1402,7 +1402,7 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 						TexCreate_None, 
 						TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false));
 				Desc.bIsArray = true;
-				Desc.ArraySize = 3;
+				Desc.ArraySize = 4;
 				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXFragmentDepthsTexture, TEXT("TressFX_FragmentDepthsTexture"));
 			}
 

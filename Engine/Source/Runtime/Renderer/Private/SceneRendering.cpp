@@ -368,7 +368,7 @@ FAutoConsoleVariableRef CVarTressFXUseComputeResolves(
 	ECVF_RenderThreadSafe
 );
 
-float GTressFXMinAlphaForDepth = 0.5f;
+float GTressFXMinAlphaForDepth = 0.95f;
 FAutoConsoleVariableRef CVarTressFXMinAlphaForSceneDepth(
 	TEXT("tfx.MinAlphaForSceneDepth"),
 	GTressFXMinAlphaForDepth,

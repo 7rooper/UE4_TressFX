@@ -675,7 +675,7 @@ float3 GetTressFXDynamicLighting(
         float KajiyaDiffuse = SpecDiffuse.x;
         float DiffuseScatter = (1 / PI) * lerp(NoL, KajiyaDiffuse, 0.33) * GbufferData.Metallic;
         float Luma = Luminance(GbufferData.BaseColor);
-        float3 ScatterTint = pow((GbufferData.BaseColor) / Luma, 1 - AttenuationAndFalloff /* Shadow */ );
+        float3 ScatterTint = pow((GbufferData.BaseColor) / Luma, 1 -  Shadow  );
         OutColor += sqrt(GbufferData.BaseColor) * DiffuseScatter * ScatterTint;
     }
 

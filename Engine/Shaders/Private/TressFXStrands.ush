@@ -151,13 +151,14 @@ TressFXVertex GetExpandedTressFXVert(
 
     // Get hair strand thickness, g_ratio is in CB
     float ratio = (g_bThinTip > 0) ? g_ratio : 1.0;
+    //ratio = g_HairThicknessCoeffs[index];
     // Calculate right and projected right vectors
     float3 right = normalize(cross(t, Safe_normalize(v - eye)));
     float2 proj_right = normalize(MatrixMult(viewProj, float4(right, 0)).xy);
 
 	//JAKETODO
     // WTF does this even do?
-    float expandPixels = (g_bExpandPixels < 0) ? 0.0 : 0.71;
+    float expandPixels = 0.71f;
     // Calculate the negative and positive offset screenspace positions
     float4 hairEdgePositions[2]; // 0 is negative, 1 is positive
     hairEdgePositions[0] = float4(v + 1.0 * right * ratio * g_FiberRadius, 1.0);

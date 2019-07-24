@@ -104,7 +104,10 @@ void main(
     int2 vScreenAddress = int2(position.xy);
 
     uint uDepth = asuint(position.z);
-    uint uDepth0Prev, uDepth1Prev;
+    uint PrevClosest;
+    InterlockedMax(RWFragmentDepthsTexture[uint3(vScreenAddress, 3)], uDepth, PrevClosest);
+    
+	uint uDepth0Prev, uDepth1Prev;
 
 	// Min of depth 0 and input depth
 	// Original value is uDepth0Prev
