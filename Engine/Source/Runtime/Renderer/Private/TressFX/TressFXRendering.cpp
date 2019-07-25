@@ -782,14 +782,62 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 
 		
 		// shortcut pass 1, accumulate alpha, depths, and optionally velocity if the material wants it (true by default)
+		// also captures AVSM hair shadow geometry
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, DepthsAlpha);
 
+
+			//clear all uavs
 			static const uint32 ShortcutClearValue[4] = { SHORTCUT_INITIAL_DEPTH ,SHORTCUT_INITIAL_DEPTH,SHORTCUT_INITIAL_DEPTH,SHORTCUT_INITIAL_DEPTH };
 			ClearUAV(RHICmdList, SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem(), ShortcutClearValue);
+
+			//avsm address tex
+			static const uint32 AddressUAVClearValues[4] = { 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL };
+			ClearUAV(RHICmdList, SceneContext.mListTexFirstSegmentNodeOffset->GetRenderTargetItem(), AddressUAVClearValues);
+
+
+			static const float EMPTY_NODE = 65504.0f; // max half prec
+			//need custom pass for clearing the structured buff TODO, use below code
+			// note that mEmptyNode == EMPTY_NODE
+			//void AVSMClearStructuredBuf_PS(FullScreenTriangleVSOut Input)
+			//{
+			//	// Compute linearized address of this pixel
+			//	uint2 screenAddress = uint2(Input.positionViewport.xy);
+			//	uint address = screenAddress.y * (uint)(mShadowMapSize)+screenAddress.x;
+
+			//	// Initialize AVSM data (clear)
+			//	gAVSMStructBufUAV[address] = AVSMGetEmptyNode();
+			//}
+//			AVSMData AVSMGetEmptyNode()
+			//{
+			//    AVSMData empty;
+			//    
+			//    empty.depth[0] = float4(mEmptyNode, mEmptyNode, mEmptyNode, mEmptyNode);
+			//    empty.trans[0] = float4(1, 1, 1, 1);    
+			//#if AVSM_RT_COUNT > 1    
+			//    empty.depth[1] = float4(mEmptyNode, mEmptyNode, mEmptyNode, mEmptyNode);
+			//    empty.trans[1] = float4(1, 1, 1, 1);    
+			//#endif
+			//#if AVSM_RT_COUNT > 2    
+			//    empty.depth[2] = float4(mEmptyNode, mEmptyNode, mEmptyNode, mEmptyNode);
+			//    empty.trans[2] = float4(1, 1, 1, 1);    
+			//#endif
+			//#if AVSM_RT_COUNT > 3    
+			//    empty.depth[3] = float4(mEmptyNode, mEmptyNode, mEmptyNode, mEmptyNode);
+			//    empty.trans[3] = float4(1, 1, 1, 1);    
+			//#endif
+			//    
+			//    return empty;
+			//}   
+
+			FUnorderedAccessViewRHIParamRef UAVs[] = { 
+				SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().UAV,
+				SceneContext.mListTexFirstSegmentNodeOffset->GetRenderTargetItem().UAV,
+				SceneContext.mAVSMStructBuf.UAV
+			};
+
+
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
-			
-			FUnorderedAccessViewRHIParamRef UAVs[] = { SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().UAV};
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EWritable, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
 			
 			FRHITexture* ColorTargets[] = {
@@ -800,6 +848,8 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			FRHIRenderPassInfo RPInfo(ARRAY_COUNT(ColorTargets), ColorTargets, ERenderTargetActions::Load_Store);
 			RPInfo.UAVIndex = 0;
 			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().UAV;			
+			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.mListTexFirstSegmentNodeOffset->GetRenderTargetItem().UAV;
+			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.mAVSMStructBuf.UAV;
 			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_Store, ERenderTargetActions::Load_Store);
 			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture;
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;

@@ -48,11 +48,13 @@ struct PS_INPUT_HAIR_AA
 #endif
 
 
-void ShadowHairModel(in float4 SVPos,
-					 in float HairOpacity,
-                     out float3 entry,
-                     out float3 exit,
-                     out float segmentTransmittance)
+void ShadowHairModel(
+	in float4 SVPos,
+	in float HairOpacity,
+    out float3 entry,
+    out float3 exit,
+    out float segmentTransmittance
+)
 {
     // Need to make this be a parameter of each hair strand
 	//JAKETODO maybe use g_HairThicknessCoeffs?
@@ -65,7 +67,7 @@ void ShadowHairModel(in float4 SVPos,
     // entry/exit points
     entry = SVPos; //input.position;
     exit = entry + float3(0, 0, hairThickness);
-    segmentTransmittance = 1 - hairOpacity;
+    segmentTransmittance = 1 - HairOpacity;
 }
 
 // First pass of ShortCut.
