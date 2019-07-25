@@ -593,6 +593,15 @@ public:
 	TRefCountPtr<IPooledRenderTarget> TressFXFragmentDepthsTexture;
 	TRefCountPtr<IPooledRenderTarget> TressFXFragmentColorsTexture;
 
+	// AVSM
+	TRefCountPtr<IPooledRenderTarget> TressFXAVSMShadowTextureArray; // see BeginRenderingCustomDepth for how to create RTVS on this
+	TRefCountPtr<IPooledRenderTarget> mListTexFirstSegmentNodeOffset; // gListTexFirstSegmentNodeAddressUAV, and gListTexFirstSegmentNodeAddressSRV
+	TRefCountPtr<IPooledRenderTarget> mAVSMGenCtrlSurface; //NONCPUT_gAVSMGenClearMaskSRV
+	int32 AVSMTextureSize = 512; //TODO, cvar
+	static const int32 AVSMNodeCount = 8; //TOOD, cvar
+	static const int32 AvsmRTCount = AVSMNodeCount / 2; //todo
+	FRWBufferStructured mAVSMStructBuf;
+
 	/*@END Third party code TressFX*/
 
 private:

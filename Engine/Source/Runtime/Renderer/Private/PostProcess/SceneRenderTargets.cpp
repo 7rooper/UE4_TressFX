@@ -1327,6 +1327,10 @@ void FSceneRenderTargets::ReleaseTressFXResources(int32 TypeToRelease)
 		TressFXAccumInvAlpha.SafeRelease();
 		TressFXFragmentDepthsTexture.SafeRelease();
 		TressFXFragmentColorsTexture.SafeRelease();
+		TressFXAVSMShadowTextureArray.SafeRelease();
+		mListTexFirstSegmentNodeOffset.SafeRelease();
+		mAVSMGenCtrlSurface.SafeRelease();
+		mAVSMStructBuf.Release();
 	}
 	if (bReleaseAll || TypeToRelease == ETressFXRenderType::Opaque)
 	{
@@ -1417,6 +1421,57 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 				Desc.NumSamples = SampleCount;
 				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXFragmentColorsTexture, TEXT("TressFX_FragmentColorsTexture"), false);
 			}
+
+
+			//AVSM
+
+			// Create AVSM main texture arra
+			{
+				FPooledRenderTargetDesc Desc(
+					FPooledRenderTargetDesc::Create2DDesc(
+						FIntPoint(AVSMTextureSize, AVSMTextureSize),
+						EPixelFormat::PF_A32B32G32R32F, //this maps to DXGI_FORMAT_R32G32B32A32_FLOAT in GPixelFormats
+						FClearValueBinding::Transparent,
+						TexCreate_None,
+						TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false));
+				Desc.bIsArray = true;
+				Desc.ArraySize = 4; //MAX_AVSM_RT_COUNT
+				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXAVSMShadowTextureArray, TEXT("TressFXAVSMShadowTextureArray"));
+			}
+
+			// Create List Texture first segment node offset texture
+			{
+				FPooledRenderTargetDesc Desc(
+					FPooledRenderTargetDesc::Create2DDesc(
+						FIntPoint(AVSMTextureSize, AVSMTextureSize),
+						PF_R32_UINT,
+						FClearValueBinding(FLinearColor(0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL)),
+						TexCreate_None,
+						TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false));
+				Desc.NumSamples = SampleCount;
+				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, mListTexFirstSegmentNodeOffset, TEXT("mListTexFirstSegmentNodeOffset"), false);
+			}
+
+			{
+
+				FPooledRenderTargetDesc Desc(
+					FPooledRenderTargetDesc::Create2DDesc(
+						FIntPoint(AVSMTextureSize, AVSMTextureSize),
+						PF_R32_FLOAT,
+						FClearValueBinding(FLinearColor(0.f, 0.f, 0.f, 0.f)),
+						TexCreate_None,
+						TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false));
+				Desc.NumSamples = SampleCount;
+				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, mAVSMGenCtrlSurface, TEXT("mAVSMGenCtrlSurface"), false);
+			}
+
+
+			{
+				const uint32 StructSize = sizeof(float) * 2 * AVSMNodeCount;
+				mAVSMStructBuf.Release();
+				mAVSMStructBuf.Initialize(StructSize, AVSMTextureSize*AVSMTextureSize, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("mAVSMStructBuf"));
+			}
+
 		}
 
 		if (TFXRenderType == ETressFXRenderType::Opaque) 
