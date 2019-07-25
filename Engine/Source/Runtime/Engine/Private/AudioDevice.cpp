@@ -4144,10 +4144,10 @@ void FAudioDevice::AddNewActiveSoundInternal(const FActiveSound& NewActiveSound,
 		return;
 	}
 
-
-	if (NewActiveSound.Sound == nullptr)
+	USoundBase* Sound = NewActiveSound.GetSound();
+	if (Sound == nullptr)
 	{
-		UAudioComponent::PlaybackCompleted(NewActiveSound.AudioComponentID, true);
+		ReportSoundFailedToStart(NewActiveSound.AudioComponentID, VirtualLoopToRetrigger);
 		return;
 	}
 
@@ -4157,12 +4157,12 @@ void FAudioDevice::AddNewActiveSoundInternal(const FActiveSound& NewActiveSound,
 		USoundSourceBus* Bus = Cast<USoundSourceBus>(NewActiveSound.Sound);
 		if (Bus)
 		{
-			UAudioComponent::PlaybackCompleted(NewActiveSound.AudioComponentID, true);
+			ReportSoundFailedToStart(NewActiveSound.AudioComponentID, VirtualLoopToRetrigger);
 			return;
 		}
 	}
 
-	if (NewActiveSound.Sound->GetDuration() <= FMath::Max(0.0f, SoundDistanceOptimizationLengthCVar))
+	if (Sound->GetDuration() <= FMath::Max(0.0f, SoundDistanceOptimizationLengthCVar))
 	{
 		// TODO: Determine if this check has already been completed at AudioComponent level and skip if so. Also,
 		// unify code paths determining if sound is audible.
@@ -4170,7 +4170,7 @@ void FAudioDevice::AddNewActiveSoundInternal(const FActiveSound& NewActiveSound,
 		{
 			UE_LOG(LogAudio, Log, TEXT("New ActiveSound not created for out of range Sound %s"), *NewActiveSound.Sound->GetName());
 
-			UAudioComponent::PlaybackCompleted(NewActiveSound.AudioComponentID, true);
+			ReportSoundFailedToStart(NewActiveSound.AudioComponentID, VirtualLoopToRetrigger);
 			return;
 		}
 	}
@@ -4187,14 +4187,11 @@ void FAudioDevice::AddNewActiveSoundInternal(const FActiveSound& NewActiveSound,
 		NewActiveSound.Sound->GetName(SoundName);
 		if (!SoundName.Contains(DebugSound))
 		{
-			UAudioComponent::PlaybackCompleted(NewActiveSound.AudioComponentID, true);
+			ReportSoundFailedToStart(NewActiveSound.AudioComponentID, VirtualLoopToRetrigger);
 			return;
 		}
 	}
-#endif
-
-	const USoundBase* Sound = NewActiveSound.GetSound();
-	check(Sound);
+#endif // !UE_BUILD_SHIPPING
 
 	const USoundWave* SoundWave = Cast<USoundWave>(Sound);
 	if (SoundWave && SoundWave->bProcedural && SoundWave->IsGeneratingAudio())
@@ -4204,7 +4201,7 @@ void FAudioDevice::AddNewActiveSoundInternal(const FActiveSound& NewActiveSound,
 
 		UE_LOG(LogAudio, Warning, TEXT("Replaying a procedural sound '%s' without stopping the previous instance. Only one sound instance per procedural sound wave is supported."), *SoundWaveName);
 
-		UAudioComponent::PlaybackCompleted(NewActiveSound.AudioComponentID, true);
+		ReportSoundFailedToStart(NewActiveSound.AudioComponentID, VirtualLoopToRetrigger);
 		return;
 	}
 
@@ -4242,11 +4239,12 @@ void FAudioDevice::AddNewActiveSoundInternal(const FActiveSound& NewActiveSound,
 			{
 				UE_LOG(LogAudio, Verbose, TEXT("New ActiveSound %s Virtualizing: Failed to pass concurrency"), *Sound->GetName());
 				AddVirtualLoop(VirtualLoop);
-				return;
+			}
+			else
+			{
+				ReportSoundFailedToStart(NewActiveSound.GetAudioComponentID(), VirtualLoopToRetrigger);
 			}
 		}
-
-		UAudioComponent::PlaybackCompleted(NewActiveSound.AudioComponentID, true);
 		return;
 	}
 
@@ -4308,8 +4306,26 @@ void FAudioDevice::AddNewActiveSoundInternal(const FActiveSound& NewActiveSound,
 	}
 }
 
+void FAudioDevice::ReportSoundFailedToStart(const uint64 AudioComponentID, FAudioVirtualLoop* VirtualLoop)
+{
+	check(IsInAudioThread());
+
+	if (VirtualLoop)
+	{
+		FActiveSound& VirtualActiveSound = VirtualLoop->GetActiveSound();
+		AddSoundToStop(&VirtualActiveSound);
+	}
+	else
+	{
+		const bool bFailedToStart = true;
+		UAudioComponent::PlaybackCompleted(AudioComponentID, bFailedToStart);
+	}
+}
+
 void FAudioDevice::RetriggerVirtualLoop(FAudioVirtualLoop& VirtualLoopToRetrigger)
 {
+	check(IsInAudioThread());
+
 	AddNewActiveSoundInternal(VirtualLoopToRetrigger.GetActiveSound(), &VirtualLoopToRetrigger);
 }
 
@@ -5734,6 +5750,8 @@ float FAudioDevice::GetGameDeltaTime() const
 
 void FAudioDevice::UpdateVirtualLoops(bool bForceUpdate)
 {
+	check(IsInAudioThread());
+
 	if (FAudioVirtualLoop::IsEnabled())
 	{
 		TArray<FAudioVirtualLoop> VirtualLoopsToRetrigger;
