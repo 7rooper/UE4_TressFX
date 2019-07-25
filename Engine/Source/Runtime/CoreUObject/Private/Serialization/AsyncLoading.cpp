@@ -6726,7 +6726,12 @@ EAsyncPackageState::Type FAsyncPackage::PostLoadObjects()
 		UObject* Object = PackageObjLoaded[PostLoadIndex++];
 		if (Object)
 		{
-			if (!bIsMultithreaded || (bAsyncPostLoadEnabled && CanPostLoadOnAsyncLoadingThread(Object)))
+			if (!Object->IsReadyForAsyncPostLoad())
+			{
+				--PostLoadIndex;
+				break;
+			}
+			else if (!bIsMultithreaded || (bAsyncPostLoadEnabled && CanPostLoadOnAsyncLoadingThread(Object)))
 			{
 				SCOPED_ACCUM_LOADTIME(PostLoad, StaticGetNativeClassName(Object->GetClass()));
 
