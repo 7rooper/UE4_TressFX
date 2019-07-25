@@ -26,11 +26,11 @@
 #include "DeferredShadingCommon.ush"
 #include "VelocityCommon.ush"
 #include "ShadingCommon.ush"
+#include "TressFXListTexture.ush"
 
 
 #include "/Engine/Generated/Material.ush"
 #include "/Engine/Generated/VertexFactory.ush"
-
 
 #include "TressFXRendering.ush"
 
@@ -46,6 +46,27 @@ struct PS_INPUT_HAIR_AA
 #ifndef OPTIONAL_IsFrontFace
 	#define OPTIONAL_IsFrontFace
 #endif
+
+
+void ShadowHairModel(in float4 SVPos,
+					 in float HairOpacity,
+                     out float3 entry,
+                     out float3 exit,
+                     out float segmentTransmittance)
+{
+    // Need to make this be a parameter of each hair strand
+	//JAKETODO maybe use g_HairThicknessCoeffs?
+	//JAKETODO not sure if i need to multiply this by g_ratio
+    const float hairThickness = g_FiberRadius * g_ratio; //float(mUI.hairShadowThickness) / 100.0f;
+
+    //const float hairOpacity = ComputeHairOpacity(input.distanceFromCenter);
+
+    // Need to calculate ray-cylinder intersection here to find
+    // entry/exit points
+    entry = SVPos; //input.position;
+    exit = entry + float3(0, 0, hairThickness);
+    segmentTransmittance = 1 - hairOpacity;
+}
 
 // First pass of ShortCut.
 // Geometry pass that stores the 3 front fragment depths, and accumulates product of 1-alpha values in the render target.
@@ -93,15 +114,37 @@ void main(
 #endif
 
     half Opacity = GetMaterialOpacity(PixelMaterialInputs);
-    float alpha = coverage * Opacity; 
+    float TFXAlpha = coverage * Opacity; 
 
-    if (alpha < SHORTCUT_MIN_ALPHA)
+	//capture AVSM data
+    float3 entry, exit;
+    float segmentTransmittance;
+    ShadowHairModel(input.Position, TFXAlpha, entry, exit, segmentTransmittance);
+    int2 vScreenAddress = int2(position.xy);
+	// Allocate a new node
+    // (If we're running out of memory we simply drop this fragment)
+    uint newNodeAddress;
+    if (LT_AllocSegmentNode(newNodeAddress)) {
+        // Fill node
+        ListTexSegmentNode node;
+        node.depth[0] = entry.z;
+        node.depth[1] = exit.z;
+        node.trans    = segmentTransmittance;
+#ifdef SORT_ON_PRIMITIVE_ID
+        node.sortKey  = primitiveID;
+#else
+        node.sortKey = input.Position.z;
+#endif
+        // Insert node!
+        LT_InsertFirstSegmentNode(vScreenAddress, newNodeAddress, node);
+    }
+	//END avsm
+
+    if (TFXAlpha < SHORTCUT_MIN_ALPHA)
     {
         AccumInvAlpha = 1.0;
         return;
     }
-
-    int2 vScreenAddress = int2(position.xy);
 
     uint uDepth = asuint(position.z);
     uint PrevClosest;
@@ -115,7 +158,7 @@ void main(
 
 	// Min of depth 1 and greater of the last compare
 	// If fragment opaque, always use input depth (don't need greater depths)
-    uDepth = (alpha > 0.98) ? uDepth : min(uDepth, uDepth0Prev);
+    uDepth = (TFXAlpha > 0.98) ? uDepth : min(uDepth, uDepth0Prev);
 
     InterlockedMax(RWFragmentDepthsTexture[uint3(vScreenAddress, 1)], uDepth, uDepth1Prev);
 
@@ -123,9 +166,9 @@ void main(
 
 	// Min of depth 2 and greater of the last compare
 	// If fragment opaque, always use input depth (don't need greater depths)
-    uDepth = (alpha > 0.98) ? uDepth : min(uDepth, uDepth1Prev);
+    uDepth = (TFXAlpha > 0.98) ? uDepth : min(uDepth, uDepth1Prev);
 
     InterlockedMax(RWFragmentDepthsTexture[uint3(vScreenAddress, 2)], uDepth, uDepth2Prev);
 
-    AccumInvAlpha = 1.0 - alpha;
+    AccumInvAlpha = 1.0 - TFXAlpha;
 }
