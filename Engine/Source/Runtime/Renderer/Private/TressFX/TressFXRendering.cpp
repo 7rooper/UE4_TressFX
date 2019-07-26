@@ -842,11 +842,15 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			//avsm address tex
 			static const uint32 AVSMAddressUAVClearValues[4] = { 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL };
 			ClearUAV(RHICmdList, SceneContext.mListTexFirstSegmentNodeOffset->GetRenderTargetItem(), AVSMAddressUAVClearValues);
+			//starts at one so if it rolls over to 0 after max uint it wont try to add more
+			static const uint32 Values[4] = { 1, 1, 1, 1 };
+			RHICmdList.ClearTinyUAV(SceneContext.AVSMBufferCounter.UAV, Values);
 
 			FUnorderedAccessViewRHIParamRef UAVs[] = { 
 				SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().UAV,
 				SceneContext.mListTexFirstSegmentNodeOffset->GetRenderTargetItem().UAV,
-				SceneContext.mAVSMStructBuf.UAV
+				SceneContext.mAVSMStructBuf.UAV,
+				SceneContext.AVSMBufferCounter.UAV
 			};
 
 
@@ -863,6 +867,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().UAV;			
 			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.mListTexFirstSegmentNodeOffset->GetRenderTargetItem().UAV;
 			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.mAVSMStructBuf.UAV;
+			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.AVSMBufferCounter.UAV;
 			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_Store, ERenderTargetActions::Load_Store);
 			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture;
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;

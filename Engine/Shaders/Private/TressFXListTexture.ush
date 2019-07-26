@@ -19,8 +19,6 @@
 #ifndef H_LIST_TEXTURE
 #define H_LIST_TEXTURE
 
-//#include "Common.hlsl"
-
 #define NODE_LIST_NULL 0xFFFFFFFF
 
 //#define ENABLE_PACKED_NODES
@@ -60,6 +58,8 @@ struct ListTexPackedVisibilityNode
 // Resource Views
 //////////////////////////////////////////////
 
+RWBuffer<uint> RWCounterBuffer;
+
 RWTexture2D<uint> gListTexFirstSegmentNodeAddressUAV;
 Texture2D<uint> gListTexFirstSegmentNodeAddressSRV;
 
@@ -85,6 +85,8 @@ Texture2D<uint> gListTexFirstSrtdExitAddressSRV;
 
 RWStructuredBuffer<ListTexVisibilityNode> gListTexSrtdExitUAV;
 StructuredBuffer<ListTexVisibilityNode> gListTexSrtdExitSRV;
+
+uint AVSMNodePoolSize;
 
 //////////////////////////////////////////////
 // Constants
@@ -113,25 +115,12 @@ uint LT_GetFirstSegmentNodeOffset(int2 screenAddress)
 bool LT_AllocSegmentNode(out uint newNodeAddress1D)
 {
     // alloc a new node
-    newNodeAddress1D = gListTexSegmentNodesUAV.IncrementCounter();
-
-#ifdef AVSM_ENABLE_MEMORY_STATS
-    uint realMaxNodes = mMaxNodes - 1;
-    ListTexSegmentNode stats;
-    stats.next = newNodeAddress1D; // allocated nodes
-    // Write out some sentinel values in case we want to validate
-    // that this node did not get stomped on.
-    stats.depth[0] = 64738;
-    stats.depth[1] = 12345;
-    stats.trans    = 13579;
-    stats.sortKey  = 24680;
-    gListTexSegmentNodesUAV[realMaxNodes] = stats;
-#else
-    uint realMaxNodes = mMaxNodes;
-#endif
+    //newNodeAddress1D = gListTexSegmentNodesUAV.IncrementCounter();
+	//using this instead of the uav IncrementCounter so i dont have to modify UE4's RHI any more
+    InterlockedAdd(RWCounterBuffer[0], 1, newNodeAddress1D);
 
     // running out of memory?
-    return newNodeAddress1D <= realMaxNodes;
+    return newNodeAddress1D <= AVSMNodePoolSize;
 }
 
 // Insert a new node at the head of the list

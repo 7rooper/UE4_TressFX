@@ -599,7 +599,10 @@ public:
 	TRefCountPtr<IPooledRenderTarget> mAVSMGenCtrlSurface; //NONCPUT_gAVSMGenClearMaskSRV
 	FRWBufferStructured mAVSMStructBuf;
 	FRWBuffer AVSMBufferCounter;
-	int32 AVSMBufferPoolSize;
+
+	// 50% coverage of screen (assuming resolution of 1680x1050
+	// with average depth complexity of 50. Should be more than plenty.
+	int32 AVSMBufferPoolSize = 1 << 24; //JAKETODO; will probably want more, this isnt 2010 anymore
 
 	/*@END Third party code TressFX*/
 

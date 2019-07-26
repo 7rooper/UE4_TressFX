@@ -99,6 +99,11 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTranslucentBasePassUniformParameters,)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 /*  @BEGIN third party code TressFX */
+BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXAVSMConstantBuffer, )
+	SHADER_PARAMETER(int32, AVSMNodePoolSize)
+END_GLOBAL_SHADER_PARAMETER_STRUCT()
+
+
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, )
 	SHADER_PARAMETER_STRUCT(FSharedBasePassUniformParameters, Shared)
 	SHADER_PARAMETER(FMatrix, DirectionalLightScreenToShadowMatrix)

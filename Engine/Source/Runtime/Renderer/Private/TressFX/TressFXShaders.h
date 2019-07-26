@@ -263,6 +263,7 @@ public:
 		RWFragmentDepthsTexture.Bind(Initializer.ParameterMap, TEXT("RWFragmentDepthsTexture"));
 		gListTexSegmentNodesUAV.Bind(Initializer.ParameterMap, TEXT("gListTexSegmentNodesUAV"));
 		gListTexFirstSegmentNodeAddressUAV.Bind(Initializer.ParameterMap, TEXT("gListTexFirstSegmentNodeAddressUAV"));
+		RWCounterBuffer.Bind(Initializer.ParameterMap, TEXT("RWCounterBuffer"));
 	}
 
 	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
@@ -287,7 +288,7 @@ public:
 	virtual bool Serialize(FArchive& Ar) override
 	{
 		const bool result = FMeshMaterialShader::Serialize(Ar);
-		Ar << RWFragmentDepthsTexture << gListTexSegmentNodesUAV << gListTexFirstSegmentNodeAddressUAV;
+		Ar << RWFragmentDepthsTexture << gListTexSegmentNodesUAV << gListTexFirstSegmentNodeAddressUAV << RWCounterBuffer;
 		return result;
 	}
 
@@ -309,6 +310,7 @@ public:
 	FRWShaderParameter RWFragmentDepthsTexture;
 	FRWShaderParameter gListTexSegmentNodesUAV; //actual nodes
 	FRWShaderParameter gListTexFirstSegmentNodeAddressUAV; //addresses
+	FRWShaderParameter RWCounterBuffer;
 
 };
 

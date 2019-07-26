@@ -83,6 +83,7 @@ IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTranslucentBasePassUniformParameters, 
 
 /*  @BEGIN third party code TressFX */
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, "TressFXColorFillPass");
+IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXAVSMConstantBuffer, "TressFXAVSMConstantBuffer");
 /*  @END third party code TressFX */
 
 // Typedef is necessary because the C preprocessor thinks the comma in the template parameter list is a comma in the macro parameter list.
