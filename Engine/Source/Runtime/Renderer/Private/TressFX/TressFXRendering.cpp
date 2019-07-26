@@ -35,6 +35,7 @@ DEFINE_LOG_CATEGORY(TressFXRenderingLog);
 extern int32 GTressFXRenderType;
 extern int32 GBTressFXPreferCompute;
 extern float GTressFXMinAlphaForDepth;
+extern int32 GTressFXAVSMNodeCount;
 
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXFillColorPS - Pixel shader for Third pass of shortcut
@@ -339,7 +340,7 @@ FMeshPassProcessor* CreateTRessFXDepthsVelocityPassProcessor(const FScene* Scene
 /////////////////////////////////////////////////////////////////////////
 
 
-template<bool bCalcVelocity>
+template<bool bCalcVelocity, int32 AVSMNodeCount>
 void TressFXDepthsAlphaPassMeshProcessor::Process(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
@@ -364,9 +365,9 @@ void TressFXDepthsAlphaPassMeshProcessor::Process(
 		FTressFXVS<bCalcVelocity>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
-		FTressFXDepthsAlphaPS<bCalcVelocity>> TFXShaders;
+		FTressFXDepthsAlphaPS<bCalcVelocity, AVSMNodeCount>> TFXShaders;
 
-	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXDepthsAlphaPS<bCalcVelocity>>(VertexFactory->GetType());
+	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXDepthsAlphaPS<bCalcVelocity, AVSMNodeCount>>(VertexFactory->GetType());
 	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<bCalcVelocity>>(VertexFactory->GetType());
 
 	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
@@ -387,6 +388,26 @@ void TressFXDepthsAlphaPassMeshProcessor::Process(
 	);
 }
 
+#define PROCESS_DEPTHSALPHA(bCalcVelocity,AVSMNodeCount, ...)				\
+	if(bCalcVelocity)														\
+	{																		\
+		Process<true, AVSMNodeCount>(__VA_ARGS__);							\
+	}																		\
+	else																	\
+	{																		\
+		Process<false, AVSMNodeCount>(__VA_ARGS__);							\
+	}
+
+#define PROCESS_DEPTHSALPHA2(bCalcVelocity,AVSMNodeCount, ...)																			\
+switch (AVSMNodeCount)																													\
+{																																		\
+	case 4:  PROCESS_DEPTHSALPHA(bCalcVelocity,4, __VA_ARGS__) break;																\
+	case 8:  PROCESS_DEPTHSALPHA(bCalcVelocity,8, __VA_ARGS__) break;																\
+	case 12:  PROCESS_DEPTHSALPHA(bCalcVelocity,12, __VA_ARGS__) break;																\
+	case 16:  PROCESS_DEPTHSALPHA(bCalcVelocity,16, __VA_ARGS__) break;																\
+	default: check(0);																													\
+}
+
 void TressFXDepthsAlphaPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId)
 {
 	const FMaterialRenderProxy* FallbackMaterialRenderProxyPtr = nullptr;
@@ -405,17 +426,42 @@ void TressFXDepthsAlphaPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRIC
 		const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
 		const ERasterizerFillMode MeshFillMode = FM_Solid;// ComputeMeshFillMode(MeshBatch, MeshBatchMaterial);
 		const ERasterizerCullMode MeshCullMode = CM_CW; // ComputeMeshCullMode(MeshBatch, MeshBatchMaterial);
-		
+		const int32 AVSMNodeCount = GTressFXAVSMNodeCounts[FMath::Clamp(static_cast<int32>(GTressFXAVSMNodeCount), 0, GTressFXAVSMNodeCounts.Num() - 1)];
 		if (bWantsVelocity)
 		{
-			Process<true>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
+			PROCESS_DEPTHSALPHA2
+			(
+				true,
+				AVSMNodeCount,
+				MeshBatch, 
+				BatchElementMask, 
+				StaticMeshId, 
+				PrimitiveSceneProxy, 
+				MaterialRenderProxy, 
+				MeshBatchMaterial, 
+				MeshFillMode, 
+				MeshCullMode
+			);
 		}
 		else
 		{
-			Process<false>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
+			PROCESS_DEPTHSALPHA2
+			(
+				false,
+				AVSMNodeCount,
+				MeshBatch, 
+				BatchElementMask, 
+				StaticMeshId,
+				PrimitiveSceneProxy, 
+				MaterialRenderProxy, 
+				MeshBatchMaterial, 
+				MeshFillMode, 
+				MeshCullMode
+			);
 		}
 	}
 }
+#undef PROCESS_DEPTHSALPHA2
 
 TressFXDepthsAlphaPassMeshProcessor::TressFXDepthsAlphaPassMeshProcessor(
 	const FScene* Scene,

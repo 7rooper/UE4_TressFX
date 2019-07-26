@@ -71,10 +71,17 @@ IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVS<true>, TEXT("/Engine/Priva
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFX_DepthsAlphaPS - Pixel shader for First pass of shortcut
 ////////////////////////////////////////////////////////////////////////////////
+#define IMPLEMENT_TRESSFX_DEPTHSALPHA_SHADER(AVSMNodeCount) \
+	typedef FTressFXVelocityDepthPS<true, AVSMNodeCount> FTressFXVelocityDepthPS##WithVelocity##AVSMNodeCount; \
+	typedef FTressFXVelocityDepthPS<false, AVSMNodeCount> FTressFXVelocityDepthPS##NoVelocity##AVSMNodeCount; \
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS##NoVelocity##AVSMNodeCount, TEXT("/Engine/Private/TressFXShortCutDepthsAlphaPS.usf"), TEXT("main"), SF_Pixel);	\
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS##NoVelocity##AVSMNodeCount, TEXT("/Engine/Private/TressFXShortCutDepthsAlphaPS.usf"), TEXT("main"), SF_Pixel);
 
-IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXDepthsAlphaPS<true>, TEXT("/Engine/Private/TressFXShortCutDepthsAlphaPS.usf"), TEXT("main"), SF_Pixel);
-IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXDepthsAlphaPS<false>, TEXT("/Engine/Private/TressFXShortCutDepthsAlphaPS.usf"), TEXT("main"), SF_Pixel);
-
+IMPLEMENT_TRESSFX_DEPTHSALPHA_SHADER(4)
+IMPLEMENT_TRESSFX_DEPTHSALPHA_SHADER(8)
+IMPLEMENT_TRESSFX_DEPTHSALPHA_SHADER(12)
+IMPLEMENT_TRESSFX_DEPTHSALPHA_SHADER(16)
+#undef IMPLEMENT_TRESSFX_DEPTHSALPHA_SHADER
 
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFX_VelocityDepthPS
@@ -176,7 +183,7 @@ void FTressFXShortCutResolveColorCS::UnsetParameters(FRHICommandList& RHICmdList
 IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveColorCS, "/Engine/Private/TressFXShortCutResolveColorPS.usf", "ShortcutResolveCS", SF_Compute);
 
 #define TressFXAVSMModifyCompilationEnvironmentCommon_Implement(AVSMNodeCount)																								\
-	void TressFXAVSMModifyCompilationEnvironmentCommon<AVSMNodeCount>(const FGlobalShaderPermutationParameters & Parameters, FShaderCompilerEnvironment & OutEnvironment)	\
+	void TressFXAVSMModifyCompilationEnvironmentCommon<AVSMNodeCount>(EShaderPlatform Platform, FShaderCompilerEnvironment & OutEnvironment)								\
 	{																																										\
 		OutEnvironment.SetDefine(TEXT("AVSM_NODE_COUNT"), AVSMNodeCount);																									\
 		OutEnvironment.SetDefine(TEXT("EMPTY_NODE"), TRESSFX_AVSM_EMPTY_NODE);																								\			

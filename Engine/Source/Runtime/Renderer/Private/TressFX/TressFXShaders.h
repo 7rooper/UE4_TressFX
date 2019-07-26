@@ -28,6 +28,9 @@ struct ETressFXPass
 
 class FTressFXShaderElementData;
 
+template <int32 AVSMNodeCount>
+void TressFXAVSMModifyCompilationEnvironmentCommon(EShaderPlatform Platform, FShaderCompilerEnvironment & OutEnvironment);
+
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXCopyOpaqueDepthPS
 ////////////////////////////////////////////////////////////////////////////////
@@ -270,6 +273,7 @@ public:
 	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		OutEnvironment.SetDefine(TEXT("NEEDS_VELOCITY"), bNeedsVelocity ? 1 : 0);
+		TressFXAVSMModifyCompilationEnvironmentCommon()
 		FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
 		FShaderUniformBufferParameter::ModifyCompilationEnvironment(
 			FTressFXAVSMConstantParams::StaticStructMetadata.GetShaderVariableName(),
@@ -587,9 +591,6 @@ public:
 	FShaderResourceParameter SceneColorTex;
 
 };
-
-template <int32 AVSMNodeCount>
-void TressFXAVSMModifyCompilationEnvironmentCommon(const FGlobalShaderPermutationParameters & Parameters, FShaderCompilerEnvironment & OutEnvironment);
 
 ///////////////////////////////////////////////////////////////////////////////////
 ////  FTressFXClearAVSMBufferPS
