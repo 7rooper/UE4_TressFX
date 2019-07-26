@@ -175,18 +175,25 @@ void FTressFXShortCutResolveColorCS::UnsetParameters(FRHICommandList& RHICmdList
 
 IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveColorCS, "/Engine/Private/TressFXShortCutResolveColorPS.usf", "ShortcutResolveCS", SF_Compute);
 
+#define TressFXAVSMModifyCompilationEnvironmentCommon_Implement(AVSMNodeCount)																								\
+	void TressFXAVSMModifyCompilationEnvironmentCommon<AVSMNodeCount>(const FGlobalShaderPermutationParameters & Parameters, FShaderCompilerEnvironment & OutEnvironment)	\
+	{																																										\
+		OutEnvironment.SetDefine(TEXT("AVSM_NODE_COUNT"), AVSMNodeCount);																									\
+		OutEnvironment.SetDefine(TEXT("EMPTY_NODE"), TRESSFX_AVSM_EMPTY_NODE);																								\			
+	}
+
+TressFXAVSMModifyCompilationEnvironmentCommon_Implement(4)
+TressFXAVSMModifyCompilationEnvironmentCommon_Implement(8)
+TressFXAVSMModifyCompilationEnvironmentCommon_Implement(12)
+TressFXAVSMModifyCompilationEnvironmentCommon_Implement(16)
+
+#undef TressFXAVSMModifyCompilationEnvironmentCommon_Implement
+
 ///////////////////////////////////////////////////////////////////////////////////
 ////  FTressFXClearAVSMBufferPS
 //////////////////////////////////////////////////////////////////////////////////
 extern int32 GTressFXAVSMTextureSize;
 extern int32 GTressFXAVSMNodeCount;
-
-void TressFXAVSMModifyCompilationEnvironmentCommon(const FGlobalShaderPermutationParameters & Parameters, FShaderCompilerEnvironment & OutEnvironment)
-{
-	const int32 AVSMNodeCount = GTressFXAVSMNodeCounts[FMath::Clamp(static_cast<int32>(GTressFXAVSMNodeCount), 0, GTressFXAVSMNodeCounts.Num() - 1)];
-	OutEnvironment.SetDefine(TEXT("AVSM_NODE_COUNT"), AVSMNodeCount);
-	OutEnvironment.SetDefine(TEXT("EMPTY_NODE"), TRESSFX_AVSM_EMPTY_NODE);
-}
 
 
 void FTressFXClearAVSMBufferPS::SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View)

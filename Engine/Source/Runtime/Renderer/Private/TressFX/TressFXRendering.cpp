@@ -427,6 +427,7 @@ TressFXDepthsAlphaPassMeshProcessor::TressFXDepthsAlphaPassMeshProcessor(
 	PassDrawRenderState = InPassDrawRenderState;
 	PassDrawRenderState.SetViewUniformBuffer(Scene->UniformBuffers.ViewUniformBuffer);
 	PassDrawRenderState.SetInstancedViewUniformBuffer(Scene->UniformBuffers.InstancedViewUniformBuffer);
+	PassDrawRenderState.SetPassUniformBuffer(Scene->UniformBuffers.TressFXAVSMConstantBuffer);
 }
 
 void SetupDepthsAlphaPassState(FMeshPassProcessorRenderState& DrawRenderState)
@@ -759,7 +760,7 @@ void ShortcutDepthsResolve_Impl(
 	RHICmdList.EndRenderPass();
 }
 
-void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views)
+void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene)
 {
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
 
@@ -781,10 +782,9 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 		}
 
 		
-		// shortcut pass 1, accumulate alpha, depths, and optionally velocity if the material wants it (true by default)
-		// also captures AVSM hair shadow geometry
+		//first clear the AVSM buffer, it needs special shader for clear
 		{
-			//first clear the AVSM buffer, it needs special shader
+
 			SCOPED_DRAW_EVENT(RHICmdList, TressFXAVSMClear);
 
 			FUnorderedAccessViewRHIParamRef UAVs[] = {
@@ -832,6 +832,8 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			RHICmdList.EndRenderPass();
 		}
 
+		// shortcut pass 1, accumulate alpha, depths, and optionally velocity if the material wants it (true by default)
+		// also captures AVSM hair shadow geometry
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, DepthsAlpha);
 
@@ -842,7 +844,8 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			//avsm address tex
 			static const uint32 AVSMAddressUAVClearValues[4] = { 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL };
 			ClearUAV(RHICmdList, SceneContext.mListTexFirstSegmentNodeOffset->GetRenderTargetItem(), AVSMAddressUAVClearValues);
-			//starts at one so if it rolls over to 0 after max uint it wont try to add more
+			
+			//starts at one so if it rolls over to 0 after max uint it wont try to add more nodes
 			static const uint32 Values[4] = { 1, 1, 1, 1 };
 			RHICmdList.ClearTinyUAV(SceneContext.AVSMBufferCounter.UAV, Values);
 
@@ -853,6 +856,10 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 				SceneContext.AVSMBufferCounter.UAV
 			};
 
+			TUniformBufferRef<FTressFXAVSMConstantParams> TressFXAVSMConstantBuffer;
+			CreateTressFXAVSMBuffer(RHICmdList, View, TressFXAVSMConstantBuffer);
+			FMeshPassProcessorRenderState DrawRenderState(View, TressFXAVSMConstantBuffer);
+			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EWritable, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
@@ -864,6 +871,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 
 			FRHIRenderPassInfo RPInfo(ARRAY_COUNT(ColorTargets), ColorTargets, ERenderTargetActions::Load_Store);
 			RPInfo.UAVIndex = 0;
+			//JAKETODO, probably gonna need to bind these explicityly to registers now
 			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().UAV;			
 			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.mListTexFirstSegmentNodeOffset->GetRenderTargetItem().UAV;
 			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.mAVSMStructBuf.UAV;
@@ -1121,7 +1129,7 @@ void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList,
 		{
 			if (ShouldRenderTressFX(ETressFXPass::DepthsAlpha))
 			{
-				RenderShortcutBasePass(RHICmdList, Views);
+				RenderShortcutBasePass(RHICmdList, Views, Scene);
 			}
 			break;
 		}

@@ -99,10 +99,9 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTranslucentBasePassUniformParameters,)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 /*  @BEGIN third party code TressFX */
-BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXAVSMConstantBuffer, )
+BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXAVSMConstantParams, )
 	SHADER_PARAMETER(int32, AVSMNodePoolSize)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
-
 
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, )
 	SHADER_PARAMETER_STRUCT(FSharedBasePassUniformParameters, Shared)
@@ -117,6 +116,11 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, )
 	SHADER_PARAMETER_TEXTURE(Texture2D, EyeAdaptation)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
+extern void CreateTressFXAVSMBuffer(
+	FRHICommandListImmediate& RHICmdList, 
+	const FViewInfo& View,
+	TUniformBufferRef<FTressFXAVSMConstantParams>& TressFXAVSMBuffer
+);
 
 extern void CreateTressFXColorPassUniformBuffer(
 	FRHICommandListImmediate& RHICmdList,

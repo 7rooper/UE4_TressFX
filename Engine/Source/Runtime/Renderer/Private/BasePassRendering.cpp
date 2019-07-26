@@ -83,7 +83,7 @@ IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTranslucentBasePassUniformParameters, 
 
 /*  @BEGIN third party code TressFX */
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, "TressFXColorFillPass");
-IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXAVSMConstantBuffer, "TressFXAVSMConstantBuffer");
+IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXAVSMConstantParams, "TressFXAVSMConstantBuffer");
 /*  @END third party code TressFX */
 
 // Typedef is necessary because the C preprocessor thinks the comma in the template parameter list is a comma in the macro parameter list.
@@ -525,6 +525,30 @@ void SetupSharedBasePassParameters(
 }
 
 /*  @BEGIN third party code TressFX */
+
+void CreateTressFXAVSMBuffer(
+	FRHICommandListImmediate& RHICmdList,
+	const FViewInfo& View,
+	TUniformBufferRef<FTressFXAVSMConstantParams>& TressFXAVSMBuffer
+)
+{
+	FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
+	FTressFXAVSMConstantParams AVSMParams;
+	AVSMParams.AVSMNodePoolSize = SceneRenderTargets.AVSMBufferPoolSize;
+	//more to come
+
+	FScene* Scene = View.Family->Scene ? View.Family->Scene->GetRenderScene() : nullptr;
+	if (Scene)
+	{
+		Scene->UniformBuffers.TressFXAVSMConstantBuffer.UpdateUniformBufferImmediate(AVSMParams);
+		TressFXAVSMBuffer = Scene->UniformBuffers.TressFXAVSMConstantBuffer;
+	}
+	else
+	{
+		TressFXAVSMBuffer = TUniformBufferRef<FTressFXAVSMConstantParams>::CreateUniformBufferImmediate(AVSMParams, UniformBuffer_SingleFrame);
+	}
+}
+
 // very similar to opaque bass pass buffer
 void CreateTressFXColorPassUniformBuffer(
 	FRHICommandListImmediate& RHICmdList,
