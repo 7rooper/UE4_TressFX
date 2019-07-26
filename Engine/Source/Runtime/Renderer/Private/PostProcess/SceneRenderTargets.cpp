@@ -1318,6 +1318,8 @@ void FSceneRenderTargets::AdjustGBufferRefCount(FRHICommandList& RHICmdList, int
 
 /*@BEGIN Third party code TressFX*/
 extern int32 GTressFXRenderType;
+extern int32 GTressFXAVSMTextureSize;
+extern int32 GTressFXAVSMNodeCount;
 void FSceneRenderTargets::ReleaseTressFXResources(int32 TypeToRelease)
 {
 	const bool bReleaseAll = TypeToRelease == ETressFXRenderType::Num;
@@ -1327,10 +1329,12 @@ void FSceneRenderTargets::ReleaseTressFXResources(int32 TypeToRelease)
 		TressFXAccumInvAlpha.SafeRelease();
 		TressFXFragmentDepthsTexture.SafeRelease();
 		TressFXFragmentColorsTexture.SafeRelease();
+
 		TressFXAVSMShadowTextureArray.SafeRelease();
 		mListTexFirstSegmentNodeOffset.SafeRelease();
 		mAVSMGenCtrlSurface.SafeRelease();
 		mAVSMStructBuf.Release();
+		AVSMBufferCounter.Release();
 	}
 	if (bReleaseAll || TypeToRelease == ETressFXRenderType::Opaque)
 	{
@@ -1406,7 +1410,7 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 						TexCreate_None, 
 						TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false));
 				Desc.bIsArray = true;
-				Desc.ArraySize = 4;
+				Desc.ArraySize = 4; //JAKETODO, go back to 3
 				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXFragmentDepthsTexture, TEXT("TressFX_FragmentDepthsTexture"));
 			}
 
@@ -1424,8 +1428,9 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 
 
 			//AVSM
-
-			// Create AVSM main texture arra
+			const int32 AVSMTextureSize = GTressFXAVSMTextureSizes[FMath::Clamp(static_cast<int32>(GTressFXAVSMTextureSize), 0, GTressFXAVSMTextureSizes.Num() - 1)];
+			const int32 AVSMNodeCount = GTressFXAVSMNodeCounts[FMath::Clamp(static_cast<int32>(GTressFXAVSMNodeCount), 0, GTressFXAVSMNodeCounts.Num() - 1)];
+			// Create AVSM main texture array
 			{
 				FPooledRenderTargetDesc Desc(
 					FPooledRenderTargetDesc::Create2DDesc(
@@ -1465,12 +1470,19 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, mAVSMGenCtrlSurface, TEXT("mAVSMGenCtrlSurface"), false);
 			}
 
-
+			const uint32 StructSize = sizeof(float) * 2 * AVSMNodeCount;
+			if (mAVSMStructBuf.NumBytes != StructSize * AVSMTextureSize * AVSMTextureSize)
 			{
-				const uint32 StructSize = sizeof(float) * 2 * AVSMNodeCount;
+				
 				mAVSMStructBuf.Release();
 				mAVSMStructBuf.Initialize(StructSize, AVSMTextureSize*AVSMTextureSize, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("mAVSMStructBuf"));
 			}
+			if (AVSMBufferCounter.NumBytes != sizeof(uint32))
+			{
+				AVSMBufferCounter.Release();
+				AVSMBufferCounter.Initialize(sizeof(uint32), 1, EPixelFormat::PF_R32_UINT, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("AVSMBufferCounter"));
+			}
+			
 
 		}
 

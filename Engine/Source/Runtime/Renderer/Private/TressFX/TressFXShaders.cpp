@@ -174,3 +174,27 @@ void FTressFXShortCutResolveColorCS::UnsetParameters(FRHICommandList& RHICmdList
 }
 
 IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveColorCS, "/Engine/Private/TressFXShortCutResolveColorPS.usf", "ShortcutResolveCS", SF_Compute);
+
+///////////////////////////////////////////////////////////////////////////////////
+////  FTressFXClearAVSMBufferPS
+//////////////////////////////////////////////////////////////////////////////////
+extern int32 GTressFXAVSMTextureSize;
+extern int32 GTressFXAVSMNodeCount;
+
+void TressFXAVSMModifyCompilationEnvironmentCommon(const FGlobalShaderPermutationParameters & Parameters, FShaderCompilerEnvironment & OutEnvironment)
+{
+	const int32 AVSMNodeCount = GTressFXAVSMNodeCounts[FMath::Clamp(static_cast<int32>(GTressFXAVSMNodeCount), 0, GTressFXAVSMNodeCounts.Num() - 1)];
+	OutEnvironment.SetDefine(TEXT("AVSM_NODE_COUNT"), AVSMNodeCount);
+	OutEnvironment.SetDefine(TEXT("EMPTY_NODE"), TRESSFX_AVSM_EMPTY_NODE);
+}
+
+
+void FTressFXClearAVSMBufferPS::SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View)
+{
+	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
+	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);
+	const int32 AVSMTextureSize = GTressFXAVSMTextureSizes[FMath::Clamp(static_cast<int32>(GTressFXAVSMTextureSize), 0, GTressFXAVSMTextureSizes.Num() - 1)];
+	SetShaderValue(RHICmdList, ShaderRHI, ShadowTextureSize, FVector4((float)AVSMTextureSize, 0, 0, 0));
+}
+
+IMPLEMENT_GLOBAL_SHADER(FTressFXClearAVSMBufferPS, "/Engine/Private/TressFX_AVSMClear.usf", "AVSMClearStructuredBuf_PS", SF_Pixel);

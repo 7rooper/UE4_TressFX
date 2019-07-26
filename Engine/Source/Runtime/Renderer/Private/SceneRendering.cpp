@@ -375,6 +375,29 @@ FAutoConsoleVariableRef CVarTressFXMinAlphaForSceneDepth(
 	TEXT("The minimum alpha value for hair to be considered for shadows"),
 	ECVF_RenderThreadSafe
 );
+
+int32 GTressFXAVSMTextureSize = 2;
+FAutoConsoleVariableRef CVarTressFXAVSMTextureSize(
+	TEXT("tfx.TressFXAVSMTextureSize"),
+	GTressFXAVSMTextureSize,
+	TEXT("0 = 128")
+	TEXT("1 = 256")
+	TEXT("2 = 512")
+	TEXT("3 = 1024"),
+	ECVF_RenderThreadSafe
+);
+
+int32 GTressFXAVSMNodeCount = 1;
+FAutoConsoleVariableRef CVarTressFXAVSMNodeCount(
+	TEXT("tfx.TressFXAVSMNodeCount"),
+	GTressFXAVSMNodeCount,
+	TEXT("0 = 4")
+	TEXT("1 = 8")
+	TEXT("3 = 12")
+	TEXT("4 = 16"),
+	ECVF_RenderThreadSafe
+);
+
 /*@END Third party code TressFX*/
 
 static FParallelCommandListSet* GOutstandingParallelCommandListSet = nullptr;

@@ -7,6 +7,10 @@
 #include "GlobalShader.h"
 
 
+#ifndef TRESSFX_AVSM_EMPTY_NODE
+	#define TRESSFX_AVSM_EMPTY_NODE 65504.0f
+#endif
+
 struct ETressFXPass
 {
 	enum Type {
@@ -571,4 +575,63 @@ public:
 	FShaderParameter TextureSize;
 	FShaderResourceParameter SceneColorTex;
 
+};
+
+void TressFXAVSMModifyCompilationEnvironmentCommon(const FGlobalShaderPermutationParameters & Parameters, FShaderCompilerEnvironment & OutEnvironment);
+
+///////////////////////////////////////////////////////////////////////////////////
+////  FTressFXClearAVSMBufferPS
+//////////////////////////////////////////////////////////////////////////////////
+
+class FTressFXClearAVSMBufferPS : public FGlobalShader
+{
+
+	DECLARE_GLOBAL_SHADER(FTressFXClearAVSMBufferPS)
+
+public:
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+	}
+
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters & Parameters, FShaderCompilerEnvironment & OutEnvironment)
+	{
+		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		TressFXAVSMModifyCompilationEnvironmentCommon(Parameters, OutEnvironment);
+	}
+
+	static const TCHAR* GetSourceFilename()
+	{
+		return TEXT("/Engine/Private/TressFX_AVSMClear.usf");
+	}
+
+	static const TCHAR* GetFunctionName()
+	{
+		return TEXT("AVSMClearStructuredBuf_PS");
+	}
+
+	FTressFXClearAVSMBufferPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
+	{
+		gAVSMStructBufUAV.Bind(Initializer.ParameterMap, TEXT("gAVSMStructBufUAV"));
+		ShadowTextureSize.Bind(Initializer.ParameterMap, TEXT("ShadowTextureSize"));
+	}
+
+	FTressFXClearAVSMBufferPS() {}
+
+
+	// FShader interface.
+	virtual bool Serialize(FArchive& Ar) override
+	{
+		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
+		Ar << gAVSMStructBufUAV << ShadowTextureSize;
+		return bShaderHasOutdatedParameters;
+	}
+
+	void SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View);
+
+public:
+
+	FRWShaderParameter gAVSMStructBufUAV;
+	FShaderParameter ShadowTextureSize;
 };

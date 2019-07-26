@@ -115,6 +115,8 @@ struct ETressFXRenderType
 
 };
 
+static TArray<int32>  GTressFXAVSMNodeCounts(TArray<int32>({ 4, 8, 12, 16 }));
+static TArray<int32>  GTressFXAVSMTextureSizes(TArray<int32>({ 128, 256, 512, 1024 }));
 
 struct FTressFXBoneSkinngAssetType
 {
