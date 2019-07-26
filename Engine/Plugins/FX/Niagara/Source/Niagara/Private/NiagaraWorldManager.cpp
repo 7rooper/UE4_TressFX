@@ -223,7 +223,7 @@ void FNiagaraWorldManager::Tick(float DeltaSeconds)
 	SkeletalMeshGeneratedData.TickGeneratedData(DeltaSeconds);
 
 	// Cache player view locations for all system instances to access
-	CachedPlayerViewLocations.Reset();
+	bCachedPlayerViewLocationsValid = true;
 	if (World->GetPlayerControllerIterator())
 	{
 		for ( FConstPlayerControllerIterator Iterator=World->GetPlayerControllerIterator(); Iterator; ++Iterator)
@@ -263,6 +263,10 @@ void FNiagaraWorldManager::Tick(float DeltaSeconds)
 	{
 		SystemSimulations.Remove(DeadSystem);
 	}
+
+	// Clear cached player view location list, it should never be used outside of the world tick
+	bCachedPlayerViewLocationsValid = false;
+	CachedPlayerViewLocations.Reset();
 
 	// Enqueue fence for deferred deletion if we need to wait on anything
 	if ( DeferredDeletionQueue[DeferredDeletionQueueIndex].Queue.Num() > 0 )
