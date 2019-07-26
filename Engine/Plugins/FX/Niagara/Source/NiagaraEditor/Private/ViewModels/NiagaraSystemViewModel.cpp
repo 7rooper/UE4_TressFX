@@ -95,12 +95,14 @@ void FNiagaraSystemViewModel::Cleanup()
 	{
 		SystemInstance->OnInitialized().RemoveAll(this);
 		SystemInstance->OnReset().RemoveAll(this);
+		SystemInstance = nullptr;
 	}
 
 	if (PreviewComponent)
 	{
 		PreviewComponent->OnSystemInstanceChanged().RemoveAll(this);
 		PreviewComponent->DeactivateImmediate();
+		PreviewComponent = nullptr;
 	}
 
 	CurveOwner.EmptyCurves();
@@ -128,7 +130,6 @@ void FNiagaraSystemViewModel::Cleanup()
 		Sequencer.Reset();
 	}
 
-	PreviewComponent = nullptr;
 	RemoveSystemEventHandlers();
 	SystemScriptViewModel.Reset();
 }
