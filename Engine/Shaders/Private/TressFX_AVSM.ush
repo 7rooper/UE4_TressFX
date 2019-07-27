@@ -52,17 +52,24 @@ struct AVSMSegment
 // Constants
 ///////////////////////
 
-cbuffer AVSMConstants
-{
-    float4 mMask0;
-    float4 mMask1;
-    float4 mMask2;
-    float4 mMask3;
-    float4 mMask4;
-    float dummy;
-    float mOpaqueNodeTrans;
-    float mShadowMapSize;
-}; 
+//cbuffer AVSMConstants
+//{
+//    float4 mMask0;
+//    float4 mMask1;
+//    float4 mMask2;
+//    float4 mMask3;
+//    float4 mMask4;
+//    float dummy;
+//    float mOpaqueNodeTrans;
+//    float mShadowMapSize;
+//}; 
+
+#define mMask0 TressFXAVSMConstantBuffer.Mask0
+#define mMask1 TressFXAVSMConstantBuffer.Mask1
+#define mMask2 TressFXAVSMConstantBuffer.Mask2
+#define mMask3 TressFXAVSMConstantBuffer.Mask3
+#define mMask4 TressFXAVSMConstantBuffer.Mask4
+#define mShadowMapSize TressFXAVSMConstantBuffer.ShadowMapDimension
 
 //////////////////////////////////////////////
 // AVSM Interpolation Functions
