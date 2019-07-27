@@ -89,6 +89,30 @@ struct FSequencerBreadcrumb
 
 
 /**
+ * A widget that holds a widget that is to be refocused on completion
+ */
+template<typename T>
+struct STemporarilyFocusedSpinBox : SSpinBox<T>
+{
+public:
+	void Setup()
+	{
+		PreviousFocusedWidget = FSlateApplication::Get().GetKeyboardFocusedWidget();
+	}
+
+	void Refocus()
+	{
+		if (PreviousFocusedWidget.IsValid())
+		{
+			FSlateApplication::Get().SetKeyboardFocus(PreviousFocusedWidget.Pin());
+		}
+	}
+
+private:
+	TWeakPtr<SWidget> PreviousFocusedWidget;
+};
+
+/**
  * Main sequencer UI widget
  */
 class SSequencer
@@ -525,7 +549,7 @@ private:
 	TSharedPtr<SWidget> CurveEditorSearchBox;
 
 	/** The current playback time display.*/
-	TSharedPtr<SSpinBox<double>> PlayTimeDisplay;
+	TSharedPtr<STemporarilyFocusedSpinBox<double>> PlayTimeDisplay;
 
 	/** The sequencer tree view responsible for the outliner and track areas */
 	TSharedPtr<SSequencerTreeView> TreeView;
