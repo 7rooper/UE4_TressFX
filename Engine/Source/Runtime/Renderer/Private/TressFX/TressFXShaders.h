@@ -11,6 +11,8 @@
 	#define TRESSFX_AVSM_EMPTY_NODE 65504.0f
 #endif
 
+class FTressFXAVSMConstantParams;
+
 struct ETressFXPass
 {
 	enum Type {
@@ -683,7 +685,7 @@ public:
 		FShaderUniformBufferParameter::ModifyCompilationEnvironment(
 			FTressFXAVSMConstantParams::StaticStructMetadata.GetShaderVariableName(),
 			FTressFXAVSMConstantParams::StaticStructMetadata,
-			Platform,
+			Parameters.Platform,
 			OutEnvironment
 		);
 	}

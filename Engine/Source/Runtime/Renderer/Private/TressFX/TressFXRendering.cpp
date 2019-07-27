@@ -1235,6 +1235,16 @@ void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList,
 	}
 }
 
+#define ShortCutResolvePass( AVSMNodeCount, ... )							\
+	switch(AVSMNodeCount)													\
+	{																		\
+		case 4: { RenderShortcutResolvePass<4>(__VA_ARGS__); break; }		\
+		case 8: { RenderShortcutResolvePass<8>(__VA_ARGS__); break; }		\
+		case 12: { RenderShortcutResolvePass<12>(__VA_ARGS__); break; }		\
+		case 16: { RenderShortcutResolvePass<16>(__VA_ARGS__); break; }		\
+		default: { check(0); }												\
+	}
+
 void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture, int32 TFXRenderType)
 {
 
@@ -1250,7 +1260,9 @@ void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdLi
 		{
 			if (ShouldRenderTressFX(ETressFXPass::FillColor_Shortcut)) 
 			{
-				RenderShortcutResolvePass(
+				const int32 AVSMNodeCount = GTressFXAVSMNodeCounts[FMath::Clamp(static_cast<int32>(GTressFXAVSMNodeCount), 0, GTressFXAVSMNodeCounts.Num() - 1)];
+				ShortCutResolvePass(
+					AVSMNodeCount,
 					RHICmdList, 
 					Views, 
 					Scene, 
