@@ -36,6 +36,7 @@ extern int32 GTressFXRenderType;
 extern int32 GBTressFXPreferCompute;
 extern float GTressFXMinAlphaForDepth;
 extern int32 GTressFXAVSMNodeCount;
+extern int32 GTressFXAVSMTextureSize;
 
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXFillColorPS - Pixel shader for Third pass of shortcut
@@ -913,7 +914,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 
 			FRHIRenderPassInfo RPInfo(ARRAY_COUNT(ColorTargets), ColorTargets, ERenderTargetActions::Load_Store);
 			RPInfo.UAVIndex = 0;
-			//JAKETODO, probably gonna need to bind these explicityly to registers now
+			//order is important here, they are bound to explict registers
 			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().UAV;			
 			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.mListTexFirstSegmentNodeOffset->GetRenderTargetItem().UAV;
 			RPInfo.UAVs[RPInfo.NumUAVs++] = SceneContext.mAVSMStructBuf.UAV;
@@ -923,7 +924,8 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
 
 			TUniformBufferRef<FTressFXAVSMConstantParams> TressFXAVSMConstantBuffer;
-			CreateTressFXAVSMBuffer(RHICmdList, View, TressFXAVSMConstantBuffer);
+			const int32 AVSMTextureSize = GTressFXAVSMTextureSizes[FMath::Clamp(static_cast<int32>(GTressFXAVSMTextureSize), 0, GTressFXAVSMTextureSizes.Num() - 1)];
+			CreateTressFXAVSMBuffer(RHICmdList, View, AVSMTextureSize, TressFXAVSMConstantBuffer);
 			FMeshPassProcessorRenderState DrawRenderState(View, TressFXAVSMConstantBuffer);
 			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 
@@ -956,6 +958,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 	}
 }
 
+template<int32 AVSMNodeCount>
 void RenderShortcutResolvePass(
 	FRHICommandListImmediate& RHICmdList, 
 	TArray<FViewInfo>& Views, 
@@ -990,6 +993,52 @@ void RenderShortcutResolvePass(
 				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture,
 				SceneContext.TressFXSceneDepth->GetDesc()
 				);
+		}
+
+		//resolve AVSM
+		{
+			SCOPED_DRAW_EVENT(RHICmdList, ResolveAVSM);
+			FRHIRenderPassInfo RPInfo(
+				SceneContext.GetSceneColorSurface(), ERenderTargetActions::Load_Store,
+				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
+			);
+
+			RHICmdList.BeginRenderPass(RPInfo, TEXT("ResolveAVSM"));
+
+			TShaderMapRef<FScreenVS>								VertexShader(View.ShaderMap);
+			TShaderMapRef<FTRessFXAVSMResolvePS<AVSMNodeCount>>		PixelShader(View.ShaderMap);
+
+			FRenderingCompositePassContext Context(RHICmdList, View);
+			Context.SetViewportAndCallRHI(View.ViewRect);
+
+			FGraphicsPipelineStateInitializer GraphicsPSOInit;
+			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+
+			GraphicsPSOInit.BlendState = TStaticBlendState<CW_RGBA>::GetRHI();
+
+			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
+			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
+
+			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
+			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
+			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
+			GraphicsPSOInit.PrimitiveType = PT_TriangleList;
+			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
+
+			VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
+			PixelShader->SetParameters(Context.RHICmdList, View, SceneContext, Scene->UniformBuffers.TressFXAVSMConstantBuffer);
+
+			DrawRectangle(
+				RHICmdList,
+				0, 0,
+				View.ViewRect.Width(), View.ViewRect.Height(),
+				View.ViewRect.Min.X, View.ViewRect.Min.Y,
+				View.ViewRect.Width(), View.ViewRect.Height(),
+				View.ViewRect.Size(),
+				SceneContext.GetBufferSizeXY(),
+				*VertexShader,
+				EDRF_UseTriangleOptimization);
+			RHICmdList.EndRenderPass();
 		}
 
 

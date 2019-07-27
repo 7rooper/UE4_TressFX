@@ -529,13 +529,19 @@ void SetupSharedBasePassParameters(
 void CreateTressFXAVSMBuffer(
 	FRHICommandListImmediate& RHICmdList,
 	const FViewInfo& View,
+	const int32 AVSMTextureSize,
 	TUniformBufferRef<FTressFXAVSMConstantParams>& TressFXAVSMBuffer
 )
 {
 	FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
 	FTressFXAVSMConstantParams AVSMParams;
 	AVSMParams.AVSMNodePoolSize = SceneRenderTargets.AVSMBufferPoolSize;
-	//more to come
+	AVSMParams.Mask0 = FVector4(0.0f, 1.0f, 2.0f, 3.0f);
+	AVSMParams.Mask1 = FVector4(4.0f, 5.0f, 6.0f, 7.0f);
+	AVSMParams.Mask2 = FVector4(8.0f, 9.0f, 10.0f, 11.0f);
+	AVSMParams.Mask3 = FVector4(12.0f, 13.0f, 14.0f, 15.0f);
+	AVSMParams.Mask4 = FVector4(16.0f, 17.0f, 18.0f, 19.0f);
+	AVSMParams.ShadowMapDimension = AVSMTextureSize;
 
 	FScene* Scene = View.Family->Scene ? View.Family->Scene->GetRenderScene() : nullptr;
 	if (Scene)

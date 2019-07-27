@@ -215,3 +215,41 @@ void FTressFXClearAVSMBufferPS::SetParameters(FRHICommandList& RHICmdList, const
 }
 
 IMPLEMENT_GLOBAL_SHADER(FTressFXClearAVSMBufferPS, "/Engine/Private/TressFX_AVSMClear.usf", "AVSMClearStructuredBuf_PS", SF_Pixel);
+
+
+///////////////////////////////////////////////////////////////////////////////////
+////  FTRessFXAVSMResolvePS
+//////////////////////////////////////////////////////////////////////////////////
+
+#define FTRessFXAVSMResolvePSSetParams_Implementation( AVSMNodeCount )													 \
+void FTRessFXAVSMResolvePS<4>::SetParameters(																			 \
+	FRHICommandList& RHICmdList																							 \
+	, const FViewInfo& View																								 \
+	, const FSceneRenderTargets& SceneContext																			 \
+	, TUniformBufferRef<FTressFXAVSMConstantParams> AVSMBuffer															 \
+)																														 \
+{																														 \
+	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();															 \
+	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);			 \
+																														 \
+	SetSRVParameter(RHICmdList, ShaderRHI, gListTexSegmentNodesSRV, SceneContext.mAVSMStructBuf.SRV);					 \
+	SetTextureParameter(																								 \
+		RHICmdList																										 \
+		, ShaderRHI																										 \
+		, gListTexFirstSegmentNodeAddressSRV																			 \
+		, SceneContext.mListTexFirstSegmentNodeOffset->GetRenderTargetItem().ShaderResourceTexture						 \
+	);																													 \
+	SetUniformBufferParameter(RHICmdList, ShaderRHI, TressFXAVSMConstants, AVSMBuffer);									 \
+}
+
+FTRessFXAVSMResolvePSSetParams_Implementation(4);
+FTRessFXAVSMResolvePSSetParams_Implementation(8);
+FTRessFXAVSMResolvePSSetParams_Implementation(12);
+FTRessFXAVSMResolvePSSetParams_Implementation(16);
+
+#undef FTRessFXAVSMResolvePSSetParams_Implementation;
+
+IMPLEMENT_GLOBAL_SHADER(FTRessFXAVSMResolvePS<4>, "/Engine/Private/TressFX_AVSMResolve.usf", "AVSMUnsortedResolvePS", SF_Pixel);
+IMPLEMENT_GLOBAL_SHADER(FTRessFXAVSMResolvePS<8>, "/Engine/Private/TressFX_AVSMResolve.usf", "AVSMUnsortedResolvePS", SF_Pixel);
+IMPLEMENT_GLOBAL_SHADER(FTRessFXAVSMResolvePS<12>, "/Engine/Private/TressFX_AVSMResolve.usf", "AVSMUnsortedResolvePS", SF_Pixel);
+IMPLEMENT_GLOBAL_SHADER(FTRessFXAVSMResolvePS<16>, "/Engine/Private/TressFX_AVSMResolve.usf", "AVSMUnsortedResolvePS", SF_Pixel);

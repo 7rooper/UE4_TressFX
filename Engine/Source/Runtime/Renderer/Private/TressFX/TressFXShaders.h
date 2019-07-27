@@ -601,7 +601,7 @@ public:
 };
 
 ///////////////////////////////////////////////////////////////////////////////////
-////  FTressFXClearAVSMBufferPS
+////  FTressFXClearAVSMPS
 //////////////////////////////////////////////////////////////////////////////////
 
 class FTressFXClearAVSMBufferPS : public FGlobalShader
@@ -656,4 +656,75 @@ public:
 
 	FRWShaderParameter gAVSMStructBufUAV;
 	FShaderParameter ShadowTextureSize;
+};
+
+
+///////////////////////////////////////////////////////////////////////////////////
+////  FTRessFXAVSMResolvePS
+//////////////////////////////////////////////////////////////////////////////////
+
+template<int32 AVSMNodeCount>
+class FTRessFXAVSMResolvePS : public FGlobalShader
+{
+
+	DECLARE_GLOBAL_SHADER(FTRessFXAVSMResolvePS)
+
+public:
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+	}
+
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters & Parameters, FShaderCompilerEnvironment & OutEnvironment)
+	{
+		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		TressFXAVSM<AVSMNodeCount>::ModifyCompilationEnvironmentCommon(Parameters.Platform, OutEnvironment);
+		FShaderUniformBufferParameter::ModifyCompilationEnvironment(
+			FTressFXAVSMConstantParams::StaticStructMetadata.GetShaderVariableName(),
+			FTressFXAVSMConstantParams::StaticStructMetadata,
+			Platform,
+			OutEnvironment
+		);
+	}
+
+	static const TCHAR* GetSourceFilename()
+	{
+		return TEXT("/Engine/Private/TressFX_AVSMResolve.usf");
+	}
+
+	static const TCHAR* GetFunctionName()
+	{
+		return TEXT("AVSMUnsortedResolvePS");
+	}
+
+	FTRessFXAVSMResolvePS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
+	{
+		gListTexSegmentNodesSRV.Bind(Initializer.ParameterMap, TEXT("gListTexSegmentNodesSRV"));
+		gListTexFirstSegmentNodeAddressSRV.Bind(Initializer.ParameterMap, TEXT("gListTexFirstSegmentNodeAddressSRV"));
+		TressFXAVSMConstants.Bind(Initializer.ParameterMap, FTressFXAVSMConstantParams::StaticStructMetadata.GetShaderVariableName());
+	}
+
+	FTRessFXAVSMResolvePS() {}
+
+
+	// FShader interface.
+	virtual bool Serialize(FArchive& Ar) override
+	{
+		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
+		Ar << gListTexSegmentNodesSRV << gListTexFirstSegmentNodeAddressSRV << TressFXAVSMConstants;
+		return bShaderHasOutdatedParameters;
+	}
+
+	void SetParameters(
+		FRHICommandList& RHICmdList
+		, const FViewInfo& View
+		, const FSceneRenderTargets& SceneContext
+		, TUniformBufferRef<FTressFXAVSMConstantParams> AVSMBuffer
+	);
+
+public:
+	FShaderResourceParameter gListTexSegmentNodesSRV;
+	FShaderResourceParameter gListTexFirstSegmentNodeAddressSRV;
+	FShaderUniformBufferParameter TressFXAVSMConstants;
 };

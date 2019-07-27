@@ -123,6 +123,7 @@ void main(
     float segmentTransmittance;
     ShadowHairModel(input.Position, TFXAlpha, entry, exit, segmentTransmittance);
     int2 vScreenAddress = int2(position.xy);
+	
 	// Allocate a new node
     // (If we're running out of memory we simply drop this fragment)
     uint newNodeAddress;
