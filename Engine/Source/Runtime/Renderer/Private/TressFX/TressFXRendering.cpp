@@ -996,12 +996,34 @@ void RenderShortcutResolvePass(
 		}
 
 		//resolve AVSM
+		if(false)
 		{
+
+
+			RHICmdList.TransitionResource(EResourceTransitionAccess::EWritable, SceneContext.TressFXAVSMShadowTextureArray->GetRenderTargetItem().TargetableTexture);
+			
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveAVSM);
-			FRHIRenderPassInfo RPInfo(
-				SceneContext.GetSceneColorSurface(), ERenderTargetActions::Load_Store,
-				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
-			);
+			FRHIRenderPassInfo RPInfo;
+
+			RPInfo.ColorRenderTargets[0].Action = MakeRenderTargetActions(ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore);
+			RPInfo.ColorRenderTargets[0].RenderTarget = SceneContext.TressFXAVSMShadowTextureArray->GetRenderTargetItem().TargetableTexture;
+			RPInfo.ColorRenderTargets[0].ArraySlice = 0;
+			RPInfo.ColorRenderTargets[0].MipIndex = 0;
+
+			RPInfo.ColorRenderTargets[1].Action = MakeRenderTargetActions(ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore);
+			RPInfo.ColorRenderTargets[1].RenderTarget = SceneContext.TressFXAVSMShadowTextureArray->GetRenderTargetItem().TargetableTexture;
+			RPInfo.ColorRenderTargets[1].ArraySlice = 1;
+			RPInfo.ColorRenderTargets[1].MipIndex = 0;
+
+			RPInfo.ColorRenderTargets[2].Action = MakeRenderTargetActions(ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore);
+			RPInfo.ColorRenderTargets[2].RenderTarget = SceneContext.TressFXAVSMShadowTextureArray->GetRenderTargetItem().TargetableTexture;
+			RPInfo.ColorRenderTargets[2].ArraySlice = 2;
+			RPInfo.ColorRenderTargets[2].MipIndex = 0;
+
+			RPInfo.ColorRenderTargets[3].Action = MakeRenderTargetActions(ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore);
+			RPInfo.ColorRenderTargets[3].RenderTarget = SceneContext.TressFXAVSMShadowTextureArray->GetRenderTargetItem().TargetableTexture;
+			RPInfo.ColorRenderTargets[3].ArraySlice = 3;
+			RPInfo.ColorRenderTargets[3].MipIndex = 0;
 
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("ResolveAVSM"));
 
