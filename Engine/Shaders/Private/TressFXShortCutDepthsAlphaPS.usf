@@ -65,6 +65,8 @@ void ShadowHairModel(
 
     // Need to calculate ray-cylinder intersection here to find
     // entry/exit points
+	//JAKETODO,i think this needs to be the position from the perspective of the LIGHT, not camera
+	// multiply by screentoshadow matrix
     entry = SVPos; //input.position;
     exit = entry + float3(0, 0, hairThickness);
     segmentTransmittance = 1 - HairOpacity;
@@ -121,9 +123,14 @@ void main(
 	//capture AVSM data
     float3 entry, exit;
     float segmentTransmittance;
+	//jaketodo, needs to be position in light space, not svpos
     ShadowHairModel(input.Position, TFXAlpha, entry, exit, segmentTransmittance);
-    int2 vScreenAddress = int2(position.xy);
-	
+
+	//the shadow map is not in the same size as the rest of the RTs, we must remap the screen pos
+    float2 ScreenAddressForShadowMap;
+    ScreenAddressForShadowMap.x = RemapValue(position.x, 0, viewport.x, 0, float(TressFXAVSMConstantBuffer.ShadowMapDimension));
+    ScreenAddressForShadowMap.y = RemapValue(position.y, 0, viewport.y, 0, float(TressFXAVSMConstantBuffer.ShadowMapDimension));
+
 	// Allocate a new node
     // (If we're running out of memory we simply drop this fragment)
     uint newNodeAddress;
@@ -139,7 +146,7 @@ void main(
         node.sortKey = input.Position.z;
 #endif
         // Insert node!
-        LT_InsertFirstSegmentNode(vScreenAddress, newNodeAddress, node);
+        LT_InsertFirstSegmentNode(int2(ScreenAddressForShadowMap), newNodeAddress, node);
     }
 	//END avsm
 
@@ -149,6 +156,7 @@ void main(
         return;
     }
 
+    int2 vScreenAddress = int2(position.xy);
     uint uDepth = asuint(position.z);
     uint PrevClosest;
     InterlockedMax(RWFragmentDepthsTexture[uint3(vScreenAddress, 3)], uDepth, PrevClosest);

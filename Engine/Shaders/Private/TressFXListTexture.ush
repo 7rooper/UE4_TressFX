@@ -103,118 +103,163 @@ float linstep(float min, float max, float v)
     return saturate((v - min) / (max - min));
 }
 
+float RemapValue(float from, float fromMin, float fromMax, float toMin, float toMax)
+{
+    float fromAbs = from - fromMin;
+    float fromMaxAbs = fromMax - fromMin;
+   
+    float normal = fromAbs / fromMaxAbs;
+
+    float toMaxAbs = toMax - toMin;
+    float toAbs = toMaxAbs * normal;
+
+    float to = toAbs + toMin;
+   
+    return to;
+}
+
 //////////////////////////////////////////////
 // Segment related functions
 //////////////////////////////////////////////
 
-uint LT_GetFirstSegmentNodeOffset(int2 screenAddress)
+    uint LT_GetFirstSegmentNodeOffset
+    (
+    int2 screenAddress)
 {
-    return gListTexFirstSegmentNodeAddressSRV[screenAddress];
-}
+        return gListTexFirstSegmentNodeAddressSRV[screenAddress];
+    }
 
-bool LT_AllocSegmentNode(out uint newNodeAddress1D)
+    bool LT_AllocSegmentNode
+    (out
+    uint newNodeAddress1D)
 {
     // alloc a new node
     //newNodeAddress1D = gListTexSegmentNodesUAV.IncrementCounter();
 	//using this instead of the uav IncrementCounter so i dont have to modify UE4's RHI any more
-    InterlockedAdd(RWCounterBuffer[0], 1, newNodeAddress1D);
+        InterlockedAdd(RWCounterBuffer[0], 1, newNodeAddress1D);
 
     // running out of memory?
-    return newNodeAddress1D <= AVSMNodePoolSize && !(newNodeAddress1D <= 0);
-}
+        return newNodeAddress1D <= AVSMNodePoolSize && !(newNodeAddress1D <= 0);
+    }
 
 // Insert a new node at the head of the list
-void LT_InsertFirstSegmentNode(in int2 screenAddress, in uint newNodeAddress, in ListTexSegmentNode newNode)
+    void LT_InsertFirstSegmentNode
+    (in
+    int2 screenAddress, in
+    uint newNodeAddress, in ListTexSegmentNode
+    newNode)
 {
-    uint oldNodeAddress;
-    InterlockedExchange(gListTexFirstSegmentNodeAddressUAV[screenAddress], newNodeAddress, oldNodeAddress);
+        uint oldNodeAddress;
+        InterlockedExchange(gListTexFirstSegmentNodeAddressUAV[screenAddress], newNodeAddress, oldNodeAddress);
       
-    newNode.next = oldNodeAddress;
-    gListTexSegmentNodesUAV[newNodeAddress] = newNode;
-}
+        newNode.next = oldNodeAddress;
+        gListTexSegmentNodesUAV[newNodeAddress] = newNode;
+    }
 
-ListTexSegmentNode LT_GetSegmentNode(uint nodeAddress)
+    ListTexSegmentNode LT_GetSegmentNode
+    (
+    uint nodeAddress)
 {
-    return gListTexSegmentNodesSRV[nodeAddress];
-}
+        return gListTexSegmentNodesSRV[nodeAddress];
+    }
 
 //////////////////////////////////////////////
 // General visibility encoding functions
 //////////////////////////////////////////////
 
-ListTexPackedVisibilityNode PackVisibilityNode(in ListTexVisibilityNode node)
+    ListTexPackedVisibilityNode PackVisibilityNode
+    (in
+    ListTexVisibilityNode node)
 {
-    ListTexPackedVisibilityNode packedNode;
+        ListTexPackedVisibilityNode packedNode;
     
-    packedNode.next = node.next;
+        packedNode.next = node.next;
     
 #ifdef ENABLE_PACKED_NODES    
     packedNode.pck_depth_trans = ((f32tof16(node.depth) << 16) & 0xFFFF0000) | f32tof16(node.trans);
 #else    
-    packedNode.depth = node.depth;
-    packedNode.trans = node.trans;
+        packedNode.depth = node.depth;
+        packedNode.trans = node.trans;
 #endif    
     
-    return packedNode;
-}
+        return packedNode;
+    }
 
-ListTexVisibilityNode UnpackVisibilityNode(in ListTexPackedVisibilityNode packedNode)
+    ListTexVisibilityNode UnpackVisibilityNode
+    (in
+    ListTexPackedVisibilityNode packedNode)
 {
-    ListTexVisibilityNode node;
+        ListTexVisibilityNode node;
     
-    node.next = packedNode.next;
+        node.next = packedNode.next;
     
 #ifdef ENABLE_PACKED_NODES    
     node.depth = f16tof32(packedNode.pck_depth_trans >> 16);
     node.trans = f16tof32(packedNode.pck_depth_trans);
 #else        
-    node.depth = packedNode.depth;
-    node.trans = packedNode.trans;
+        node.depth = packedNode.depth;
+        node.trans = packedNode.trans;
 #endif    
     
-    return node;
-}
+        return node;
+    }
 
-float LT_Interp(float d0, float d1, float t0, float t1, float r)
+    float LT_Interp
+    (
+    float d0, float d1, float t0, float t1, float r)
 {
-    float depth = linstep(d0, d1, r);
-    return t0 + (t1 - t0) * depth;
-}
+        float depth = linstep(d0, d1, r);
+        return t0 + (t1 - t0) * depth;
+    }
 
-uint LT_GetFirstVisibilityNodeOffset(int2 screenAddress)
+    uint LT_GetFirstVisibilityNodeOffset
+    (
+    int2 screenAddress)
 {
-    return gListTexFirstVisibilityNodeAddressSRV[screenAddress];
-}
+        return gListTexFirstVisibilityNodeAddressSRV[screenAddress];
+    }
 
-uint LT_GetFirstSrtdEntryOffset(int2 screenAddress)
+    uint LT_GetFirstSrtdEntryOffset
+    (
+    int2 screenAddress)
 {
-    return gListTexFirstSrtdEntryAddressSRV[screenAddress];
-}
+        return gListTexFirstSrtdEntryAddressSRV[screenAddress];
+    }
 
-uint LT_GetFirstSrtdExitOffset(int2 screenAddress)
+    uint LT_GetFirstSrtdExitOffset
+    (
+    int2 screenAddress)
 {
-    return gListTexFirstSrtdExitAddressSRV[screenAddress];
-}
+        return gListTexFirstSrtdExitAddressSRV[screenAddress];
+    }
 
-ListTexVisibilityNode LT_GetVisibilityNode(uint nodeAddress)
+    ListTexVisibilityNode LT_GetVisibilityNode
+    (
+    uint nodeAddress)
 {
-    return gListTexVisibilityNodesSRV[nodeAddress];
-}
+        return gListTexVisibilityNodesSRV[nodeAddress];
+    }
 
-ListTexVisibilityNode LT_GetSrtdEntryNode(uint nodeAddress)
+    ListTexVisibilityNode LT_GetSrtdEntryNode
+    (
+    uint nodeAddress)
 {
-    return gListTexSrtdEntrySRV[nodeAddress];
-}
+        return gListTexSrtdEntrySRV[nodeAddress];
+    }
 
-ListTexVisibilityNode LT_GetSrtdExitNode(uint nodeAddress)
+    ListTexVisibilityNode LT_GetSrtdExitNode
+    (
+    uint nodeAddress)
 {
-    return gListTexSrtdExitSRV[nodeAddress];
-}
+        return gListTexSrtdExitSRV[nodeAddress];
+    }
 
-bool LT_AllocVisibilityNode(out uint newNodeAddress1D)
+    bool LT_AllocVisibilityNode
+    (out
+    uint newNodeAddress1D)
 {
     // alloc a new node
-    newNodeAddress1D = gListTexVisibilityNodesUAV.IncrementCounter();
+        newNodeAddress1D = gListTexVisibilityNodesUAV.IncrementCounter();
 
 #ifdef AVSM_ENABLE_MEMORY_STATS
     uint realMaxNodes = mMaxNodes - 1;
@@ -226,196 +271,228 @@ bool LT_AllocVisibilityNode(out uint newNodeAddress1D)
     stats.trans = 13579;
     gListTexVisibilityNodesUAV[realMaxNodes] = stats;
 #else
-    uint realMaxNodes = mMaxNodes;
+        uint realMaxNodes = mMaxNodes;
 #endif
     
     // running out of memory?
-    return newNodeAddress1D <= realMaxNodes;
-}
+        return newNodeAddress1D <= realMaxNodes;
+    }
 
-bool LT_AllocSrtdEntryNode(out uint newNodeAddress1D)
+    bool LT_AllocSrtdEntryNode
+    (out
+    uint newNodeAddress1D)
 {
     // alloc a new node
-    newNodeAddress1D = gListTexSrtdEntryUAV.IncrementCounter();
+        newNodeAddress1D = gListTexSrtdEntryUAV.IncrementCounter();
     
     // running out of memory?
-    return newNodeAddress1D <= mMaxNodes;
-}
+        return newNodeAddress1D <= mMaxNodes;
+    }
 
-bool LT_AllocSrtdExitNode(out uint newNodeAddress1D)
+    bool LT_AllocSrtdExitNode
+    (out
+    uint newNodeAddress1D)
 {
     // alloc a new node
-    newNodeAddress1D = gListTexSrtdExitUAV.IncrementCounter();
+        newNodeAddress1D = gListTexSrtdExitUAV.IncrementCounter();
     
     // running out of memory?
-    return newNodeAddress1D <= mMaxNodes;
-}
+        return newNodeAddress1D <= mMaxNodes;
+    }
 
 // Insert a new node at the head of the list
-void LT_InsertFirstVisibilityNode(in int2 screenAddress, in uint newNodeAddress, in ListTexVisibilityNode newNode)
+    void LT_InsertFirstVisibilityNode
+    (in
+    int2 screenAddress, in
+    uint newNodeAddress, in ListTexVisibilityNode
+    newNode)
 {
-    uint oldNodeAddress;
-    InterlockedExchange(gListTexFirstVisibilityNodeAddressUAV[screenAddress], newNodeAddress, oldNodeAddress);
+        uint oldNodeAddress;
+        InterlockedExchange(gListTexFirstVisibilityNodeAddressUAV[screenAddress], newNodeAddress, oldNodeAddress);
       
-    newNode.next = oldNodeAddress;
-    gListTexVisibilityNodesUAV[newNodeAddress] = newNode;
-}
+        newNode.next = oldNodeAddress;
+        gListTexVisibilityNodesUAV[newNodeAddress] = newNode;
+    }
 
 // Insert a new node at the head of the list
-void LT_InsertFirstSrtdEntryNode(in int2 screenAddress, in uint newNodeAddress, in ListTexVisibilityNode newNode)
+    void LT_InsertFirstSrtdEntryNode
+    (in
+    int2 screenAddress, in
+    uint newNodeAddress, in ListTexVisibilityNode
+    newNode)
 {
-    uint oldNodeAddress;
-    InterlockedExchange(gListTexFirstSrtdEntryAddressUAV[screenAddress], newNodeAddress, oldNodeAddress);
+        uint oldNodeAddress;
+        InterlockedExchange(gListTexFirstSrtdEntryAddressUAV[screenAddress], newNodeAddress, oldNodeAddress);
       
-    newNode.next = oldNodeAddress;
-    gListTexSrtdEntryUAV[newNodeAddress] = newNode;
-}
+        newNode.next = oldNodeAddress;
+        gListTexSrtdEntryUAV[newNodeAddress] = newNode;
+    }
 
 // Insert a new node at the head of the list
-void LT_InsertFirstSrtdExitNode(in int2 screenAddress, in uint newNodeAddress, in ListTexVisibilityNode newNode)
+    void LT_InsertFirstSrtdExitNode
+    (in
+    int2 screenAddress, in
+    uint newNodeAddress, in ListTexVisibilityNode
+    newNode)
 {
-    uint oldNodeAddress;
-    InterlockedExchange(gListTexFirstSrtdExitAddressUAV[screenAddress], newNodeAddress, oldNodeAddress);
+        uint oldNodeAddress;
+        InterlockedExchange(gListTexFirstSrtdExitAddressUAV[screenAddress], newNodeAddress, oldNodeAddress);
       
-    newNode.next = oldNodeAddress;
-    gListTexSrtdExitUAV[newNodeAddress] = newNode;
-}
+        newNode.next = oldNodeAddress;
+        gListTexSrtdExitUAV[newNodeAddress] = newNode;
+    }
 
 // Insert a new node at the tail of the list
-void LT_InsertLastVisibilityNode(in uint tailNodeAddress, in uint newNodeAddress, in ListTexVisibilityNode newNode)
+    void LT_InsertLastVisibilityNode
+    (in
+    uint tailNodeAddress, in
+    uint newNodeAddress, in ListTexVisibilityNode
+    newNode)
 {
-    uint oldNodeAddress;
-    newNode.next = NODE_LIST_NULL;
-    gListTexVisibilityNodesUAV[newNodeAddress] = newNode;
-    InterlockedExchange(gListTexVisibilityNodesUAV[tailNodeAddress].next, newNodeAddress, oldNodeAddress);
-}
+        uint oldNodeAddress;
+        newNode.next = NODE_LIST_NULL;
+        gListTexVisibilityNodesUAV[newNodeAddress] = newNode;
+        InterlockedExchange(gListTexVisibilityNodesUAV[tailNodeAddress].next, newNodeAddress, oldNodeAddress);
+    }
 
 //////////////////////////////////////////////
 // List Texture Segment Sampling Functions
 //////////////////////////////////////////////
 
-float LT_SegmentPointSample(in float2 uv, in float receiverDepth)
+    float LT_SegmentPointSample
+    (in
+    float2 uv, in
+    float receiverDepth)
 {
-    float transmittance = 1.0f;
+        float transmittance = 1.0f;
     
     // Get fragment  coordinates
-    int2 screenAddress = int2(mFirstNodeMapSize.xx * uv);
+        int2 screenAddress = int2(mFirstNodeMapSize.xx * uv);
     
     // Get offset to the first node
-    uint nodeOffset = LT_GetFirstSegmentNodeOffset(screenAddress);
+        uint nodeOffset = LT_GetFirstSegmentNodeOffset(screenAddress);
 
     // Fetch nodes
-    ListTexSegmentNode node;
+        ListTexSegmentNode node;
     [loop]
-    while ((nodeOffset != NODE_LIST_NULL))
-    {
+        while ((nodeOffset != NODE_LIST_NULL))
+        {
         // Get node..
-        node = LT_GetSegmentNode(nodeOffset);
+            node = LT_GetSegmentNode(nodeOffset);
         
         // Compute and composite transmittance for this segment            
-        transmittance *= LT_Interp(node.depth[0], node.depth[1], 1.0f, node.trans, receiverDepth);
+            transmittance *= LT_Interp(node.depth[0], node.depth[1], 1.0f, node.trans, receiverDepth);
                            
         // Move to next node
-        nodeOffset = node.next;
-    }
+            nodeOffset = node.next;
+        }
     
     [flatten]
-    if (any(uv > 1.0f.xx) || any(uv < 0.0f.xx))
-    {
-        transmittance = 1.0f;
+        if (any(uv > 1.0f.xx) || any(uv < 0.0f.xx))
+        {
+            transmittance = 1.0f;
+        }
+    
+    
+        return transmittance;
     }
-    
-    
-    return transmittance;
-}
 
-float LT_SegmentBilinearSample(in float2 textureCoords, in float receiverDepth)
+    float LT_SegmentBilinearSample
+    (in
+    float2 textureCoords, in
+    float receiverDepth)
 {
-    float2 unnormCoords = textureCoords * mFirstNodeMapSize.xx;
+        float2 unnormCoords = textureCoords * mFirstNodeMapSize.xx;
     
-    const float a = frac(unnormCoords.x - 0.5f);
-    const float b = frac(unnormCoords.y - 0.5f);
-    const float i = floor(unnormCoords.x - 0.5f);
-    const float j = floor(unnormCoords.y - 0.5f);
+        const float a = frac(unnormCoords.x - 0.5f);
+        const float b = frac(unnormCoords.y - 0.5f);
+        const float i = floor(unnormCoords.x - 0.5f);
+        const float j = floor(unnormCoords.y - 0.5f);
     
-    float sample00 = LT_SegmentPointSample(float2(i, j) / mFirstNodeMapSize.xx, receiverDepth);
-    float sample01 = LT_SegmentPointSample(float2(i, j + 1) / mFirstNodeMapSize.xx, receiverDepth);
-    float sample10 = LT_SegmentPointSample(float2(i + 1, j) / mFirstNodeMapSize.xx, receiverDepth);
-    float sample11 = LT_SegmentPointSample(float2(i + 1, j + 1) / mFirstNodeMapSize.xx, receiverDepth);
+        float sample00 = LT_SegmentPointSample(float2(i, j) / mFirstNodeMapSize.xx, receiverDepth);
+        float sample01 = LT_SegmentPointSample(float2(i, j + 1) / mFirstNodeMapSize.xx, receiverDepth);
+        float sample10 = LT_SegmentPointSample(float2(i + 1, j) / mFirstNodeMapSize.xx, receiverDepth);
+        float sample11 = LT_SegmentPointSample(float2(i + 1, j + 1) / mFirstNodeMapSize.xx, receiverDepth);
 	
-    return (1 - a) * (1 - b) * sample00 + a * (1 - b) * sample10 + (1 - a) * b * sample01 + a * b * sample11;
-}
+        return (1 - a) * (1 - b) * sample00 + a * (1 - b) * sample10 + (1 - a) * b * sample01 + a * b * sample11;
+    }
 
 //////////////////////////////////////////////
 // List Texture Visibility Sampling Functions
 //////////////////////////////////////////////
 
-float LT_VisibilityPointSample(in float2 uv, in float receiverDepth)
+    float LT_VisibilityPointSample
+    (in
+    float2 uv, in
+    float receiverDepth)
 {
     // Get fragment  coordinates
-    int2 screenAddress = int2(mFirstNodeMapSize.xx * uv);
+        int2 screenAddress = int2(mFirstNodeMapSize.xx * uv);
     
     // Get offset to the first node
-    uint nodeOffset = LT_GetFirstVisibilityNodeOffset(screenAddress);
+        uint nodeOffset = LT_GetFirstVisibilityNodeOffset(screenAddress);
 
     // empty list
-    if (nodeOffset == NODE_LIST_NULL)
-    {
-        return 1.0;
-    }
+        if (nodeOffset == NODE_LIST_NULL)
+        {
+            return 1.0;
+        }
     
-    uint prevNodeOffset, nodeCount = 0;
-    ListTexVisibilityNode node;
-    while (nodeOffset != NODE_LIST_NULL)
-    {
-        nodeCount++;
-        node = LT_GetVisibilityNode(nodeOffset);
+        uint prevNodeOffset, nodeCount = 0;
+        ListTexVisibilityNode node;
+        while (nodeOffset != NODE_LIST_NULL)
+        {
+            nodeCount++;
+            node = LT_GetVisibilityNode(nodeOffset);
         
-        if (receiverDepth < node.depth)
-            break;
+            if (receiverDepth < node.depth)
+                break;
         
-        prevNodeOffset = nodeOffset;
-        nodeOffset = node.next;
-    }
+            prevNodeOffset = nodeOffset;
+            nodeOffset = node.next;
+        }
     
-    if (nodeCount == 0)
-    {
-        return 1.0f;
-    }
-    
-    if (nodeOffset == NODE_LIST_NULL)
-    {
-        return node.trans;
-    }
-    else
-    {
-        if (nodeCount == 1)
+        if (nodeCount == 0)
         {
             return 1.0f;
         }
+    
+        if (nodeOffset == NODE_LIST_NULL)
+        {
+            return node.trans;
+        }
         else
         {
-            ListTexVisibilityNode prevNode = LT_GetVisibilityNode(prevNodeOffset);
-            return LT_Interp(prevNode.depth, node.depth, prevNode.trans, node.trans, receiverDepth);
+            if (nodeCount == 1)
+            {
+                return 1.0f;
+            }
+            else
+            {
+                ListTexVisibilityNode prevNode = LT_GetVisibilityNode(prevNodeOffset);
+                return LT_Interp(prevNode.depth, node.depth, prevNode.trans, node.trans, receiverDepth);
+            }
         }
     }
-}
     
-float LT_VisibilityBilinearSample(in float2 textureCoords, in float receiverDepth)
+    float LT_VisibilityBilinearSample
+    (in
+    float2 textureCoords, in
+    float receiverDepth)
 {
-    float2 unnormCoords = textureCoords * mFirstNodeMapSize.xx;
+        float2 unnormCoords = textureCoords * mFirstNodeMapSize.xx;
     
-    const float a = frac(unnormCoords.x - 0.5f);
-    const float b = frac(unnormCoords.y - 0.5f);
-    const float i = floor(unnormCoords.x - 0.5f);
-    const float j = floor(unnormCoords.y - 0.5f);
+        const float a = frac(unnormCoords.x - 0.5f);
+        const float b = frac(unnormCoords.y - 0.5f);
+        const float i = floor(unnormCoords.x - 0.5f);
+        const float j = floor(unnormCoords.y - 0.5f);
     
-    float sample00 = LT_VisibilityPointSample(float2(i, j) / mFirstNodeMapSize.xx, receiverDepth);
-    float sample01 = LT_VisibilityPointSample(float2(i, j + 1) / mFirstNodeMapSize.xx, receiverDepth);
-    float sample10 = LT_VisibilityPointSample(float2(i + 1, j) / mFirstNodeMapSize.xx, receiverDepth);
-    float sample11 = LT_VisibilityPointSample(float2(i + 1, j + 1) / mFirstNodeMapSize.xx, receiverDepth);
+        float sample00 = LT_VisibilityPointSample(float2(i, j) / mFirstNodeMapSize.xx, receiverDepth);
+        float sample01 = LT_VisibilityPointSample(float2(i, j + 1) / mFirstNodeMapSize.xx, receiverDepth);
+        float sample10 = LT_VisibilityPointSample(float2(i + 1, j) / mFirstNodeMapSize.xx, receiverDepth);
+        float sample11 = LT_VisibilityPointSample(float2(i + 1, j + 1) / mFirstNodeMapSize.xx, receiverDepth);
 	
-    return (1 - a) * (1 - b) * sample00 + a * (1 - b) * sample10 + (1 - a) * b * sample01 + a * b * sample11;
-}
+        return (1 - a) * (1 - b) * sample00 + a * (1 - b) * sample10 + (1 - a) * b * sample01 + a * b * sample11;
+    }
 
 #endif // H_LIST_TEXTURE	
