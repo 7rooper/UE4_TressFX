@@ -58,12 +58,12 @@ struct ListTexPackedVisibilityNode
 // Resource Views
 //////////////////////////////////////////////
 
-RWBuffer<uint> RWCounterBuffer;
+RWBuffer<uint> RWCounterBuffer : register(u5);
 
-RWTexture2D<uint> gListTexFirstSegmentNodeAddressUAV;
+RWTexture2D<uint> gListTexFirstSegmentNodeAddressUAV : register(u3);
 Texture2D<uint> gListTexFirstSegmentNodeAddressSRV;
 
-RWStructuredBuffer<ListTexSegmentNode> gListTexSegmentNodesUAV;
+RWStructuredBuffer<ListTexSegmentNode> gListTexSegmentNodesUAV : register(u4);
 StructuredBuffer<ListTexSegmentNode> gListTexSegmentNodesSRV;
 
 RWTexture2D<uint> gListTexFirstVisibilityNodeAddressUAV;
@@ -86,7 +86,7 @@ Texture2D<uint> gListTexFirstSrtdExitAddressSRV;
 RWStructuredBuffer<ListTexVisibilityNode> gListTexSrtdExitUAV;
 StructuredBuffer<ListTexVisibilityNode> gListTexSrtdExitSRV;
 
-uint AVSMNodePoolSize;
+#define AVSMNodePoolSize TressFXAVSMConstantBuffer.AVSMNodePoolSize
 
 //////////////////////////////////////////////
 // Constants
@@ -120,7 +120,7 @@ bool LT_AllocSegmentNode(out uint newNodeAddress1D)
     InterlockedAdd(RWCounterBuffer[0], 1, newNodeAddress1D);
 
     // running out of memory?
-    return newNodeAddress1D <= AVSMNodePoolSize;
+    return newNodeAddress1D <= AVSMNodePoolSize && !(newNodeAddress1D <= 0);
 }
 
 // Insert a new node at the head of the list

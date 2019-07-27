@@ -34,7 +34,7 @@
 
 #include "TressFXRendering.ush"
 
-RWTexture2DArray<uint> RWFragmentDepthsTexture;
+RWTexture2DArray<uint> RWFragmentDepthsTexture : register(u2);
 
 struct PS_INPUT_HAIR_AA
 {

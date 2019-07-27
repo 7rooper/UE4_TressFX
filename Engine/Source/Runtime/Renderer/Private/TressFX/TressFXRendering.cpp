@@ -902,10 +902,6 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 				SceneContext.AVSMBufferCounter.UAV
 			};
 
-			TUniformBufferRef<FTressFXAVSMConstantParams> TressFXAVSMConstantBuffer;
-			CreateTressFXAVSMBuffer(RHICmdList, View, TressFXAVSMConstantBuffer);
-			FMeshPassProcessorRenderState DrawRenderState(View, TressFXAVSMConstantBuffer);
-			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EWritable, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
@@ -926,11 +922,15 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture;
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
 
+			TUniformBufferRef<FTressFXAVSMConstantParams> TressFXAVSMConstantBuffer;
+			CreateTressFXAVSMBuffer(RHICmdList, View, TressFXAVSMConstantBuffer);
+			FMeshPassProcessorRenderState DrawRenderState(View, TressFXAVSMConstantBuffer);
+			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
+
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXDepthsAlpha"));
 
 			FLinearColor ClearColors[] = { FLinearColor::White, FLinearColor::Transparent };
 			DrawClearQuadMRT( RHICmdList, true, 2, ClearColors, false, 0, false, 0);
-			FMeshPassProcessorRenderState DrawRenderState(View);
 
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 			View.ParallelMeshDrawCommandPasses[EMeshPass::TressFX_DepthsAlpha].DispatchDraw(nullptr, RHICmdList);

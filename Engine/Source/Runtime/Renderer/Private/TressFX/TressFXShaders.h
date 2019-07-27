@@ -29,7 +29,11 @@ struct ETressFXPass
 class FTressFXShaderElementData;
 
 template <int32 AVSMNodeCount>
-void TressFXAVSMModifyCompilationEnvironmentCommon(EShaderPlatform Platform, FShaderCompilerEnvironment & OutEnvironment);
+struct TressFXAVSM
+{
+	static void ModifyCompilationEnvironmentCommon(EShaderPlatform Platform, FShaderCompilerEnvironment & OutEnvironment);
+};
+
 
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXCopyOpaqueDepthPS
@@ -268,12 +272,12 @@ public:
 		gListTexFirstSegmentNodeAddressUAV.Bind(Initializer.ParameterMap, TEXT("gListTexFirstSegmentNodeAddressUAV"));
 		RWCounterBuffer.Bind(Initializer.ParameterMap, TEXT("RWCounterBuffer"));
 		TressFXAVSMConstants.Bind(Initializer.ParameterMap, FTressFXAVSMConstantParams::StaticStructMetadata.GetShaderVariableName());
+		TressfxShadeParameters.Bind(Initializer.ParameterMap, TEXT("TressfxShadeParameters"));
 	}
 
 	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		OutEnvironment.SetDefine(TEXT("NEEDS_VELOCITY"), bNeedsVelocity ? 1 : 0);
-		TressFXAVSMModifyCompilationEnvironmentCommon()
 		FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
 		FShaderUniformBufferParameter::ModifyCompilationEnvironment(
 			FTressFXAVSMConstantParams::StaticStructMetadata.GetShaderVariableName(),
@@ -281,6 +285,7 @@ public:
 			Platform,
 			OutEnvironment
 		);
+		TressFXAVSM<AVSMNodeCount>::ModifyCompilationEnvironmentCommon(Platform, OutEnvironment);
 	}
 
 	FTressFXDepthsAlphaPS() {}
@@ -299,7 +304,7 @@ public:
 	virtual bool Serialize(FArchive& Ar) override
 	{
 		const bool result = FMeshMaterialShader::Serialize(Ar);
-		Ar << RWFragmentDepthsTexture << gListTexSegmentNodesUAV << gListTexFirstSegmentNodeAddressUAV << RWCounterBuffer << TressFXAVSMConstants;
+		Ar << RWFragmentDepthsTexture << gListTexSegmentNodesUAV << gListTexFirstSegmentNodeAddressUAV << RWCounterBuffer << TressFXAVSMConstants << TressfxShadeParameters;
 		return result;
 	}
 
@@ -315,6 +320,8 @@ public:
 	{
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
 		ShaderBindings.Add(TressFXAVSMConstants, DrawRenderState.GetPassUniformBuffer());
+		const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)PrimitiveSceneProxy;
+		ShaderBindings.Add(TressfxShadeParameters, TFXProxy->TressFXHairObject->ShadeParametersUniformBuffer);
 	}
 
 public:
@@ -324,6 +331,7 @@ public:
 	FRWShaderParameter gListTexFirstSegmentNodeAddressUAV; //addresses
 	FRWShaderParameter RWCounterBuffer;
 	FShaderUniformBufferParameter TressFXAVSMConstants;
+	FShaderUniformBufferParameter TressfxShadeParameters;
 
 };
 
@@ -612,7 +620,7 @@ public:
 	{
 		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 		//node count doesnt actually matter here so just pass 8
-		TressFXAVSMModifyCompilationEnvironmentCommon<8>(Parameters, OutEnvironment);
+		TressFXAVSM<8>::ModifyCompilationEnvironmentCommon(Parameters.Platform, OutEnvironment);
 	}
 
 	static const TCHAR* GetSourceFilename()
