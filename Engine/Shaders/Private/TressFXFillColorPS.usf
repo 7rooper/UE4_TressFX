@@ -20,6 +20,15 @@
 #include "ReflectionEnvironmentShared.ush"
 #include "ShadowFilteringCommon.ush"
 
+#ifndef TFX_SHORTCUT
+	#define TFX_SHORTCUT 1
+#endif
+
+#ifndef TFX_PPLL
+	#define TFX_PPLL 0
+#endif
+
+
 #ifndef ENABLE_SKY_LIGHT
 	#define ENABLE_SKY_LIGHT 1
 #endif
@@ -664,7 +673,7 @@ float3 GetTressFXDynamicLighting(
 
     float AttenuationAndFalloff = (DistanceAttenuation * LightRadiusMask * SpotFalloff);
     float SurfaceAttenuation = saturate(ShadowTerms.SurfaceShadow);
-    float Shadow = AttenuationAndFalloff * DepthBasedAttenuation * SurfaceAttenuation;
+    float Shadow = AttenuationAndFalloff;// * DepthBasedAttenuation; // * SurfaceAttenuation;
     OutColor += reflectedLight * Shadow;
 	// Hack approximation for multiple scattering. copied and slightly modified from ue4 hair shader
     if (1)
@@ -833,11 +842,15 @@ float3 GetForwardDirectLightingTressFX(
 	//DirectLighting = CulledLightsGrid.NumLocalLights / (float)ForwardLightData.MaxCulledLightsPerCell;
 	return DirectLighting;
 }
-
+#if TFX_PPLL
+	#include "TressFXPPLL.ush"
+#endif
 EARLYDEPTHSTENCIL
 void main(
 	PS_INPUT_HAIR_AA In OPTIONAL_IsFrontFace
-	,out float4 OutColor : SV_Target0
+#if TFX_SHORTCUT
+	, out float4 OutColor : SV_Target0
+#endif
 )
 {
 	//final color
@@ -883,7 +896,11 @@ void main(
 	BRANCH
     if (TFXAlpha < SHORTCUT_MIN_ALPHA)
     {
-		OutColor = float4(0, 0, 0, 0);
+		#if TFX_PPLL
+
+		#elif TFX_SHORTCUT
+			OutColor = float4(0, 0, 0, 0);
+		#endif
         return;
     }
 
@@ -983,6 +1000,11 @@ void main(
     const uint EyeIndex = 0;
     Color += GetForwardDirectLightingTressFX(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, 0, Dither, TFXAlpha, TFXTangent, In.FactoryInterpolants.Root2Tip, In.FactoryInterpolants.HairId, In.Position.z, ScreenPositionForShadow);
 	
-	OutColor = float4(Color * TFXAlpha, TFXAlpha);
+	#if TFX_PPLL
+		//color will be multipled be TFXAlpha during resolve pass
+		BuildPPLL(float4(Color, TFXAlpha), int2(In.Position.xy),  GBuffer.Depth);
+	#elif TFX_SHORTCUT		
+		OutColor = float4(Color * TFXAlpha, TFXAlpha);
+	#endif
 	return;
 }

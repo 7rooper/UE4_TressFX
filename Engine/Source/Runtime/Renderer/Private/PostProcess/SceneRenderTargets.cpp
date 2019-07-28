@@ -296,6 +296,10 @@ FSceneRenderTargets::FSceneRenderTargets(const FViewInfo& View, const FSceneRend
 	TressFXAccumInvAlpha = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXAccumInvAlpha);
 	TressFXFragmentDepthsTexture = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXFragmentDepthsTexture);
 	TressFXFragmentColorsTexture = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXFragmentColorsTexture);
+	TressFXKBufferListHeads = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXKBufferListHeads);
+	TressFXKBufferNodePoolSize = SnapshotSource.TressFXKBufferNodePoolSize;
+	TressFXKBufferNodes = SnapshotSource.TressFXKBufferNodes;
+	TressFXKBufferCounter = SnapshotSource.TressFXKBufferCounter;
 	/*@END Third party code TressFX*/
 }
 
@@ -1318,9 +1322,99 @@ void FSceneRenderTargets::AdjustGBufferRefCount(FRHICommandList& RHICmdList, int
 
 /*@BEGIN Third party code TressFX*/
 extern int32 GTressFXRenderType;
+extern int32 GTressFXKBufferSize;
+template <typename TRHICmdList>
+void FSceneRenderTargets::InitializeTressFXKBufferResources(TRHICmdList& RHICmdList, bool bForceReinit /*= false*/)
+{
+	const int32 KBufferSize = FMath::Clamp(static_cast<int32>(GTressFXKBufferSize), MIN_TFX_KBUFFER_SIZE, MAX_TFX_KBUFFER_SIZE);
+	const FIntPoint BuffSize = GetBufferSizeXY();
+
+	if (bForceReinit || !TressFXKBufferListHeads || !TressFXKBufferListHeads.IsValid() || TressFXKBufferListHeads->GetDesc().Extent != BuffSize)
+	{
+		FPooledRenderTargetDesc Desc(
+			FPooledRenderTargetDesc::Create2DDesc(
+				BuffSize,
+				PF_R32_UINT,
+				FClearValueBinding::Transparent,
+				TexCreate_None,
+				TexCreate_RenderTargetable | TexCreate_UAV,
+				false)
+		);
+		Desc.NumSamples = 1;
+		GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXKBufferListHeads, TEXT("PPLLHeads"));
+	}
+	const int32 RequiredPoolSize = BuffSize.X * BuffSize.Y * KBufferSize;
+
+	if (bForceReinit || TressFXKBufferNodePoolSize != RequiredPoolSize)
+	{
+		TressFXKBufferNodePoolSize = RequiredPoolSize;
+	}
+
+	if (bForceReinit || TressFXKBufferNodes.NumBytes != sizeof(FPPLL_Struct) * TressFXKBufferNodePoolSize)
+	{
+		TressFXKBufferNodes.Release();
+		TressFXKBufferNodes.Initialize(sizeof(FPPLL_Struct), RequiredPoolSize, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("TressFXKBuffer"));
+	}
+
+	if (bForceReinit || TressFXKBufferCounter.NumBytes != sizeof(uint32))
+	{
+		TressFXKBufferCounter.Release();
+		TressFXKBufferCounter.Initialize(sizeof(uint32), 1, EPixelFormat::PF_R32_UINT, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("TressFXKBufferCounter"));
+	}
+};
+
+#define IMPLEMENT_InitializeTressFXKBufferResources( TRHICmdList )							\
+	template void FSceneRenderTargets::InitializeTressFXKBufferResources< TRHICmdList >(	\
+		TRHICmdList& RHICmdList,															\
+		bool bForceReinit																	\
+	);
+
+IMPLEMENT_InitializeTressFXKBufferResources(FRHICommandList)
+IMPLEMENT_InitializeTressFXKBufferResources(FRHICommandListImmediate)
+
+#undef IMPLEMENT_InitializeTressFXKBufferResources
+
+template <typename TRHICmdList>
+void FSceneRenderTargets::GetTressFXKBufferResources(
+	TRHICmdList& RHICmdList,
+	TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,
+	FRWBufferStructured*& OutTressFXKBufferNodes,
+	FRWBuffer*& OutTressFXKBufferCounter,
+	int32& OutTressFXKBufferNodePoolSize
+)
+{
+	InitializeTressFXKBufferResources(RHICmdList, false);
+	OutTressFXKBufferListHeads = TressFXKBufferListHeads;
+	OutTressFXKBufferNodes = &TressFXKBufferNodes;
+	OutTressFXKBufferCounter = &TressFXKBufferCounter;
+	OutTressFXKBufferNodePoolSize = TressFXKBufferNodePoolSize;
+}
+
+#define IMPLEMENT_GetTressFXKBufferResources( TRHICmdList )									\
+	template void FSceneRenderTargets::GetTressFXKBufferResources< TRHICmdList >(			\
+		TRHICmdList& RHICmdList,															\
+		TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,						\
+		FRWBufferStructured*& OutTressFXKBufferNodes,										\
+		FRWBuffer*& OutTressFXKBufferCounter,												\
+		int32& OutTressFXKBufferNodePoolSize												\
+	);
+
+IMPLEMENT_GetTressFXKBufferResources(FRHICommandList);
+IMPLEMENT_GetTressFXKBufferResources(FRHICommandListImmediate);
+
+#undef IMPLEMENT_GetTressFXKBufferResources
+
 void FSceneRenderTargets::ReleaseTressFXResources(int32 TypeToRelease)
 {
 	const bool bReleaseAll = TypeToRelease == ETressFXRenderType::Num;
+
+	if (bReleaseAll || TypeToRelease == ETressFXRenderType::KBuffer)
+	{
+		TressFXKBufferListHeads.SafeRelease();
+		TressFXKBufferNodes.Release();
+		TressFXKBufferCounter.Release();
+		TressFXKBufferNodePoolSize = 0;
+	}
 
 	if (bReleaseAll || TypeToRelease == ETressFXRenderType::ShortCut)
 	{
@@ -1381,6 +1475,9 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 
 		if (TFXRenderType == ETressFXRenderType::ShortCut)
 		{
+			//make sure k-buffer resources are not allocated, they use a lot of memory
+			ReleaseTressFXResources(ETressFXRenderType::KBuffer);
+
 			{
 				FPooledRenderTargetDesc Desc(
 					FPooledRenderTargetDesc::Create2DDesc(
@@ -1418,9 +1515,15 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXFragmentColorsTexture, TEXT("TressFX_FragmentColorsTexture"), false);
 			}
 		}
-
-		if (TFXRenderType == ETressFXRenderType::Opaque) 
+		else if (TFXRenderType == ETressFXRenderType::KBuffer)
 		{
+			//release shortcut textures
+			ReleaseTressFXResources(ETressFXRenderType::ShortCut);
+			InitializeTressFXKBufferResources(RHICmdList);
+		}
+		else if (TFXRenderType == ETressFXRenderType::Opaque) 
+		{
+			ReleaseTressFXResources(ETressFXRenderType::KBuffer);
 			ReleaseTressFXResources(ETressFXRenderType::ShortCut);
 		}
 	}

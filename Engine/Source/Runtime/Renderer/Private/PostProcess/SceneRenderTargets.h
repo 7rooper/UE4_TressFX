@@ -593,6 +593,25 @@ public:
 	TRefCountPtr<IPooledRenderTarget> TressFXFragmentDepthsTexture;
 	TRefCountPtr<IPooledRenderTarget> TressFXFragmentColorsTexture;
 
+	template <typename TRHICmdList>
+	void GetTressFXKBufferResources(
+		TRHICmdList& RHICmdList,
+		TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,
+		FRWBufferStructured*& OutTressFXKBufferNodes,
+		FRWBuffer*& OutTressFXKBufferCounter,
+		int32& OutTressFXKBufferNodePoolSize
+	);
+
+private:
+		template <typename TRHICmdList>
+		void InitializeTressFXKBufferResources(TRHICmdList& RHICmdList, bool bForceReinit = false);
+
+		/** k-buffer specific */
+		TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
+		FRWBufferStructured TressFXKBufferNodes;
+		FRWBuffer TressFXKBufferCounter;
+		int32 TressFXKBufferNodePoolSize;
+
 	/*@END Third party code TressFX*/
 
 private:

@@ -35,14 +35,15 @@ DEFINE_LOG_CATEGORY(TressFXRenderingLog);
 extern int32 GTressFXRenderType;
 extern int32 GBTressFXPreferCompute;
 extern float GTressFXMinAlphaForDepth;
+extern int32 GTressFXKBufferSize;
 
 /////////////////////////////////////////////////////////////////////////////////
-//  FTressFXFillColorPS - Pixel shader for Third pass of shortcut
+//  FTressFXFillColorPS - Pixel shader for Third pass of shortcut, and PPLL build of kbuffer
 ////////////////////////////////////////////////////////////////////////////////
 
 #pragma optimize("",off)
 
-template<bool Dummy = true>
+template <ETressFXPass::Type ColorPassType, int32 KBufferSize>
 class FTressFXFillColorPS : public FMeshMaterialShader
 {
 	DECLARE_SHADER_TYPE(FTressFXFillColorPS, MeshMaterial)
@@ -53,6 +54,12 @@ public:
 	{
 		TressfxShadeParameters.Bind(Initializer.ParameterMap, TEXT("TressfxShadeParameters"));
 		ColorPassUniformBuffer.Bind(Initializer.ParameterMap, FTressFXColorPassUniformParameters::StaticStructMetadata.GetShaderVariableName());
+		if (ColorPassType == ETressFXPass::FillColor_KBuffer)
+		{
+			RWFragmentListHead.Bind(Initializer.ParameterMap, TEXT("RWFragmentListHead"));
+			RWLinkedListUAV.Bind(Initializer.ParameterMap, TEXT("RWLinkedListUAV"));
+			RWCounterBuffer.Bind(Initializer.ParameterMap, TEXT("RWCounterBuffer"));
+		}
 	}
 
 	FTressFXFillColorPS() {}
@@ -67,6 +74,12 @@ public:
 			Platform,
 			OutEnvironment
 		);
+		OutEnvironment.SetDefine(TEXT("TFX_SHORTCUT"), ColorPassType == ETressFXPass::FillColor_Shortcut ? TEXT("1") : TEXT("0"));
+		OutEnvironment.SetDefine(TEXT("TFX_PPLL"), ColorPassType == ETressFXPass::FillColor_KBuffer ? TEXT("1") : TEXT("0"));
+		if (ColorPassType == ETressFXPass::FillColor_KBuffer)
+		{
+			OutEnvironment.SetDefine(TEXT("KBUFFER_SIZE"), KBufferSize);
+		}
 	}
 
 	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType)
@@ -84,6 +97,12 @@ public:
 		const bool result = FMeshMaterialShader::Serialize(Ar);
 		Ar << TressfxShadeParameters;
 		Ar << ColorPassUniformBuffer;
+		if (ColorPassType == ETressFXPass::FillColor_KBuffer)
+		{
+			Ar << RWFragmentListHead;
+			Ar << RWLinkedListUAV;
+			Ar << RWCounterBuffer;
+		}
 		return result;
 	}
 
@@ -98,6 +117,10 @@ public:
 		const FTressFXShaderElementData& ShaderElementData,
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
+		check(
+			ColorPassType == ETressFXPass::FillColor_KBuffer
+			|| ColorPassType == ETressFXPass::FillColor_Shortcut
+		)
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
 		const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
 		const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)PrimitiveSceneProxy;
@@ -108,10 +131,39 @@ public:
 public:
 	FShaderUniformBufferParameter ColorPassUniformBuffer;
 	FShaderUniformBufferParameter TressfxShadeParameters;
+
+	//Kbuffer
+	FRWShaderParameter RWFragmentListHead;
+	FRWShaderParameter RWLinkedListUAV;
+	FRWShaderParameter RWCounterBuffer;
 };
 
-typedef FTressFXFillColorPS<true> FTressFXFillColorPS_Shortcut;
+typedef FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut,0> FTressFXFillColorPS_Shortcut;
 IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_Shortcut, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
+
+#define IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(KBufferSize) \
+	typedef FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize> FTressFXFillColorPS_KBuffer##KBufferSize; \
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_KBuffer##KBufferSize, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
+
+static_assert(2 >= MIN_TFX_KBUFFER_SIZE, "MIN_TFX_KBUFFER_SIZE is not >= 2!");
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(2)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(3)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(4)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(5)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(6)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(7)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(8)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(9)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(10)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(11)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(12)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(13)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(14)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(15)
+IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(16)
+static_assert(16 <= MAX_TFX_KBUFFER_SIZE, "MAX_TFX_KBUFFER_SIZE is not <= 16!");
+#undef IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS
+
 
 void TressFXCopySceneDepth(FRHICommandList& RHICmdList, const FViewInfo& View, FSceneRenderTargets& SceneContext, TRefCountPtr<IPooledRenderTarget> Destination)
 {
@@ -194,6 +246,7 @@ bool FSceneRenderer::TressFXCanUseComputeResolves(const FSceneRenderTargets& Sce
 #define PROCESS_DEPTHSVELOCITY2(bCalcVelocity,TFXRenderType, ...)																		\
 switch (TFXRenderType)																													\
 {																																		\
+	case ETressFXRenderType::KBuffer:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXRenderType::KBuffer, __VA_ARGS__) break;			\
 	case ETressFXRenderType::Opaque:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXRenderType::Opaque, __VA_ARGS__) break;				\
 	case ETressFXRenderType::ShortCut:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXRenderType::ShortCut, __VA_ARGS__) break;			\
 	default: check(0);																													\
@@ -334,6 +387,8 @@ FMeshPassProcessor* CreateTRessFXDepthsVelocityPassProcessor(const FScene* Scene
 #undef PROCESS_DEPTHSVELOCITY
 #undef PROCESS_DEPTHSVELOCITY2
 
+
+
 //////////////////////////////////////////////////////////////////////////
 //TressFXDepthsAlphaPassMeshProcessor
 /////////////////////////////////////////////////////////////////////////
@@ -470,6 +525,62 @@ FMeshPassProcessor* CreateTRessFXDepthsAlphaPassProcessor(const FScene* Scene, c
 //FTressFXFillColorPassMeshProcessor
 /////////////////////////////////////////////////////////////////////////
 
+template<int32 KBufferSize>
+void FTressFXFillColorPassMeshProcessor::ProcessKBuffer(
+	const FMeshBatch& RESTRICT MeshBatch,
+	uint64 BatchElementMask,
+	int32 StaticMeshId,
+	const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy,
+	const FMaterialRenderProxy& RESTRICT MaterialRenderProxy,
+	const FMaterial& RESTRICT MaterialResource,
+	ERasterizerFillMode MeshFillMode,
+	ERasterizerCullMode MeshCullMode
+)
+{
+	const FVertexFactory* VertexFactory = MeshBatch.VertexFactory;
+	FShaderPipeline* ShaderPipeline = nullptr;
+	FMeshPassProcessorRenderState DrawRenderState(PassDrawRenderState);
+	DrawRenderState.SetBlendState(
+		TStaticBlendState<
+		EColorWriteMask::CW_NONE
+		>::GetRHI());
+	DrawRenderState.SetDepthStencilState(
+		TStaticDepthStencilState<
+		true, CF_GreaterEqual,
+		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
+		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
+		0xff, 0xff, DWM_Zero
+		>::GetRHI());
+
+	FTressFXShaderElementData ShaderElementData(ETressFXPass::FillColor_KBuffer, ViewIfDynamicMeshCommand);
+	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
+	TMeshProcessorShaders<
+		FTressFXVS<false>,
+		FMeshMaterialShader,
+		FMeshMaterialShader,
+		FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize>> TFXShaders;
+
+	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize>>(VertexFactory->GetType());
+	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<false>>(VertexFactory->GetType());
+
+	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
+	BuildMeshDrawCommands(
+		MeshBatch,
+		BatchElementMask,
+		PrimitiveSceneProxy,
+		MaterialRenderProxy,
+		MaterialResource,
+		DrawRenderState,
+		TFXShaders,
+		MeshFillMode,
+		MeshCullMode,
+		SortKey,
+		EMeshPassFeatures::Default,
+		ShaderElementData
+	);
+}
+
+
 void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
@@ -509,9 +620,9 @@ void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 		FTressFXVS<false>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
-		FTressFXFillColorPS<true>> TFXShaders;
+		FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut, 0>> TFXShaders;
 
-	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<true>>(VertexFactory->GetType());
+	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut,0>>(VertexFactory->GetType());
 	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<false>>(VertexFactory->GetType());
 
 	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
@@ -531,6 +642,28 @@ void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 	);
 }
 
+#define PROCESS_KBUFFER(KBufferSize, ...)						\
+switch (KBufferSize)											\
+{																\
+	case 2:  ProcessKBuffer<2>(__VA_ARGS__); break;				\
+	case 3:  ProcessKBuffer<3>(__VA_ARGS__); break;				\
+	case 4:  ProcessKBuffer<4>(__VA_ARGS__); break;				\
+	case 5:  ProcessKBuffer<5>(__VA_ARGS__); break;				\
+	case 6:  ProcessKBuffer<6>(__VA_ARGS__); break;				\
+	case 7:  ProcessKBuffer<7>(__VA_ARGS__); break;				\
+	case 8:  ProcessKBuffer<8>(__VA_ARGS__); break;				\
+	case 9:  ProcessKBuffer<9>(__VA_ARGS__); break;				\
+	case 10: ProcessKBuffer<10>(__VA_ARGS__); break;			\
+	case 11: ProcessKBuffer<11>(__VA_ARGS__); break;			\
+	case 12: ProcessKBuffer<12>(__VA_ARGS__); break;			\
+	case 13: ProcessKBuffer<13>(__VA_ARGS__); break;			\
+	case 14: ProcessKBuffer<14>(__VA_ARGS__); break;			\
+	case 15: ProcessKBuffer<15>(__VA_ARGS__); break;			\
+	case 16: ProcessKBuffer<16>(__VA_ARGS__); break;			\
+	default: check(0);											\
+}
+
+template<ETressFXRenderType::Type RenderType>
 void FTressFXFillColorPassMeshProcessor::Process(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
@@ -544,18 +677,46 @@ void FTressFXFillColorPassMeshProcessor::Process(
 {	   
 	const FTressFXSceneProxy* TFXProxy = ((const FTressFXSceneProxy*)(PrimitiveSceneProxy));
 
-	ProcessShortcut(
-		MeshBatch,
-		BatchElementMask,
-		StaticMeshId,
-		PrimitiveSceneProxy,
-		MaterialRenderProxy,
-		MaterialResource,
-		MeshFillMode,
-		MeshCullMode
-	);
-	
+	switch (RenderType)
+	{
+		case ETressFXRenderType::KBuffer: 
+		{
+			int32 KBufferSize = FMath::Clamp(static_cast<int32>(GTressFXKBufferSize), MIN_TFX_KBUFFER_SIZE, MAX_TFX_KBUFFER_SIZE);
+			PROCESS_KBUFFER(
+				KBufferSize,
+				MeshBatch,
+				BatchElementMask,
+				StaticMeshId,
+				PrimitiveSceneProxy,
+				MaterialRenderProxy,
+				MaterialResource,
+				MeshFillMode,
+				MeshCullMode
+			);
+				break;
+		}
+		case ETressFXRenderType::ShortCut:
+		{
+			ProcessShortcut(
+				MeshBatch,
+				BatchElementMask,
+				StaticMeshId,
+				PrimitiveSceneProxy,
+				MaterialRenderProxy,
+				MaterialResource,
+				MeshFillMode,
+				MeshCullMode
+			);
+			break;
+		}
+		default:
+		{
+			check(0);
+		}
+	}	
 }
+
+#undef PROCESS_KBUFFER
 
 void FTressFXFillColorPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId)
 {
@@ -578,7 +739,11 @@ void FTressFXFillColorPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT
 		TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
 		 if(TFXRenderType == ETressFXRenderType::ShortCut)
 		{
-			Process(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
+			 Process<ETressFXRenderType::ShortCut>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
+		}
+		else if(TFXRenderType == ETressFXRenderType::KBuffer)
+		{
+			Process<ETressFXRenderType::KBuffer>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
 		}
 	}
 }
@@ -654,6 +819,14 @@ void RenderDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, TArray<FViewI
 		{
 			continue;
 		}
+
+		if (TFXRenderType == ETressFXRenderType::KBuffer)
+		{
+			//copy scene depth, so we have a copy that doesnt have hair depths in it
+			SCOPED_DRAW_EVENT(RHICmdList, TressFXCopySceneDepth);
+			TressFXCopySceneDepth(RHICmdList, View, SceneContext, SceneContext.TressFXSceneDepth);
+		}
+
 
 		Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 
@@ -1029,6 +1202,230 @@ void RenderShortcutResolvePass(
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////
+//K-Buffer Passes
+/////////////////////////////////////////////////////////////////////////
+
+
+void RenderKbufferBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene, int32 TFXRenderType)
+{
+	RenderDepthsAndVelocity(RHICmdList, Views, Scene, TFXRenderType);
+}
+
+void RenderKBufferResolvePasses(
+	FRHICommandListImmediate& RHICmdList,
+	TArray<FViewInfo>& Views, FScene* Scene,
+	TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture,
+	const bool bUseComputeResolve,
+	FSortedShadowMaps SortedShadowsForShadowDepthPass,
+	TArray<FVisibleLightInfo, SceneRenderingAllocator> VisibleLightInfos
+)
+{
+	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
+
+	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
+	{
+		FViewInfo& View = Views[ViewIndex];
+
+		if (View.TressFXMeshBatches.Num() < 1 || !View.ShouldRenderView() || !View.Family->EngineShowFlags.TressFX)
+		{
+			continue;
+		}
+
+		TArray<FProjectedShadowInfo*> TressFXPerObjectShadowInfos;
+		//gather shadow infos for tressfx, just using single directional light ATM for testing.
+		//for testing, just assuming a single direction light in the scene, take the first one
+		{
+			for (int32 VisibleLightIndex = 0; VisibleLightIndex < VisibleLightInfos.Num(); VisibleLightIndex++)
+			{
+				for (int32 ShadowsToProjectIndex = 0; ShadowsToProjectIndex < VisibleLightInfos[VisibleLightIndex].ShadowsToProject.Num(); ShadowsToProjectIndex++)
+				{
+					FProjectedShadowInfo* Shadow = VisibleLightInfos[VisibleLightIndex].ShadowsToProject[ShadowsToProjectIndex];
+					const bool bIsPerObjectTressFX = Shadow->bIsPerObjectTressFX;
+					const bool bIsDirectional = Shadow->bDirectionalLight;
+					if (bIsPerObjectTressFX && bIsDirectional)
+					{
+						TressFXPerObjectShadowInfos.Add(Shadow);
+					}
+				}
+			}
+			//for testing, just assuming a single direction light in the scene, take the first one
+
+			//View.TressFXMeshBatches[0].Proxy->IsTressFX(); // to get all tfx proxies.
+			//TODO, we can get match the shadow info to the proxy with ShadowInfo.GetParentSceneInfo()->Proxy->GetPrimitiveComponentID == the Tressfxproxy->GetPrimitiveComponentID
+			// use tfxproxy->GetPrimitiveComponentID to sort the components, and order the shadows the same way
+			// example
+			// componentIds [54, 98, 80]
+			// sort asc [54, 80, 90]
+			// so the screentoshadowmatrixes for the proxy with ID 54 will be stored at index 0, 80 will be at 1 etc
+			// fill colors shader needs to write the correct index(es) to the shader so it knows what matrices to use for each proxy being rendered
+			/*
+				const TArray<FProjectedShadowInfo*, SceneRenderingAllocator>& DirectionalLightShadowInfos = VisibleLightInfos[LightSceneInfo->Id].AllProjectedShadows;
+
+				for (int32 ShadowIndex = 0; ShadowIndex < DirectionalLightShadowInfos.Num(); ShadowIndex++)
+				{
+					const FProjectedShadowInfo* ShadowInfo = DirectionalLightShadowInfos[ShadowIndex];
+					see lightgridinjection line 474
+			*/
+		}
+
+		SCOPED_DRAW_EVENT(RHICmdList, TressFXKBufferPasses);
+
+		TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
+		FRWBufferStructured* TressFXKBufferNodes = nullptr;
+		FRWBuffer* TressFXKBufferCounter = nullptr;
+		int32 TressFXKBufferNodePoolSize;
+		SceneContext.GetTressFXKBufferResources(RHICmdList, TressFXKBufferListHeads, TressFXKBufferNodes, TressFXKBufferCounter, TressFXKBufferNodePoolSize);
+
+		// Fill k-buffer
+		{
+			SCOPED_DRAW_EVENT(RHICmdList, FillKbuffer);
+
+			const uint32 FragmentListClearValue[4] = { TFX_PPLL_NULL, TFX_PPLL_NULL, TFX_PPLL_NULL, TFX_PPLL_NULL };
+			ClearUAV(RHICmdList, TressFXKBufferListHeads->GetRenderTargetItem(), FragmentListClearValue);
+			TressFXKBufferNodes->AcquireTransientResource();
+			TressFXKBufferCounter->AcquireTransientResource();
+			ClearUAV(RHICmdList, *TressFXKBufferNodes, 0);
+
+			//starts at one so if it rolls over to 0 after max uint it wont try to add more
+			static const uint32 Values[4] = { 1, 1, 1, 1 };
+			RHICmdList.ClearTinyUAV(TressFXKBufferCounter->UAV, Values);
+
+			FUnorderedAccessViewRHIParamRef UAVS[] = {
+				TressFXKBufferListHeads->GetRenderTargetItem().UAV,
+				TressFXKBufferNodes->UAV,
+				TressFXKBufferCounter->UAV
+			};
+			RHICmdList.TransitionResources(EResourceTransitionAccess::EWritable, EResourceTransitionPipeline::EGfxToGfx, UAVS, ARRAY_COUNT(UAVS));
+
+			FRHIRenderPassInfo RPInfo(
+				ARRAY_COUNT(UAVS), UAVS
+			);
+
+			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_DontStore, ERenderTargetActions::Load_DontStore);
+			// in k-buffer path, tressfx scene depth is the original scene depth without hair depth
+			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture;
+			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
+			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXFillKBuffer"));
+
+			TUniformBufferRef<FTressFXColorPassUniformParameters> TFXColorPassUniformBuffer;
+
+			CreateTressFXColorPassUniformBuffer(RHICmdList, View, ScreenShadowMaskTexture, TFXColorPassUniformBuffer, SortedShadowsForShadowDepthPass, TressFXPerObjectShadowInfos ,TressFXKBufferNodePoolSize);
+			FMeshPassProcessorRenderState DrawRenderState(View, TFXColorPassUniformBuffer);
+			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
+			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
+			View.ParallelMeshDrawCommandPasses[EMeshPass::TressFX_FillColors].DispatchDraw(nullptr, RHICmdList);
+			RHICmdList.EndRenderPass();
+		}
+
+		{
+			//readable for resolve pass
+			FUnorderedAccessViewRHIParamRef UAVS[] = {
+				TressFXKBufferListHeads->GetRenderTargetItem().UAV,
+				TressFXKBufferNodes->UAV
+			};
+			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, UAVS, ARRAY_COUNT(UAVS));
+		}
+
+		if (bUseComputeResolve)
+		{
+			SCOPED_DRAW_EVENT(RHICmdList, ResolveKBufferCS);
+			UnbindRenderTargets(RHICmdList);
+			const FIntRect Rect = View.ViewRect;
+			FIntPoint DestSize(Rect.Width(), Rect.Height());
+
+			FRenderingCompositePassContext Context(RHICmdList, View);
+			Context.SetViewportAndCallRHI(Rect, 0.0f, 1.0f);
+			RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, SceneContext.GetSceneColorTextureUAV());
+			TShaderMapRef<FTressFXFKBufferResolveCS> ComputeShader(View.ShaderMap);
+			RHICmdList.SetComputeShader(ComputeShader->GetComputeShader());
+
+
+			ComputeShader->SetParameters(
+				RHICmdList,
+				View,
+				TressFXKBufferNodes->SRV,
+				TressFXKBufferListHeads->GetRenderTargetItem().ShaderResourceTexture,
+				SceneContext.GetSceneColorTextureUAV(),
+				DestSize
+			);
+
+			uint32 GroupSizeX = FMath::DivideAndRoundUp(DestSize.X, (int32)FTressFXFKBufferResolveCS::ThreadSizeX);
+			uint32 GroupSizeY = FMath::DivideAndRoundUp(DestSize.Y, (int32)FTressFXFKBufferResolveCS::ThreadSizeY);
+			DispatchComputeShader(RHICmdList, *ComputeShader, GroupSizeX, GroupSizeY, 1);
+
+			ComputeShader->UnsetParameters(RHICmdList);
+			RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EComputeToGfx, SceneContext.GetSceneColorTextureUAV());
+		}
+		else
+		{
+			SCOPED_DRAW_EVENT(RHICmdList, ResolveKBufferPS);
+
+			FRHIRenderPassInfo RPInfo(
+				SceneContext.GetSceneColorSurface(), ERenderTargetActions::Load_Store,
+				SceneContext.TressFXSceneDepth->GetRenderTargetItem().TargetableTexture, EDepthStencilTargetActions::LoadDepthStencil_StoreDepthStencil
+			);
+
+			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXResolveKBuffer"));
+
+			TShaderMapRef<FScreenVS>							VertexShader(View.ShaderMap);
+			TShaderMapRef<FTressFXFKBufferResolvePS>			PixelShader(View.ShaderMap);
+
+			FRenderingCompositePassContext Context(RHICmdList, View);
+			Context.SetViewportAndCallRHI(View.ViewRect);
+
+			FGraphicsPipelineStateInitializer GraphicsPSOInit;
+			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+
+			GraphicsPSOInit.BlendState = TStaticBlendState<
+				EColorWriteMask::CW_RGBA,
+				EBlendOperation::BO_Add,  // color blend op
+				EBlendFactor::BF_One,  // color source blend
+				EBlendFactor::BF_SourceAlpha, //color dest blend
+				EBlendOperation::BO_Add,   //alpha blend op
+				EBlendFactor::BF_Zero, // alpha src blend
+				EBlendFactor::BF_Zero //alpha dest blend
+			>::GetRHI();
+
+			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
+			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<
+				true, CF_Greater,
+				false, CF_Equal, SO_Keep, SO_Keep, SO_Keep,
+				false, CF_Always, SO_Keep, SO_Keep, SO_Keep,
+				0xff, 0x00, EDepthWriteMask::DWM_Zero, true>::GetRHI();
+
+			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
+			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
+			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
+			GraphicsPSOInit.PrimitiveType = PT_TriangleList;
+			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
+
+
+			VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
+			PixelShader->SetParameters(Context.RHICmdList, View, TressFXKBufferNodes->SRV, TressFXKBufferListHeads->GetRenderTargetItem().ShaderResourceTexture);
+
+			DrawRectangle(
+				RHICmdList,
+				0, 0,
+				View.ViewRect.Width(), View.ViewRect.Height(),
+				View.ViewRect.Min.X, View.ViewRect.Min.Y,
+				View.ViewRect.Width(), View.ViewRect.Height(),
+				View.ViewRect.Size(),
+				SceneContext.GetBufferSizeXY(),
+				*VertexShader,
+				EDRF_UseTriangleOptimization);
+
+			RHICmdList.EndRenderPass();
+		}
+
+		if (IsTransientResourceBufferAliasingEnabled())
+		{
+			TressFXKBufferNodes->DiscardTransientResource();
+			TressFXKBufferCounter->DiscardTransientResource();
+		}
+	}
+}
+
 void FSceneRenderer::RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, int32 TFXRenderType)
 {
 	if (!ShouldRenderTressFX((int32)ETressFXPass::DepthsVelocity))
@@ -1054,6 +1451,14 @@ void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList,
 			if (ShouldRenderTressFX(ETressFXPass::DepthsAlpha))
 			{
 				RenderShortcutBasePass(RHICmdList, Views);
+			}
+			break;
+		}
+		case ETressFXRenderType::KBuffer:
+		{
+			if (ShouldRenderTressFX(ETressFXPass::DepthsVelocity))
+			{
+				RenderKbufferBasePass(RHICmdList, Views, Scene, TFXRenderType);
 			}
 			break;
 		}
@@ -1087,6 +1492,22 @@ void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdLi
 					TressFXCanUseComputeResolves(FSceneRenderTargets::Get(RHICmdList)), 
 					SortedShadowsForShadowDepthPass,
 					VisibleLightInfos
+				);
+			}
+			break;
+		}
+		case ETressFXRenderType::KBuffer:
+		{
+			if (ShouldRenderTressFX(ETressFXPass::FillColor_KBuffer))
+			{
+				RenderKBufferResolvePasses(
+					RHICmdList
+					, Views
+					, Scene
+					, ScreenShadowMaskTexture
+					, TressFXCanUseComputeResolves(FSceneRenderTargets::Get(RHICmdList))
+					, SortedShadowsForShadowDepthPass
+					, VisibleLightInfos
 				);
 			}
 			break;

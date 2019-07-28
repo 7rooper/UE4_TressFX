@@ -15,6 +15,18 @@ DECLARE_LOG_CATEGORY_EXTERN(TressFXRenderingLog, Log, All);
 	#define SHORTCUT_INITIAL_DEPTH 0x0
 #endif
 
+#define MAX_TFX_KBUFFER_SIZE 16
+#define MIN_TFX_KBUFFER_SIZE 2
+#define TFX_PPLL_NULL 0xffffffff
+
+struct FPPLL_Struct
+{
+	uint32 Depth;
+	uint32 Color;
+	uint32 Next;
+	uint32 DummyPad;
+};
+
 struct FTressFXMeshBatch
 {
 	const FMeshBatch* Mesh;
@@ -111,8 +123,20 @@ public:
 	virtual void AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId = -1) override final;
 
 private:
-
+	template<ETressFXRenderType::Type RenderType>
 	void Process(
+		const FMeshBatch& RESTRICT MeshBatch,
+		uint64 BatchElementMask,
+		int32 StaticMeshId,
+		const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy,
+		const FMaterialRenderProxy& RESTRICT MaterialRenderProxy,
+		const FMaterial& RESTRICT MaterialResource,
+		ERasterizerFillMode MeshFillMode,
+		ERasterizerCullMode MeshCullMode
+	);
+
+	template<int32 KBufferSize>
+	void ProcessKBuffer(
 		const FMeshBatch& RESTRICT MeshBatch,
 		uint64 BatchElementMask,
 		int32 StaticMeshId,

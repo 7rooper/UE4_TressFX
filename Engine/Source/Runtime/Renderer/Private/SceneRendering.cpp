@@ -356,7 +356,16 @@ FAutoConsoleVariableRef CVarTressFXType(
 	TEXT("tfx.type"),
 	GTressFXRenderType,
 	TEXT("0: Opaque")
-	TEXT("1: ShortCut"),
+	TEXT("1: ShortCut")
+	TEXT("2: KBuffer"),
+	ECVF_RenderThreadSafe
+);
+
+int32 GTressFXKBufferSize = 8;
+FAutoConsoleVariableRef CVarTressFXKBufferSize(
+	TEXT("tfx.KBuffer.Size"),
+	GTressFXKBufferSize,
+	TEXT("Size of OIT K-Buffer"),
 	ECVF_RenderThreadSafe
 );
 

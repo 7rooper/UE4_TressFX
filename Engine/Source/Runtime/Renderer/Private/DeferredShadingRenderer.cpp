@@ -1970,6 +1970,13 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 
 	checkSlow(RHICmdList.IsOutsideRenderPass());
 
+	//@BEGIN third party code TressFX
+	if (bSceneHasTressFX && TFXRenderType == ETressFXRenderType::KBuffer)
+	{
+		RenderTressfXResolvePass(RHICmdList, TressFXScreenShadowMaskTexture, TFXRenderType);
+	}
+	//@END third party code TressFX
+
 	if (bCanOverlayRayTracingOutput && ViewFamily.EngineShowFlags.LightShafts)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_FDeferredShadingSceneRenderer_RenderLightShaftBloom);

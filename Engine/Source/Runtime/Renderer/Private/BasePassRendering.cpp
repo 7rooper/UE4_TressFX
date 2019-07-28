@@ -531,7 +531,8 @@ void CreateTressFXColorPassUniformBuffer(
 	IPooledRenderTarget* ForwardScreenSpaceShadowMask,
 	TUniformBufferRef<FTressFXColorPassUniformParameters>& TFXColorPassUniformBuffer,
 	const FSortedShadowMaps& SortedShadowsForShadowDepthPass,
-	const TArray<FProjectedShadowInfo*>& TressFXPerObjectShadowInfos
+	const TArray<FProjectedShadowInfo*>& TressFXPerObjectShadowInfos,
+	uint32 KbufferNodePoolSize /*= 0*/
 )
 {
 	FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
@@ -578,9 +579,8 @@ void CreateTressFXColorPassUniformBuffer(
 	}
 
 	ColorPassParams.IndirectOcclusionTexture = IndirectOcclusion->GetRenderTargetItem().ShaderResourceTexture;
-
 	ColorPassParams.ResolvedSceneDepthTexture = SceneRenderTargets.SceneDepthZ->GetRenderTargetItem().ShaderResourceTexture;
-
+	ColorPassParams.NodePoolSize = KbufferNodePoolSize;
 	// Misc
 	ColorPassParams.EyeAdaptation = GetEyeAdaptation(View);
 
