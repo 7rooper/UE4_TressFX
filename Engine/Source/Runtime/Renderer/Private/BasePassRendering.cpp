@@ -548,11 +548,12 @@ void CreateTressFXColorPassUniformBuffer(
 		ColorPassParams.ShadowDepthTex = ShadowMapAtlas.RenderTargets.DepthTarget->GetRenderTargetItem().ShaderResourceTexture;
 		if (TressFXPerObjectShadowInfos.Num() > 0)
 		{
-			ColorPassParams.DirectionalLightScreenToShadowMatrix = TressFXPerObjectShadowInfos[0]->GetScreenToShadowMatrix(View);
+			FVector4 MinMax;
+			ColorPassParams.DirectionalLightWorldToShadowMatrix = TressFXPerObjectShadowInfos[0]->GetWorldToShadowMatrix(MinMax);
 		}
 		else 
 		{
-			ColorPassParams.DirectionalLightScreenToShadowMatrix = FMatrix::Identity;
+			ColorPassParams.DirectionalLightWorldToShadowMatrix = FMatrix::Identity;
 		}
 	}
 	else 

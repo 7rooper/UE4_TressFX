@@ -101,7 +101,7 @@ END_GLOBAL_SHADER_PARAMETER_STRUCT()
 /*  @BEGIN third party code TressFX */
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, )
 	SHADER_PARAMETER_STRUCT(FSharedBasePassUniformParameters, Shared)
-	SHADER_PARAMETER(FMatrix, DirectionalLightScreenToShadowMatrix)
+	SHADER_PARAMETER(FMatrix, DirectionalLightWorldToShadowMatrix)
 	SHADER_PARAMETER(uint32, NodePoolSize)
 	// Forward shading 
 	SHADER_PARAMETER(int32, UseForwardScreenSpaceShadowMask)
