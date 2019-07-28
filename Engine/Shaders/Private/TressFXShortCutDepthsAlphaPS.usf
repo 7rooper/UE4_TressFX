@@ -65,9 +65,8 @@ void ShadowHairModel(
 
     // Need to calculate ray-cylinder intersection here to find
     // entry/exit points
-	//JAKETODO,i think this needs to be the position from the perspective of the LIGHT, not camera
-	// multiply by screentoshadow matrix
-    entry = SVPos; //input.position;
+	// multiply by world to shadow matrix
+    entry = mul(float4(SVPos.xyz, 1), TressFXAVSMConstantBuffer.DirectionalLightWorldToShadowMatrix); //input.position;
     exit = entry + float3(0, 0, hairThickness);
     segmentTransmittance = 1 - HairOpacity;
 }
@@ -123,7 +122,6 @@ void main(
 	//capture AVSM data
     float3 entry, exit;
     float segmentTransmittance;
-	//jaketodo, needs to be position in light space, not svpos
     ShadowHairModel(input.Position, TFXAlpha, entry, exit, segmentTransmittance);
 
 	//the shadow map is not in the same size as the rest of the RTs, we must remap the screen pos

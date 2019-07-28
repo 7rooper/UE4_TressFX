@@ -530,6 +530,8 @@ void CreateTressFXAVSMBuffer(
 	FRHICommandListImmediate& RHICmdList,
 	const FViewInfo& View,
 	const int32 AVSMTextureSize,
+	const FSortedShadowMaps& SortedShadowsForShadowDepthPass,
+	const TArray<FProjectedShadowInfo*>& TressFXPerObjectShadowInfos,
 	TUniformBufferRef<FTressFXAVSMConstantParams>& TressFXAVSMBuffer
 )
 {
@@ -542,6 +544,22 @@ void CreateTressFXAVSMBuffer(
 	AVSMParams.Mask3 = FVector4(12.0f, 13.0f, 14.0f, 15.0f);
 	AVSMParams.Mask4 = FVector4(16.0f, 17.0f, 18.0f, 19.0f);
 	AVSMParams.ShadowMapDimension = AVSMTextureSize;
+
+	//first atlas is for whole scene shadows, second one holds per-object shadows
+	if (SortedShadowsForShadowDepthPass.ShadowMapAtlases.Num() > 1)
+	{
+		//TODO implement more than 1 light in the scene, need to figure out how to map the shadowproj/light to the proxy
+		const FSortedShadowMapAtlas& ShadowMapAtlas = SortedShadowsForShadowDepthPass.ShadowMapAtlases.Last();
+		if (TressFXPerObjectShadowInfos.Num() > 0)
+		{
+			FVector4 ShadowmapMinMax;
+			AVSMParams.DirectionalLightWorldToShadowMatrix = TressFXPerObjectShadowInfos[0]->GetWorldToShadowMatrix(ShadowmapMinMax);
+		}
+		else
+		{
+			AVSMParams.DirectionalLightWorldToShadowMatrix = FMatrix::Identity;
+		}
+	}
 
 	FScene* Scene = View.Family->Scene ? View.Family->Scene->GetRenderScene() : nullptr;
 	if (Scene)

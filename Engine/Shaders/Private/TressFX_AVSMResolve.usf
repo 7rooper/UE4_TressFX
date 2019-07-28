@@ -43,7 +43,9 @@ void InitAVSMData(inout AVSMData data)
 // Note that AVSMs can be created submitting blockers in any order, in this particular case we might want to sort the blockers
 // only the reduce temporal artifacts introduced by the non deterministic fragments shading order and AVSM lossy compression algorithm
 
-AVSMData_PSOut AVSMUnsortedResolvePS(FScreenVertexOutput Input)
+RWTexture2DArray<float4> RWFragmentAVSMTex: register(u0);
+
+void AVSMUnsortedResolvePS(FScreenVertexOutput Input)
 {
     AVSMData data;
 
@@ -59,7 +61,7 @@ AVSMData_PSOut AVSMUnsortedResolvePS(FScreenVertexOutput Input)
     // Fetch nodes
     ListTexSegmentNode node;
     [loop]
-    while (nodeOffset != NODE_LIST_NULL)
+    while (nodeOffset != NODE_LIST_NULL && nodeOffset > 0)
     {
         // Get node..
         node = LT_GetSegmentNode(nodeOffset);
@@ -70,8 +72,15 @@ AVSMData_PSOut AVSMUnsortedResolvePS(FScreenVertexOutput Input)
         // Increase node count and move to next node
         nodeOffset = node.next;
     }
-    
-    return data;
+    RWFragmentAVSMTex[uint3(screenAddress, 0)] = data.depth[0];
+	#if AVSM_RT_COUNT > 1
+    RWFragmentAVSMTex[uint3(screenAddress, 1)] = data.depth[1];
+	#endif
+    RWFragmentAVSMTex[uint3(screenAddress, 2)] = data.trans[0];
+	#if AVSM_RT_COUNT > 1
+    RWFragmentAVSMTex[uint3(screenAddress, 3)] = data.trans[1];
+	#endif
+    //return data;
 }
 
 AVSMData_PSOut AVSMInsertionSortResolvePS(FScreenVertexOutput Input)

@@ -1437,7 +1437,7 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 						FIntPoint(AVSMTextureSize, AVSMTextureSize),
 						EPixelFormat::PF_A32B32G32R32F, //this maps to DXGI_FORMAT_R32G32B32A32_FLOAT in GPixelFormats
 						FClearValueBinding::Transparent,
-						TexCreate_TargetArraySlicesIndependently,
+						TexCreate_None,
 						TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false));
 				Desc.bIsArray = true;
 				Desc.ArraySize = 4; //MAX_AVSM_RT_COUNT
@@ -1475,7 +1475,7 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 			{
 				
 				mAVSMStructBuf.Release();
-				mAVSMStructBuf.Initialize(StructSize, AVSMTextureSize*AVSMTextureSize, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("mAVSMStructBuf"));
+				mAVSMStructBuf.Initialize(StructSize, AVSMTextureSize*AVSMTextureSize * 4, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("mAVSMStructBuf"));
 			}
 			if (AVSMBufferCounter.NumBytes != sizeof(uint32))
 			{

@@ -107,6 +107,7 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXAVSMConstantParams, )
 	SHADER_PARAMETER(FVector4, Mask2)
 	SHADER_PARAMETER(FVector4, Mask3)
 	SHADER_PARAMETER(FVector4, Mask4)
+	SHADER_PARAMETER(FMatrix, DirectionalLightWorldToShadowMatrix)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, )
@@ -126,6 +127,8 @@ extern void CreateTressFXAVSMBuffer(
 	FRHICommandListImmediate& RHICmdList, 
 	const FViewInfo& View,
 	const int32 AVSMTextureSize,
+	const FSortedShadowMaps& SortedShadowsForShadowDepthPass,
+	const TArray<FProjectedShadowInfo*>& TressFXPerObjectShadowInfos,
 	TUniformBufferRef<FTressFXAVSMConstantParams>& TressFXAVSMBuffer
 );
 

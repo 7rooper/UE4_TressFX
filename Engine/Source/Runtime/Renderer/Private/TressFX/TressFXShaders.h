@@ -704,6 +704,7 @@ public:
 	{
 		gListTexSegmentNodesSRV.Bind(Initializer.ParameterMap, TEXT("gListTexSegmentNodesSRV"));
 		gListTexFirstSegmentNodeAddressSRV.Bind(Initializer.ParameterMap, TEXT("gListTexFirstSegmentNodeAddressSRV"));
+		RWFragmentAVSMTex.Bind(Initializer.ParameterMap, TEXT("RWFragmentAVSMTex"));
 		TressFXAVSMConstants.Bind(Initializer.ParameterMap, FTressFXAVSMConstantParams::StaticStructMetadata.GetShaderVariableName());
 	}
 
@@ -714,7 +715,7 @@ public:
 	virtual bool Serialize(FArchive& Ar) override
 	{
 		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-		Ar << gListTexSegmentNodesSRV << gListTexFirstSegmentNodeAddressSRV << TressFXAVSMConstants;
+		Ar << gListTexSegmentNodesSRV << gListTexFirstSegmentNodeAddressSRV << TressFXAVSMConstants << RWFragmentAVSMTex;
 		return bShaderHasOutdatedParameters;
 	}
 
@@ -729,4 +730,5 @@ public:
 	FShaderResourceParameter gListTexSegmentNodesSRV;
 	FShaderResourceParameter gListTexFirstSegmentNodeAddressSRV;
 	FShaderUniformBufferParameter TressFXAVSMConstants;
+	FRWShaderParameter RWFragmentAVSMTex;
 };

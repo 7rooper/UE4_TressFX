@@ -807,7 +807,13 @@ void ShortcutDepthsResolve_Impl(
 	RHICmdList.EndRenderPass();
 }
 
-void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene)
+void RenderShortcutBasePass(
+	FRHICommandListImmediate& RHICmdList
+	, TArray<FViewInfo>& Views
+	, FScene* Scene
+	, FSortedShadowMaps SortedShadowsForShadowDepthPass,
+	TArray<FVisibleLightInfo, SceneRenderingAllocator> VisibleLightInfos
+)
 {
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
 
@@ -828,7 +834,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			TressFXCopySceneDepth(RHICmdList, View, SceneContext, SceneContext.TressFXSceneDepth);
 		}
 
-		
+		const int32 AVSMTextureSize = GTressFXAVSMTextureSizes[FMath::Clamp(static_cast<int32>(GTressFXAVSMTextureSize), 0, GTressFXAVSMTextureSizes.Num() - 1)];
 		//first clear the AVSM buffer, it needs special shader for clear
 		{
 
@@ -844,9 +850,6 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 
 			TShaderMapRef<FScreenVS>							VertexShader(View.ShaderMap);
 			TShaderMapRef<FTressFXClearAVSMBufferPS>			PixelShader(View.ShaderMap);
-
-			FRenderingCompositePassContext Context(RHICmdList, View);
-			Context.SetViewportAndCallRHI(View.ViewRect);
 
 			FGraphicsPipelineStateInitializer GraphicsPSOInit;
 			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
@@ -865,19 +868,43 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
 
 			VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
-			PixelShader->SetParameters(Context.RHICmdList, View);
+			PixelShader->SetParameters(RHICmdList, View);
+			RHICmdList.SetViewport(0, 0, 0.f, AVSMTextureSize, AVSMTextureSize, 1.f);
 			DrawRectangle(
 				RHICmdList,
 				0, 0,
-				View.ViewRect.Width(), View.ViewRect.Height(),
-				View.ViewRect.Min.X, View.ViewRect.Min.Y,
-				View.ViewRect.Width(), View.ViewRect.Height(),
-				View.ViewRect.Size(),
-				SceneContext.GetBufferSizeXY(),
+				AVSMTextureSize, AVSMTextureSize,
+				0, 0,
+				AVSMTextureSize, AVSMTextureSize,
+				FIntPoint(AVSMTextureSize, AVSMTextureSize),
+				FIntPoint(AVSMTextureSize, AVSMTextureSize),
 				*VertexShader,
 				EDRF_UseTriangleOptimization);
 			RHICmdList.EndRenderPass();
 		}
+
+		TArray<FProjectedShadowInfo*> TressFXPerObjectShadowInfos;
+		{
+			//gather shadow infos for tressfx, just using single directional light ATM for testing.
+			//for testing, just assuming a single direction light in the scene, take the first one
+			{
+				for (int32 VisibleLightIndex = 0; VisibleLightIndex < VisibleLightInfos.Num(); VisibleLightIndex++)
+				{
+					for (int32 ShadowsToProjectIndex = 0; ShadowsToProjectIndex < VisibleLightInfos[VisibleLightIndex].ShadowsToProject.Num(); ShadowsToProjectIndex++)
+					{
+						FProjectedShadowInfo* Shadow = VisibleLightInfos[VisibleLightIndex].ShadowsToProject[ShadowsToProjectIndex];
+						const bool bIsPerObjectTressFX = Shadow->bIsPerObjectTressFX;
+						const bool bIsDirectional = Shadow->bDirectionalLight;
+						if (bIsPerObjectTressFX && bIsDirectional)
+						{
+							TressFXPerObjectShadowInfos.Add(Shadow);
+						}
+					}
+				}
+
+			}
+		}
+
 
 		// shortcut pass 1, accumulate alpha, depths, and optionally velocity if the material wants it (true by default)
 		// also captures AVSM hair shadow geometry
@@ -924,8 +951,8 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
 
 			TUniformBufferRef<FTressFXAVSMConstantParams> TressFXAVSMConstantBuffer;
-			const int32 AVSMTextureSize = GTressFXAVSMTextureSizes[FMath::Clamp(static_cast<int32>(GTressFXAVSMTextureSize), 0, GTressFXAVSMTextureSizes.Num() - 1)];
-			CreateTressFXAVSMBuffer(RHICmdList, View, AVSMTextureSize, TressFXAVSMConstantBuffer);
+		
+			CreateTressFXAVSMBuffer(RHICmdList, View, AVSMTextureSize, SortedShadowsForShadowDepthPass, TressFXPerObjectShadowInfos , TressFXAVSMConstantBuffer);
 			FMeshPassProcessorRenderState DrawRenderState(View, TressFXAVSMConstantBuffer);
 			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 
@@ -996,47 +1023,30 @@ void RenderShortcutResolvePass(
 		}
 
 		//resolve AVSM
-		if(false)
+		if(true)
 		{
 
-
-			RHICmdList.TransitionResource(EResourceTransitionAccess::EWritable, SceneContext.TressFXAVSMShadowTextureArray->GetRenderTargetItem().TargetableTexture);
-			
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveAVSM);
-			FRHIRenderPassInfo RPInfo;
+			
+			FUnorderedAccessViewRHIParamRef UAVs[] = {
+				SceneContext.TressFXAVSMShadowTextureArray->GetRenderTargetItem().UAV
+			};
+			RHICmdList.TransitionResources(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
+			RHICmdList.TransitionResource(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, SceneContext.mListTexFirstSegmentNodeOffset->GetRenderTargetItem().UAV);
+			RHICmdList.TransitionResource(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToGfx, SceneContext.mAVSMStructBuf.UAV);
 
-			RPInfo.ColorRenderTargets[0].Action = MakeRenderTargetActions(ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore);
-			RPInfo.ColorRenderTargets[0].RenderTarget = SceneContext.TressFXAVSMShadowTextureArray->GetRenderTargetItem().TargetableTexture;
-			RPInfo.ColorRenderTargets[0].ArraySlice = 0;
-			RPInfo.ColorRenderTargets[0].MipIndex = 0;
-
-			RPInfo.ColorRenderTargets[1].Action = MakeRenderTargetActions(ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore);
-			RPInfo.ColorRenderTargets[1].RenderTarget = SceneContext.TressFXAVSMShadowTextureArray->GetRenderTargetItem().TargetableTexture;
-			RPInfo.ColorRenderTargets[1].ArraySlice = 1;
-			RPInfo.ColorRenderTargets[1].MipIndex = 0;
-
-			RPInfo.ColorRenderTargets[2].Action = MakeRenderTargetActions(ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore);
-			RPInfo.ColorRenderTargets[2].RenderTarget = SceneContext.TressFXAVSMShadowTextureArray->GetRenderTargetItem().TargetableTexture;
-			RPInfo.ColorRenderTargets[2].ArraySlice = 2;
-			RPInfo.ColorRenderTargets[2].MipIndex = 0;
-
-			RPInfo.ColorRenderTargets[3].Action = MakeRenderTargetActions(ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore);
-			RPInfo.ColorRenderTargets[3].RenderTarget = SceneContext.TressFXAVSMShadowTextureArray->GetRenderTargetItem().TargetableTexture;
-			RPInfo.ColorRenderTargets[3].ArraySlice = 3;
-			RPInfo.ColorRenderTargets[3].MipIndex = 0;
+			FRHIRenderPassInfo RPInfo(ARRAY_COUNT(UAVs), UAVs);
 
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("ResolveAVSM"));
 
 			TShaderMapRef<FScreenVS>								VertexShader(View.ShaderMap);
 			TShaderMapRef<FTRessFXAVSMResolvePS<AVSMNodeCount>>		PixelShader(View.ShaderMap);
 
-			FRenderingCompositePassContext Context(RHICmdList, View);
-			Context.SetViewportAndCallRHI(View.ViewRect);
 
 			FGraphicsPipelineStateInitializer GraphicsPSOInit;
 			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 
-			GraphicsPSOInit.BlendState = TStaticBlendState<CW_RGBA>::GetRHI();
+			GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
 
 			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
 			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
@@ -1048,16 +1058,17 @@ void RenderShortcutResolvePass(
 			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
 
 			VertexShader->SetParameters(RHICmdList, View.ViewUniformBuffer);
-			PixelShader->SetParameters(Context.RHICmdList, View, SceneContext, Scene->UniformBuffers.TressFXAVSMConstantBuffer);
-
+			PixelShader->SetParameters(RHICmdList, View, SceneContext, Scene->UniformBuffers.TressFXAVSMConstantBuffer);
+			const int32 AVSMTextureSize = GTressFXAVSMTextureSizes[FMath::Clamp(static_cast<int32>(GTressFXAVSMTextureSize), 0, GTressFXAVSMTextureSizes.Num() - 1)];
+			RHICmdList.SetViewport(0, 0, 0.f, AVSMTextureSize, AVSMTextureSize, 1.f);
 			DrawRectangle(
 				RHICmdList,
 				0, 0,
-				View.ViewRect.Width(), View.ViewRect.Height(),
-				View.ViewRect.Min.X, View.ViewRect.Min.Y,
-				View.ViewRect.Width(), View.ViewRect.Height(),
-				View.ViewRect.Size(),
-				SceneContext.GetBufferSizeXY(),
+				AVSMTextureSize, AVSMTextureSize,
+				0, 0,
+				AVSMTextureSize, AVSMTextureSize,
+				FIntPoint(AVSMTextureSize, AVSMTextureSize),
+				FIntPoint(AVSMTextureSize, AVSMTextureSize),
 				*VertexShader,
 				EDRF_UseTriangleOptimization);
 			RHICmdList.EndRenderPass();
@@ -1246,7 +1257,13 @@ void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList,
 		{
 			if (ShouldRenderTressFX(ETressFXPass::DepthsAlpha))
 			{
-				RenderShortcutBasePass(RHICmdList, Views, Scene);
+				RenderShortcutBasePass(
+					RHICmdList
+					, Views
+					, Scene
+					, SortedShadowsForShadowDepthPass,
+					VisibleLightInfos
+				);
 			}
 			break;
 		}
