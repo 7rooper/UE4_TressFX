@@ -482,33 +482,26 @@ float3 ComputeShadowUV(float3 WorldPosition, uint CascadeIndex)
 #define e 2.71828183
 #define EPSILON 1e-7f
 
-float3 ComputeDepthBasedAttenuation(
-	  float SceneDepth
-	, float3 FragmentWorldPos
-)
+float ApproximateDeepShadow(float3 FragmentWorldPos, float SelfshadowStrength)
 {
 
     float4 shadowPos = mul(float4(FragmentWorldPos, 1.f), TressFXColorFillPass.DirectionalLightWorldToShadowMatrix);
     float2 ShadowUVs = shadowPos.xy / shadowPos.w;
-
-    float LightSpacePixelDepthForOpaque = min(shadowPos.z, 0.99999f);
-    float totalWeight = 0.0f;
-    float shadowFactor = 0.0f;
 
     FPCFSamplerSettings Settings;
     Settings.ShadowDepthTexture = TressFXColorFillPass.ShadowDepthTex;
     Settings.ShadowDepthTextureSampler = ForwardLightData.ShadowmapSampler;
     Settings.ShadowBufferSize = float4(2048, 2048, .00049, .00049); //ShadowBufferSize;
     Settings.TransitionScale = 60.f; //SoftTransitionScale.z;
-    Settings.SceneDepth = LightSpacePixelDepthForOpaque;
+    Settings.SceneDepth = min(shadowPos.z, 0.99999f);
     Settings.bSubsurface = false;
     Settings.bTreatMaxDepthUnshadowed = false;
     Settings.DensityMulConstant = 0;
     Settings.ProjectionDepthBiasParameters = 0;
     float shadowMapDepth = ManualPCF(ShadowUVs, Settings);
-    float shadowDistFalloff = 1.0f; //TODO
-    float shadowRange = max(0.0f, shadowDistFalloff * ( shadowPos.z - shadowMapDepth));
-    return ComputeHairShadowAttenuation(shadowRange, g_FiberSpacing ,g_FiberRadius, .1f);
+    float shadowDistFalloff = 1.0f; //TODO?
+    float shadowRange = max(0.0f, shadowDistFalloff * (shadowPos.z - shadowMapDepth));
+    return ComputeHairShadowAttenuation(shadowRange, g_FiberSpacing, g_FiberRadius, SelfshadowStrength);
 }
 
 
@@ -605,8 +598,8 @@ float3 GetTressFXDynamicLighting(
 
 	// Setup shadow
     //LightAttenuation = dirBlur(LightData.Direction.xy, ScreenUV );
-    LightAttenuation = saturate((LightAttenuation - TFXShadowAttenuation) / (1 - TFXShadowAttenuation));
-    LightAttenuation = Square(LightAttenuation);
+    //LightAttenuation = saturate((LightAttenuation - TFXShadowAttenuation) / (1 - TFXShadowAttenuation));
+    //LightAttenuation = Square(LightAttenuation);
     FShadowTerms ShadowTerms;
     ShadowTerms.SurfaceShadow = 1;
 
@@ -665,15 +658,15 @@ float3 GetTressFXDynamicLighting(
     reflectedLight += SpecDiffuse.y * LightData.Color; // 1st specular highlight
     reflectedLight += SpecDiffuse.z * LightData.Color; // 2nd specular highlight
     
-	float DepthBasedAttenuation = 1.0f;
+	float ApproxDeepShadow = 1.0f;
     if (bDirectionalLight)
     {
-        DepthBasedAttenuation = ComputeDepthBasedAttenuation(FragmentDepth, AbsoluteWorldPosition);
+        ApproxDeepShadow = ApproximateDeepShadow(AbsoluteWorldPosition, TFXSelfShadowStrength);
     }
 
     float AttenuationAndFalloff = (DistanceAttenuation * LightRadiusMask * SpotFalloff);
     float SurfaceAttenuation = saturate(ShadowTerms.SurfaceShadow);
-    float Shadow = AttenuationAndFalloff * DepthBasedAttenuation; // * SurfaceAttenuation;
+    float Shadow = AttenuationAndFalloff * ApproxDeepShadow; // * SurfaceAttenuation;
     OutColor += reflectedLight * Shadow;
 	// Hack approximation for multiple scattering. copied and slightly modified from ue4 hair shader
     if (1)

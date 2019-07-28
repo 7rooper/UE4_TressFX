@@ -229,7 +229,7 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 	ShadeParametersUniformBuffer.TressFXSettings2 = FVector4
 	(
 		DynamicData.TressFXShadeSettings.DiffuseBlend,
-		DynamicData.TressFXShadeSettings.ShadowMultiplier,
+		DynamicData.TressFXShadeSettings.SelfShadowStrength,
 		0,
 		0
 	);

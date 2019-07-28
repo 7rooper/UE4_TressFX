@@ -42,6 +42,6 @@ cbuffer TressfxShadeParameters
 #define TFXSecondarySpecExp TressFXSettings1.w
 
 #define TFXDiffuseBlend TressFXSettings2.x;
-#define TFXShadowAttenuation TressFXSettings2.y
+#define TFXSelfShadowStrength TressFXSettings2.y
 
 #define TFXSpecularColor TressFXSpecularColor
