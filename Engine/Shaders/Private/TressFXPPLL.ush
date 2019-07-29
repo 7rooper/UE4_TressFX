@@ -11,6 +11,10 @@
 	#define COUNTER_BUFFER_REGISTER u2
 #endif
 
+#ifndef OPACITY_THRESHOLD_REGISTER
+	#define OPACITY_THRESHOLD_REGISTER u3
+#endif
+
 
 #ifndef KBUFFER_SIZE
 	#define KBUFFER_SIZE 8
@@ -57,18 +61,6 @@ uint PackFloat4IntoUint(float4 vValue)
     return r | g | b | a;
 }
 
-//uint PackFloat4IntoUint(float4 vValue)
-//{
-//    return (((uint) (vValue.x * 255)) << 24) | (((uint) (vValue.y * 255)) << 16) | (((uint) (vValue.z * 255)) << 8) | (uint) (vValue.w * 255);
-//}
-
-//float4 UnpackUintIntoFloat4(uint uValue)
-//{
-//    return float4(((uValue & 0xFF000000) >> 24) / 255.0, ((uValue & 0x00FF0000) >> 16) / 255.0, ((uValue & 0x0000FF00) >> 8) / 255.0, ((uValue & 0x000000FF)) / 255.0);
-//}
-
-
-
 #if KBUFFER_RESOLVE_PASS
 Texture2D<uint> FragmentListHead;
 StructuredBuffer<FPPLL_Struct> LinkedListSRV;
@@ -77,6 +69,7 @@ RWTexture2D<uint> RWFragmentListHead : register(FRAGMENT_LIST_REGISTER);
 RWStructuredBuffer<FPPLL_Struct> RWLinkedListUAV : register(LINKED_LIST_REGISTER);
 //using this instead of the uav counter so i dont have to modify UE4's RHI any more
 RWBuffer<uint> RWCounterBuffer : register(COUNTER_BUFFER_REGISTER);
+RWTexture2D<uint> RWOpacityThresholdingUAV : register(OPACITY_THRESHOLD_REGISTER);
 
 // Allocate a new fragment location in fragment color, depth, and link buffers
 int AllocateFragment(int2 vScreenAddress)

@@ -1940,6 +1940,24 @@ void FSceneRenderer::CreatePerObjectProjectedShadow(
 				FMath::Min<int32>(MinShadowResolution, ShadowBufferResolution.X - SHADOW_BORDER * 2)
 				)
 			);
+		/*@BEGIN Third party code TressFX*/
+		//JAKETODO, cvar
+		const float TFXShadowResolutionScale = 5.0f;
+		if (View.bHasTressFX) 
+		{
+			const float HairUnclampedResolution = UnclampedResolution * TFXShadowResolutionScale;
+
+			MaxDesiredResolution = FMath::Max(
+				MaxDesiredResolution,
+				FMath::Clamp<uint32>(
+					HairUnclampedResolution,
+					FMath::Min<int32>(MinShadowResolution, ShadowBufferResolution.X - SHADOW_BORDER * 2),
+					MaxShadowResolution
+					)
+			);
+		}
+
+		/*@END Third party code TressFX*/
 	}
 
 	FBoxSphereBounds Bounds = OriginalBounds;

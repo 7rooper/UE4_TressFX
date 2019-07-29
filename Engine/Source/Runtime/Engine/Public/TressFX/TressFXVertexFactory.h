@@ -46,6 +46,8 @@ public:
 
 	virtual void InitRHI() override;
 
+	virtual bool SupportsNullPixelShader() const override { return false; }
+
 };
 
 /**
