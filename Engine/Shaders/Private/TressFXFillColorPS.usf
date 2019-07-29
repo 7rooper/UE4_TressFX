@@ -453,24 +453,6 @@ float ComputeHairGlint(
     return noise;
 }
 
-static const int samples = 5;
-
-float4 dirBlur(float2 _2dDirection, float2 UV)
-{
-    float4 acc = 0;
-    
-    const float delta = 2.0 / (float)samples;
-    
-    for(float i = -1.0; i <= 1.0; i += delta)
-    {
-        acc += OpaqueBasePass.ForwardScreenSpaceShadowMaskTexture.Load(int3(UV - float2(_2dDirection.x * i, _2dDirection.y * i), 0)).rgba;
-    }   
-    
-    return float4(delta * acc);
-    
-}
-
-
 float3 ComputeShadowUV(float3 WorldPosition, uint CascadeIndex)
 {
     float4 HomogeneousShadowPosition = mul(float4(WorldPosition, 1), ForwardLightData.DirectionalLightWorldToShadowMatrix[CascadeIndex]);
@@ -527,17 +509,19 @@ float3 GetTressFXDynamicLighting(
 		return 0;
 #endif
     float DiffuseBlend = TFXDiffuseBlend;
+	
 	// Use 1 for diffuse blend for un-shadowed light, to darken hairs at back faces. 
      if (!LightData.ShadowedBits)
     {
         DiffuseBlend = 1;
     }
-    float3 OutColor = 0;
+    
+	float3 OutColor = 0;
     float3 SpecularColor = TFXSpecularColor.xyz;
 
 	// Setup light
     float3 WorldPosition = AbsoluteWorldPosition;
-    float3 V = -normalize(ScreenVector);
+    float3 V = normalize(ScreenVector);
     float ClampedRoughness = clamp(GbufferData.Roughness, 1 / 255.0f, 1.0f);
     float3 N = GbufferData.WorldNormal;
     float3 ToLight = LightData.Direction;
@@ -642,21 +626,6 @@ float3 GetTressFXDynamicLighting(
  //   }
 	
 
- //   const bool bUseHWVersion = false;
-
- //   if (bUseHWVersion)
- //   {
-	//	// Sum lighting, hairworks version
- //       OutColor = (HairWorksDiffuse * GbufferData.BaseColor + HairWorksSpecular * SpecularColor) * SurfaceAttenuation * LightData.Color.rgb 
-	//		+ 
-	//	GlintAmbient * Shadow * GbufferData.BaseColor;
- //   }
-
-
-    float3 SpecDiffuse = TressFX_ComputeDiffuseSpecFactors(V, LightData.Direction, TFXTangent, DiffuseBlend);
-    float3 reflectedLight = SpecDiffuse.x * LightData.Color * GbufferData.BaseColor; // diffuse
-    reflectedLight += SpecDiffuse.y * LightData.Color; // 1st specular highlight
-    reflectedLight += SpecDiffuse.z * LightData.Color; // 2nd specular highlight
     
 	float ApproxDeepShadow = 1.0f;
     if (bDirectionalLight)
@@ -666,15 +635,76 @@ float3 GetTressFXDynamicLighting(
 
     float AttenuationAndFalloff = (DistanceAttenuation * LightRadiusMask * SpotFalloff);
     float SurfaceAttenuation = saturate(ShadowTerms.SurfaceShadow);
-    float Shadow = AttenuationAndFalloff * ApproxDeepShadow; // * SurfaceAttenuation;
-    OutColor += reflectedLight * Shadow;
+    float Shadow = AttenuationAndFalloff * ApproxDeepShadow;// * SurfaceAttenuation;
+    
+	float3 reflectedLight;
+    const bool bUseHWVersion = true;
+    if (bUseHWVersion)
+    {
+		    float HairWorksDiffuse = TFXComputeHairDiffuseShading(
+				L,
+				TFXTangent.xyz,
+				GbufferData.WorldNormal,
+				1,
+				DiffuseBlend
+			);
+			float HairWorksSpecular = 0;
+			{
+				float3 Ldir = L;
+				float3 T = TFXTangent.xyz;
+				float3 N = GbufferData.WorldNormal;
+				float primaryScale = TFXPrimarySpecScale;
+				float primaryShininess = TFXPrimarySpecExp;
+				float secondaryScale = TFXSecondarySpecScale;
+				float secondaryShininess = TFXSecondarySpecExp;
+				float secondaryOffset = TFXSecondarySpecOffset;
+				float specPrimaryOffset = TFXPrimarySpecOffset;
+
+				// primary specular
+				float3 H = normalize(V + L);
+				float TdotH = clamp(dot(T, H), -1.0f, 1.0f);
+
+				float TdotHshifted = clamp(TdotH + specPrimaryOffset, -1.0f, 1.0f);
+				float specPrimary = sqrt(1.0f - TdotHshifted*TdotHshifted);
+
+				specPrimary = pow(max(0, specPrimary), primaryShininess);
+
+				// secondary
+				TdotH = clamp(TdotH + secondaryOffset, -1.0, 1.0);
+				float specSecondary = sqrt(1 - TdotH*TdotH);
+				specSecondary = pow(max(0, specSecondary), secondaryShininess);
+
+				// specular sum
+				float specularSum = primaryScale * specPrimary + secondaryScale * specSecondary;
+
+				// visibility due to diffuse normal
+				float visibilityScale = lerp(1.0f, saturate(dot(N, Ldir)), DiffuseBlend);
+				specularSum *= visibilityScale;
+
+				HairWorksSpecular = max(0, specularSum);
+			}
+		// Sum lighting
+        float tameFactor = .07f;
+        reflectedLight = (HairWorksDiffuse * tameFactor * GbufferData.BaseColor + HairWorksSpecular * tameFactor * SpecularColor) * LightData.Color.rgb;
+		//	+
+		//GlintAmbient * Shadow * GbufferData.BaseColor;
+    }
+    else
+    {
+        float3 SpecDiffuse = TressFX_ComputeDiffuseSpecFactors(V, LightData.Direction, TFXTangent, DiffuseBlend);
+        reflectedLight = SpecDiffuse.x * LightData.Color * GbufferData.BaseColor; // diffuse
+        reflectedLight += SpecDiffuse.y * LightData.Color; // 1st specular highlight
+        reflectedLight += SpecDiffuse.z * LightData.Color; // 2nd specular highlight
+    }
+	
+	OutColor += reflectedLight * Shadow;
 	// Hack approximation for multiple scattering. copied and slightly modified from ue4 hair shader
     if (1)
     {
         float3 FakeNormal = normalize(V - N * dot(V, N));
         N = FakeNormal;
         float Wrap = 1;
-        float KajiyaDiffuse = SpecDiffuse.x;
+        float KajiyaDiffuse = 1 - abs( dot(N,L) ); //SpecDiffuse.x;
         float DiffuseScatter = (1 / PI) * lerp(NoL, KajiyaDiffuse, 0.33) * GbufferData.Metallic;
         float Luma = Luminance(GbufferData.BaseColor);
         float3 ScatterTint = pow((GbufferData.BaseColor) / Luma, 1 -  Shadow  );

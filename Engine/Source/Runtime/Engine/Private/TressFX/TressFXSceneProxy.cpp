@@ -230,8 +230,8 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 	(
 		DynamicData.TressFXShadeSettings.DiffuseBlend,
 		DynamicData.TressFXShadeSettings.SelfShadowStrength,
-		0,
-		0
+		SpecularSettings.SpecularPrimaryOffset,
+		SpecularSettings.SpecularSecondaryOffset
 	);
 	ShadeParametersUniformBuffer.TressFXSpecularColor = FVector4(SpecularSettings.SpecularColor);
 
