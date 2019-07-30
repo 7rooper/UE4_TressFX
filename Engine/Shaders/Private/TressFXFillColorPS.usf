@@ -556,26 +556,6 @@ float3 TressFXHairShading(FGBufferData GBuffer, float3 L, float3 V, half3 N, flo
     return S;
 }
 
-float TFXComputeHairDiffuseShading(
-	float3 Ldir, // light direction
-	float3 T,
-	float3 N,
-	float diffuseScale,
-	float diffuseBlend
-	)
-{
-	// diffuse hair shading
-    float TdotL = clamp(dot(T, Ldir), -1.0f, 1.0f);
-
-    float diffuseSkin = max(0, dot(N, Ldir));
-    float diffuseHair = sqrt(1.0f - TdotL * TdotL);
-
-    float diffuse = lerp(diffuseHair, diffuseSkin, diffuseBlend);
-    float result = diffuseScale * saturate(diffuse);
-
-    return max(0, result);
-}
-
 //modified from hairworks
 float ComputeHairGlint(
 	float glintSize, //strength
@@ -611,14 +591,6 @@ float ComputeHairGlint(
     return noise;
 }
 
-float3 ComputeShadowUV(float3 WorldPosition, uint CascadeIndex)
-{
-    float4 HomogeneousShadowPosition = mul(float4(WorldPosition, 1), ForwardLightData.DirectionalLightWorldToShadowMatrix[CascadeIndex]);
-    float3 ShadowUVs = HomogeneousShadowPosition.xyz / HomogeneousShadowPosition.w;
-
-    return ShadowUVs;
-}
-
 #define e 2.71828183
 #define EPSILON 1e-7f
 
@@ -644,7 +616,7 @@ float ApproximateDeepShadow(float3 FragmentWorldPos, float SelfshadowStrength)
     return ComputeHairShadowAttenuation(shadowRange, g_FiberSpacing, g_FiberRadius, SelfshadowStrength);
 }
 
-//JAKETODO rect lights
+//JAKETODO rect lights, also, why the inout?
 bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldPosition, float3 N, inout float3 ToLight, inout float3 L, inout float NoL, out float LightAttenuationNoShadow)
 {
 	float DistanceAttenuation = 1;
@@ -760,7 +732,6 @@ float3 GetTressFXDynamicLighting(
 
 	if(LightData.ShadowedBits)
     {
-
 		GetShadowTerms(GbufferData, LightData, WorldPosition, L, LightAttenuation, Dither, ShadowTerms);
 		// greatly reduces shadow mapping artifacts
         ShadowTerms.SurfaceShadow *= saturate(dot(N, L) * 6 - 0.2);
