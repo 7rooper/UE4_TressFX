@@ -600,6 +600,10 @@ void ULandscapeComponent::PostEditUndo()
 		const bool bUpdateAll = true;
 		RequestHeightmapUpdate(bUpdateAll);
 		RequestWeightmapUpdate(bUpdateAll);
+
+		// Clear Cached Editing Data
+		CachedEditingLayer.Invalidate();
+		CachedEditingLayerData = nullptr;
 	}
 	else
 	{
