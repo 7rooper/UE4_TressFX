@@ -646,8 +646,8 @@ float3 GetTressFXDynamicLighting(
 
     float AttenuationAndFalloff = (DistanceAttenuation * LightRadiusMask * SpotFalloff);
     float SurfaceAttenuation = saturate(ShadowTerms.SurfaceShadow);
-    SurfaceAttenuation = lerp(1, SurfaceAttenuation,1- Alpha);
-    float Shadow = AttenuationAndFalloff * ApproxDeepShadow * SurfaceAttenuation;
+    //SurfaceAttenuation = lerp(1, SurfaceAttenuation,1- Alpha);
+    float Shadow = AttenuationAndFalloff * SurfaceAttenuation; // * ApproxDeepShadow;
     
 	float3 reflectedLight;
     #define USE_HW_SHADER 0
@@ -815,6 +815,7 @@ float3 GetForwardDirectLightingTressFX(
         #if MATERIAL_SHADINGMODEL_TRESSFX
 			float3 NewLighting = GetTressFXDynamicLighting(-CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent, WorldPosition, Root2Tip	, HairId, FragmentDepth, true, TFXAlpha);
 		#else
+			//LightAttenuation = lerp(float4(1.0, 1.0, 1.0, 1.0), LightAttenuation, float4((1 - TFXAlpha), (1 - TFXAlpha), (1 - TFXAlpha), (1 - TFXAlpha)));
 			float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
 		#endif
 
@@ -863,6 +864,8 @@ float3 GetForwardDirectLightingTressFX(
         #if MATERIAL_SHADINGMODEL_TRESSFX
 			float3 NewLighting = GetTressFXDynamicLighting(-CameraVector, GBufferData, LightData, Dither, LightAttenuation, TFXTangent, WorldPosition, Root2Tip	, HairId, FragmentDepth, false, TFXAlpha);
 		#else
+			//LightAttenuation.z = lerp(1, LightAttenuation.z,1 - TFXAlpha);
+			//LightAttenuation.w = lerp(1, LightAttenuation.w,1 - TFXAlpha);
 			float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
 		#endif
 		

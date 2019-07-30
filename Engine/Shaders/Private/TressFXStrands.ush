@@ -154,11 +154,12 @@ TressFXVertex GetExpandedTressFXVert(
     //ratio = g_HairThicknessCoeffs[index];
     // Calculate right and projected right vectors
     float3 right = normalize(cross(t, Safe_normalize(v - eye)));
-    float2 proj_right = normalize(MatrixMult(viewProj, float4(right, 0)).xy);
+    float4 proj_right4 = MatrixMult(viewProj, float4(right, 0));
+    float2 proj_right = normalize(proj_right4.xy);
+    float4 proj_tangent4 = MatrixMult(viewProj, float4(t, 0));
+    float3 proj_cross = cross(proj_right4.xyz, proj_tangent4.xyz);
 
-	//JAKETODO
-    // WTF does this even do?
-    float expandPixels = 0.71f;
+    const float expandPixels = 0.71f;
     // Calculate the negative and positive offset screenspace positions
     float4 hairEdgePositions[2]; // 0 is negative, 1 is positive
     hairEdgePositions[0] = float4(v + 1.0 * right * ratio * g_FiberRadius, 1.0);
@@ -188,7 +189,10 @@ TressFXVertex GetExpandedTressFXVert(
 
     Output.Position = ((vertexId & 0x01) ? hairEdgePositions[0] : hairEdgePositions[1]) + fDirIndex * float4(proj_right * expandPixels / winSize.y, 0.0f, 0.0f) * ((vertexId & 0x01) ? hairEdgePositions[0].w : hairEdgePositions[1].w);
     Output.Tangent = float4(t, ratio);
-    Output.TangentZ = float4(proj_right.x, proj_right.y, 0, 1);
+    float TangentZ_W = proj_cross.z;
+    TangentZ_W = TangentZ_W > 0 ? 1 : -1;
+    Output.TangentZ = float4(proj_right.x, proj_right.y, 0, TangentZ_W);
+
     Output.p0p1 = float4(hairEdgePositions[0].xy / max(hairEdgePositions[0].w, TRESSFX_FLOAT_EPSILON), hairEdgePositions[1].xy / max(hairEdgePositions[1].w, TRESSFX_FLOAT_EPSILON));
     Output.strandUV = GetStrandUV(index);
     Output.Root2Tip = g_GuideHairVertexPositions[index].w;
