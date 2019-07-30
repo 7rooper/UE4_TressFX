@@ -1,3 +1,5 @@
+// Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
+
 #include "LandscapeBlueprintBrushBase.h"
 #include "CoreMinimal.h"
 #include "LandscapeProxy.h"
@@ -142,7 +144,8 @@ void ALandscapeBlueprintBrushBase::Destroyed()
 void ALandscapeBlueprintBrushBase::SetOwningLandscape(ALandscape* InOwningLandscape)
 {
 #if WITH_EDITORONLY_DATA
-	Modify();
+	const bool bAlwaysMarkDirty = false;
+	Modify(bAlwaysMarkDirty);
 	OwningLandscape = InOwningLandscape;
 #endif
 }
