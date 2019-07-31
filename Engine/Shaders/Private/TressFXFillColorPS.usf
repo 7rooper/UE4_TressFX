@@ -673,7 +673,9 @@ float3 GetTressFXDynamicLighting(
         SpecularColor *= lerp(1.0, GlintComputed, GlintStrength);
     }
 
+
 	float3 Shading;
+	//NOTE: shadow is only us for scatter calc in TressFXHairShading
     Shading = TressFXHairShading(GbufferData, L, V, N, AllShadow, 1, 0, uint2(0, 0), TFXTangent);
     
     float3 Lighting;
