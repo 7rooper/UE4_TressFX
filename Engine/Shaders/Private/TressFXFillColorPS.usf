@@ -426,136 +426,6 @@ float TFX_Hair_F(float CosTheta)
     return F0 + (1 - F0) * Pow5(1 - CosTheta);
 }
 
-float3 TressFXHairShading(FGBufferData GBuffer, float3 L, float3 V, half3 N, float Shadow, float Backlit, float Area, uint2 Random)
-{
-	// to prevent NaN with decals
-	// OR-18489 HERO: IGGY: RMB on E ability causes blinding hair effect
-	// OR-17578 HERO: HAMMER: E causes blinding light on heroes with hair
-    float ClampedRoughness = clamp(GBuffer.Roughness, 1 / 255.0f, 1.0f);
-
-	//const float3 DiffuseN	= OctahedronToUnitVector( GBuffer.CustomData.xy * 2 - 1 );
-	//const float Backlit	= GBuffer.CustomData.z;
-
-
-	// N is the vector parallel to hair pointing toward root
-
-    const float VoL = dot(V, L);
-    const float SinThetaL = dot(N, L);
-    const float SinThetaV = dot(N, V);
-    float CosThetaD = cos(0.5 * abs(asinFast(SinThetaV) - asinFast(SinThetaL)));
-
-	//CosThetaD = abs( CosThetaD ) < 0.01 ? 0.01 : CosThetaD;
-
-    const float3 Lp = L - SinThetaL * N;
-    const float3 Vp = V - SinThetaV * N;
-    const float CosPhi = dot(Lp, Vp) * rsqrt(dot(Lp, Lp) * dot(Vp, Vp) + 1e-4);
-    const float CosHalfPhi = sqrt(saturate(0.5 + 0.5 * CosPhi));
-	//const float Phi = acosFast( CosPhi );
-
-    float n = 1.55;
-	//float n_prime = sqrt( n*n - 1 + Pow2( CosThetaD ) ) / CosThetaD;
-    float n_prime = 1.19 / CosThetaD + 0.36 * CosThetaD;
-
-    float Shift = 0.035;
-    float Alpha[] =
-    {
-        -Shift * 2,
-		Shift,
-		Shift * 4,
-    };
-    float B[] =
-    {
-        Area + Pow2(ClampedRoughness),
-		Area + Pow2(ClampedRoughness) / 2,
-		Area + Pow2(ClampedRoughness) * 2,
-    };
-
-    float3 S = 0;
-
-	// R
-    if (1)
-    {
-        const float sa = sin(Alpha[0]);
-        const float ca = cos(Alpha[0]);
-        float Shift = 2 * sa * (ca * CosHalfPhi * sqrt(1 - SinThetaV * SinThetaV) + sa * SinThetaV);
-
-        float Mp = TFX_Hair_g(B[0] * sqrt(2.0) * CosHalfPhi, SinThetaL + SinThetaV - Shift);
-        float Np = 0.25 * CosHalfPhi;
-        float Fp = TFX_Hair_F(sqrt(saturate(0.5 + 0.5 * VoL)));
-        S += Mp * Np * Fp * (GBuffer.Specular * 2) * lerp(1, Backlit, saturate(-VoL));
-    }
-
-	// TT
-    if (1)
-    {
-        float Mp = TFX_Hair_g(B[1], SinThetaL + SinThetaV - Alpha[1]);
-
-        float a = 1 / n_prime;
-		//float h = CosHalfPhi * rsqrt( 1 + a*a - 2*a * sqrt( 0.5 - 0.5 * CosPhi ) );
-		//float h = CosHalfPhi * ( ( 1 - Pow2( CosHalfPhi ) ) * a + 1 );
-        float h = CosHalfPhi * (1 + a * (0.6 - 0.8 * CosPhi));
-		//float h = 0.4;
-		//float yi = asinFast(h);
-		//float yt = asinFast(h / n_prime);
-		
-        float f = TFX_Hair_F(CosThetaD * sqrt(saturate(1 - h * h)));
-        float Fp = Pow2(1 - f);
-		//float3 Tp = pow( GBuffer.BaseColor, 0.5 * ( 1 + cos(2*yt) ) / CosThetaD );
-		//float3 Tp = pow( GBuffer.BaseColor, 0.5 * cos(yt) / CosThetaD );
-        float3 Tp = pow(GBuffer.BaseColor, 0.5 * sqrt(1 - Pow2(h * a)) / CosThetaD);
-
-		//float t = asin( 1 / n_prime );
-		//float d = ( sqrt(2) - t ) / ( 1 - t );
-		//float s = -0.5 * PI * (1 - 1 / n_prime) * log( 2*d - 1 - 2 * sqrt( d * (d - 1) ) );
-		//float s = 0.35;
-		//float Np = exp( (Phi - PI) / s ) / ( s * Pow2( 1 + exp( (Phi - PI) / s ) ) );
-		//float Np = 0.71 * exp( -1.65 * Pow2(Phi - PI) );
-        float Np = exp(-3.65 * CosPhi - 3.98);
-
-        S += Mp * Np * Fp * Tp * Backlit;
-    }
-
-	// TRT
-    if (1)
-    {
-        float Mp = TFX_Hair_g(B[2], SinThetaL + SinThetaV - Alpha[2]);
-		
-		//float h = 0.75;
-        float f = TFX_Hair_F(CosThetaD * 0.5);
-        float Fp = Pow2(1 - f) * f;
-		//float3 Tp = pow( GBuffer.BaseColor, 1.6 / CosThetaD );
-        float3 Tp = pow(GBuffer.BaseColor, 0.8 / CosThetaD);
-
-		//float s = 0.15;
-		//float Np = 0.75 * exp( Phi / s ) / ( s * Pow2( 1 + exp( Phi / s ) ) );
-        float Np = exp(17 * CosPhi - 16.78);
-
-        S += Mp * Np * Fp * Tp;
-    }
-
-    if (1)
-    {
-		// Use soft Kajiya Kay diffuse attenuation
-        float KajiyaDiffuse = 1 - abs(dot(N, L));
-
-        float3 FakeNormal = normalize(V - N * dot(V, N));
-		//N = normalize( DiffuseN + FakeNormal * 2 );
-        N = FakeNormal;
-
-		// Hack approximation for multiple scattering.
-        float Wrap = 1;
-        float NoL = saturate((dot(N, L) + Wrap) / Square(1 + Wrap));
-        float DiffuseScatter = (1 / PI) * lerp(NoL, KajiyaDiffuse, 0.33) * GBuffer.Metallic;
-        float Luma = Luminance(GBuffer.BaseColor);
-        float3 ScatterTint = pow(GBuffer.BaseColor / Luma, 1 - Shadow);
-        S += sqrt(GBuffer.BaseColor) * DiffuseScatter * ScatterTint;
-    }
-
-    S = -min(-S, 0.0);
-
-    return S;
-}
-
 //modified from hairworks
 float ComputeHairGlint(
 	float glintSize, //strength
@@ -591,6 +461,42 @@ float ComputeHairGlint(
     return noise;
 }
 
+
+float3 TressFXHairShading(
+	FGBufferData GBuffer
+   , float3 L
+   , float3 V
+   , float3 N
+   , float Shadow
+   , float Backlit
+   , float Area
+   , uint2 Random
+   , float3 TFXTangent
+)
+{
+    float DiffuseBlend = TFXDiffuseBlend;
+    float NoL = saturate(dot(N, L));
+
+    float3 S = 0;
+    float3 SpecDiffuse = TressFX_ComputeDiffuseSpecFactors(V, L, TFXTangent, DiffuseBlend);
+    S = SpecDiffuse.x * GBuffer.BaseColor; // diffuse
+    S += SpecDiffuse.y; // 1st specular highlight
+    S += SpecDiffuse.z; // 2nd specular highlight
+    if (1)
+    {
+        float3 FakeNormal = normalize(V - N * dot(V, N));
+        N = FakeNormal;
+        float Wrap = 1;
+        float KajiyaDiffuse = 1 - abs( dot(N,L) );//SpecDiffuse.x;
+        float DiffuseScatter = (1 / PI) * lerp(NoL, KajiyaDiffuse, 0.33) * GBuffer.Metallic;
+        float Luma = Luminance(GBuffer.BaseColor);
+        float3 ScatterTint = pow((GBuffer.BaseColor) / Luma, 1 - Shadow);
+        S += sqrt(GBuffer.BaseColor) * DiffuseScatter * ScatterTint;
+    }
+    return S;
+}
+
+
 #define e 2.71828183
 #define EPSILON 1e-7f
 
@@ -616,8 +522,8 @@ float ApproximateDeepShadow(float3 FragmentWorldPos, float SelfshadowStrength)
     return ComputeHairShadowAttenuation(shadowRange, g_FiberSpacing, g_FiberRadius, SelfshadowStrength);
 }
 
-//JAKETODO rect lights, also, why the inout?
-bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldPosition, float3 N, inout float3 ToLight, inout float3 L, inout float NoL, out float LightAttenuationNoShadow)
+//JAKETODO rect lights
+bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldPosition, float3 N, float3 ToLight, float3 L, float NoL, out float LightAttenuationNoShadow)
 {
 	float DistanceAttenuation = 1;
     float LightRadiusMask = 1;
@@ -689,6 +595,8 @@ float3 GetTressFXDynamicLighting(
 	, FRectTexture SourceTexture
 	, float Root2Tip
 	, float HairId
+	, float3 TFXTangent
+	, float TFXAlpha
 	, bool bDirectionalLight
 )
 {
@@ -726,7 +634,7 @@ float3 GetTressFXDynamicLighting(
 
 	// Setup shadow
     //LightAttenuation = saturate((LightAttenuation - TFXShadowAttenuation) / (1 - TFXShadowAttenuation));
-    LightAttenuation = Square(LightAttenuation);
+    //LightAttenuation = Square(LightAttenuation);
     FShadowTerms ShadowTerms;
     ShadowTerms.SurfaceShadow = 1;
 
@@ -748,7 +656,7 @@ float3 GetTressFXDynamicLighting(
     }
 
     float ShadowAttenuation = saturate(ShadowTerms.TransmissionShadow);
-    //SurfaceAttenuation = lerp(1, SurfaceAttenuation,1- Alpha);
+    //ShadowAttenuation = lerp(1, ShadowAttenuation, 1 - TFXAlpha);
     float AllShadow = LightAttenuationNoShadow * ShadowAttenuation; // * ApproxDeepShadow;
     
 	// Add glint JAKETODO ?
@@ -765,34 +673,17 @@ float3 GetTressFXDynamicLighting(
         SpecularColor *= lerp(1.0, GlintComputed, GlintStrength);
     }
 
-	float3 Lighting;
-    if (0)
-    {
-        float3 SpecDiffuse = TressFX_ComputeDiffuseSpecFactors(V, LightData.Direction, TFXTangent, DiffuseBlend);
-        Lighting = SpecDiffuse.x * LightData.Color * GbufferData.BaseColor; // diffuse
-        Lighting += SpecDiffuse.y * LightData.Color; // 1st specular highlight
-        Lighting += SpecDiffuse.z * LightData.Color; // 2nd specular highlight
-        Lighting += GlintAmbient * GbufferData.BaseColor;
-        if (1)
-        {
-            float3 FakeNormal = normalize(V - N * dot(V, N));
-            N = FakeNormal;
-            float Wrap = 1;
-            float KajiyaDiffuse = SpecDiffuse.x;
-            float DiffuseScatter = (1 / PI) * lerp(NoL, KajiyaDiffuse, 0.33) * GbufferData.Metallic;
-            float Luma = Luminance(GbufferData.BaseColor);
-            float3 ScatterTint = pow((GbufferData.BaseColor) / Luma, 1 - AllShadow);
-            OutColor += sqrt(GbufferData.BaseColor) * DiffuseScatter * ScatterTint;
-        }
-    }
-	else
-	{
-        Lighting = TressFXHairShading(GbufferData, L, V, N, ShadowTerms.TransmissionShadow, 1, 0, uint2(0, 0));
-    }
+	float3 Shading;
+    Shading = TressFXHairShading(GbufferData, L, V, N, AllShadow, 1, 0, uint2(0, 0), TFXTangent);
+    
+    float3 Lighting;
+	Lighting = LightData.Color * Shading;
+    
 	// IES lighting
     Lighting *= ComputeLightProfileMultiplier(WorldPosition, DeferredLightUniforms.Position, -DeferredLightUniforms.Direction, DeferredLightUniforms.Tangent);
 	
 	OutColor += Lighting * AllShadow;
+    OutColor += GlintAmbient * AllShadow * GbufferData.BaseColor;
     return saturate(OutColor);
 }
 
@@ -874,7 +765,7 @@ float3 GetForwardDirectLightingTressFX(
 		// LightAttenuation: Light function + per-object shadows in z, per-object SSS shadowing in w, 
 		// Whole scene directional light shadows in x, whole scene directional light SSS shadows in y
         #if MATERIAL_SHADINGMODEL_TRESSFX
-			float3 NewLighting = GetTressFXDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture, Root2Tip, HairId, true);
+			float3 NewLighting = GetTressFXDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture, Root2Tip, HairId, TFXTangent, TFXAlpha, true);
 		#else
 			float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
 		#endif
@@ -922,7 +813,7 @@ float3 GetForwardDirectLightingTressFX(
 		float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
 		float4 LightAttenuation = float4(1, 1, DynamicShadowing.x, DynamicShadowing.x);
         #if MATERIAL_SHADINGMODEL_TRESSFX
-			float3 NewLighting = GetTressFXDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture, Root2Tip, HairId, false);
+			float3 NewLighting = GetTressFXDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture, Root2Tip, HairId, TFXTangent, TFXAlpha, false);
 		#else
 			float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
 		#endif
@@ -1079,7 +970,7 @@ void main(
 		float3 V = MaterialParameters.CameraVector;
 		float3 L = normalize( V - N * dot(V,N) );
 		DiffuseDir = L;
-        DiffuseColorForIndirect = 2 * PI * TressFXHairShading(GBuffer, L, V, N, 1, 0, 0.2, uint2(0, 0));
+        DiffuseColorForIndirect = 2 * PI * TressFXHairShading(GBuffer, L, V, N, 1, 0, 0.2, uint2(0, 0), TFXTangent);
     }
 
 	float3 DiffuseIndirectLighting;
