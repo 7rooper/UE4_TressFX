@@ -1440,6 +1440,7 @@ void FSceneRenderTargets::ReleaseTressFXResources(int32 TypeToRelease)
 		TressFXAccumInvAlpha.SafeRelease();
 		TressFXFragmentDepthsTexture.SafeRelease();
 		TressFXFragmentColorsTexture.SafeRelease();
+		TressFXDeepOpacityMap.SafeRelease();
 	}
 	if (bReleaseAll || TypeToRelease == ETressFXRenderType::Opaque)
 	{
@@ -1484,6 +1485,17 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 					TexCreate_ShaderResource | TexCreate_DepthStencilTargetable, false));
 			TressFXSceneDepthDesc.NumSamples = SampleCount;
 			GRenderTargetPool.FindFreeElement(RHICmdList, TressFXSceneDepthDesc, TressFXSceneDepth, TEXT("TressFXSceneDepth"));
+
+			// TressFXDeepOpacityMap
+			FPooledRenderTargetDesc TressFXDeepOpacityMapDesc(
+				FPooledRenderTargetDesc::Create2DDesc(
+					BufferSize,
+					EPixelFormat::PF_A32B32G32R32F, //todo, probably dont need this much precision, but fine for testing
+					FClearValueBinding(FLinearColor(0,0,0,0)),
+					TexCreate_None,
+					TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false)
+			);
+			GRenderTargetPool.FindFreeElement(RHICmdList, TressFXDeepOpacityMapDesc, TressFXDeepOpacityMap, TEXT("TressFXDeepOpacityMap"));
 		}
 		else 
 		{
@@ -1516,7 +1528,8 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 						PF_R32_UINT, 
 						FClearValueBinding::Transparent, 
 						TexCreate_None, 
-						TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false));
+						TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false)
+				);
 				Desc.bIsArray = true;
 				Desc.ArraySize = 4;
 				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXFragmentDepthsTexture, TEXT("TressFX_FragmentDepthsTexture"));
