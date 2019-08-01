@@ -1345,6 +1345,7 @@ void USoundWave::FreeResources()
 	ResourceID = 0;
 	bDynamicResource = false;
 	DecompressionType = DTYPE_Setup;
+	SetPrecacheState(ESoundWavePrecacheState::NotStarted);
 	bDecompressedFromOgg = false;
 
 	if (ResourceState == ESoundWaveResourceState::Freeing)
