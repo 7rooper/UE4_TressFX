@@ -82,8 +82,8 @@ IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FOpaqueBasePassUniformParameters, "Opaq
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTranslucentBasePassUniformParameters, "TranslucentBasePass");
 
 /*  @BEGIN third party code TressFX */
-IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, "TressFXColorFillPass"); //FTressFXDeepOpacityParameters
-IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXDeepOpacityParameters, "TressFXDeepOpacityBuffer");
+IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, "TressFXColorFillPass");
+IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXDeepOpacityParameters, "TressFXDeepOpacityPass");
 /*  @END third party code TressFX */
 
 // Typedef is necessary because the C preprocessor thinks the comma in the template parameter list is a comma in the macro parameter list.
@@ -556,6 +556,7 @@ void CreateTressFXDeepOpacityUniformBuffer(
 		//JAKETODO more than 1 shadow instead of just hardcoding to first one!
 		DeepOpacityParams.SoftTransitionScale = FVector(0, 0, TressFXPerObjectShadowInfos[0]->ComputeTransitionSize());
 	}
+	SetupSceneTextureUniformParameters(SceneRenderTargets, View.FeatureLevel, ESceneTextureSetupMode::None, DeepOpacityParams.SceneTextures);
 }
 
 // very similar to opaque bass pass buffer

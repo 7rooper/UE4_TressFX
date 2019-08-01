@@ -114,6 +114,7 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, )
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXDeepOpacityParameters, )
+	SHADER_PARAMETER_STRUCT(FSceneTexturesUniformParameters, SceneTextures)
 	SHADER_PARAMETER(FVector4, ShadowBufferSize)
 	SHADER_PARAMETER(FVector, SoftTransitionScale)
 	SHADER_PARAMETER_SAMPLER(SamplerState, ShadowDepthTextureSampler)

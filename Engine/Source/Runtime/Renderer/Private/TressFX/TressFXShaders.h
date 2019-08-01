@@ -715,13 +715,13 @@ public:
 	{
 		OutEnvironment.SetDefine(TEXT("PERSPECTIVE_CORRECT_DEPTH"), (uint32)(ShaderMode == ETressFXShadowDepthPixelShaderMode::TFXPixelShadowDepth_PerspectiveCorrect));
 		OutEnvironment.SetDefine(TEXT("ONEPASS_POINTLIGHT_SHADOW"), (uint32)(ShaderMode == ETressFXShadowDepthPixelShaderMode::TFXPixelShadowDepth_OnePassPointLight));
-		FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
 		FShaderUniformBufferParameter::ModifyCompilationEnvironment(
 			FTressFXDeepOpacityParameters::StaticStructMetadata.GetShaderVariableName(),
 			FTressFXDeepOpacityParameters::StaticStructMetadata,
 			Platform,
 			OutEnvironment
 		);
+		FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
 	}
 
 	FTressFXDeepOpacityPS() {}

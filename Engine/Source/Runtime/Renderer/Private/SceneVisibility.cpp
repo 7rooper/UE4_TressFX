@@ -2679,6 +2679,9 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 			PassMask.Set(EMeshPass::TressFX_DepthsAlpha);
 			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsAlpha] += NumElements;
 
+			PassMask.Set(EMeshPass::TressFX_DeepOpacity);
+			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DeepOpacity] += NumElements;
+
 			PassMask.Set(EMeshPass::TressFX_FillColors);
 			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
 		}
@@ -2686,6 +2689,9 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 		{
 			PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
 			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
+
+			PassMask.Set(EMeshPass::TressFX_DeepOpacity);
+			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DeepOpacity] += NumElements;
 
 			PassMask.Set(EMeshPass::TressFX_FillColors);
 			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
