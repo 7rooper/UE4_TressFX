@@ -1489,11 +1489,11 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 			// TressFXDeepOpacityMap
 			FPooledRenderTargetDesc TressFXDeepOpacityMapDesc(
 				FPooledRenderTargetDesc::Create2DDesc(
-					BufferSize,
-					EPixelFormat::PF_A32B32G32R32F, //todo, probably dont need this much precision, but fine for testing
+					GetShadowDepthTextureResolution(),
+					EPixelFormat::PF_A32B32G32R32F, //maps to DXGI_FORMAT_R32G32B32A32_FLOAT. todo, probably dont need this much precision, but fine for testing
 					FClearValueBinding(FLinearColor(0,0,0,0)),
 					TexCreate_None,
-					TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false)
+					TexCreate_ShaderResource | TexCreate_RenderTargetable, false)
 			);
 			GRenderTargetPool.FindFreeElement(RHICmdList, TressFXDeepOpacityMapDesc, TressFXDeepOpacityMap, TEXT("TressFXDeepOpacityMap"));
 		}

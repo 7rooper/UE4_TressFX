@@ -685,3 +685,81 @@ public:
 
 	void UnsetParameters(FRHICommandList& RHICmdList);
 };
+
+
+/////////////////////////////////////////////////////////////////////////////////
+//  FTressFXDeepOpacityPS
+////////////////////////////////////////////////////////////////////////////////
+
+enum ETressFXShadowDepthPixelShaderMode
+{
+	TFXPixelShadowDepth_NonPerspectiveCorrect,
+	TFXPixelShadowDepth_PerspectiveCorrect,
+	TFXPixelShadowDepth_OnePassPointLight
+};
+
+template <ETressFXShadowDepthPixelShaderMode ShaderMode>
+class FTressFXDeepOpacityPS : public FMeshMaterialShader
+{
+
+	DECLARE_SHADER_TYPE(FTressFXDeepOpacityPS, MeshMaterial)
+
+public:
+
+	FTressFXDeepOpacityPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
+	{
+		TressDeepOpacityBuffer.Bind(Initializer.ParameterMap, FTressFXDeepOpacityParameters::StaticStructMetadata.GetShaderVariableName());
+	}
+
+	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
+	{
+		OutEnvironment.SetDefine(TEXT("PERSPECTIVE_CORRECT_DEPTH"), (uint32)(ShaderMode == ETressFXShadowDepthPixelShaderMode::TFXPixelShadowDepth_PerspectiveCorrect));
+		OutEnvironment.SetDefine(TEXT("ONEPASS_POINTLIGHT_SHADOW"), (uint32)(ShaderMode == ETressFXShadowDepthPixelShaderMode::TFXPixelShadowDepth_OnePassPointLight));
+		FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
+		FShaderUniformBufferParameter::ModifyCompilationEnvironment(
+			FTressFXDeepOpacityParameters::StaticStructMetadata.GetShaderVariableName(),
+			FTressFXDeepOpacityParameters::StaticStructMetadata,
+			Platform,
+			OutEnvironment
+		);
+	}
+
+	FTressFXDeepOpacityPS() {}
+
+	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType)
+	{
+		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
+		{
+			return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5);
+		}
+
+		return false;
+	}
+
+
+	virtual bool Serialize(FArchive& Ar) override
+	{
+		const bool result = FMeshMaterialShader::Serialize(Ar);
+		Ar << TressDeepOpacityBuffer;
+		return result;
+	}
+
+	void GetShaderBindings(
+		const FScene* Scene,
+		ERHIFeatureLevel::Type FeatureLevel,
+		const FPrimitiveSceneProxy* PrimitiveSceneProxy,
+		const FMaterialRenderProxy& MaterialRenderProxy,
+		const FMaterial& Material,
+		const FMeshPassProcessorRenderState& DrawRenderState,
+		const FTressFXShaderElementData& ShaderElementData,
+		FMeshDrawSingleShaderBindings& ShaderBindings) const
+	{
+		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
+		ShaderBindings.Add(TressDeepOpacityBuffer, DrawRenderState.GetPassUniformBuffer());
+	}
+
+public:
+
+	FShaderUniformBufferParameter TressDeepOpacityBuffer;
+
+};

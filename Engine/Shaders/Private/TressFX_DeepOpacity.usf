@@ -82,7 +82,7 @@ Pass 3: render the hair however you want and sample the opacity map for shadow
 	float opacity = 0;
 	float3 opacity_rgb = float3(0,0,0);
 	float4 OpacityMapValue = sample the opacity map at coords
-	float SampledDepth = OpacityMapValue.r; aka z0
+	float SampledDepth = OpacityMapValue.r; aka z0, 
 
 	if (FragDepth - Layer1Thickness < SampledDepth)
 	{
@@ -97,13 +97,12 @@ Pass 3: render the hair however you want and sample the opacity map for shadow
 		opacity_rgb.r = lerp(prevMax, 0, (FragDepth - Layer1Thickness - SampledDepth) / Layer2Thickness);
 	}
 	else
-		{
-			opacity = lerp(OpacityMapValue.b, OpacityMapValue.a, (FragDepth - _Layer1Thickness - _Layer2Thickness - culledDepth) / _Layer3Thickness);
-			float prevMax = OpacityMapValue.b;
-			//float prevMax = lerp(0, OpacityMapValue.b, (FragDepth - _Layer1Thickness - culledDepth) / _Layer2Thickness);
-			opacity_rgb.b = lerp(0, OpacityMapValue.a, (FragDepth - _Layer1Thickness - _Layer2Thickness - culledDepth) / _Layer3Thickness);
-			opacity_rgb.g = lerp(prevMax, 0, (FragDepth - _Layer1Thickness - _Layer2Thickness - culledDepth) / _Layer3Thickness);
-		}
+	{
+		opacity = lerp(OpacityMapValue.b, OpacityMapValue.a, (FragDepth - Layer1Thickness - Layer2Thickness - SampledDepth) / Layer3Thickness);
+		float prevMax = OpacityMapValue.b;
+		opacity_rgb.b = lerp(0, OpacityMapValue.a, (FragDepth - Layer1Thickness - Layer2Thickness - SampledDepth) / Layer3Thickness);
+		opacity_rgb.g = lerp(prevMax, 0, (FragDepth - Layer1Thickness - Layer2Thickness - SampledDepth) / Layer3Thickness);
+	}
 
 	opacity = max(0, opacity);
 	opacity_rgb = lerp(opacity, opacity_rgb, _OpacityRGB);
@@ -111,6 +110,88 @@ Pass 3: render the hair however you want and sample the opacity map for shadow
 
 */
 
+
+#pragma once
+#include "/Engine/Generated/Material.ush"
+#include "/Engine/Generated/VertexFactory.ush"
+
+#include "TressFXRendering.ush"
+#include "ShadowDepthCommon.ush"
+#include "ShadowFilteringCommon.ush"
+
+#define ShadowDepthTexture TressFXDeepOpacityBuffer.ShadowDepthTexture
+# define ShadowDepthTextureSampler TressFXDeepOpacityBuffer.ShadowDepthTextureSampler
+// xy:unused, z:SoftTransitionScale
+#define SoftTransitionScale TressFXDeepOpacityBuffer.SoftTransitionScale.z
+// xy:ShadowTexelSize.xy, zw:1/ShadowTexelSize.xy
+#define ShadowBufferSize TressFXDeepOpacityBuffer.ShadowBufferSize
+
+#ifndef OPTIONAL_IsFrontFace
+	#define OPTIONAL_IsFrontFace
+#endif
+
 #define OpacityPerFragment .01f
 
-RWTexture2D<float4> DeepOpacityMap;
+//i have no idea what good values for thickness will be. will require expermentation
+#define Layer1Thickness .01f
+#define Layer2Thickness .01f
+#define Layer3Thickness .01f
+#define Layer4Thickness .01f
+
+//EARLYDEPTHSTENCIL
+void Main(FShadowDepthVSToPS Inputs, in float4 SvPosition : SV_Position, out float4 DeepOpacity : SV_Target0)
+{
+    
+	float FragDepth = SvPosition.z;
+    int2 ScreenAddress = int2(SvPosition.xy);
+    FPCFSamplerSettings Settings;
+    Settings.ShadowDepthTexture = ShadowDepthTexture;
+    Settings.ShadowDepthTextureSampler = ShadowDepthTextureSampler;
+    Settings.ShadowBufferSize = ShadowBufferSize;
+    Settings.TransitionScale = SoftTransitionScale.z;
+    Settings.SceneDepth = FragDepth;
+    Settings.bSubsurface = false;
+    Settings.bTreatMaxDepthUnshadowed = false;
+    Settings.DensityMulConstant = 0;
+    Settings.ProjectionDepthBiasParameters = 0;
+    float SampledDepth = ManualPCF(SvPosition.xy, Settings);
+	
+	float4 OutDepth = 0;
+
+	// JAKETODO note this might be backward since u are dyslexic and ue4 uses inverse-z
+	if (FragDepth - Layer1Thickness < SampledDepth) 
+	{
+		OutDepth.r = OpacityPerFragment;
+		OutDepth.g = OpacityPerFragment;
+		OutDepth.b = OpacityPerFragment;
+        OutDepth.a = OpacityPerFragment;
+    }
+	// layer 2
+	else if (FragDepth - Layer1Thickness - Layer2Thickness < SampledDepth) 
+	{
+		OutDepth.r = 0;
+		OutDepth.g = OpacityPerFragment;
+		OutDepth.b = OpacityPerFragment;
+        OutDepth.a = OpacityPerFragment;
+    }
+	// layer 3
+    else if (FragDepth - Layer1Thickness - Layer2Thickness - Layer3Thickness < SampledDepth) 
+	{
+		OutDepth.r = 0;
+		OutDepth.g = 0;
+		OutDepth.b = OpacityPerFragment;
+        OutDepth.a = OpacityPerFragment;
+    }
+	//layer4
+    else
+    {
+        OutDepth.r = 0;
+        OutDepth.g = 0;
+        OutDepth.b = 0;
+        OutDepth.a = OpacityPerFragment;
+    }
+	
+	//use additive blending
+    DeepOpacity = OutDepth;
+
+}

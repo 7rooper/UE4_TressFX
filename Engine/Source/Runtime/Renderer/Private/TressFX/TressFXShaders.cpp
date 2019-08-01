@@ -241,3 +241,11 @@ void FTressFXFKBufferResolveCS::UnsetParameters(FRHICommandList& RHICmdList)
 }
 
 IMPLEMENT_GLOBAL_SHADER(FTressFXFKBufferResolveCS, "/Engine/Private/TressFXPPLLResolve.usf", "ResolvePPLL_CS", SF_Compute);
+
+/////////////////////////////////////////////////////////////////////////////////
+//  FTressFXDeepOpacityPS
+////////////////////////////////////////////////////////////////////////////////
+
+IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXDeepOpacityPS<TFXPixelShadowDepth_NonPerspectiveCorrect>, TEXT("/Engine/Private/TressFX_DeepOpacity.usf"), TEXT("Main"), SF_Pixel);
+IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXDeepOpacityPS<TFXPixelShadowDepth_PerspectiveCorrect>, TEXT("/Engine/Private/TressFX_DeepOpacity.usf"), TEXT("Main"), SF_Pixel);
+IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXDeepOpacityPS<TFXPixelShadowDepth_OnePassPointLight>, TEXT("/Engine/Private/TressFX_DeepOpacity.usf"), TEXT("Main"), SF_Pixel);
