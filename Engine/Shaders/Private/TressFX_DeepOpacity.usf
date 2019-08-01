@@ -111,7 +111,7 @@ Pass 3: render the hair however you want and sample the opacity map for shadow
 */
 
 
-#pragma once
+#include "Common.ush"
 
 #define SceneTexturesStruct TressFXDeepOpacityPass.SceneTextures 
 
@@ -121,13 +121,6 @@ Pass 3: render the hair however you want and sample the opacity map for shadow
 #include "TressFXRendering.ush"
 #include "ShadowDepthCommon.ush"
 #include "ShadowFilteringCommon.ush"
-
-#define ShadowDepthTexture TressFXDeepOpacityBuffer.ShadowDepthTexture
-# define ShadowDepthTextureSampler TressFXDeepOpacityBuffer.ShadowDepthTextureSampler
-// xy:unused, z:SoftTransitionScale
-#define SoftTransitionScale TressFXDeepOpacityBuffer.SoftTransitionScale.z
-// xy:ShadowTexelSize.xy, zw:1/ShadowTexelSize.xy
-#define ShadowBufferSize TressFXDeepOpacityBuffer.ShadowBufferSize
 
 #ifndef OPTIONAL_IsFrontFace
 	#define OPTIONAL_IsFrontFace
@@ -148,10 +141,10 @@ void Main(FShadowDepthVSToPS Inputs, in float4 SvPosition : SV_Position, out flo
 	float FragDepth = SvPosition.z;
     int2 ScreenAddress = int2(SvPosition.xy);
     FPCFSamplerSettings Settings;
-    Settings.ShadowDepthTexture = ShadowDepthTexture;
-    Settings.ShadowDepthTextureSampler = ShadowDepthTextureSampler;
-    Settings.ShadowBufferSize = ShadowBufferSize;
-    Settings.TransitionScale = SoftTransitionScale.z;
+    Settings.ShadowDepthTexture = TressFXDeepOpacityPass.ShadowDepthTexture;
+    Settings.ShadowDepthTextureSampler = TressFXDeepOpacityPass.ShadowDepthTextureSampler;
+    Settings.ShadowBufferSize = TressFXDeepOpacityPass.ShadowBufferSize;
+    Settings.TransitionScale = TressFXDeepOpacityPass.SoftTransitionScale.z;
     Settings.SceneDepth = FragDepth;
     Settings.bSubsurface = false;
     Settings.bTreatMaxDepthUnshadowed = false;
