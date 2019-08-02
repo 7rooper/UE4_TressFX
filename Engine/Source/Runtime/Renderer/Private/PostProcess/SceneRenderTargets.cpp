@@ -300,6 +300,8 @@ FSceneRenderTargets::FSceneRenderTargets(const FViewInfo& View, const FSceneRend
 	TressFXKBufferNodePoolSize = SnapshotSource.TressFXKBufferNodePoolSize;
 	TressFXKBufferNodes = SnapshotSource.TressFXKBufferNodes;
 	TressFXKBufferCounter = SnapshotSource.TressFXKBufferCounter;
+	TressFXDeepOpacityMap = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXDeepOpacityMap);
+	TressFXOpacityThresholdingUAV = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXOpacityThresholdingUAV);
 	/*@END Third party code TressFX*/
 }
 
