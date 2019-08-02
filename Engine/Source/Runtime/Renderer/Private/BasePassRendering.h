@@ -113,22 +113,6 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, )
 	SHADER_PARAMETER_TEXTURE(Texture2D, EyeAdaptation)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
-BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXDeepOpacityParameters, )
-	SHADER_PARAMETER_STRUCT(FSceneTexturesUniformParameters, SceneTextures)
-	SHADER_PARAMETER(FVector4, ShadowBufferSize)
-	SHADER_PARAMETER(FVector, SoftTransitionScale)
-	SHADER_PARAMETER_SAMPLER(SamplerState, ShadowDepthTextureSampler)
-	SHADER_PARAMETER_TEXTURE(Texture2D, ShadowDepthTexture)
-END_GLOBAL_SHADER_PARAMETER_STRUCT()
-
-extern void CreateTressFXDeepOpacityUniformBuffer(
-	FRHICommandListImmediate& RHICmdList,
-	const FViewInfo& View,
-	TUniformBufferRef<FTressFXDeepOpacityParameters>& TFXDeepOpacityUniformBuffer,
-	const FSortedShadowMaps& SortedShadowsForShadowDepthPass,
-	const TArray<FProjectedShadowInfo*>& TressFXPerObjectShadowInfos
-);
-
 extern void CreateTressFXColorPassUniformBuffer(
 	FRHICommandListImmediate& RHICmdList,
 	const FViewInfo& View,

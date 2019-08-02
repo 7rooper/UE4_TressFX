@@ -1587,7 +1587,7 @@ void FSceneRenderer::RenderTressFXDeepOpacityMaps(FRHICommandListImmediate& RHIC
 
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
 
-	//TODO, actual loop here instead of harcoding for single shadow
+	//TODO, actual loop here instead of hardcoding for single shadow
 	const FSortedShadowMapAtlas& ShadowMapAtlas = SortedShadowsForShadowDepthPass.ShadowMapAtlases.Last();
 	FSceneRenderTargetItem& RenderTarget = SceneContext.TressFXDeepOpacityMap->GetRenderTargetItem();
 	FIntPoint AtlasSize = SceneContext.TressFXDeepOpacityMap->GetDesc().Extent;

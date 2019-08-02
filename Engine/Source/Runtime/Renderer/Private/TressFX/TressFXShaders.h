@@ -708,19 +708,13 @@ public:
 
 	FTressFXDeepOpacityPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
 	{
-		TressDeepOpacityBuffer.Bind(Initializer.ParameterMap, FTressFXDeepOpacityParameters::StaticStructMetadata.GetShaderVariableName());
+		PassUniformBuffer.Bind(Initializer.ParameterMap, FShadowDepthPassUniformParameters::StaticStructMetadata.GetShaderVariableName());
 	}
 
 	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		OutEnvironment.SetDefine(TEXT("PERSPECTIVE_CORRECT_DEPTH"), (uint32)(ShaderMode == ETressFXShadowDepthPixelShaderMode::TFXPixelShadowDepth_PerspectiveCorrect));
 		OutEnvironment.SetDefine(TEXT("ONEPASS_POINTLIGHT_SHADOW"), (uint32)(ShaderMode == ETressFXShadowDepthPixelShaderMode::TFXPixelShadowDepth_OnePassPointLight));
-		FShaderUniformBufferParameter::ModifyCompilationEnvironment(
-			FTressFXDeepOpacityParameters::StaticStructMetadata.GetShaderVariableName(),
-			FTressFXDeepOpacityParameters::StaticStructMetadata,
-			Platform,
-			OutEnvironment
-		);
 		FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
 	}
 
@@ -740,7 +734,6 @@ public:
 	virtual bool Serialize(FArchive& Ar) override
 	{
 		const bool result = FMeshMaterialShader::Serialize(Ar);
-		Ar << TressDeepOpacityBuffer;
 		return result;
 	}
 
@@ -755,11 +748,8 @@ public:
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
-		ShaderBindings.Add(TressDeepOpacityBuffer, DrawRenderState.GetPassUniformBuffer());
 	}
 
 public:
-
-	FShaderUniformBufferParameter TressDeepOpacityBuffer;
 
 };

@@ -2393,7 +2393,6 @@ public:
 
 	/*  @BEGIN third party code TressFX */
 	TUniformBufferRef <FTressFXColorPassUniformParameters> TressFXColorPassUniformBuffer;
-	TUniformBufferRef <FTressFXDeepOpacityParameters> TressFXDeepOpacityPassUniformBuffer;
 	/*  @END third party code TressFX */
 
 	// View from which ViewUniformBuffer was last updated.

@@ -168,9 +168,22 @@ public:
 
 typedef TFunctionRef<void(FRHICommandList& RHICmdList, bool bFirst)> FBeginShadowRenderPassFunction;
 
+/*  @BEGIN third party code TressFX */
+BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXDeepOpacityParameters, )
+	SHADER_PARAMETER(FVector4, ShadowBufferSize)
+	SHADER_PARAMETER(FVector, SoftTransitionScale)
+	SHADER_PARAMETER_SAMPLER(SamplerState, ShadowDepthTextureSampler)
+	SHADER_PARAMETER_TEXTURE(Texture2D, ShadowDepthTexture)
+END_GLOBAL_SHADER_PARAMETER_STRUCT()
+
+//NOTE added as sub struct in FShadowDepthPassUniformParameters
+
+/*  @END third party code TressFX */
+
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FShadowDepthPassUniformParameters,)
 	SHADER_PARAMETER_STRUCT(FSceneTexturesUniformParameters, SceneTextures)
 	SHADER_PARAMETER_STRUCT(FLpvWriteUniformBufferParameters, LPV)
+	SHADER_PARAMETER_STRUCT(FTressFXDeepOpacityParameters, TressFXDeepOpacity)
 	SHADER_PARAMETER(FMatrix, ProjectionMatrix)
 	SHADER_PARAMETER(FVector2D, ShadowParams)
 	SHADER_PARAMETER(float, bClampToNearPlane)

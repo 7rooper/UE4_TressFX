@@ -44,6 +44,9 @@
 /*@END Third party code TressFX*/
 
 DECLARE_GPU_STAT_NAMED(ShadowDepths, TEXT("Shadow Depths"));
+/*@BEGIN Third party code TressFX*/
+IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXDeepOpacityParameters, "TressFXDeepOpacityPass");
+/*@END Third party code TressFX*/
 
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FShadowDepthPassUniformParameters, "ShadowDepthPass");
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FMobileShadowDepthPassUniformParameters, "MobileShadowDepthPass");
@@ -52,7 +55,12 @@ void SetupShadowDepthPassUniformBuffer(
 	const FProjectedShadowInfo* ShadowInfo,
 	FRHICommandListImmediate& RHICmdList,
 	const FViewInfo& View,
-	FShadowDepthPassUniformParameters& ShadowDepthPassParameters)
+	FShadowDepthPassUniformParameters& ShadowDepthPassParameters
+	/*@BEGIN Third party code TressFX*/
+	, bool bDeepOpacityTressFX = false
+	, TRefCountPtr<IPooledRenderTarget> ShadowDepthAtlas = nullptr
+	/*@END Third party code TressFX*/
+)
 {
 	FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
 	SetupSceneTextureUniformParameters(SceneRenderTargets, View.FeatureLevel, ESceneTextureSetupMode::None, ShadowDepthPassParameters.SceneTextures);
@@ -90,6 +98,27 @@ void SetupShadowDepthPassUniformBuffer(
 			}
 		}
 	}
+	
+	/*@BEGIN Third party code TressFX*/
+	FTressFXDeepOpacityParameters DeepOpacityParams;
+	if (bDeepOpacityTressFX && ShadowDepthAtlas && ShadowDepthAtlas.IsValid() && ShadowDepthAtlas->GetRenderTargetItem().IsValid())
+	{
+		DeepOpacityParams.ShadowDepthTexture = ShadowDepthAtlas->GetRenderTargetItem().ShaderResourceTexture;		
+		DeepOpacityParams.SoftTransitionScale = FVector(0, 0, ShadowInfo->ComputeTransitionSize());
+
+		const FIntVector ShadowBufferResolution = ShadowDepthAtlas->GetDesc().GetSize();
+		FVector2D ShadowBufferSizeValue(ShadowBufferResolution.X, ShadowBufferResolution.Y);
+		DeepOpacityParams.ShadowBufferSize = FVector4(ShadowBufferSizeValue.X, ShadowBufferSizeValue.Y, 1.0f / ShadowBufferSizeValue.X, 1.0f / ShadowBufferSizeValue.Y);
+	}
+	else
+	{
+		DeepOpacityParams.ShadowDepthTexture = GWhiteTexture->TextureRHI;
+		DeepOpacityParams.ShadowBufferSize = FVector4(0);
+		DeepOpacityParams.SoftTransitionScale = FVector(0);
+	}
+	DeepOpacityParams.ShadowDepthTextureSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+	ShadowDepthPassParameters.TressFXDeepOpacity = DeepOpacityParams;
+	/*@END Third party code TressFX*/
 }
 
 void SetupShadowDepthPassUniformBuffer(
@@ -1244,8 +1273,16 @@ void FProjectedShadowInfo::TressFXRenderDeepOpacityMap(FRHICommandListImmediate&
 	check(FSceneInterface::GetShadingPath(FeatureLevel) == EShadingPath::Deferred)
 
 	{
+		TRefCountPtr<IPooledRenderTarget> ShadowDepthAtlas = SceneRenderer->SortedShadowsForShadowDepthPass.ShadowMapAtlases.Last().RenderTargets.DepthTarget;
 		FShadowDepthPassUniformParameters ShadowDepthPassParameters;
-		SetupShadowDepthPassUniformBuffer(this, RHICmdList, *ShadowDepthView, ShadowDepthPassParameters);
+		SetupShadowDepthPassUniformBuffer(
+			  this
+			, RHICmdList
+			, *ShadowDepthView
+			, ShadowDepthPassParameters
+			, true
+			, ShadowDepthAtlas
+		);
 
 		if (IsWholeSceneDirectionalShadow() && !bReflectiveShadowmap)
 		{
@@ -2024,8 +2061,6 @@ void GetTressFXDeepOpacityShaders(
 			VertexShader = Material.GetShader<TShadowDepthVS<VertexShadowDepth_OutputDepth, false, false> >(VFType);
 		}
 	}
-
-
 	{
 		if (bUsePerspectiveCorrectShadowDepths)
 		{
@@ -2166,8 +2201,9 @@ FTressFXDeepOpacityPassProcessor::FTressFXDeepOpacityPassProcessor(
 	, PassDrawRenderState(FMeshPassProcessorRenderState(InViewUniformBuffer, InPassUniformBuffer))
 	, ShadowDepthType(InShadowDepthType)
 {
-	//JAKETODO!!!!!!!
-	SetStateForShadowDepth(ShadowDepthType.bReflectiveShadowmap, ShadowDepthType.bOnePassPointLightShadow, PassDrawRenderState);
+
+	PassDrawRenderState.SetBlendState(TStaticBlendState<CW_RGBA>::GetRHI());
+	PassDrawRenderState.SetDepthStencilState(TStaticDepthStencilState<false, CF_LessEqual>::GetRHI());
 }
 
 

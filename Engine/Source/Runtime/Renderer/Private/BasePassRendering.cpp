@@ -83,7 +83,6 @@ IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTranslucentBasePassUniformParameters, 
 
 /*  @BEGIN third party code TressFX */
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, "TressFXColorFillPass");
-IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXDeepOpacityParameters, "TressFXDeepOpacityPass");
 /*  @END third party code TressFX */
 
 // Typedef is necessary because the C preprocessor thinks the comma in the template parameter list is a comma in the macro parameter list.
@@ -525,52 +524,6 @@ void SetupSharedBasePassParameters(
 }
 
 /*  @BEGIN third party code TressFX */
-
-void CreateTressFXDeepOpacityUniformBuffer(
-	FRHICommandListImmediate& RHICmdList,
-	const FViewInfo& View,
-	TUniformBufferRef<FTressFXDeepOpacityParameters>& TFXDeepOpacityUniformBuffer,
-	const FSortedShadowMaps& SortedShadowsForShadowDepthPass,
-	const TArray<FProjectedShadowInfo*>& TressFXPerObjectShadowInfos
-)
-{
-	FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
-	FTressFXDeepOpacityParameters DeepOpacityParams;
-	if (SortedShadowsForShadowDepthPass.ShadowMapAtlases.Num() > 1)
-	{
-		const FSortedShadowMapAtlas& ShadowMapAtlas = SortedShadowsForShadowDepthPass.ShadowMapAtlases.Last();
-		DeepOpacityParams.ShadowDepthTexture = ShadowMapAtlas.RenderTargets.DepthTarget->GetRenderTargetItem().ShaderResourceTexture;
-		const FIntPoint ShadowBufferResolution = ShadowMapAtlas.RenderTargets.GetSize();
-		FVector2D ShadowBufferSizeValue(ShadowBufferResolution.X, ShadowBufferResolution.Y);
-		DeepOpacityParams.ShadowBufferSize = FVector4(ShadowBufferSizeValue.X, ShadowBufferSizeValue.Y, 1.0f / ShadowBufferSizeValue.X, 1.0f / ShadowBufferSizeValue.Y);
-	}
-	else
-	{
-		DeepOpacityParams.ShadowDepthTexture = GWhiteTexture->TextureRHI;
-		DeepOpacityParams.ShadowBufferSize = FVector4();
-	}
-
-	DeepOpacityParams.ShadowDepthTextureSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
-	if(TressFXPerObjectShadowInfos.Num() > 0)
-	{
-		//JAKETODO more than 1 shadow instead of just hardcoding to first one!
-		DeepOpacityParams.SoftTransitionScale = FVector(0, 0, TressFXPerObjectShadowInfos[0]->ComputeTransitionSize());
-	}
-	SetupSceneTextureUniformParameters(SceneRenderTargets, View.FeatureLevel, ESceneTextureSetupMode::None, DeepOpacityParams.SceneTextures);
-
-	FScene* Scene = View.Family->Scene ? View.Family->Scene->GetRenderScene() : nullptr;
-	if (Scene)
-	{
-		Scene->UniformBuffers.TressFXDeepOpacityPassUniformBuffer.UpdateUniformBufferImmediate(DeepOpacityParams);
-		TFXDeepOpacityUniformBuffer = Scene->UniformBuffers.TressFXDeepOpacityPassUniformBuffer;
-	}
-	else
-	{
-		TFXDeepOpacityUniformBuffer = TUniformBufferRef<FTressFXDeepOpacityParameters>::CreateUniformBufferImmediate(DeepOpacityParams, UniformBuffer_SingleFrame);
-	}
-
-}
-
 // very similar to opaque bass pass buffer
 void CreateTressFXColorPassUniformBuffer(
 	FRHICommandListImmediate& RHICmdList,

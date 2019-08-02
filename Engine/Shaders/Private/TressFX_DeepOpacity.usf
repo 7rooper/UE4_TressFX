@@ -75,7 +75,9 @@ Pass 3: render the hair however you want and sample the opacity map for shadow
 
 #include "Common.ush"
 
-#define SceneTexturesStruct TressFXDeepOpacityPass.SceneTextures 
+#define PassStruct ShadowDepthPass
+#define SceneTexturesStruct ShadowDepthPass.SceneTextures 
+#define TressFXDeepOpacityPass ShadowDepthPass.TressFXDeepOpacity
 
 #include "/Engine/Generated/Material.ush"
 #include "/Engine/Generated/VertexFactory.ush"
