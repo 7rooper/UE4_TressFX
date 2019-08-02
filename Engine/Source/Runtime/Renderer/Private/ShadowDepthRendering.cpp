@@ -2169,7 +2169,6 @@ void FTressFXDeepOpacityPassProcessor::AddMeshBatch(const FMeshBatch& RESTRICT M
 			const bool bEffectivelyTwoSided = bTwoSided;
 			// Invert culling order when mobile HDR == false.
 			auto ShaderPlatform = GShaderPlatformForFeatureLevel[FeatureLevel];
-
 			const bool bPlatformReversesCulling = RHINeedsToSwitchVerticalAxis(ShaderPlatform);
 
 			const bool bRenderSceneTwoSided = bEffectivelyTwoSided;
@@ -2184,6 +2183,7 @@ void FTressFXDeepOpacityPassProcessor::AddMeshBatch(const FMeshBatch& RESTRICT M
 			const FMaterialRenderProxy* EffectiveMaterialRenderProxy = &MaterialRenderProxy;
 			const FMaterial* EffectiveMaterial = &Material;
 
+			//JAKETODO, might need to NOT override with default material...
 			OverrideWithDefaultMaterialForShadowDepth(EffectiveMaterialRenderProxy, EffectiveMaterial, ShadowDepthType.bReflectiveShadowmap, FeatureLevel);
 			Process(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, *EffectiveMaterialRenderProxy, *EffectiveMaterial, MeshFillMode, FinalCullMode);
 		}
@@ -2202,7 +2202,16 @@ FTressFXDeepOpacityPassProcessor::FTressFXDeepOpacityPassProcessor(
 	, ShadowDepthType(InShadowDepthType)
 {
 
-	PassDrawRenderState.SetBlendState(TStaticBlendState<CW_RGBA>::GetRHI());
+	//JAKETODO, is this what i want?
+	PassDrawRenderState.SetBlendState(TStaticBlendState<
+		CW_RGBA
+		, EBlendOperation::BO_Add //color blend op
+		, EBlendFactor::BF_One //color src blend
+		, EBlendFactor::BF_One // color dst blend
+		, EBlendOperation::BO_Add // alpha blend op
+		, EBlendFactor::BF_One //alpha src blend
+		, EBlendFactor::BF_One //alpha dest blend
+	>::GetRHI());
 	PassDrawRenderState.SetDepthStencilState(TStaticDepthStencilState<false, CF_LessEqual>::GetRHI());
 }
 
@@ -2211,8 +2220,6 @@ FTressFXDeepOpacityPassProcessor::FTressFXDeepOpacityPassProcessor(
 FMeshPassProcessor* CreateTressFXDeepOpacityPassProcessor(const FScene* Scene, const FSceneView* InViewIfDynamicMeshCommand, FMeshPassDrawListContext* InDrawListContext)
 {
 	FUniformBufferRHIParamRef PassUniformBuffer = nullptr;
-
-	EShadingPath ShadingPath = Scene->GetShadingPath();
 	PassUniformBuffer = Scene->UniformBuffers.CSMShadowDepthPassUniformBuffer;
 
 	return new(FMemStack::Get()) FTressFXDeepOpacityPassProcessor(
