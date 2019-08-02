@@ -373,6 +373,10 @@ public:
 	 */
 	void RenderDepth(FRHICommandListImmediate& RHICmdList, class FSceneRenderer* SceneRenderer, FBeginShadowRenderPassFunction BeginShadowRenderPass, bool bDoParallelDispatch);
 
+	/*@BEGIN third party code TressFX */
+	void TressFXRenderDeepOpacityMap(FRHICommandListImmediate& RHICmdList, class FSceneRenderer* SceneRenderer, FBeginShadowRenderPassFunction BeginShadowRenderPass);
+	/*@END third party code TressFX */
+
 	void SetStateForView(FRHICommandList& RHICmdList) const;
 
 	/** Set state for depth rendering */
@@ -434,6 +438,9 @@ public:
 	void GatherDynamicMeshElements(FSceneRenderer& Renderer, class FVisibleLightInfo& VisibleLightInfo, TArray<const FSceneView*>& ReusedViewsArray, 
 		FGlobalDynamicIndexBuffer& DynamicIndexBuffer, FGlobalDynamicVertexBuffer& DynamicVertexBuffer, FGlobalDynamicReadBuffer& DynamicReadBuffer);
 
+	/*@BEGIN Third party code TressFX*/
+	void SetUpMeshDrawCommandsForTressFXDeepOpacity(FSceneRenderer& Renderer, FUniformBufferRHIParamRef PassUniformBuffer);
+	/*@END Third party code TressFX*/
 	void SetupMeshDrawCommandsForShadowDepth(FSceneRenderer& Renderer, FUniformBufferRHIParamRef PassUniformBuffer);
 
 	void SetupMeshDrawCommandsForProjectionStenciling(FSceneRenderer& Renderer);
@@ -541,7 +548,9 @@ private:
 
 	FMeshCommandOneFrameArray ShadowDepthPassVisibleCommands;
 	FParallelMeshDrawCommandPass ShadowDepthPass;
-
+	/*@BEGIN Third party code TressFX*/
+	FParallelMeshDrawCommandPass TressFXDeepOpacityPass;
+	/*@END Third party code TressFX*/
 	TArray<FShadowMeshDrawCommandPass, TInlineAllocator<2>> ProjectionStencilingPasses;
 
 	FDynamicMeshDrawCommandStorage DynamicMeshDrawCommandStorage;
@@ -1561,3 +1570,39 @@ struct FCompareFProjectedShadowInfoBySplitIndex
 	}
 };
 
+/*@BEGIN third party code TressFX */
+//////////////////////////////////////////////////////////////////////////
+//FTressFXDeepOpacityPassProcessor
+/////////////////////////////////////////////////////////////////////////
+extern FShadowDepthType CSMShadowDepthType;
+class FTressFXDeepOpacityPassProcessor : public FMeshPassProcessor
+{
+public:
+
+	FTressFXDeepOpacityPassProcessor(
+		const FScene* Scene,
+		const FSceneView* InViewIfDynamicMeshCommand,
+		const TUniformBufferRef<FViewUniformShaderParameters>& InViewUniformBuffer,
+		FUniformBufferRHIParamRef InPassUniformBuffer,
+		FShadowDepthType InShadowDepthType,
+		FMeshPassDrawListContext* InDrawListContext);
+
+	virtual void AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId = -1) override final;
+
+	FMeshPassProcessorRenderState PassDrawRenderState;
+
+private:
+
+	void Process(
+		const FMeshBatch& RESTRICT MeshBatch,
+		uint64 BatchElementMask,
+		int32 StaticMeshId,
+		const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy,
+		const FMaterialRenderProxy& RESTRICT MaterialRenderProxy,
+		const FMaterial& RESTRICT MaterialResource,
+		ERasterizerFillMode MeshFillMode,
+		ERasterizerCullMode MeshCullMode);
+
+	FShadowDepthType ShadowDepthType;
+};
+/*@END third party code TressFX */

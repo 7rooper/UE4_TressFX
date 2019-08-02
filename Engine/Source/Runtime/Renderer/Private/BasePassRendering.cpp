@@ -557,6 +557,18 @@ void CreateTressFXDeepOpacityUniformBuffer(
 		DeepOpacityParams.SoftTransitionScale = FVector(0, 0, TressFXPerObjectShadowInfos[0]->ComputeTransitionSize());
 	}
 	SetupSceneTextureUniformParameters(SceneRenderTargets, View.FeatureLevel, ESceneTextureSetupMode::None, DeepOpacityParams.SceneTextures);
+
+	FScene* Scene = View.Family->Scene ? View.Family->Scene->GetRenderScene() : nullptr;
+	if (Scene)
+	{
+		Scene->UniformBuffers.TressFXDeepOpacityPassUniformBuffer.UpdateUniformBufferImmediate(DeepOpacityParams);
+		TFXDeepOpacityUniformBuffer = Scene->UniformBuffers.TressFXDeepOpacityPassUniformBuffer;
+	}
+	else
+	{
+		TFXDeepOpacityUniformBuffer = TUniformBufferRef<FTressFXDeepOpacityParameters>::CreateUniformBufferImmediate(DeepOpacityParams, UniformBuffer_SingleFrame);
+	}
+
 }
 
 // very similar to opaque bass pass buffer
@@ -621,7 +633,6 @@ void CreateTressFXColorPassUniformBuffer(
 	ColorPassParams.EyeAdaptation = GetEyeAdaptation(View);
 
 	FScene* Scene = View.Family->Scene ? View.Family->Scene->GetRenderScene() : nullptr;
-	SortedShadowsForShadowDepthPass;
 	if (Scene)
 	{
 		Scene->UniformBuffers.TressFXColorPassUniformBuffer.UpdateUniformBufferImmediate(ColorPassParams);

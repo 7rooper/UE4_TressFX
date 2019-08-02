@@ -1581,8 +1581,111 @@ void FSceneRenderer::RenderTressFXResolveVelocity(FRHICommandListImmediate& RHIC
 	}
 }
 
+void FSceneRenderer::RenderTressFXDeepOpacityMaps(FRHICommandListImmediate& RHICmdList)
+{
+	check(RHICmdList.IsOutsideRenderPass());
+
+	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
+
+	//TODO, actual loop here instead of harcoding for single shadow
+	const FSortedShadowMapAtlas& ShadowMapAtlas = SortedShadowsForShadowDepthPass.ShadowMapAtlases.Last();
+	FSceneRenderTargetItem& RenderTarget = SceneContext.TressFXDeepOpacityMap->GetRenderTargetItem();
+	FIntPoint AtlasSize = SceneContext.TressFXDeepOpacityMap->GetDesc().Extent;
+
+	SCOPED_DRAW_EVENTF(RHICmdList, TressFXDeepOpacity, TEXT("Atlas%u %ux%u"), 1, AtlasSize.X, AtlasSize.Y);
+
+	auto BeginDeepOpacityPass = [this, &RenderTarget, &SceneContext](FRHICommandList& InRHICmdList, bool bPerformClear)
+	{
+		ERenderTargetLoadAction DepthLoadAction = ERenderTargetLoadAction::ELoad;
+		
+		FRHITexture* ColorTargets[] = {
+			RenderTarget.TargetableTexture
+		};
+
+		FRHIRenderPassInfo RPInfo(ARRAY_COUNT(ColorTargets), ColorTargets, ERenderTargetActions::Load_Store);
+		InRHICmdList.TransitionResource(EResourceTransitionAccess::EWritable, RPInfo.ColorRenderTargets[0].RenderTarget);
+		InRHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXDeepOpacityMapAtlases"));
+
+		if(bPerformClear)
+		{
+			InRHICmdList.BindClearMRTValues(true, false, false);
+		}
+		else 
+		{
+			InRHICmdList.BindClearMRTValues(false, false, false);
+		}			
+	};
+
+	TArray<FProjectedShadowInfo*, SceneRenderingAllocator> SerialShadowPasses;
+
+	// Gather our passes here to minimize switching renderpasses
+	for (int32 ShadowIndex = 0; ShadowIndex < ShadowMapAtlas.Shadows.Num(); ShadowIndex++)
+	{
+		FProjectedShadowInfo* ProjectedShadowInfo = ShadowMapAtlas.Shadows[ShadowIndex];
+		const bool bIsPerObjectTressFX = ProjectedShadowInfo->bIsPerObjectTressFX;
+		const bool bIsDirectional = ProjectedShadowInfo->bDirectionalLight;
+			
+		//JAKETODO, non directional if this works
+		if (bIsPerObjectTressFX && bIsDirectional) 
+		{
+			SerialShadowPasses.Add(ProjectedShadowInfo);
+		}
+	}
+
+	FLightSceneProxy* CurrentLightForDrawEvent = NULL;
+
+#if WANTS_DRAW_MESH_EVENTS
+	TDrawEvent<FRHICommandList> LightEvent;
+#endif
+
+	CurrentLightForDrawEvent = nullptr;
+
+	if (SerialShadowPasses.Num() > 0)
+	{
+		{
+			SCOPED_DRAW_EVENT(RHICmdList, SetTressFXDeepOpacityRTSAndClear);
+			BeginDeepOpacityPass(RHICmdList, true);
+		}
+
+		for (int32 ShadowIndex = 0; ShadowIndex < SerialShadowPasses.Num(); ShadowIndex++)
+		{
+			FProjectedShadowInfo* ProjectedShadowInfo = SerialShadowPasses[ShadowIndex];
+
+			if (!CurrentLightForDrawEvent || ProjectedShadowInfo->GetLightSceneInfo().Proxy != CurrentLightForDrawEvent)
+			{
+				if (CurrentLightForDrawEvent)
+				{
+					STOP_DRAW_EVENT(LightEvent);
+				}
+
+				CurrentLightForDrawEvent = ProjectedShadowInfo->GetLightSceneInfo().Proxy;
+				FString LightNameWithLevel;
+				GetLightNameForDrawEvent(CurrentLightForDrawEvent, LightNameWithLevel);
+
+				BEGIN_DRAW_EVENTF(
+					RHICmdList,
+					LightNameEvent,
+					LightEvent,
+					*LightNameWithLevel);
+			}
+			
+			ProjectedShadowInfo->TressFXRenderDeepOpacityMap(RHICmdList, this, BeginDeepOpacityPass);
+		}
+		RHICmdList.EndRenderPass();
+	}
+
+	if (CurrentLightForDrawEvent)
+	{
+		STOP_DRAW_EVENT(LightEvent);
+		CurrentLightForDrawEvent = NULL;
+	}
+
+	RHICmdList.TransitionResource(EResourceTransitionAccess::EReadable, RenderTarget.TargetableTexture);
+	
+}
 
 FRegisterPassProcessorCreateFunction RegisterTRessFXDepthsVelocityPass(&CreateTRessFXDepthsVelocityPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_DepthsVelocity, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
 FRegisterPassProcessorCreateFunction RegisterTRessFXDepthsAlphaPass(&CreateTRessFXDepthsAlphaPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_DepthsAlpha, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
 FRegisterPassProcessorCreateFunction RegisterTRessFXFillColorPass(&CreateTRessFXFillColorPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_FillColors, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
+
 #pragma optimize("", on)

@@ -977,6 +977,8 @@ void FPersistentUniformBuffers::Initialize()
 	/*  @BEGIN third party code TressFX */
 	FTressFXColorPassUniformParameters TressFXColorPassUniformBufferParams;
 	TressFXColorPassUniformBuffer = TUniformBufferRef<FTressFXColorPassUniformParameters>::CreateUniformBufferImmediate(TressFXColorPassUniformBufferParams, UniformBuffer_MultiFrame, EUniformBufferValidation::None);
+	FTressFXDeepOpacityParameters TressFXDeepOpacityParameters;
+	TressFXDeepOpacityPassUniformBuffer = TUniformBufferRef<FTressFXDeepOpacityParameters>::CreateUniformBufferImmediate(TressFXDeepOpacityParameters, UniformBuffer_MultiFrame, EUniformBufferValidation::None);
 	/*  @END third party code TressFX */
 }
 

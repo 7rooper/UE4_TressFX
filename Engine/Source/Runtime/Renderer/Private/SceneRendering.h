@@ -1327,6 +1327,10 @@ public:
 	/** Array of dispatched parallel shadow depth passes. */
 	TArray<FParallelMeshDrawCommandPass*, SceneRenderingAllocator> DispatchedShadowDepthPasses;
 
+	/*@BEGIN Third party code TressFX*/
+	TArray<FParallelMeshDrawCommandPass*, SceneRenderingAllocator> DispatchedTressFXDeepOpacityPasses;
+	/*@END Third party code TressFX*/
+
 	FSortedShadowMaps SortedShadowsForShadowDepthPass;
 
 	/** If a freeze request has been made */
@@ -1588,6 +1592,7 @@ protected:
 	void RenderTressFXResolveVelocity(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& VelocityRT);
 	void RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture, int32 TFXRenderType);
 	bool GetAnyViewHasTressFX();
+	void RenderTressFXDeepOpacityMaps(FRHICommandListImmediate& RHICmdList);
 	/*@END Third party code TressFX*/
 
 private:

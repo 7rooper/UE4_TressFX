@@ -38,44 +38,6 @@ Pass 2:
 		other layers behind it. The total opacity of a layer at a pixel
 		is the sum of all contributing fragments."
 
-
-		psuedocode: 
-
-		FragDepth = In.Position.FragDepth
-		SampledDepth = some float value, sampled from shadowdepth per object texture
-		float4 OutDepth = 0;
-		// JAKETODO note this might be backward since u are dyslexic and ue4 uses inverse-FragDepth
-		// also i have no idea what good values for thickness will be. will require expermentation
-		//
-		if (FragDepth - Layer1Thickness < SampledDepth) 
-		{
-			OutDepth.g = OpacityPerFragment;
-			OutDepth.b = OpacityPerFragment;
-			OutDepth.a = OpacityPerFragment;
-		}
-		// layer 2
-		else if (FragDepth - Layer1Thickness - Layer2Thickness < SampledDepth) 
-		{
-			OutDepth.g = 0;
-			OutDepth.b = OpacityPerFragment;
-			OutDepth.a = OpacityPerFragment;
-		}
-		// layer 3
-		else 
-		{
-			OutDepth.g = 0;
-			OutDepth.b = 0;
-			OutDepth.a = OpacityPerFragment;
-		}
-		
-		DeepOpacityMap[ScreenAddress].g += OutDepth.g;
-		DeepOpacityMap[ScreenAddress].b += OutDepth.b;
-		DeepOpacityMap[ScreenAddress].a += OutDepth.a;
-		float oldMin;
-		//store depth (z0) from POV of light in the r channel
-		//again im dislexic this may be backwards on the first try :).
-		InterLockedMin(DeepOpacityMap[ScreenAddress], SampledDepth , oldMin )
-
 Pass 3: render the hair however you want and sample the opacity map for shadow
 	https://github.com/ReubenWattenhofer/hair-renderer/blob/master/hair-renderer/Assets/Hair_Renderer/Shaders/basic-hair.shader
 	pseudocode for sample, not sure if correct. probably not, came from above. but is definitely backwards since ue4 uses inverse z

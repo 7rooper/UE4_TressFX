@@ -1207,6 +1207,43 @@ void FProjectedShadowInfo::SetupMeshDrawCommandsForShadowDepth(FSceneRenderer& R
 
 	Renderer.DispatchedShadowDepthPasses.Add(&ShadowDepthPass);
 }
+/*@BEGIN Third party code TressFX*/
+void FProjectedShadowInfo::SetUpMeshDrawCommandsForTressFXDeepOpacity(FSceneRenderer& Renderer, FUniformBufferRHIParamRef PassUniformBuffer)
+{
+
+	FTressFXDeepOpacityPassProcessor* MeshPassProcessor = new(FMemStack::Get()) FTressFXDeepOpacityPassProcessor(
+		Renderer.Scene,
+		ShadowDepthView,
+		ShadowDepthView->ViewUniformBuffer,
+		PassUniformBuffer,
+		GetShadowDepthType(),
+		nullptr);
+
+	//if (Renderer.ShouldDumpMeshDrawCommandInstancingStats())
+	//{
+	//	FString PassNameForStats;
+	//	GetShadowTypeNameForDrawEvent(PassNameForStats);
+	//	ShadowDepthPass.SetDumpInstancingStats(TEXT("ShadowDepth ") + PassNameForStats);
+	//}
+
+	const uint32 InstanceFactor = !GetShadowDepthType().bOnePassPointLightShadow || RHISupportsGeometryShaders(Renderer.Scene->GetShaderPlatform()) ? 1 : 6;
+
+	TressFXDeepOpacityPass.DispatchPassSetup(
+		Renderer.Scene,
+		*ShadowDepthView,
+		EMeshPass::Num,
+		FExclusiveDepthStencil::DepthNop_StencilNop,
+		MeshPassProcessor,
+		DynamicSubjectMeshElements,
+		nullptr,
+		NumDynamicSubjectMeshElements * InstanceFactor,
+		SubjectMeshCommandBuildRequests,
+		NumSubjectMeshCommandBuildRequestElements * InstanceFactor,
+		ShadowDepthPassVisibleCommands);
+
+	Renderer.DispatchedTressFXDeepOpacityPasses.Add(&TressFXDeepOpacityPass);
+}
+/*@BEGIN Third party code TressFX*/
 
 void FProjectedShadowInfo::SetupMeshDrawCommandsForProjectionStenciling(FSceneRenderer& Renderer)
 {
@@ -1441,6 +1478,9 @@ void FProjectedShadowInfo::GatherDynamicMeshElements(FSceneRenderer& Renderer, F
 	}
 
 	SetupMeshDrawCommandsForShadowDepth(Renderer, PassUniformBuffer);
+	/*@BEGIN Third party code TressFX*/
+	SetUpMeshDrawCommandsForTressFXDeepOpacity(Renderer, PassUniformBuffer);
+	/*@END Third party code TressFX*/
 	SetupMeshDrawCommandsForProjectionStenciling(Renderer);
 }
 

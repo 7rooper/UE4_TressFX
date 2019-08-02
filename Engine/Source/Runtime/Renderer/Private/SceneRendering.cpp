@@ -3003,6 +3003,12 @@ void FSceneRenderer::WaitForTasksClearSnapshotsAndDeleteSceneRenderer(FRHIComman
 	{
 		SceneRenderer->DispatchedShadowDepthPasses[PassIndex]->WaitForTasksAndEmpty();
 	}
+	/*  @BEGIN third party code TressFX */
+	for (int32 PassIndex = 0; PassIndex < SceneRenderer->DispatchedTressFXDeepOpacityPasses.Num(); ++PassIndex)
+	{
+		SceneRenderer->DispatchedTressFXDeepOpacityPasses[PassIndex]->WaitForTasksAndEmpty();
+	}
+	/*  @END third party code TressFX */
 
 	FViewInfo::DestroyAllSnapshots(); // this destroys viewinfo snapshots
 	FSceneRenderTargets::GetGlobalUnsafe().DestroyAllSnapshots(); // this will destroy the render target snapshots
