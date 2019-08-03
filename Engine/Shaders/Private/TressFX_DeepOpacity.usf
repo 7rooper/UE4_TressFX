@@ -90,7 +90,7 @@ Pass 3: render the hair however you want and sample the opacity map for shadow
 	#define OPTIONAL_IsFrontFace
 #endif
 
-#define OpacityPerFragment .001f
+#define OpacityPerFragment .01f
 
 //i have no idea what good values for thickness will be. will require expermentation
 #define Layer1Thickness .01f

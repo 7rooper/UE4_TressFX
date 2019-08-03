@@ -657,7 +657,7 @@ float3 GetTressFXDynamicLighting(
 
     float ShadowAttenuation = saturate(ShadowTerms.TransmissionShadow);
     //ShadowAttenuation = lerp(1, ShadowAttenuation, 1 - TFXAlpha);
-    float AllShadow = LightAttenuationNoShadow * ShadowAttenuation; // * ApproxDeepShadow;
+    float AllShadow = LightAttenuationNoShadow;// * ShadowAttenuation; // * ApproxDeepShadow;
     
 	// Add glint JAKETODO ?
     float GlintAmbient = 0;

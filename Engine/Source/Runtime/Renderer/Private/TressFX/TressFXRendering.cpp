@@ -1600,13 +1600,12 @@ void FSceneRenderer::RenderTressFXDeepOpacityMaps(FRHICommandListImmediate& RHIC
 
 		auto BeginDeepOpacityPass = [this, &RenderTarget, &SceneContext](FRHICommandList& InRHICmdList, bool bPerformClear)
 		{
-			ERenderTargetLoadAction DepthLoadAction = ERenderTargetLoadAction::ELoad;
 
 			FRHITexture* ColorTargets[] = {
 				RenderTarget.TargetableTexture
 			};
 
-			FRHIRenderPassInfo RPInfo(ARRAY_COUNT(ColorTargets), ColorTargets, ERenderTargetActions::Load_Store);
+			FRHIRenderPassInfo RPInfo(ARRAY_COUNT(ColorTargets), ColorTargets, bPerformClear ? ERenderTargetActions::Clear_Store : ERenderTargetActions::Load_Store);
 			InRHICmdList.TransitionResource(EResourceTransitionAccess::EWritable, RPInfo.ColorRenderTargets[0].RenderTarget);
 			InRHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXDeepOpacityMapAtlases"));
 

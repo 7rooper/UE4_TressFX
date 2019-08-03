@@ -1921,7 +1921,7 @@ void FShadowDepthPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT Mesh
 		{
 			const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, Material);
 
-			const bool bTwoSided = Material.IsTwoSided() || PrimitiveSceneProxy->CastsShadowAsTwoSided();
+			const bool bTwoSided = Material.IsTwoSided() || PrimitiveSceneProxy->CastsShadowAsTwoSided() || /*@BEGIN third party code TressFX */ PrimitiveSceneProxy->IsTressFX() /*@END third party code TressFX */;
 			// @TODO: only render directional light shadows as two sided, and only when blocking is enabled (required by geometry volume injection)
 			const bool bEffectivelyTwoSided = ShadowDepthType.bReflectiveShadowmap ? true : bTwoSided;
 			// Invert culling order when mobile HDR == false.
@@ -2164,16 +2164,12 @@ void FTressFXDeepOpacityPassProcessor::AddMeshBatch(const FMeshBatch& RESTRICT M
 		{
 			const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, Material);
 
-			const bool bTwoSided = Material.IsTwoSided() || PrimitiveSceneProxy->CastsShadowAsTwoSided();
-			// @TODO: only render directional light shadows as two sided, and only when blocking is enabled (required by geometry volume injection)
-			const bool bEffectivelyTwoSided = bTwoSided;
+			const bool bEffectivelyTwoSided = true;
 			// Invert culling order when mobile HDR == false.
 			auto ShaderPlatform = GShaderPlatformForFeatureLevel[FeatureLevel];
 			const bool bPlatformReversesCulling = RHINeedsToSwitchVerticalAxis(ShaderPlatform);
-
 			const bool bRenderSceneTwoSided = bEffectivelyTwoSided;
 			const bool bReverseCullMode = XOR(bPlatformReversesCulling, ShadowDepthType.bOnePassPointLightShadow);
-
 			FinalCullMode = bRenderSceneTwoSided ? CM_None : bReverseCullMode ? InverseCullMode(MeshCullMode) : MeshCullMode;
 		}
 
