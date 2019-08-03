@@ -170,6 +170,7 @@ typedef TFunctionRef<void(FRHICommandList& RHICmdList, bool bFirst)> FBeginShado
 
 /*  @BEGIN third party code TressFX */
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXDeepOpacityParameters, )
+	SHADER_PARAMETER_STRUCT(FTressFXShadeParametersUniformBuffer, TFXShadeParameters)
 	SHADER_PARAMETER(FVector4, ShadowBufferSize)
 	SHADER_PARAMETER(FVector, SoftTransitionScale)
 	SHADER_PARAMETER_SAMPLER(SamplerState, ShadowDepthTextureSampler)

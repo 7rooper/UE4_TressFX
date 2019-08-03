@@ -496,10 +496,6 @@ float3 TressFXHairShading(
     return S;
 }
 
-
-#define e 2.71828183
-#define EPSILON 1e-7f
-
 float ApproximateDeepShadow(float3 FragmentWorldPos, float SelfshadowStrength)
 {
 
@@ -509,7 +505,7 @@ float ApproximateDeepShadow(float3 FragmentWorldPos, float SelfshadowStrength)
     FPCFSamplerSettings Settings;
     Settings.ShadowDepthTexture = TressFXColorFillPass.ShadowDepthTex;
     Settings.ShadowDepthTextureSampler = ForwardLightData.ShadowmapSampler;
-    Settings.ShadowBufferSize = float4(2048, 2048, .00049, .00049); //ShadowBufferSize;
+    Settings.ShadowBufferSize = TressFXColorFillPass.ShadowBufferSize;
     Settings.TransitionScale = 60.f; //SoftTransitionScale.z;
     Settings.SceneDepth = min(shadowPos.z, 0.99999f);
     Settings.bSubsurface = false;
@@ -522,6 +518,11 @@ float ApproximateDeepShadow(float3 FragmentWorldPos, float SelfshadowStrength)
     return ComputeHairShadowAttenuation(shadowRange, g_FiberSpacing, g_FiberRadius, SelfshadowStrength);
 }
 
+#define Layer1Thickness DeepOpacityLayerThickness.r
+#define Layer2Thickness  DeepOpacityLayerThickness.g
+#define Layer3Thickness DeepOpacityLayerThickness.b
+#define Layer4Thickness  DeepOpacityLayerThickness.a
+#define OpacityPerFragment DeepOpacityPerFragment
 void GetDeepOpacity(float3 WorldPosition, out float Opacity, float4 Opacity_rgba)
 {
     Opacity = 0;
@@ -531,19 +532,19 @@ void GetDeepOpacity(float3 WorldPosition, out float Opacity, float4 Opacity_rgba
     float2 ShadowUVs = ShadowPos.xy / ShadowPos.w;
     float2 ShadowScreenAddr = TressFXColorFillPass.ShadowBufferSize.xy * ShadowPos.xy;
     int2 ShadowAddress = int2(ShadowScreenAddr);
-    float4 OpacityMapValue = TressFXColorFillPass.DeepOpacityMap.Load(int3(ShadowAddress, 0));
+    float4 OpacityMapValue = TressFXColorFillPass.DeepOpacityMap.Load(int3(ShadowAddress, 0)).rgba;
     float FragDepth = ShadowPos.z;
 
 	// AKA z0, the cloest depth to to the light
     float SampledDepth = TressFXColorFillPass.ShadowDepthTex.Load(int3(ShadowAddress, 0));
 
-	if (FragDepth - Layer1Thickness < SampledDepth)
+	if (FragDepth - Layer1Thickness > SampledDepth)
 	{
         Opacity = lerp(0, OpacityMapValue.r, (FragDepth - SampledDepth) / Layer1Thickness);
         Opacity_rgba.r = lerp(0, OpacityMapValue.r, (FragDepth - SampledDepth) / Layer1Thickness);
     }
 	// layer 2
-	else if (FragDepth - Layer1Thickness - Layer2Thickness < SampledDepth) 
+    else if (FragDepth - Layer1Thickness - Layer2Thickness > SampledDepth) 
 	{
         Opacity = lerp(OpacityMapValue.r, OpacityMapValue.g, (FragDepth - Layer1Thickness - SampledDepth) / Layer2Thickness);
 		float prevMax = OpacityMapValue.r;
@@ -551,7 +552,7 @@ void GetDeepOpacity(float3 WorldPosition, out float Opacity, float4 Opacity_rgba
 		Opacity_rgba.r = lerp(prevMax, 0, (FragDepth - Layer1Thickness - SampledDepth) / Layer2Thickness);
 	}
 	// layer 3
-    else if (FragDepth - Layer1Thickness - Layer2Thickness - Layer3Thickness < SampledDepth)
+    else if (FragDepth - Layer1Thickness - Layer2Thickness - Layer3Thickness > SampledDepth)
     {
         Opacity = lerp(OpacityMapValue.g, OpacityMapValue.b, (FragDepth - Layer1Thickness - Layer2Thickness - SampledDepth) / Layer3Thickness);
         float prevMax = OpacityMapValue.g;
@@ -699,17 +700,17 @@ float3 GetTressFXDynamicLighting(
     }
     
 	float ApproxDeepShadow = 1.0f;
-    //if (bDirectionalLight)
-    //{
-    //    ApproxDeepShadow = ApproximateDeepShadow(WorldPosition, TFXSelfShadowStrength);
-    //}
+    if (bDirectionalLight)
+    {
+        ApproxDeepShadow = ApproximateDeepShadow(WorldPosition, TFXSelfShadowStrength);
+    }
 
     float ShadowAttenuation = saturate(ShadowTerms.TransmissionShadow);
     //ShadowAttenuation = lerp(1, ShadowAttenuation, 1 - TFXAlpha);
-    float4 DeepOpacityRGBA;
-    float DeepOpacity;
-    GetDeepOpacity(WorldPosition, DeepOpacity, DeepOpacityRGBA);
-    float AllShadow = LightAttenuationNoShadow * saturate(1 - DeepOpacity); // * ShadowAttenuation; // * ApproxDeepShadow;
+    //float4 DeepOpacityRGBA;
+    //float DeepOpacity;
+    //GetDeepOpacity(WorldPosition, DeepOpacity, DeepOpacityRGBA);
+    float AllShadow = LightAttenuationNoShadow * ApproxDeepShadow; //  saturate(Square(DeepOpacity/4)); // * ShadowAttenuation; // * ApproxDeepShadow;
     
 	// Add glint JAKETODO ?
     float GlintAmbient = 0;
@@ -1064,7 +1065,7 @@ void main(
 		, In.FactoryInterpolants.HairId
 		, In.Position.z
 	);
-	
+
 	#if TFX_PPLL
 		//color will be multipled be TFXAlpha during resolve pass
 		BuildPPLL(float4(saturate(Color), TFXAlpha), ScreenAddr, In.Position.w);

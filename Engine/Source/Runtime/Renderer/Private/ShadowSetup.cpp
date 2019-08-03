@@ -1231,7 +1231,7 @@ void FProjectedShadowInfo::SetUpMeshDrawCommandsForTressFXDeepOpacity(FSceneRend
 	TressFXDeepOpacityPass.DispatchPassSetup(
 		Renderer.Scene,
 		*ShadowDepthView,
-		EMeshPass::Num, //JAKETODO, do i want to pass Num here?
+		EMeshPass::Num,
 		FExclusiveDepthStencil::DepthNop_StencilNop,
 		MeshPassProcessor,
 		DynamicSubjectMeshElements,
@@ -1239,8 +1239,7 @@ void FProjectedShadowInfo::SetUpMeshDrawCommandsForTressFXDeepOpacity(FSceneRend
 		NumDynamicSubjectMeshElements * InstanceFactor,
 		SubjectMeshCommandBuildRequests,
 		NumSubjectMeshCommandBuildRequestElements * InstanceFactor,
-		ShadowDepthPassVisibleCommands //JAKETODO, is this what i want to pass here or should i make my own for this pass?
-	);
+		ShadowDepthPassVisibleCommands);
 
 	Renderer.DispatchedTressFXDeepOpacityPasses.Add(&TressFXDeepOpacityPass);
 }
@@ -1586,10 +1585,6 @@ void FProjectedShadowInfo::ClearTransientArrays()
 
 	ShadowDepthPassVisibleCommands.Empty();
 	ShadowDepthPass.WaitForTasksAndEmpty();
-	
-	/*@BEGIN third party code tressfx */
-	TressFXDeepOpacityPass.WaitForTasksAndEmpty();
-	/*@END third party code tressfx */
 
 	SubjectMeshCommandBuildRequests.Empty();
 

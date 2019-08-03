@@ -21,7 +21,7 @@ Pass 2:
 			float Layer2Thickness; - d2
 					etc...
 
-		opacity: will add param later, for now will use "OpacityPerFragment" define from below
+		opacity: will add param later, for now will use "TFXShadeParams.OpacityPerFragment" define from below
 
 		- in this case k=3, we use 4 component texture uav. r = depth, g = layer1, b = layer2, a = layer3 etc...
 			- note, dont think i need to store depth in r, we have depth in the per object shadow tex, gives us another layer, 
@@ -77,14 +77,16 @@ Pass 3: render the hair however you want and sample the opacity map for shadow
 
 #define PassStruct ShadowDepthPass
 #define SceneTexturesStruct ShadowDepthPass.SceneTextures 
-#define TressFXDeepOpacityPass ShadowDepthPass.TressFXDeepOpacity
 
 #include "/Engine/Generated/Material.ush"
 #include "/Engine/Generated/VertexFactory.ush"
 
-#include "TressFXRendering.ush"
+#define TressFXDeepOpacityPass ShadowDepthPass.TressFXDeepOpacity
+#define TFXShadeParams TressFXDeepOpacityPass.TFXShadeParameters
+
 #include "ShadowDepthCommon.ush"
 #include "ShadowFilteringCommon.ush"
+#include "TressFXRendering.ush"
 
 #ifndef OPTIONAL_IsFrontFace
 	#define OPTIONAL_IsFrontFace
@@ -103,9 +105,16 @@ void Main(FShadowDepthVSToPS Inputs, in float4 SvPosition : SV_Position, out flo
     int2 ScreenAddress = int2(SvPosition.xy);
     float2 ScreenUV = float2(SvPosition.xy * TressFXDeepOpacityPass.ShadowBufferSize.zw);
 
-	//not using PCF, too many fagments, performance would be poo
-    float SampledDepth = TressFXDeepOpacityPass.ShadowDepthTexture.Load(int3(ScreenAddress,0));
+    float SampledDepth = PoissonSampleFloat(ScreenUV, .01, TressFXDeepOpacityPass.ShadowBufferSize.zw, TressFXDeepOpacityPass.ShadowDepthTexture, TressFXDeepOpacityPass.ShadowDepthTextureSampler);
+    //float SampledDepth = TressFXDeepOpacityPass.ShadowDepthTexture.Load(int3(ScreenAddress,0));
 	float4 OutDepth = 0;
+    SampledDepth = saturate(SampledDepth);
+
+    const float Layer1Thickness = TFXShadeParams.DeepOpacityLayerThickness.r;
+    const float Layer2Thickness = TFXShadeParams.DeepOpacityLayerThickness.g;
+    const float Layer3Thickness = TFXShadeParams.DeepOpacityLayerThickness.b;
+    const float Layer4Thickness = TFXShadeParams.DeepOpacityLayerThickness.a;
+    const float OpacityPerFragment = TFXShadeParams.DeepOpacityPerFragment;
 
     if (IcCloserToTheLight(FragDepth - Layer1Thickness, SampledDepth)) 
 	{

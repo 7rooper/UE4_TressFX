@@ -59,6 +59,7 @@ void SetupShadowDepthPassUniformBuffer(
 	/*@BEGIN Third party code TressFX*/
 	, bool bDeepOpacityTressFX = false
 	, TRefCountPtr<IPooledRenderTarget> ShadowDepthAtlas = nullptr
+	, const FTressFXSceneProxy* TFXProxy = nullptr
 	/*@END Third party code TressFX*/
 )
 {
@@ -105,7 +106,9 @@ void SetupShadowDepthPassUniformBuffer(
 	{
 		DeepOpacityParams.ShadowDepthTexture = ShadowDepthAtlas->GetRenderTargetItem().ShaderResourceTexture;		
 		DeepOpacityParams.SoftTransitionScale = FVector(0, 0, 1.0f / ShadowInfo->ComputeTransitionSize());
-
+		FTressFXShadeSettings ShadeSettings = TFXProxy->DynamicRenderData.TressFXShadeSettings;
+		DeepOpacityParams.TFXShadeParameters.DeepOpacityPerFragment = ShadeSettings.DeepOpacityPerFragment;
+		DeepOpacityParams.TFXShadeParameters.DeepOpacityLayerThickness = ShadeSettings.DeepOpacityLayerThickness;
 		const FIntVector ShadowBufferResolution = ShadowDepthAtlas->GetDesc().GetSize();
 		FVector2D ShadowBufferSizeValue(ShadowBufferResolution.X, ShadowBufferResolution.Y);
 		DeepOpacityParams.ShadowBufferSize = FVector4(ShadowBufferSizeValue.X, ShadowBufferSizeValue.Y, 1.0f / ShadowBufferSizeValue.X, 1.0f / ShadowBufferSizeValue.Y);
@@ -1275,6 +1278,7 @@ void FProjectedShadowInfo::TressFXRenderDeepOpacityMap(FRHICommandListImmediate&
 	{
 		TRefCountPtr<IPooledRenderTarget> ShadowDepthAtlas = SceneRenderer->SortedShadowsForShadowDepthPass.ShadowMapAtlases.Last().RenderTargets.DepthTarget;
 		FShadowDepthPassUniformParameters ShadowDepthPassParameters;
+		check(ParentSceneInfo->Proxy->IsTressFX());
 		SetupShadowDepthPassUniformBuffer(
 			  this
 			, RHICmdList
@@ -1282,8 +1286,9 @@ void FProjectedShadowInfo::TressFXRenderDeepOpacityMap(FRHICommandListImmediate&
 			, ShadowDepthPassParameters
 			, true
 			, ShadowDepthAtlas
+			, (const FTressFXSceneProxy*)ParentSceneInfo->Proxy
 		);
-
+		
 		if (IsWholeSceneDirectionalShadow() && !bReflectiveShadowmap)
 		{
 			check(GetShadowDepthType() == CSMShadowDepthType);
