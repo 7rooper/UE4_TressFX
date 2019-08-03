@@ -90,7 +90,7 @@ Pass 3: render the hair however you want and sample the opacity map for shadow
 	#define OPTIONAL_IsFrontFace
 #endif
 
-#define OpacityPerFragment .01f
+#define OpacityPerFragment .001f
 
 //i have no idea what good values for thickness will be. will require expermentation
 #define Layer1Thickness .01f
@@ -104,18 +104,9 @@ void Main(FShadowDepthVSToPS Inputs, in float4 SvPosition : SV_Position, out flo
     
 	float FragDepth = SvPosition.z;
     int2 ScreenAddress = int2(SvPosition.xy);
-    FPCFSamplerSettings Settings;
-    Settings.ShadowDepthTexture = TressFXDeepOpacityPass.ShadowDepthTexture;
-    Settings.ShadowDepthTextureSampler = TressFXDeepOpacityPass.ShadowDepthTextureSampler;
-    Settings.ShadowBufferSize = TressFXDeepOpacityPass.ShadowBufferSize;
-    Settings.TransitionScale = TressFXDeepOpacityPass.SoftTransitionScale.z;
-    Settings.SceneDepth = FragDepth;
-    Settings.bSubsurface = false;
-    Settings.bTreatMaxDepthUnshadowed = false;
-    Settings.DensityMulConstant = 0;
-    Settings.ProjectionDepthBiasParameters = 0;
-    float SampledDepth = ManualPCF(SvPosition.xy, Settings);
-	
+    float2 ScreenUV = float2(SvPosition.xy * TressFXDeepOpacityPass.ShadowBufferSize.zw);
+
+    float SampledDepth = TressFXDeepOpacityPass.ShadowDepthTexture.Load(int3(ScreenAddress,0));
 	float4 OutDepth = 0;
 
 	// JAKETODO note this might be backward since u are dyslexic and ue4 uses inverse-z

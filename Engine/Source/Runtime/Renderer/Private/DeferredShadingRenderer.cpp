@@ -1204,6 +1204,13 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 
 	checkSlow(RHICmdList.IsOutsideRenderPass());
 
+	/*@Begin Third party code TressFX*/
+	if (bSceneHasTressFX && (TFXRenderType > ETressFXRenderType::Opaque))
+	{
+		RenderTressFXDeepOpacityMaps(RHICmdList);
+	}
+	/*@End Third party code TressFX*/
+
 	// Clear LPVs for all views
 	if (FeatureLevel >= ERHIFeatureLevel::SM5)
 	{

@@ -104,7 +104,7 @@ void SetupShadowDepthPassUniformBuffer(
 	if (bDeepOpacityTressFX && ShadowDepthAtlas && ShadowDepthAtlas.IsValid() && ShadowDepthAtlas->GetRenderTargetItem().IsValid())
 	{
 		DeepOpacityParams.ShadowDepthTexture = ShadowDepthAtlas->GetRenderTargetItem().ShaderResourceTexture;		
-		DeepOpacityParams.SoftTransitionScale = FVector(0, 0, ShadowInfo->ComputeTransitionSize());
+		DeepOpacityParams.SoftTransitionScale = FVector(0, 0, 1.0f / ShadowInfo->ComputeTransitionSize());
 
 		const FIntVector ShadowBufferResolution = ShadowDepthAtlas->GetDesc().GetSize();
 		FVector2D ShadowBufferSizeValue(ShadowBufferResolution.X, ShadowBufferResolution.Y);
