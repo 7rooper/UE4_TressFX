@@ -709,6 +709,7 @@ public:
 	FTressFXDeepOpacityPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
 	{
 		PassUniformBuffer.Bind(Initializer.ParameterMap, FShadowDepthPassUniformParameters::StaticStructMetadata.GetShaderVariableName());
+		TressfxShadeParameters.Bind(Initializer.ParameterMap, TEXT("TressfxShadeParameters"));
 	}
 
 	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
@@ -734,6 +735,7 @@ public:
 	virtual bool Serialize(FArchive& Ar) override
 	{
 		const bool result = FMeshMaterialShader::Serialize(Ar);
+		Ar << TressfxShadeParameters;
 		return result;
 	}
 
@@ -748,8 +750,10 @@ public:
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
+		const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)PrimitiveSceneProxy;
+		ShaderBindings.Add(TressfxShadeParameters, TFXProxy->TressFXHairObject->ShadeParametersUniformBuffer);
 	}
 
 public:
-
+	FShaderUniformBufferParameter TressfxShadeParameters;
 };

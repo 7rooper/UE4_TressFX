@@ -550,6 +550,9 @@ void CreateTressFXColorPassUniformBuffer(
 		{
 			FVector4 MinMax;
 			ColorPassParams.DirectionalLightWorldToShadowMatrix = TressFXPerObjectShadowInfos[0]->GetWorldToShadowMatrix(MinMax);
+			const FIntPoint ShadowBufferResolution = ShadowMapAtlas.RenderTargets.GetSize();
+			FVector2D ShadowBufferSizeValue(ShadowBufferResolution.X, ShadowBufferResolution.Y);
+			ColorPassParams.ShadowBufferSize = FVector4(ShadowBufferSizeValue.X, ShadowBufferSizeValue.Y, 1.0f / ShadowBufferSizeValue.X, 1.0f / ShadowBufferSizeValue.Y);
 		}
 		else 
 		{
@@ -584,6 +587,15 @@ void CreateTressFXColorPassUniformBuffer(
 	ColorPassParams.NodePoolSize = KbufferNodePoolSize;
 	// Misc
 	ColorPassParams.EyeAdaptation = GetEyeAdaptation(View);
+	if(SceneRenderTargets.TressFXDeepOpacityMap && SceneRenderTargets.TressFXDeepOpacityMap->GetRenderTargetItem().IsValid())
+	{
+		RHICmdList.TransitionResource(EResourceTransitionAccess::EReadable, SceneRenderTargets.TressFXDeepOpacityMap->GetRenderTargetItem().TargetableTexture);
+		ColorPassParams.DeepOpacityMap = SceneRenderTargets.TressFXDeepOpacityMap->GetRenderTargetItem().ShaderResourceTexture;
+	}
+	else
+	{
+		ColorPassParams.DeepOpacityMap = GBlackTexture->TextureRHI;
+	}
 
 	FScene* Scene = View.Family->Scene ? View.Family->Scene->GetRenderScene() : nullptr;
 	if (Scene)

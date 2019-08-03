@@ -180,6 +180,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0", ClampMax = "1"))
 		float SelfShadowStrength;
 
+	// x = layer1, y = layer2 etc...
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
+		FVector4 DeepOpacityLayerThickness;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0", ClampMax = "1"))
+		float DeepOpacityPerFragment;
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 	FTressFXSpecularSettings Specular;
@@ -192,6 +199,8 @@ public:
 		HairThickness = 0.1f;
 		DiffuseBlend = 0.40f;
 		SelfShadowStrength = 0.005f;
+		DeepOpacityLayerThickness = FVector4(.01f,.01f, .01f, .01f);
+		DeepOpacityPerFragment = .01f;
 	}
 
 

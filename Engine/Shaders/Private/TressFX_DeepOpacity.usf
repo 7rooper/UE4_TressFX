@@ -90,15 +90,12 @@ Pass 3: render the hair however you want and sample the opacity map for shadow
 	#define OPTIONAL_IsFrontFace
 #endif
 
-#define OpacityPerFragment .01f
+//simple function to help my dislexic brain
+bool IcCloserToTheLight(float Compare, float CompareTo)
+{
+    return Compare < CompareTo;
+}
 
-//i have no idea what good values for thickness will be. will require expermentation
-#define Layer1Thickness .01f
-#define Layer2Thickness .01f
-#define Layer3Thickness .01f
-#define Layer4Thickness .01f
-
-//EARLYDEPTHSTENCIL
 void Main(FShadowDepthVSToPS Inputs, in float4 SvPosition : SV_Position, out float4 DeepOpacity : SV_Target0)
 {
     
@@ -106,11 +103,11 @@ void Main(FShadowDepthVSToPS Inputs, in float4 SvPosition : SV_Position, out flo
     int2 ScreenAddress = int2(SvPosition.xy);
     float2 ScreenUV = float2(SvPosition.xy * TressFXDeepOpacityPass.ShadowBufferSize.zw);
 
+	//not using PCF, too many fagments, performance would be poo
     float SampledDepth = TressFXDeepOpacityPass.ShadowDepthTexture.Load(int3(ScreenAddress,0));
 	float4 OutDepth = 0;
 
-	// JAKETODO note this might be backward since u are dyslexic and ue4 uses inverse-z
-	if (FragDepth - Layer1Thickness < SampledDepth) 
+    if (IcCloserToTheLight(FragDepth - Layer1Thickness, SampledDepth)) 
 	{
 		OutDepth.r = OpacityPerFragment;
 		OutDepth.g = OpacityPerFragment;
@@ -118,7 +115,7 @@ void Main(FShadowDepthVSToPS Inputs, in float4 SvPosition : SV_Position, out flo
         OutDepth.a = OpacityPerFragment;
     }
 	// layer 2
-	else if (FragDepth - Layer1Thickness - Layer2Thickness < SampledDepth) 
+    else if (IcCloserToTheLight(FragDepth - Layer1Thickness - Layer2Thickness, SampledDepth)) 
 	{
 		OutDepth.r = 0;
 		OutDepth.g = OpacityPerFragment;
@@ -126,7 +123,7 @@ void Main(FShadowDepthVSToPS Inputs, in float4 SvPosition : SV_Position, out flo
         OutDepth.a = OpacityPerFragment;
     }
 	// layer 3
-    else if (FragDepth - Layer1Thickness - Layer2Thickness - Layer3Thickness < SampledDepth) 
+    else if (IcCloserToTheLight(FragDepth - Layer1Thickness - Layer2Thickness - Layer3Thickness, SampledDepth)) 
 	{
 		OutDepth.r = 0;
 		OutDepth.g = 0;
