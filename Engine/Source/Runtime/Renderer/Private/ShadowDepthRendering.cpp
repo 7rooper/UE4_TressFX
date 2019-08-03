@@ -1926,7 +1926,7 @@ void FShadowDepthPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT Mesh
 		{
 			const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, Material);
 
-			const bool bTwoSided = Material.IsTwoSided() || PrimitiveSceneProxy->CastsShadowAsTwoSided() || /*@BEGIN third party code TressFX */ PrimitiveSceneProxy->IsTressFX() /*@END third party code TressFX */;
+			const bool bTwoSided = Material.IsTwoSided() || PrimitiveSceneProxy->CastsShadowAsTwoSided();
 			// @TODO: only render directional light shadows as two sided, and only when blocking is enabled (required by geometry volume injection)
 			const bool bEffectivelyTwoSided = ShadowDepthType.bReflectiveShadowmap ? true : bTwoSided;
 			// Invert culling order when mobile HDR == false.

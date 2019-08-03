@@ -198,7 +198,7 @@ public:
 		FiberSpacing = 0.1;
 		HairThickness = 0.1f;
 		DiffuseBlend = 0.40f;
-		SelfShadowStrength = 0.005f;
+		SelfShadowStrength = 0.025f;
 		DeepOpacityLayerThickness = FVector4(.01f,.01f, .01f, .01f);
 		DeepOpacityPerFragment = .01f;
 	}
