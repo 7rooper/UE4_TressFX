@@ -540,10 +540,9 @@ void CreateTressFXColorPassUniformBuffer(
 	FTressFXColorPassUniformParameters ColorPassParams;
 	SetupSharedBasePassParameters(RHICmdList, View, SceneRenderTargets, ColorPassParams.Shared);
 
-	//first atlas is for whole scene shadows, second one holds per-object shadows
+	//first atlas is for whole scene shadows, second one holds per-object shadows, if any
 	if (SortedShadowsForShadowDepthPass.ShadowMapAtlases.Num() > 1)
 	{
-		//TODO implement more than 1 light in the scene, need to figure out how to map the shadowproj/light to the proxy
 		const FSortedShadowMapAtlas& ShadowMapAtlas = SortedShadowsForShadowDepthPass.ShadowMapAtlases.Last();
 		ColorPassParams.ShadowDepthTex = ShadowMapAtlas.RenderTargets.DepthTarget->GetRenderTargetItem().ShaderResourceTexture;
 		if (TressFXPerObjectShadowInfos.Num() > 0)
@@ -587,15 +586,6 @@ void CreateTressFXColorPassUniformBuffer(
 	ColorPassParams.NodePoolSize = KbufferNodePoolSize;
 	// Misc
 	ColorPassParams.EyeAdaptation = GetEyeAdaptation(View);
-	if(SceneRenderTargets.TressFXDeepOpacityMap && SceneRenderTargets.TressFXDeepOpacityMap->GetRenderTargetItem().IsValid())
-	{
-		RHICmdList.TransitionResource(EResourceTransitionAccess::EReadable, SceneRenderTargets.TressFXDeepOpacityMap->GetRenderTargetItem().TargetableTexture);
-		ColorPassParams.DeepOpacityMap = SceneRenderTargets.TressFXDeepOpacityMap->GetRenderTargetItem().ShaderResourceTexture;
-	}
-	else
-	{
-		ColorPassParams.DeepOpacityMap = GBlackTexture->TextureRHI;
-	}
 
 	FScene* Scene = View.Family->Scene ? View.Family->Scene->GetRenderScene() : nullptr;
 	if (Scene)

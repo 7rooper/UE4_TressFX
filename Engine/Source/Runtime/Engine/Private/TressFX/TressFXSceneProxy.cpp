@@ -234,8 +234,6 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 		SpecularSettings.SpecularSecondaryOffset
 	);
 	ShadeParametersUniformBuffer.TressFXSpecularColor = FVector4(SpecularSettings.SpecularColor);
-	ShadeParametersUniformBuffer.DeepOpacityLayerThickness = DynamicData.TressFXShadeSettings.DeepOpacityLayerThickness;
-	ShadeParametersUniformBuffer.DeepOpacityPerFragment = DynamicData.TressFXShadeSettings.DeepOpacityPerFragment;
 
 	TressFXHairObject->SimParametersUniformBuffer = TUniformBufferRef<FTressFXSimParametersUniformBuffer>::CreateUniformBufferImmediate(SimParamsUniformBuffer, UniformBuffer_SingleFrame);
 	TressFXHairObject->ShadeParametersUniformBuffer = TUniformBufferRef<FTressFXShadeParametersUniformBuffer>::CreateUniformBufferImmediate(ShadeParametersUniformBuffer, UniformBuffer_SingleFrame);

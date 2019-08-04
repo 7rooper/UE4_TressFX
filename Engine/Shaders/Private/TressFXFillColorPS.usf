@@ -461,6 +461,7 @@ float ComputeHairGlint(
     return noise;
 }
 
+#define USE_HW_SHADER 0
 
 float3 TressFXHairShading(
 	FGBufferData GBuffer
@@ -478,10 +479,30 @@ float3 TressFXHairShading(
     float NoL = saturate(dot(N, L));
 
     float3 S = 0;
+#if USE_HW_SHADER
+    float HWDiffuseFactor = TressFX_ComputeHairDiffuseHW(L, TFXTangent, N, 1.0f, DiffuseBlend);
+    float HWSpecularFactor = TressFX_ComputeHairSpecularHW(
+		  V
+		, L
+		, TFXTangent
+		, N
+		, DiffuseBlend
+		, TFXPrimarySpecScale
+		, TFXSecondarySpecScale
+		, TFXPrimarySpecExp
+		, TFXSecondarySpecExp
+		, TFXPrimarySpecOffset
+		, TFXSecondarySpecOffset
+	);
+    S = HWDiffuseFactor * GBuffer.BaseColor;
+    S += HWSpecularFactor * TressFXSpecularColor;
+#else
     float3 SpecDiffuse = TressFX_ComputeDiffuseSpecFactors(V, L, TFXTangent, DiffuseBlend);
     S = SpecDiffuse.x * GBuffer.BaseColor; // diffuse
     S += SpecDiffuse.y; // 1st specular highlight
     S += SpecDiffuse.z; // 2nd specular highlight
+#endif
+
     if (1)
     {
         float3 FakeNormal = normalize(V - N * dot(V, N));
@@ -519,7 +540,7 @@ float ApproximateDeepShadow(float3 FragmentWorldPos, float SelfshadowStrength)
 #else
     float ShadowMapDepth = PoissonSampleFloat(ShadowUVs, .01f, TressFXColorFillPass.ShadowBufferSize.zw, TressFXColorFillPass.ShadowDepthTex, ForwardLightData.ShadowmapSampler);
 #endif
-	float shadowDistFalloff = 1.0f; //TODO?
+	float shadowDistFalloff = 1.0f;
     float shadowRange = max(0.0f, shadowDistFalloff * (ShadowPos.z - ShadowMapDepth));
     return ComputeHairShadowAttenuation(shadowRange, g_FiberSpacing, g_FiberRadius, SelfshadowStrength);
 }
@@ -636,6 +657,7 @@ float3 GetTressFXDynamicLighting(
     }    
 
 	// Setup shadow
+    float TFXShadowAttenuation = 1;
     //LightAttenuation = saturate((LightAttenuation - TFXShadowAttenuation) / (1 - TFXShadowAttenuation));
     //LightAttenuation = Square(LightAttenuation);
     FShadowTerms ShadowTerms;
@@ -653,14 +675,14 @@ float3 GetTressFXDynamicLighting(
     }
     
 	float ApproxDeepShadow = 1.0f;
-    if (bDirectionalLight && TFXSelfShadowStrength > 1e-5)
+    if (bDirectionalLight && TFXSelfShadowStrength > 1e-3)
     {
         ApproxDeepShadow = ApproximateDeepShadow(WorldPosition, TFXSelfShadowStrength);
     }
 
-    float ShadowAttenuation = saturate(ShadowTerms.TransmissionShadow);
+    float ShadowAttenuation = saturate(ShadowTerms.SurfaceShadow);
     //ShadowAttenuation = lerp(1, ShadowAttenuation, 1 - TFXAlpha);
-    float AllShadow = LightAttenuationNoShadow * ApproxDeepShadow;// * ShadowAttenuation; 
+    float AllShadow = LightAttenuationNoShadow * ApproxDeepShadow * ShadowAttenuation;
     
 	// Add glint JAKETODO ?
     float GlintAmbient = 0;
@@ -678,7 +700,7 @@ float3 GetTressFXDynamicLighting(
 
 
 	float3 Shading;
-	//NOTE: shadow is only us for scatter calc in TressFXHairShading
+	//NOTE: shadow is only used for scatter calc in TressFXHairShading
     Shading = TressFXHairShading(GbufferData, L, V, N, AllShadow, 1, 0, uint2(0, 0), TFXTangent);
     
     float3 Lighting;

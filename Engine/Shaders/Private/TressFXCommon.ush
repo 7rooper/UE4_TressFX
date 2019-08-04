@@ -30,11 +30,9 @@ cbuffer TressfxShadeParameters
     float g_FiberSpacing;
     int g_NumVerticesPerStrand;
     float g_ratio;
-    float DeepOpacityPerFragment;
     float4 TressFXSettings1;
     float4 TressFXSettings2;
     float4 TressFXSpecularColor;
-    float4 DeepOpacityLayerThickness;
 };
 
 #define TFXPrimarySpecScale TressFXSettings1.x

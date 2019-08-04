@@ -40,12 +40,9 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXShadeParametersUni
 	SHADER_PARAMETER(float, g_FiberSpacing)
 	SHADER_PARAMETER(int32, g_NumVerticesPerStrand)
 	SHADER_PARAMETER(float, g_ratio)
-	SHADER_PARAMETER(float, DeepOpacityPerFragment)
 	SHADER_PARAMETER(FVector4, TressFXSettings1)
 	SHADER_PARAMETER(FVector4, TressFXSettings2)
 	SHADER_PARAMETER(FVector4, TressFXSpecularColor)
-	SHADER_PARAMETER(FVector4, DeepOpacityLayerThickness)
-
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 

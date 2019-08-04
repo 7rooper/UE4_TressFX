@@ -300,7 +300,6 @@ FSceneRenderTargets::FSceneRenderTargets(const FViewInfo& View, const FSceneRend
 	TressFXKBufferNodePoolSize = SnapshotSource.TressFXKBufferNodePoolSize;
 	TressFXKBufferNodes = SnapshotSource.TressFXKBufferNodes;
 	TressFXKBufferCounter = SnapshotSource.TressFXKBufferCounter;
-	TressFXDeepOpacityMap = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXDeepOpacityMap);
 	TressFXOpacityThresholdingUAV = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXOpacityThresholdingUAV);
 	/*@END Third party code TressFX*/
 }
@@ -1442,7 +1441,6 @@ void FSceneRenderTargets::ReleaseTressFXResources(int32 TypeToRelease)
 		TressFXAccumInvAlpha.SafeRelease();
 		TressFXFragmentDepthsTexture.SafeRelease();
 		TressFXFragmentColorsTexture.SafeRelease();
-		TressFXDeepOpacityMap.SafeRelease();
 	}
 	if (bReleaseAll || TypeToRelease == ETressFXRenderType::Opaque)
 	{
@@ -1487,17 +1485,6 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 					TexCreate_ShaderResource | TexCreate_DepthStencilTargetable, false));
 			TressFXSceneDepthDesc.NumSamples = SampleCount;
 			GRenderTargetPool.FindFreeElement(RHICmdList, TressFXSceneDepthDesc, TressFXSceneDepth, TEXT("TressFXSceneDepth"));
-
-			// TressFXDeepOpacityMap
-			FPooledRenderTargetDesc TressFXDeepOpacityMapDesc(
-				FPooledRenderTargetDesc::Create2DDesc(
-					GetShadowDepthTextureResolution(),
-					EPixelFormat::PF_A32B32G32R32F, //maps to DXGI_FORMAT_R32G32B32A32_FLOAT. todo, probably dont need this much precision, but fine for testing
-					FClearValueBinding(FLinearColor(0,0,0,0)),
-					TexCreate_None,
-					TexCreate_ShaderResource | TexCreate_RenderTargetable, false)
-			);
-			GRenderTargetPool.FindFreeElement(RHICmdList, TressFXDeepOpacityMapDesc, TressFXDeepOpacityMap, TEXT("TressFXDeepOpacityMap"));
 		}
 		else 
 		{

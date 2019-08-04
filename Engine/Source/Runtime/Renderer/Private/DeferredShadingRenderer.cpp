@@ -1428,10 +1428,6 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	}
 
 	//@BEGIN third party code TressFX
-	if (bSceneHasTressFX && (TFXRenderType > ETressFXRenderType::Opaque))
-	{
-		RenderTressFXDeepOpacityMaps(RHICmdList);
-	}
 	if (bSceneHasTressFX)
 	{
 		RenderTressFXBasePass(RHICmdList, TFXRenderType);

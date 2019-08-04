@@ -168,23 +168,9 @@ public:
 
 typedef TFunctionRef<void(FRHICommandList& RHICmdList, bool bFirst)> FBeginShadowRenderPassFunction;
 
-/*  @BEGIN third party code TressFX */
-BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXDeepOpacityParameters, )
-	SHADER_PARAMETER_STRUCT(FTressFXShadeParametersUniformBuffer, TFXShadeParameters)
-	SHADER_PARAMETER(FVector4, ShadowBufferSize)
-	SHADER_PARAMETER(FVector, SoftTransitionScale)
-	SHADER_PARAMETER_SAMPLER(SamplerState, ShadowDepthTextureSampler)
-	SHADER_PARAMETER_TEXTURE(Texture2D, ShadowDepthTexture)
-END_GLOBAL_SHADER_PARAMETER_STRUCT()
-
-//NOTE added as sub struct in FShadowDepthPassUniformParameters
-
-/*  @END third party code TressFX */
-
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FShadowDepthPassUniformParameters,)
 	SHADER_PARAMETER_STRUCT(FSceneTexturesUniformParameters, SceneTextures)
 	SHADER_PARAMETER_STRUCT(FLpvWriteUniformBufferParameters, LPV)
-	SHADER_PARAMETER_STRUCT(FTressFXDeepOpacityParameters, TressFXDeepOpacity)
 	SHADER_PARAMETER(FMatrix, ProjectionMatrix)
 	SHADER_PARAMETER(FVector2D, ShadowParams)
 	SHADER_PARAMETER(float, bClampToNearPlane)
@@ -387,10 +373,6 @@ public:
 	 */
 	void RenderDepth(FRHICommandListImmediate& RHICmdList, class FSceneRenderer* SceneRenderer, FBeginShadowRenderPassFunction BeginShadowRenderPass, bool bDoParallelDispatch);
 
-	/*@BEGIN third party code TressFX */
-	void TressFXRenderDeepOpacityMap(FRHICommandListImmediate& RHICmdList, class FSceneRenderer* SceneRenderer, FBeginShadowRenderPassFunction BeginShadowRenderPass);
-	/*@END third party code TressFX */
-
 	void SetStateForView(FRHICommandList& RHICmdList) const;
 
 	/** Set state for depth rendering */
@@ -452,9 +434,6 @@ public:
 	void GatherDynamicMeshElements(FSceneRenderer& Renderer, class FVisibleLightInfo& VisibleLightInfo, TArray<const FSceneView*>& ReusedViewsArray, 
 		FGlobalDynamicIndexBuffer& DynamicIndexBuffer, FGlobalDynamicVertexBuffer& DynamicVertexBuffer, FGlobalDynamicReadBuffer& DynamicReadBuffer);
 
-	/*@BEGIN Third party code TressFX*/
-	void SetUpMeshDrawCommandsForTressFXDeepOpacity(FSceneRenderer& Renderer, FUniformBufferRHIParamRef PassUniformBuffer);
-	/*@END Third party code TressFX*/
 	void SetupMeshDrawCommandsForShadowDepth(FSceneRenderer& Renderer, FUniformBufferRHIParamRef PassUniformBuffer);
 
 	void SetupMeshDrawCommandsForProjectionStenciling(FSceneRenderer& Renderer);
@@ -562,9 +541,6 @@ private:
 
 	FMeshCommandOneFrameArray ShadowDepthPassVisibleCommands;
 	FParallelMeshDrawCommandPass ShadowDepthPass;
-	/*@BEGIN Third party code TressFX*/
-	FParallelMeshDrawCommandPass TressFXDeepOpacityPass;
-	/*@END Third party code TressFX*/
 	TArray<FShadowMeshDrawCommandPass, TInlineAllocator<2>> ProjectionStencilingPasses;
 
 	FDynamicMeshDrawCommandStorage DynamicMeshDrawCommandStorage;
@@ -1583,40 +1559,3 @@ struct FCompareFProjectedShadowInfoBySplitIndex
 		}
 	}
 };
-
-/*@BEGIN third party code TressFX */
-//////////////////////////////////////////////////////////////////////////
-//FTressFXDeepOpacityPassProcessor
-/////////////////////////////////////////////////////////////////////////
-extern FShadowDepthType CSMShadowDepthType;
-class FTressFXDeepOpacityPassProcessor : public FMeshPassProcessor
-{
-public:
-
-	FTressFXDeepOpacityPassProcessor(
-		const FScene* Scene,
-		const FSceneView* InViewIfDynamicMeshCommand,
-		const TUniformBufferRef<FViewUniformShaderParameters>& InViewUniformBuffer,
-		FUniformBufferRHIParamRef InPassUniformBuffer,
-		FShadowDepthType InShadowDepthType,
-		FMeshPassDrawListContext* InDrawListContext);
-
-	virtual void AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId = -1) override final;
-
-	FMeshPassProcessorRenderState PassDrawRenderState;
-
-private:
-
-	void Process(
-		const FMeshBatch& RESTRICT MeshBatch,
-		uint64 BatchElementMask,
-		int32 StaticMeshId,
-		const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy,
-		const FMaterialRenderProxy& RESTRICT MaterialRenderProxy,
-		const FMaterial& RESTRICT MaterialResource,
-		ERasterizerFillMode MeshFillMode,
-		ERasterizerCullMode MeshCullMode);
-
-	FShadowDepthType ShadowDepthType;
-};
-/*@END third party code TressFX */

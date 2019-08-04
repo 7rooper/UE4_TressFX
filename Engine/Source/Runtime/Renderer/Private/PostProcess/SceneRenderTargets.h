@@ -587,7 +587,6 @@ public:
 	/** common targets */
 	TRefCountPtr<IPooledRenderTarget> TressFXSceneDepth;
 	TRefCountPtr<IPooledRenderTarget> TressFXVelocity;
-	TRefCountPtr<IPooledRenderTarget> TressFXDeepOpacityMap;
 
 	/** shortcut specific */
 	TRefCountPtr<IPooledRenderTarget> TressFXAccumInvAlpha;

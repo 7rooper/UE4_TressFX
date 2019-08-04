@@ -40,7 +40,6 @@ namespace EMeshPass
 		TressFX_DepthsVelocity,
 		TressFX_DepthsAlpha,
 		TressFX_FillColors,
-		TressFX_DeepOpacity,
 		/*@End Third party code TressFX*/
 		Num,
 		NumBits = 5,
@@ -74,7 +73,6 @@ inline const TCHAR* GetMeshPassName(EMeshPass::Type MeshPass)
 	case EMeshPass::TressFX_DepthsVelocity: return TEXT("TressFX_DepthsVelocity");
 	case EMeshPass::TressFX_DepthsAlpha: return TEXT("TressFX_DepthsAlpha");
 	case EMeshPass::TressFX_FillColors: return TEXT("TressFX_FillColors");
-	case EMeshPass::TressFX_DeepOpacity: return TEXT("TressFX_DeepOpacity");
 	//@END third party code TressFX
 	}
 

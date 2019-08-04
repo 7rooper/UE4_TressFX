@@ -74,7 +74,7 @@ void main(
 			RWGBufferB[uint2(input.Position.xy)] = Current;
 		#endif
 
-		float HairDepth = asfloat(FragmentDepthsTexture[uint3(vScreenAddress, 3)]);
+		float HairDepth = asfloat(FragmentDepthsTexture[uint3(vScreenAddress, 0)]);
 	#else
 		// Write farthest depth value for culling in the next pass.
 		float HairDepth = asfloat(FragmentDepthsTexture[uint3(vScreenAddress, 2)]);
