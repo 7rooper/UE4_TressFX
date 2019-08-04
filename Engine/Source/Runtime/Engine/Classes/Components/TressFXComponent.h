@@ -127,11 +127,11 @@ public:
 
 	/** Primary specular scale. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Primary Scale", ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
-		float SpecularPrimaryScale = 0.3f;
+		float SpecularPrimaryScale = 0.6f;
 
 	/** Primary specular power exponent. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Primary Exponent", ClampMin = "1.0", ClampMax = "1000.0", UIMin = "1.0", UIMax = "1000.0"))
-		float SpecularPrimaryExponent = 30.f;
+		float SpecularPrimaryExponent = 60.f;
 
 	/** Secondary specular scale. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Secondary Scale", ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
@@ -139,7 +139,7 @@ public:
 
 	/** Secondary specular power exponent. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Secondary Exponent", ClampMin = "1.0", ClampMax = "1000.0", UIMin = "1.0", UIMax = "1000.0"))
-		float SpecularSecondaryExponent = 20.0f;
+		float SpecularSecondaryExponent = 40.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Secondary Offset", ClampMin = "-1.0", ClampMax = "1.0", UIMin = "-1.0", UIMax = "1.0"))
 		float SpecularSecondaryOffset = 0.1f;

@@ -496,11 +496,15 @@ float3 TressFXHairShading(
 	);
     S = HWDiffuseFactor * GBuffer.BaseColor;
     S += HWSpecularFactor * TressFXSpecularColor;
+    S *= .07f;
 #else
     float3 SpecDiffuse = TressFX_ComputeDiffuseSpecFactors(V, L, TFXTangent, DiffuseBlend);
+    float visibilityScale = lerp(1.0f, saturate(dot(N, L)), DiffuseBlend);
+    SpecDiffuse.yz *= visibilityScale;
     S = SpecDiffuse.x * GBuffer.BaseColor; // diffuse
     S += SpecDiffuse.y; // 1st specular highlight
     S += SpecDiffuse.z; // 2nd specular highlight
+
 #endif
 
     if (1)
@@ -678,7 +682,8 @@ float3 GetTressFXDynamicLighting(
     }
 
     float ShadowAttenuation = saturate(ShadowTerms.SurfaceShadow);
-    //ShadowAttenuation = lerp(1, ShadowAttenuation, 1 - TFXAlpha);
+	//JAKETODO toggle for this in component
+    ShadowAttenuation = lerp(1, ShadowAttenuation, 1 - TFXAlpha);
     float AllShadow = LightAttenuationNoShadow * ApproxDeepShadow * ShadowAttenuation;
     
 	// Add glint JAKETODO ?
