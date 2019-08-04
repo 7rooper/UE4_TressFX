@@ -655,11 +655,7 @@ float3 GetTressFXDynamicLighting(
     {
         return 0;
     }    
-
-	// Setup shadow
-    float TFXShadowAttenuation = 1;
-    //LightAttenuation = saturate((LightAttenuation - TFXShadowAttenuation) / (1 - TFXShadowAttenuation));
-    //LightAttenuation = Square(LightAttenuation);
+    
     FShadowTerms ShadowTerms;
     ShadowTerms.SurfaceShadow = 1;
 
@@ -667,7 +663,8 @@ float3 GetTressFXDynamicLighting(
     {
 		GetShadowTerms(GbufferData, LightData, WorldPosition, L, LightAttenuation, Dither, ShadowTerms);
 		// greatly reduces shadow mapping artifacts
-        ShadowTerms.SurfaceShadow *= saturate(dot(N, L) * 6 - 0.2);
+		//JAKENOTE, actually doesnt
+        //ShadowTerms.SurfaceShadow *= saturate(dot(N, L) * 6 - 0.2);
     }
 	else
 	{
