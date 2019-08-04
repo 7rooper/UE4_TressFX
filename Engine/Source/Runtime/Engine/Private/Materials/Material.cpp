@@ -901,7 +901,7 @@ UMaterial::UMaterial(const FObjectInitializer& ObjectInitializer)
 	/*@BEGIN Third party code TressFX*/
 	bTressFXRenderVelocity = true;
 	bTressFXApproximateDeepShadow = false;
-	bTressFXAttenuateShadowByAlpha = true;
+	bTressFXAttenuateShadowByAlpha = false;
 	bTressFXUseHairworksShadingModel = false;
 	/*@End Third party code TressFX*/
 }

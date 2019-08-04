@@ -513,7 +513,7 @@ void SetupDepthsAlphaPassState(FMeshPassProcessorRenderState& DrawRenderState)
 		true, CF_GreaterEqual,
 		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
 		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
-		0xff, 0xff, DWM_Zero //JAKETODO, DWM_zero only currently implemented in dx11/12
+		0xff, 0xff, DWM_Zero //JAKETODO, DWM_zero only currently implemented in dx11/12, not sure how it will work on other platforms
 	>::GetRHI());
 
 }
@@ -553,7 +553,7 @@ void FTressFXFillColorPassMeshProcessor::ProcessKBuffer(
 		true, CF_GreaterEqual,
 		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
 		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
-		0xff, 0xff, DWM_Zero
+		0xff, 0xff, DWM_Zero //JAKETODO, DWM_zero only currently implemented in dx11/12, not sure how it will work on other platforms
 		>::GetRHI());
 
 	FTressFXShaderElementData ShaderElementData(ETressFXPass::FillColor_KBuffer, ViewIfDynamicMeshCommand);
@@ -615,7 +615,7 @@ void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 		true, CF_GreaterEqual,
 		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
 		true, CF_Always, SO_Keep, SO_Keep, SO_SaturatedIncrement,
-		0xff, 0xff, DWM_Zero
+		0xff, 0xff, DWM_Zero //JAKETODO, DWM_zero only currently implemented in dx11/12, not sure how it will work on other platforms
 		>::GetRHI());
 
 	FTressFXShaderElementData ShaderElementData(ETressFXPass::FillColor_Shortcut, ViewIfDynamicMeshCommand);
@@ -767,7 +767,7 @@ FTressFXFillColorPassMeshProcessor::FTressFXFillColorPassMeshProcessor(
 
 void SetupFillColorPassState(FMeshPassProcessorRenderState& DrawRenderState)
 {
-	//set up is done during Process()
+	//set up is done during Process() since its depends whether its kbuffer or shortcut
 }
 
 FMeshPassProcessor* CreateTRessFXFillColorPassProcessor(const FScene* Scene, const FSceneView* InViewIfDynamicMeshCommand, FMeshPassDrawListContext* InDrawListContext)
@@ -997,6 +997,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 		}
 
 		// shortcut pass 2, resolve depths closer to the camera to ue4 scene depth, mainly for shadows and lighting
+		// also needs to write to gbufferb
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveCloserDepthsToSceneDepth);
 			ShortcutDepthsResolve_Impl<true, true>(
@@ -1009,6 +1010,29 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			);
 		}
 	}
+}
+
+// gather shadow infos for Approximate deep shadows. Only supported for a single directional light ATM.
+// And for now I am assuming a single directional light in the scene
+TArray<FProjectedShadowInfo*> GatherTressFXProjectionShadows(TArray<FVisibleLightInfo, SceneRenderingAllocator> VisibleLightInfos)
+{
+	TArray<FProjectedShadowInfo*> TressFXPerObjectShadowInfos;
+	{
+		for (int32 VisibleLightIndex = 0; VisibleLightIndex < VisibleLightInfos.Num(); VisibleLightIndex++)
+		{
+			for (int32 ShadowsToProjectIndex = 0; ShadowsToProjectIndex < VisibleLightInfos[VisibleLightIndex].ShadowsToProject.Num(); ShadowsToProjectIndex++)
+			{
+				FProjectedShadowInfo* Shadow = VisibleLightInfos[VisibleLightIndex].ShadowsToProject[ShadowsToProjectIndex];
+				const bool bIsPerObjectTressFX = Shadow->bIsPerObjectTressFX;
+				const bool bIsDirectional = Shadow->bDirectionalLight;
+				if (bIsPerObjectTressFX && bIsDirectional)
+				{
+					TressFXPerObjectShadowInfos.Add(Shadow);
+				}
+			}
+		}
+	}
+	return TressFXPerObjectShadowInfos;
 }
 
 void RenderShortcutResolvePass(
@@ -1035,7 +1059,7 @@ void RenderShortcutResolvePass(
 
 		// shortcut pass 2.5, depths resolve to the tressfxscenedepth texture, write the farthest depth
 		// its important we dont do this until shadows have been rendered. Because we use the this texture (without hair depth) to render regular shadows behind tressfx
-		// and the regular scene depth texture (WITH hair depths) to render tressfx shadows into a separate mask textures
+		// and the regular scene depth texture (WITH hair depths) to render tressfx shadows into a separate mask texture
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveFarthestDepthsToTressFXSceneDepth);
 			ShortcutDepthsResolve_Impl<false, false>(
@@ -1048,42 +1072,7 @@ void RenderShortcutResolvePass(
 		}
 
 
-		TArray<FProjectedShadowInfo*> TressFXPerObjectShadowInfos;
-		//gather shadow infos for tressfx, just using single directional light ATM for testing.
-		//for testing, just assuming a single direction light in the scene, take the first one
-		{
-			for(int32 VisibleLightIndex = 0; VisibleLightIndex < VisibleLightInfos.Num(); VisibleLightIndex++)
-			{
-				for(int32 ShadowsToProjectIndex = 0; ShadowsToProjectIndex < VisibleLightInfos[VisibleLightIndex].ShadowsToProject.Num(); ShadowsToProjectIndex++)
-				{
-					FProjectedShadowInfo* Shadow = VisibleLightInfos[VisibleLightIndex].ShadowsToProject[ShadowsToProjectIndex];
-					const bool bIsPerObjectTressFX = Shadow->bIsPerObjectTressFX;
-					const bool bIsDirectional = Shadow->bDirectionalLight;
-					if( bIsPerObjectTressFX && bIsDirectional )
-					{
-						TressFXPerObjectShadowInfos.Add(Shadow);
-					}
-				}
-			}
-			//for testing, just assuming a single direction light in the scene, take the first one
-
-			//View.TressFXMeshBatches[0].Proxy->IsTressFX(); // to get all tfx proxies.
-			//TODO, we can get match the shadow info to the proxy with ShadowInfo.GetParentSceneInfo()->Proxy->GetPrimitiveComponentID == the Tressfxproxy->GetPrimitiveComponentID
-			// use tfxproxy->GetPrimitiveComponentID to sort the components, and order the shadows the same way
-			// example
-			// componentIds [54, 98, 80]
-			// sort asc [54, 80, 90]
-			// so the screentoshadowmatrixes for the proxy with ID 54 will be stored at index 0, 80 will be at 1 etc
-			// fill colors shader needs to write the correct index(es) to the shader so it knows what matrices to use for each proxy being rendered
-			/*
-				const TArray<FProjectedShadowInfo*, SceneRenderingAllocator>& DirectionalLightShadowInfos = VisibleLightInfos[LightSceneInfo->Id].AllProjectedShadows;
-
-				for (int32 ShadowIndex = 0; ShadowIndex < DirectionalLightShadowInfos.Num(); ShadowIndex++)
-				{
-					const FProjectedShadowInfo* ShadowInfo = DirectionalLightShadowInfos[ShadowIndex];
-					see lightgridinjection line 474
-			*/
-		}
+		TArray<FProjectedShadowInfo*> TressFXPerObjectShadowInfos = GatherTressFXProjectionShadows(VisibleLightInfos);
 
 		// shortcut pass 3, fill colors
 		{
@@ -1097,7 +1086,14 @@ void RenderShortcutResolvePass(
 
 			TUniformBufferRef<FTressFXColorPassUniformParameters> TFXColorPassUniformBuffer;
 
-			CreateTressFXColorPassUniformBuffer(RHICmdList, View, ScreenShadowMaskTexture, TFXColorPassUniformBuffer, SortedShadowsForShadowDepthPass, TressFXPerObjectShadowInfos);
+			CreateTressFXColorPassUniformBuffer(
+				  RHICmdList
+				, View
+				, ScreenShadowMaskTexture
+				, TFXColorPassUniformBuffer
+				, SortedShadowsForShadowDepthPass
+				, TressFXPerObjectShadowInfos
+			);
 			FMeshPassProcessorRenderState DrawRenderState(View, TFXColorPassUniformBuffer);
 			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 			
@@ -1236,42 +1232,7 @@ void RenderKBufferResolvePasses(
 			continue;
 		}
 
-		TArray<FProjectedShadowInfo*> TressFXPerObjectShadowInfos;
-		//gather shadow infos for tressfx, just using single directional light ATM for testing.
-		//for testing, just assuming a single direction light in the scene, take the first one
-		{
-			for (int32 VisibleLightIndex = 0; VisibleLightIndex < VisibleLightInfos.Num(); VisibleLightIndex++)
-			{
-				for (int32 ShadowsToProjectIndex = 0; ShadowsToProjectIndex < VisibleLightInfos[VisibleLightIndex].ShadowsToProject.Num(); ShadowsToProjectIndex++)
-				{
-					FProjectedShadowInfo* Shadow = VisibleLightInfos[VisibleLightIndex].ShadowsToProject[ShadowsToProjectIndex];
-					const bool bIsPerObjectTressFX = Shadow->bIsPerObjectTressFX;
-					const bool bIsDirectional = Shadow->bDirectionalLight;
-					if (bIsPerObjectTressFX && bIsDirectional)
-					{
-						TressFXPerObjectShadowInfos.Add(Shadow);
-					}
-				}
-			}
-			//for testing, just assuming a single direction light in the scene, take the first one
-
-			//View.TressFXMeshBatches[0].Proxy->IsTressFX(); // to get all tfx proxies.
-			//TODO, we can get match the shadow info to the proxy with ShadowInfo.GetParentSceneInfo()->Proxy->GetPrimitiveComponentID == the Tressfxproxy->GetPrimitiveComponentID
-			// use tfxproxy->GetPrimitiveComponentID to sort the components, and order the shadows the same way
-			// example
-			// componentIds [54, 98, 80]
-			// sort asc [54, 80, 90]
-			// so the screentoshadowmatrixes for the proxy with ID 54 will be stored at index 0, 80 will be at 1 etc
-			// fill colors shader needs to write the correct index(es) to the shader so it knows what matrices to use for each proxy being rendered
-			/*
-				const TArray<FProjectedShadowInfo*, SceneRenderingAllocator>& DirectionalLightShadowInfos = VisibleLightInfos[LightSceneInfo->Id].AllProjectedShadows;
-
-				for (int32 ShadowIndex = 0; ShadowIndex < DirectionalLightShadowInfos.Num(); ShadowIndex++)
-				{
-					const FProjectedShadowInfo* ShadowInfo = DirectionalLightShadowInfos[ShadowIndex];
-					see lightgridinjection line 474
-			*/
-		}
+		TArray<FProjectedShadowInfo*> TressFXPerObjectShadowInfos = GatherTressFXProjectionShadows(VisibleLightInfos);
 
 		SCOPED_DRAW_EVENT(RHICmdList, TressFXKBufferPasses);
 
@@ -1280,7 +1241,14 @@ void RenderKBufferResolvePasses(
 		FRWBufferStructured* TressFXKBufferNodes = nullptr;
 		FRWBuffer* TressFXKBufferCounter = nullptr;
 		int32 TressFXKBufferNodePoolSize;
-		SceneContext.GetTressFXKBufferResources(RHICmdList, TressFXKBufferListHeads, OpacityThreshholdingUAV, TressFXKBufferNodes, TressFXKBufferCounter, TressFXKBufferNodePoolSize);
+		SceneContext.GetTressFXKBufferResources(
+			  RHICmdList
+			, TressFXKBufferListHeads
+			, OpacityThreshholdingUAV
+			, TressFXKBufferNodes
+			, TressFXKBufferCounter
+			, TressFXKBufferNodePoolSize
+		);
 
 		// Fill k-buffer
 		{

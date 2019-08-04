@@ -934,8 +934,10 @@ void main(
         return;
     }
 
-	#if TFX_PPLL
-		int2 ScreenAddr = int2(In.Position.xy);
+    int2 ScreenAddr = int2(In.Position.xy);
+	//not working out quite as i hoped but also im dislexic so maybe i just got it bakckwards
+	#if TFX_PPLL && 0
+
 		const uint DepthAsUint = asuint(In.Position.w);
 		const uint DepthToWrite = (TFXAlpha > .8f) ? DepthAsUint : 0;
 		uint oldMinDepthAsUint;
