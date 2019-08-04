@@ -833,7 +833,19 @@ public:
 
 	/** Render Hair velocity into UE4's Velocity buffer. This is requried for temporal AA, motion blur etc. But could save on performance if disabled for greater lods. */
 	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Render Hair Velocity"))
-		uint32 bTressFXRenderVelocity : 1;
+	uint32 bTressFXRenderVelocity : 1;
+
+	/** Helps smooth out shadows when using shadow mapping, but loses some detail */
+	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Attenuate Shadow by alpha"))
+	uint32 bTressFXAttenuateShadowByAlpha : 1;
+
+	/** use the "aproximate deep shadow" method for shadowing instead of shadow maps, this doesnt allow for shadow receiving from objects. Use "Self Shadow Strength" on the tressfx component to determine how strong this is. */
+	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Approximate Deep Shadow"))
+	uint32 bTressFXApproximateDeepShadow : 1;
+
+	/** Experimental */
+	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Use Hairworks Shading Model"))
+	uint32 bTressFXUseHairworksShadingModel : 1;
 
 	/*@End Third party code TressFX*/
 

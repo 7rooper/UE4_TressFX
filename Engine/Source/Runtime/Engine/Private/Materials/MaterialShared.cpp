@@ -1244,6 +1244,9 @@ bool FMaterialResource::ShouldApplyFogging() const {return Material->bUseTranslu
 
 /*@BEGIN Third party code TressFX*/
 bool FMaterialResource::TressFXShouldRenderVelocity() const { return Material->bTressFXRenderVelocity; }
+bool FMaterialResource::TressFXUseHairworksShadingModel() const { return Material->bTressFXUseHairworksShadingModel; }
+bool FMaterialResource::TressFXApproximateDeepShadow() const { return Material->bTressFXApproximateDeepShadow; }
+bool FMaterialResource::TressFXAttenuateShadowByAlpha() const { return Material->bTressFXAttenuateShadowByAlpha; }
 /*@End Third party code TressFX*/
 
 bool FMaterialResource::ComputeFogPerPixel() const {return Material->bComputeFogPerPixel;}

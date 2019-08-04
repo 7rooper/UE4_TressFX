@@ -900,6 +900,9 @@ UMaterial::UMaterial(const FObjectInitializer& ObjectInitializer)
 
 	/*@BEGIN Third party code TressFX*/
 	bTressFXRenderVelocity = true;
+	bTressFXApproximateDeepShadow = false;
+	bTressFXAttenuateShadowByAlpha = true;
+	bTressFXUseHairworksShadingModel = false;
 	/*@End Third party code TressFX*/
 }
 
@@ -4170,7 +4173,12 @@ bool UMaterial::CanEditChange(const UProperty* InProperty) const
 		FString PropertyName = InProperty->GetName();
 
 		/*@BEGIN Third party code TressFX*/
-		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXRenderVelocity))
+		if (
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXRenderVelocity) ||
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXAttenuateShadowByAlpha) ||
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXApproximateDeepShadow) ||
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXUseHairworksShadingModel)
+		)
 		{
 			return bUsedWithTressFX;
 		}
@@ -4376,6 +4384,7 @@ void UMaterial::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 	}
 
 	/*@BEGIN Third party code TressFX*/
+	// i dont remember writing this but im sure i had a reason...
 	const FName Name = PropertyThatChanged ? PropertyThatChanged->GetFName() : NAME_None;
 	if (Name == GET_MEMBER_NAME_CHECKED(UMaterial, ShadingModel))
 	{
@@ -4386,7 +4395,6 @@ void UMaterial::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 			EnumProp->GetSignedIntPropertyValue(Value);
 			if (Value)
 			{
-				//JAKETODO, test if this works
 				int32* IntValue = (int32*)Value;
 				if (IntValue && *IntValue == EMaterialShadingModel::MSM_TressFX)
 				{

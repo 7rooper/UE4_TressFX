@@ -77,6 +77,10 @@ public:
 		);
 		OutEnvironment.SetDefine(TEXT("TFX_SHORTCUT"), ColorPassType == ETressFXPass::FillColor_Shortcut ? TEXT("1") : TEXT("0"));
 		OutEnvironment.SetDefine(TEXT("TFX_PPLL"), ColorPassType == ETressFXPass::FillColor_KBuffer ? TEXT("1") : TEXT("0"));
+		OutEnvironment.SetDefine(TEXT("USE_HW_SHADER"), Material->TressFXUseHairworksShadingModel() ? TEXT("1") : TEXT("0"));
+		OutEnvironment.SetDefine(TEXT("APPROX_DEEP_SHADOW"), Material->TressFXApproximateDeepShadow() ? TEXT("1") : TEXT("0"));
+		OutEnvironment.SetDefine(TEXT("ATTENUATE_SHADOW_BY_ALPHA"), Material->TressFXAttenuateShadowByAlpha() ? TEXT("1") : TEXT("0"));
+
 		if (ColorPassType == ETressFXPass::FillColor_KBuffer)
 		{
 			OutEnvironment.SetDefine(TEXT("KBUFFER_SIZE"), KBufferSize);
@@ -119,10 +123,7 @@ public:
 		const FTressFXShaderElementData& ShaderElementData,
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
-		check(
-			ColorPassType == ETressFXPass::FillColor_KBuffer
-			|| ColorPassType == ETressFXPass::FillColor_Shortcut
-		)
+		check(ColorPassType == ETressFXPass::FillColor_KBuffer || ColorPassType == ETressFXPass::FillColor_Shortcut)
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
 		const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
 		const FTressFXSceneProxy* TFXProxy = (const FTressFXSceneProxy*)PrimitiveSceneProxy;

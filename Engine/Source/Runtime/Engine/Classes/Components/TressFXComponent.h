@@ -141,9 +141,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Secondary Exponent", ClampMin = "1.0", ClampMax = "1000.0", UIMin = "1.0", UIMax = "1000.0"))
 		float SpecularSecondaryExponent = 40.0f;
 
+	//only used with hairworks shading model
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Secondary Offset", ClampMin = "-1.0", ClampMax = "1.0", UIMin = "-1.0", UIMax = "1.0"))
 		float SpecularSecondaryOffset = 0.1f;
 
+	//only used with hairworks shading model
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Primary Offset", ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
 		float SpecularPrimaryOffset = 0;
 
@@ -177,6 +179,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0", ClampMax = "1"))
 		float DiffuseBlend;
 
+	// only works with directional light, and only if approximate deep shadow is on
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0", ClampMax = "1"))
 		float SelfShadowStrength;
 
@@ -190,7 +193,7 @@ public:
 		FiberSpacing = 0.1;
 		HairThickness = 0.1f;
 		DiffuseBlend = 0.40f;
-		SelfShadowStrength = 0.025f;
+		SelfShadowStrength = 0.05f;
 	}
 
 

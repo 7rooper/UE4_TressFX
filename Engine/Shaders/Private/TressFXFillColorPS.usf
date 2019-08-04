@@ -28,6 +28,18 @@
 	#define TFX_PPLL 0
 #endif
 
+#ifndef USE_HW_SHADER
+	#define USE_HW_SHADER 0
+#endif
+
+#ifndef APPROX_DEEP_SHADOW
+	#define APPROX_DEEP_SHADOW 0
+#endif
+
+#ifndef ATTENUATE_SHADOW_BY_ALPHA
+	#define ATTENUATE_SHADOW_BY_ALPHA 1
+#endif
+
 
 #ifndef ENABLE_SKY_LIGHT
 	#define ENABLE_SKY_LIGHT 1
@@ -461,8 +473,6 @@ float ComputeHairGlint(
     return noise;
 }
 
-#define USE_HW_SHADER 0
-
 float3 TressFXHairShading(
 	FGBufferData GBuffer
    , float3 L
@@ -661,29 +671,32 @@ float3 GetTressFXDynamicLighting(
     }    
     
     FShadowTerms ShadowTerms;
-    ShadowTerms.SurfaceShadow = 1;
-
-	if(LightData.ShadowedBits)
-    {
-		GetShadowTerms(GbufferData, LightData, WorldPosition, L, LightAttenuation, Dither, ShadowTerms);
-		// greatly reduces shadow mapping artifacts
-		//JAKENOTE, actually looks terrible
-        //ShadowTerms.SurfaceShadow *= saturate(dot(N, L) * 6 - 0.2);
-    }
-	else
-	{
-        ShadowTerms.SurfaceShadow = GbufferData.GBufferAO;
-    }
+    ShadowTerms.SurfaceShadow = 1;	
     
 	float ApproxDeepShadow = 1.0f;
+#if APPROX_DEEP_SHADOW
     if (bDirectionalLight && GetTressFXSelfShadowStrength() > 1e-3)
     {
         ApproxDeepShadow = ApproximateDeepShadow(WorldPosition, GetTressFXSelfShadowStrength());
     }
+#else
+    if (LightData.ShadowedBits)
+    {
+        GetShadowTerms(GbufferData, LightData, WorldPosition, L, LightAttenuation, Dither, ShadowTerms);
+		// greatly reduces shadow mapping artifacts
+		//JAKENOTE, actually looks terrible
+        //ShadowTerms.SurfaceShadow *= saturate(dot(N, L) * 6 - 0.2);
+    }
+    else
+    {
+        ShadowTerms.SurfaceShadow = GbufferData.GBufferAO;
+    }
+#endif
 
     float ShadowAttenuation = saturate(ShadowTerms.SurfaceShadow);
-	//JAKETODO toggle for this in component
+#if ATTENUATE_SHADOW_BY_ALPHA && !APPROX_DEEP_SHADOW
     ShadowAttenuation = lerp(1, ShadowAttenuation, 1 - TFXAlpha);
+#endif
     float AllShadow = LightAttenuationNoShadow * ApproxDeepShadow * ShadowAttenuation;
     
 	// Add glint JAKETODO ?
