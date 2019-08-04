@@ -121,10 +121,10 @@ float ComputeHairShadowAttenuation(float fDepthDistanceWS)
 float3 TressFX_ComputeDiffuseSpecFactors(float3 eyeDir, float3 lightDir, float3 tangentDir, float Kd)
 {
 
-    float Ks1 = TFXPrimarySpecScale; // specular intensity 1
-    float Ex1 = TFXPrimarySpecExp; // specular exponent 1
-    float Ks2 = TFXSecondarySpecScale; //specular intensity 2
-    float Ex2 = TFXSecondarySpecExp; // specular exponent 2
+    float Ks1 = GetPrimarySpecularScale(); // specular intensity 1
+    float Ex1 = GetPrimarySpecularExponent(); // specular exponent 1
+    float Ks2 = GetSecondarySpecularScale(); //specular intensity 2
+    float Ex2 = GetSecondarySpecularExponent(); // specular exponent 2
 
     float coneAngleRadians = 10.0f * PI / 180.0f;
 
@@ -150,7 +150,9 @@ float3 TressFX_ComputeDiffuseSpecFactors(float3 eyeDir, float3 lightDir, float3 
 
 
     float3 diffuseSpecular = float3(Kd * diffuse, Ks1 * pow(primarySpecular, Ex1), Ks2 * pow(secundarySpecular, Ex2));
-    diffuseSpecular *= 0.07f; // Reduce light intensity to account for extremely bright lights used in PBR
+	// from confetti sample: Reduce light intensity to account for extremely bright lights used in PBR
+	// https://github.com/ConfettiFX/The-Forge#6-material-playground
+    diffuseSpecular *= 0.07f; 
     return diffuseSpecular;
 }
 

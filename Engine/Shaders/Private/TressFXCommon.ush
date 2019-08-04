@@ -35,16 +35,47 @@ cbuffer TressfxShadeParameters
     float4 TressFXSpecularColor;
 };
 
-#define TFXPrimarySpecScale TressFXSettings1.x
-#define TFXPrimarySpecExp TressFXSettings1.y
+float GetPrimarySpecularScale()
+{
+    return TressFXSettings1.x;
+}
 
-#define TFXSecondarySpecScale TressFXSettings1.z
-#define TFXSecondarySpecExp TressFXSettings1.w
+float GetPrimarySpecularExponent()
+{
+    return TressFXSettings1.y;
+}
 
-#define TFXDiffuseBlend TressFXSettings2.x;
-#define TFXSelfShadowStrength TressFXSettings2.y
+float GetSecondarySpecularScale()
+{
+    return TressFXSettings1.z;
+}
 
-#define TFXSpecularColor TressFXSpecularColor
+float GetSecondarySpecularExponent()
+{
+    return TressFXSettings1.w;
+}
 
-#define TFXPrimarySpecOffset TressFXSettings2.z
-#define TFXSecondarySpecOffset TressFXSettings2.w
+float GetDiffuseBlend()
+{
+    return TressFXSettings2.x;
+}
+
+float GetTressFXSelfShadowStrength()
+{
+    return TressFXSettings2.y;
+}
+
+float3 GetTressFXSpecularColor()
+{
+    return TressFXSpecularColor.xyz;
+}
+
+float GetPrimarySpecularOffset()
+{
+    return TressFXSettings2.z;
+}
+
+float GetSecondarySpecularOffset()
+{
+    return TressFXSettings2.w;
+}

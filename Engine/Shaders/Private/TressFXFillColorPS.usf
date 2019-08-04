@@ -475,7 +475,7 @@ float3 TressFXHairShading(
    , float3 TFXTangent
 )
 {
-    float DiffuseBlend = TFXDiffuseBlend;
+    float DiffuseBlend = GetDiffuseBlend();
     float NoL = saturate(dot(N, L));
 
     float3 S = 0;
@@ -487,20 +487,20 @@ float3 TressFXHairShading(
 		, TFXTangent
 		, N
 		, DiffuseBlend
-		, TFXPrimarySpecScale
-		, TFXSecondarySpecScale
-		, TFXPrimarySpecExp
-		, TFXSecondarySpecExp
-		, TFXPrimarySpecOffset
-		, TFXSecondarySpecOffset
+		, GetPrimarySpecularScale()
+		, GetSecondarySpecularScale()
+		, GetPrimarySpecularExponent()
+		, GetSecondarySpecularExponent()
+		, GetPrimarySpecularOffset()
+		, GetSecondarySpecularOffset()
 	);
     S = HWDiffuseFactor * GBuffer.BaseColor;
     S += HWSpecularFactor * TressFXSpecularColor;
     S *= .07f;
 #else
     float3 SpecDiffuse = TressFX_ComputeDiffuseSpecFactors(V, L, TFXTangent, DiffuseBlend);
-    float visibilityScale = lerp(1.0f, saturate(dot(N, L)), DiffuseBlend);
-    SpecDiffuse.yz *= visibilityScale;
+    float VisibilityScale = lerp(1.0f, saturate(dot(N, L)), DiffuseBlend);
+    SpecDiffuse.yz *= VisibilityScale;
     S = SpecDiffuse.x * GBuffer.BaseColor; // diffuse
     S += SpecDiffuse.y; // 1st specular highlight
     S += SpecDiffuse.z; // 2nd specular highlight
@@ -633,7 +633,7 @@ float3 GetTressFXDynamicLighting(
 	if((GetPrimitiveData(PrimitiveId).LightingChannelMask & DeferredLightUniforms.LightingChannelMask) == 0)
 		return 0;
 #endif
-    float DiffuseBlend = TFXDiffuseBlend;
+    float DiffuseBlend = GetDiffuseBlend();
 	
 	// Use 1 for diffuse blend for un-shadowed light, to darken hairs at back faces. 
      if (!LightData.ShadowedBits)
@@ -643,7 +643,7 @@ float3 GetTressFXDynamicLighting(
     
 	float3 OutColor = 0;
 
-    float3 SpecularColor = TFXSpecularColor.xyz;
+    float3 SpecularColor = GetTressFXSpecularColor();
 
 	// Setup light
     float3 V = -CameraVector;
@@ -667,7 +667,7 @@ float3 GetTressFXDynamicLighting(
     {
 		GetShadowTerms(GbufferData, LightData, WorldPosition, L, LightAttenuation, Dither, ShadowTerms);
 		// greatly reduces shadow mapping artifacts
-		//JAKENOTE, actually doesnt
+		//JAKENOTE, actually looks terrible
         //ShadowTerms.SurfaceShadow *= saturate(dot(N, L) * 6 - 0.2);
     }
 	else
@@ -676,9 +676,9 @@ float3 GetTressFXDynamicLighting(
     }
     
 	float ApproxDeepShadow = 1.0f;
-    if (bDirectionalLight && TFXSelfShadowStrength > 1e-3)
+    if (bDirectionalLight && GetTressFXSelfShadowStrength() > 1e-3)
     {
-        ApproxDeepShadow = ApproximateDeepShadow(WorldPosition, TFXSelfShadowStrength);
+        ApproxDeepShadow = ApproximateDeepShadow(WorldPosition, GetTressFXSelfShadowStrength());
     }
 
     float ShadowAttenuation = saturate(ShadowTerms.SurfaceShadow);
