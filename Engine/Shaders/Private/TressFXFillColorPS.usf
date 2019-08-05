@@ -509,9 +509,7 @@ float3 TressFXHairShading(
     S *= .07f;
 #else
 
-    //const float SinThetaL = dot(N, L);
-    //const float SinThetaV = dot(N, V);
-    //float CosThetaD = cos(0.5 * abs(asinFast(SinThetaV) - asinFast(SinThetaL)));
+   
     //const float Thickness = 1 - Root2Tip;
     //const float ColorTintFactor = saturate(CosThetaD) + Square(Thickness) + 1e-4;
     //const float2 BaseColorTintPower = float2(0.6, 1.2) / ColorTintFactor;
@@ -527,6 +525,7 @@ float3 TressFXHairShading(
 
     if (1)
     {
+		//from ue4 hair shader
         float3 FakeNormal = normalize(V - N * dot(V, N));
         N = FakeNormal;
         float Wrap = 1;
@@ -535,6 +534,19 @@ float3 TressFXHairShading(
         float Luma = Luminance(GBuffer.BaseColor);
         float3 ScatterTint = pow((GBuffer.BaseColor) / Luma, 1 - Shadow);
         S += sqrt(GBuffer.BaseColor) * DiffuseScatter * ScatterTint;
+    }
+    else
+    {
+		// https://www.slideshare.net/KiHyunwoo/rendering-aaaquality-characters-of-project-a1
+		//WIP, better scatter maybe?
+        const float SinThetaL = dot(N, L);
+        const float SinThetaV = dot(N, V);
+        float CosThetaD = cos(0.5 * abs(asinFast(SinThetaV) - asinFast(SinThetaL)));
+        float HGPhase = HenyeyGreensteinPhase(dot(V, L), CosThetaD);
+		float3 ScatterColor = GBuffer.BaseColor * Shadow;
+		float3 ScatterAtten = saturate(	pow(ScatterColor / Luminance(ScatterColor), 1 - Shadow)	);
+		float3 ScatteringLighting = ScatterColor * ScatterAtten * GBuffer.Metallic;
+		S += ScatteringLighting;
     }
     return S;
 }
