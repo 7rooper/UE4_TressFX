@@ -1602,7 +1602,7 @@ void ALandscape::CopyOldDataToDefaultLayer(ALandscapeProxy* InProxy)
 				check(DefaultLayerHeightmap != nullptr);
 
 				// Only copy Mip0 as other mips will get regenerated
-				TArray<uint8> ExistingMip0Data;
+				TArray64<uint8> ExistingMip0Data;
 				ComponentHeightmap->Source.GetMipData(ExistingMip0Data, 0);
 
 				FColor* Mip0Data = (FColor*)DefaultLayerHeightmap->Source.LockMip(0);
@@ -1657,7 +1657,7 @@ void ALandscape::CopyOldDataToDefaultLayer(ALandscapeProxy* InProxy)
 					UTexture2D* NewLayerWeightmapTexture = InProxy->CreateLandscapeTexture(ComponentWeightmap->Source.GetSizeX(), ComponentWeightmap->Source.GetSizeY(), TEXTUREGROUP_Terrain_Weightmap, ComponentWeightmap->Source.GetFormat());
 
 					// Only copy Mip0 as other mips will get regenerated
-					TArray<uint8> ExistingMip0Data;
+					TArray64<uint8> ExistingMip0Data;
 					ComponentWeightmap->Source.GetMipData(ExistingMip0Data, 0);
 
 					FColor* Mip0Data = (FColor*)NewLayerWeightmapTexture->Source.LockMip(0);
