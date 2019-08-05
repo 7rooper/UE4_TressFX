@@ -492,21 +492,21 @@ void SetupDepthsAlphaPassState(FMeshPassProcessorRenderState& DrawRenderState)
 {
 	DrawRenderState.SetBlendState(TStaticBlendState<
 		//accum inv allpha
-		  CW_RED
-		, BO_Add
-		, BF_Zero
-		, BF_SourceColor
-		, BO_Add
-		, BF_Zero
-		, BF_SourceAlpha
+		  CW_RED			
+		, BO_Add			// color blend op
+		, BF_Zero			// color source blend
+		, BF_SourceColor	//color dest blend
+		, BO_Add			//alpha blend op
+		, BF_Zero			// alpha src blend
+		, BF_SourceAlpha	//alpha dest blend
 		//velocity
 		, CW_RGBA
-		, BO_Add
-		, BF_One
-		, BF_Zero
-		, BO_Add
-		, BF_One
-		, BF_Zero
+		, BO_Add			// color blend op
+		, BF_One			// color source blend
+		, BF_Zero			//color dest blend
+		, BO_Add			//alpha blend op
+		, BF_One			// alpha src blend
+		, BF_Zero			//alpha dest blend
 	>::GetRHI());
 	DrawRenderState.SetDepthStencilState(
 		TStaticDepthStencilState<
@@ -603,12 +603,12 @@ void FTressFXFillColorPassMeshProcessor::ProcessShortcut(
 	DrawRenderState.SetBlendState(
 		TStaticBlendState<
 		CW_RGBA,
-		BO_Add,
-		BF_One,
-		BF_One,
-		BO_Add,
-		BF_One,
-		BF_One
+		BO_Add,// color blend op
+		BF_One,// color source blend
+		BF_One,//color dest blend
+		BO_Add,//alpha blend op
+		BF_One,// alpha src blend
+		BF_One //alpha dest blend
 		>::GetRHI());
 	DrawRenderState.SetDepthStencilState(
 		TStaticDepthStencilState<
@@ -809,7 +809,6 @@ bool FSceneRenderer::ShouldRenderTressFX(int32 TressFXPass)
 	}
 	return false;
 }
-
 
 void RenderDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene, int32 TFXRenderType)
 {
@@ -1165,12 +1164,12 @@ void RenderShortcutResolvePass(
 
 			GraphicsPSOInit.BlendState = TStaticBlendState<
 				CW_RGBA
-				, BO_Add // color blend op
-				, BF_One // color source blend
-				, BF_SourceAlpha //color dest blend
-				, BO_Add //alpha blend op
-				, BF_Zero // alpha src blend
-				, BF_Zero //alpha dest blend
+				, BO_Add				// color blend op
+				, BF_One				// color source blend
+				, BF_SourceAlpha		//color dest blend
+				, BO_Add				//alpha blend op
+				, BF_Zero				// alpha src blend
+				, BF_Zero				//alpha dest blend
 			>::GetRHI();
 
 			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();

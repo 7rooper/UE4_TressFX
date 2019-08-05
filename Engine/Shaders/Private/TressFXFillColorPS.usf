@@ -481,7 +481,7 @@ float3 TressFXHairShading(
    , float Shadow
    , float Backlit
    , float Area
-   , uint2 Random
+   , float Root2Tip
    , float3 TFXTangent
 )
 {
@@ -508,13 +508,21 @@ float3 TressFXHairShading(
     S += HWSpecularFactor * TressFXSpecularColor;
     S *= .07f;
 #else
+
+    //const float SinThetaL = dot(N, L);
+    //const float SinThetaV = dot(N, V);
+    //float CosThetaD = cos(0.5 * abs(asinFast(SinThetaV) - asinFast(SinThetaL)));
+    //const float Thickness = 1 - Root2Tip;
+    //const float ColorTintFactor = saturate(CosThetaD) + Square(Thickness) + 1e-4;
+    //const float2 BaseColorTintPower = float2(0.6, 1.2) / ColorTintFactor;
+    //float3 TTColorTint = pow(GBuffer.BaseColor, BaseColorTintPower.x);
+    //float3 TRTColorTint = pow(GBuffer.BaseColor, BaseColorTintPower.y);
     float3 SpecDiffuse = TressFX_ComputeDiffuseSpecFactors(V, L, TFXTangent, DiffuseBlend);
     float VisibilityScale = lerp(1.0f, saturate(dot(N, L)), DiffuseBlend);
     SpecDiffuse.yz *= VisibilityScale;
     S = SpecDiffuse.x * GBuffer.BaseColor; // diffuse
-    S += SpecDiffuse.y; // 1st specular highlight
-    S += SpecDiffuse.z; // 2nd specular highlight
-
+    S += SpecDiffuse.y; // 1st specular highlight	R
+    S += SpecDiffuse.z; // 2nd specular highlight TRT
 #endif
 
     if (1)
@@ -716,7 +724,7 @@ float3 GetTressFXDynamicLighting(
 
 	float3 Shading;
 	//NOTE: shadow is only used for scatter calc in TressFXHairShading
-    Shading = TressFXHairShading(GbufferData, L, V, N, AllShadow, 1, 0, uint2(0, 0), TFXTangent);
+    Shading = TressFXHairShading(GbufferData, L, V, N, AllShadow, 1, 0, Root2Tip, TFXTangent);
     
     float3 Lighting;
 	Lighting = LightData.Color * Shading;
@@ -950,7 +958,11 @@ void main(
 	#endif
 
     half3 BaseColor = GetMaterialBaseColor(PixelMaterialInputs);
-    half Metallic = GetMaterialMetallic(PixelMaterialInputs);
+    float Metallic = GetMaterialMetallic(PixelMaterialInputs);
+
+	//for lighter tips
+    Metallic += lerp(0, Metallic, In.FactoryInterpolants.Root2Tip);
+
     half Specular = GetMaterialSpecular(PixelMaterialInputs);
     float MaterialAO = GetMaterialAmbientOcclusion(PixelMaterialInputs);
     float Roughness = GetMaterialRoughness(PixelMaterialInputs);
@@ -1015,7 +1027,7 @@ void main(
 		float3 L = normalize( V - N * dot(V,N) );
 		DiffuseDir = L;
 #if MATERIAL_SHADINGMODEL_TRESSFX
-        DiffuseColorForIndirect = 2 * PI * TressFXHairShading(GBuffer, L, V, N, 1, 0, 0.2, uint2(0, 0), TFXTangent);
+        DiffuseColorForIndirect = 2 * PI * TressFXHairShading(GBuffer, L, V, N, 1, 0, 0.2, In.FactoryInterpolants.Root2Tip, TFXTangent);
 #else
         DiffuseColorForIndirect = 2 * PI * HairShading(GBuffer, L, V, N, 1, 0, 0.2, uint2(0, 0));
 #endif

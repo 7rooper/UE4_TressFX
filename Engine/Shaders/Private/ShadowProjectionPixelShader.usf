@@ -285,7 +285,7 @@ float4 CalcTressFXShadows(in float4 SVPos)
 		if(bIsTressFXNonOpaquePixel)
 		{
 			float LightInfluenceMask = GetLightInfluenceMask(WorldPosition);
-			// TFX note: important to multiply by FadedSSSShadow for correct lighting, this is different than normal forward rendering
+			// TFX note: important to multiply by FadedSSSShadow for correct(er) lighting, this is different than normal forward rendering
 			FadedShadow = lerp(1, FadedShadow * saturate( FadedSSSShadow ) + .01f, LightInfluenceMask);
 			FinalColor = EncodeLightAttenuation(FadedShadow);
 		}
