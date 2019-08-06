@@ -460,7 +460,6 @@ void Main(
 		/*@END Third party code TressFX*/
 
     BRANCH
-
     if (IsSubsurfaceModel(GBufferData.ShadingModelID))
     {
         float Opacity = GBufferData.CustomData.a;
@@ -573,77 +572,6 @@ void Main(
 // .x:DepthBias, y: unused, zw: depth projection parameters
 float4 PointLightDepthBiasAndProjParameters;
 
-/*@BEGIN Third party code TressFX*/
-float4 CalcTressFXOnePassPointLightShadows(in float4 SVPos, out bool bIsTressFXPixel)
-{
-    float4 FinalColor = 0;
-    float2 ScreenUV = float2(SVPos.xy * View.BufferSizeAndInvSize.zw);
-	//hair depth is in regular scene depth tex
-    float SceneW = CalcSceneDepth(ScreenUV);
-	float2 ScreenPosition = ( ScreenUV.xy - View.ScreenPositionScaleBias.wz ) / View.ScreenPositionScaleBias.xy;
-	float3 WorldPosition = mul(float4(ScreenPosition.xy * SceneW, SceneW, 1), View.ScreenToWorld).xyz;
-
-	float4 GBufferB = Texture2DSampleLevel(SceneTexturesStruct.GBufferBTexture, SceneTexturesStruct.GBufferBTextureSampler, ScreenUV, 0);
-	uint SelectiveOutputMask = DecodeSelectiveOutputMask(GBufferB.a);
-	const bool bIsTressFXNonOpaquePixel = (SelectiveOutputMask & IS_TRESSFX_NON_OPAQUE_PIXEL);
-    bIsTressFXPixel = bIsTressFXNonOpaquePixel;
-	// For debugging
-#define OUTPUT_CUBE_SHADOW_DEPTH_NO_FILTERING 0
-	float3 LightVector = LightPositionAndInvRadius.xyz - WorldPosition.xyz;
-#if OUTPUT_CUBE_SHADOW_DEPTH_NO_FILTERING
-	// Note: point light shadow depth is Z / W, not linear
-	#if OPENGL_PROFILE || COMPILER_VULKAN || COMPILER_SWITCH
-	float Shadow = TextureCubeSampleLevel(ShadowDepthCubeTexture2, ShadowDepthTextureSampler, LightVector, 0);
-	#else
-	float Shadow = TextureCubeSampleLevel(ShadowDepthCubeTexture, ShadowDepthTextureSampler, LightVector, 0);
-	#endif
-#else
- 	float Shadow = CubemapHardwarePCF(WorldPosition, LightPositionAndInvRadius.xyz, LightPositionAndInvRadius.w, PointLightDepthBiasAndProjParameters.x);
-
-	Shadow = saturate( (Shadow - 0.5) * ShadowSharpen + 0.5 );
-#endif
-
-	float FadedShadow = lerp(1.0f, Square(Shadow), ShadowFadeFraction);
-
-#if FORWARD_SHADING
-	float LightInfluenceMask = GetLightInfluenceMask(WorldPosition);
-	FadedShadow = lerp(1, FadedShadow, LightInfluenceMask);
-	FinalColor = EncodeLightAttenuation(FadedShadow);
-#else
-
-    if (bIsTressFXNonOpaquePixel)
-    {
-        float LightInfluenceMask = GetLightInfluenceMask(WorldPosition);
-        FadedShadow = lerp(1, FadedShadow, LightInfluenceMask);
-        FinalColor = EncodeLightAttenuation(FadedShadow);
-    }
-    else
-    {
-        FinalColor.b = EncodeLightAttenuation(FadedShadow);
-        FinalColor.rga = 1;
-		// SSS is not correctly handled but at least it should be shadowed
-        FinalColor.a = FinalColor.b;
-    }
-#endif
-
-#if USE_TRANSMISSION
-	float Thickness = 1.0f;
-	// TODO: Use existing GBuffer data, instead of overwriting?
-	FGBufferData GBufferData = GetGBufferData(ScreenUV);
-	//if bSubsurface get SSS shadow,else opaque shadow.
-	bool IsSubsurfaceProfile = GBufferData.ShadingModelID == SHADINGMODELID_SUBSURFACE_PROFILE;
-	if (IsSubsurfaceProfile)
-	{
-		Thickness = CalcTransmissionThickness(GBufferData, WorldPosition, LightVector, PointLightDepthBiasAndProjParameters.zw, LightPositionAndInvRadius.w, 0);
-	}
-   	FinalColor.a = IsSubsurfaceProfile ? EncodeLightAttenuation(Thickness) : FinalColor.b;
-#endif // USE_TRANSMISSION
-
-    return FinalColor;
-
-}
-/*@END Third party code TressFX*/
-
 /** Pixel shader for projecting a one pass point light shadow from a cube map. */
 void MainOnePassPointLightPS(
 	in float4 SVPos : SV_POSITION,
@@ -656,10 +584,20 @@ void MainOnePassPointLightPS(
 	)
 {
 	float2 ScreenUV = float2( SVPos.xy * View.BufferSizeAndInvSize.zw );
-	
+
 	/*@BEGIN Third party code TressFX*/
 	// TressFX scene depth tex has no hair depth at this point yet, so use that for regular shadows if there is tressfx in the scene
 	#if TRESSFX_SHADOWS 
+		float4 GBufferB = Texture2DSampleLevel(SceneTexturesStruct.GBufferBTexture, SceneTexturesStruct.GBufferBTextureSampler, ScreenUV, 0);
+		uint SelectiveOutputMask = DecodeSelectiveOutputMask(GBufferB.a);
+		const bool bIsTressFXNonOpaquePixel = (SelectiveOutputMask & IS_TRESSFX_NON_OPAQUE_PIXEL);
+		//early out, tressfx shadows do not use this shader
+		if (bIsTressFXNonOpaquePixel)
+		{
+			OutColor = 1;
+			OutTFXColor = 1;
+			return;
+		}
 	    float SceneW = CalcTressFXSceneDepth(ScreenUV);
 	#else
 		float SceneW = CalcSceneDepth(ScreenUV);
@@ -714,13 +652,8 @@ void MainOnePassPointLightPS(
 #endif // USE_TRANSMISSION
 	/*@BEGIN Third party code TressFX*/
 	#if TRESSFX_SHADOWS
-		bool bIsTressFXPixel;
-		OutTFXColor = CalcTressFXOnePassPointLightShadows(SVPos, bIsTressFXPixel);
-		if(bIsTressFXPixel)
-		{
-			OutColor = 1;
-		}
-#endif
+			OutTFXColor = 1;
+	#endif
 	/*@END Third party code TressFX*/
 }
  

@@ -1649,7 +1649,14 @@ bool FSceneRenderer::RenderShadowProjections(FRHICommandListImmediate& RHICmdLis
 					{
 						if (ProjectedShadowInfo->bOnePassPointLightShadow)
 						{
-							ProjectedShadowInfo->RenderOnePassPointLightProjection(RHICmdList, ViewIndex, View, bProjectingForForwardShading /*@BEGIN third party code TressFX */, bTressFXShadows /*@END third party code TressFX */);
+							/*@BEGIN third party code TressFX */
+							if(!ProjectedShadowInfo->bIsPerObjectTressFX)
+							{
+							/*@END third party code TressFX */
+								ProjectedShadowInfo->RenderOnePassPointLightProjection(RHICmdList, ViewIndex, View, bProjectingForForwardShading /*@BEGIN third party code TressFX */, bTressFXShadows /*@END third party code TressFX */);
+							/*@BEGIN third party code TressFX */
+							}
+							/*@END third party code TressFX */
 						}
 						else
 						{
