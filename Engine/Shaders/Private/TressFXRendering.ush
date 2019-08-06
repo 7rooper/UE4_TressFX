@@ -156,9 +156,6 @@ float3 TressFX_ComputeDiffuseSpecFactors(float3 eyeDir, float3 lightDir, float3 
     return diffuseSpecular;
 }
 
-#ifndef MODULATE_COVERAGE_BY_DEPTH
-	#define MODULATE_COVERAGE_BY_DEPTH 0
-#endif
 
 //from hairworks
 float TressFX_ComputeHairDiffuseHW(
@@ -246,17 +243,12 @@ float ComputeCoverage(float2 p0, float2 p1, float2 pixelLoc, float2 winSize, flo
     // signed distance (positive if inside hair, negative if outside hair)
     float relDist = sign * saturate(min(p0dist, p1dist));
 
-	#if MODULATE_COVERAGE_BY_DEPTH
-		float modulator = 1 + (1 - sceneDepthZ);
-		float coverage = (relDist + 1.f) * 0.5f;
-		return saturate(coverage * modulator);
-	#else
-	    // returns coverage based on the relative distance
-		// 0, if completely outside hair edge
-		// 1, if completely inside hair edge
+	// returns coverage based on the relative distance
+	// 0, if completely outside hair edge
+	// 1, if completely inside hair edge
 
-		return (relDist + 1.f) * 0.5f;
-	#endif
+	return (relDist + 1.f) * 0.5f;
+
 
 
 }

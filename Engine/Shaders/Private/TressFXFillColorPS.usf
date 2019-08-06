@@ -482,7 +482,8 @@ float3 TressFXHairShading(
    , float Backlit
    , float Area
    , float Root2Tip
-   , float3 TFXTangent
+   , float3 T
+   , float Coverage
 )
 {
     float DiffuseBlend = GetDiffuseBlend();
@@ -494,7 +495,7 @@ float3 TressFXHairShading(
     float HWSpecularFactor = TressFX_ComputeHairSpecularHW(
 		  V
 		, L
-		, TFXTangent
+		, T
 		, N
 		, DiffuseBlend
 		, GetPrimarySpecularScale()
@@ -508,14 +509,7 @@ float3 TressFXHairShading(
     S += HWSpecularFactor * TressFXSpecularColor;
     S *= .07f;
 #else
-
-   
-    //const float Thickness = 1 - Root2Tip;
-    //const float ColorTintFactor = saturate(CosThetaD) + Square(Thickness) + 1e-4;
-    //const float2 BaseColorTintPower = float2(0.6, 1.2) / ColorTintFactor;
-    //float3 TTColorTint = pow(GBuffer.BaseColor, BaseColorTintPower.x);
-    //float3 TRTColorTint = pow(GBuffer.BaseColor, BaseColorTintPower.y);
-    float3 SpecDiffuse = TressFX_ComputeDiffuseSpecFactors(V, L, TFXTangent, DiffuseBlend);
+    float3 SpecDiffuse = TressFX_ComputeDiffuseSpecFactors(V, L, T, DiffuseBlend);
     float VisibilityScale = lerp(1.0f, saturate(dot(N, L)), DiffuseBlend);
     SpecDiffuse.yz *= VisibilityScale;
     S = SpecDiffuse.x * GBuffer.BaseColor; // diffuse
@@ -523,31 +517,43 @@ float3 TressFXHairShading(
     S += SpecDiffuse.z; // 2nd specular highlight TRT
 #endif
 
-    if (1)
-    {
-		//from ue4 hair shader
-        float3 FakeNormal = normalize(V - N * dot(V, N));
-        N = FakeNormal;
-        float Wrap = 1;
-        float KajiyaDiffuse = 1 - abs( dot(N,L) );//SpecDiffuse.x;
-        float DiffuseScatter = (1 / PI) * lerp(NoL, KajiyaDiffuse, 0.33) * GBuffer.Metallic;
-        float Luma = Luminance(GBuffer.BaseColor);
-        float3 ScatterTint = pow((GBuffer.BaseColor) / Luma, 1 - Shadow);
-        S += sqrt(GBuffer.BaseColor) * DiffuseScatter * ScatterTint;
-    }
-    else
-    {
+#define EXPERIMENTAL_SCATTER 0
+#if EXPERIMENTAL_SCATTER
+		// looks ok but probably not worth the extra instructions, try it if you want
 		// https://www.slideshare.net/KiHyunwoo/rendering-aaaquality-characters-of-project-a1
-		//WIP, better scatter maybe?
-        const float SinThetaL = dot(N, L);
+		const float SinThetaL = dot(N, L);
         const float SinThetaV = dot(N, V);
         float CosThetaD = cos(0.5 * abs(asinFast(SinThetaV) - asinFast(SinThetaL)));
+	{
         float HGPhase = HenyeyGreensteinPhase(dot(V, L), CosThetaD);
-		float3 ScatterColor = GBuffer.BaseColor * Shadow;
-		float3 ScatterAtten = saturate(	pow(ScatterColor / Luminance(ScatterColor), 1 - Shadow)	);
-		float3 ScatteringLighting = ScatterColor * ScatterAtten * GBuffer.Metallic;
-		S += ScatteringLighting;
+        float3 ScatterColor = GBuffer.BaseColor * Shadow;
+        float3 ScatterAtten = saturate(pow(ScatterColor / Luminance(ScatterColor), 1 - Shadow));
+        float3 ScatteringLighting = ScatterColor * ScatterAtten * GBuffer.Metallic;
+        S += ScatteringLighting;
     }
+	{
+		const float Thickness =	g_FiberRadius * Coverage;
+		const float ColorTintFactor = saturate(CosThetaD) + Square(Thickness) + 1e-4;
+		const float2 BaseColorTintPower = float2(0.6, 1.2) / ColorTintFactor;
+		float3 TTColorTint = pow(GBuffer.BaseColor, BaseColorTintPower.x);
+		float3 TRTColorTint = pow(GBuffer.BaseColor, BaseColorTintPower.y);
+		S += TTColorTint * GBuffer.Metallic * .07;
+        S += TTColorTint * GBuffer.Metallic * .07;
+    }
+#else
+
+	//from ue4 hair shader
+    float3 FakeNormal = normalize(V - N * dot(V, N));
+    N = FakeNormal;
+    float Wrap = 1;
+    float KajiyaDiffuse = 1 - abs(dot(N, L));
+    float DiffuseScatter = (1 / PI) * lerp(NoL, KajiyaDiffuse, 0.33) * GBuffer.Metallic;
+    float Luma = Luminance(GBuffer.BaseColor);
+    float3 ScatterTint = pow((GBuffer.BaseColor) / Luma, 1 - Shadow);
+    S += sqrt(GBuffer.BaseColor) * DiffuseScatter * ScatterTint;
+    
+#endif
+
     return S;
 }
 
@@ -655,7 +661,7 @@ float3 GetTressFXDynamicLighting(
 	, float3 TFXTangent
 	, float TFXAlpha
 	, bool bDirectionalLight
-	, float DepthZ
+	, float Coverage
 )
 {
 	// Check lighting channels
@@ -736,7 +742,7 @@ float3 GetTressFXDynamicLighting(
 
 	float3 Shading;
 	//NOTE: shadow is only used for scatter calc in TressFXHairShading
-    Shading = TressFXHairShading(GbufferData, L, V, N, AllShadow, 1, 0, Root2Tip, TFXTangent);
+    Shading = TressFXHairShading(GbufferData, L, V, N, AllShadow, 1, 0, Root2Tip, TFXTangent, Coverage);
     
     float3 Lighting;
 	Lighting = LightData.Color * Shading;
@@ -762,7 +768,7 @@ float3 GetForwardDirectLightingTressFX(
 	, float3 TFXTangent
 	, float Root2Tip
 	, float HairId
-	, float FragmentDepth
+	, float Coverage
 )
 {
 
@@ -827,7 +833,7 @@ float3 GetForwardDirectLightingTressFX(
 		// LightAttenuation: Light function + per-object shadows in z, per-object SSS shadowing in w, 
 		// Whole scene directional light shadows in x, whole scene directional light SSS shadows in y
         #if MATERIAL_SHADINGMODEL_TRESSFX
-			float3 NewLighting = GetTressFXDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture, Root2Tip, HairId, TFXTangent, TFXAlpha, true, FragmentDepth);
+			float3 NewLighting = GetTressFXDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture, Root2Tip, HairId, TFXTangent, TFXAlpha, true, Coverage);
 		#else
 			float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
 		#endif
@@ -875,7 +881,7 @@ float3 GetForwardDirectLightingTressFX(
 		float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
 		float4 LightAttenuation = float4(1, 1, DynamicShadowing.x, DynamicShadowing.x);
         #if MATERIAL_SHADINGMODEL_TRESSFX
-			float3 NewLighting = GetTressFXDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture, Root2Tip, HairId, TFXTangent, TFXAlpha, false, FragmentDepth);
+			float3 NewLighting = GetTressFXDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture, Root2Tip, HairId, TFXTangent, TFXAlpha, false, Coverage);
 		#else
 			float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
 		#endif
@@ -973,7 +979,7 @@ void main(
     float Metallic = GetMaterialMetallic(PixelMaterialInputs);
 
 	//for lighter tips
-    Metallic += lerp(0, Metallic, In.FactoryInterpolants.Root2Tip);
+    //Metallic += lerp(0, Metallic, In.FactoryInterpolants.Root2Tip);
 
     half Specular = GetMaterialSpecular(PixelMaterialInputs);
     float MaterialAO = GetMaterialAmbientOcclusion(PixelMaterialInputs);
@@ -1039,7 +1045,7 @@ void main(
 		float3 L = normalize( V - N * dot(V,N) );
 		DiffuseDir = L;
 #if MATERIAL_SHADINGMODEL_TRESSFX
-        DiffuseColorForIndirect = 2 * PI * TressFXHairShading(GBuffer, L, V, N, 1, 0, 0.2, In.FactoryInterpolants.Root2Tip, TFXTangent);
+        DiffuseColorForIndirect = 2 * PI * TressFXHairShading(GBuffer, L, V, N, 1, 0, 0.2, In.FactoryInterpolants.Root2Tip, TFXTangent, TFXCoverage);
 #else
         DiffuseColorForIndirect = 2 * PI * HairShading(GBuffer, L, V, N, 1, 0, 0.2, uint2(0, 0));
 #endif
@@ -1080,7 +1086,7 @@ void main(
 		, TFXTangent
 		, In.FactoryInterpolants.Root2Tip
 		, In.FactoryInterpolants.HairId
-		, In.Position.z
+		, TFXCoverage
 	);
 
 	#if TFX_PPLL
