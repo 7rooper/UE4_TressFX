@@ -300,7 +300,6 @@ FSceneRenderTargets::FSceneRenderTargets(const FViewInfo& View, const FSceneRend
 	TressFXKBufferNodePoolSize = SnapshotSource.TressFXKBufferNodePoolSize;
 	TressFXKBufferNodes = SnapshotSource.TressFXKBufferNodes;
 	TressFXKBufferCounter = SnapshotSource.TressFXKBufferCounter;
-	TressFXOpacityThresholdingUAV = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXOpacityThresholdingUAV);
 	/*@END Third party code TressFX*/
 }
 
@@ -1345,21 +1344,6 @@ void FSceneRenderTargets::InitializeTressFXKBufferResources(TRHICmdList& RHICmdL
 		GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXKBufferListHeads, TEXT("PPLLHeads"));
 	}
 
-	if (bForceReinit || !TressFXOpacityThresholdingUAV || !TressFXOpacityThresholdingUAV.IsValid() || TressFXOpacityThresholdingUAV->GetDesc().Extent != BuffSize)
-	{
-		FPooledRenderTargetDesc Desc(
-			FPooledRenderTargetDesc::Create2DDesc(
-				BuffSize,
-				PF_R32_UINT,
-				FClearValueBinding::Transparent,
-				TexCreate_None,
-				TexCreate_RenderTargetable | TexCreate_UAV,
-				false)
-		);
-		Desc.NumSamples = 1;
-		GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXOpacityThresholdingUAV, TEXT("KBufferOpacityThresholdingUAV"));
-	}
-
 	const int32 RequiredPoolSize = BuffSize.X * BuffSize.Y * KBufferSize;
 
 	if (bForceReinit || TressFXKBufferNodePoolSize != RequiredPoolSize)
@@ -1395,7 +1379,6 @@ template <typename TRHICmdList>
 void FSceneRenderTargets::GetTressFXKBufferResources(
 	TRHICmdList& RHICmdList,
 	TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,
-	TRefCountPtr<IPooledRenderTarget>& OutTressFXOpacityThresholdingUAV,
 	FRWBufferStructured*& OutTressFXKBufferNodes,
 	FRWBuffer*& OutTressFXKBufferCounter,
 	int32& OutTressFXKBufferNodePoolSize
@@ -1406,14 +1389,12 @@ void FSceneRenderTargets::GetTressFXKBufferResources(
 	OutTressFXKBufferNodes = &TressFXKBufferNodes;
 	OutTressFXKBufferCounter = &TressFXKBufferCounter;
 	OutTressFXKBufferNodePoolSize = TressFXKBufferNodePoolSize;
-	OutTressFXOpacityThresholdingUAV = TressFXOpacityThresholdingUAV;
 }
 
 #define IMPLEMENT_GetTressFXKBufferResources( TRHICmdList )									\
 	template void FSceneRenderTargets::GetTressFXKBufferResources< TRHICmdList >(			\
 		TRHICmdList& RHICmdList,															\
 		TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,						\
-		TRefCountPtr<IPooledRenderTarget>& OutTressFXOpacityThresholdingUAV,				\
 		FRWBufferStructured*& OutTressFXKBufferNodes,										\
 		FRWBuffer*& OutTressFXKBufferCounter,												\
 		int32& OutTressFXKBufferNodePoolSize												\

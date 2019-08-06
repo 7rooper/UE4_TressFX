@@ -1236,14 +1236,12 @@ void RenderKBufferResolvePasses(
 		SCOPED_DRAW_EVENT(RHICmdList, TressFXKBufferPasses);
 
 		TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
-		TRefCountPtr<IPooledRenderTarget> OpacityThreshholdingUAV;
 		FRWBufferStructured* TressFXKBufferNodes = nullptr;
 		FRWBuffer* TressFXKBufferCounter = nullptr;
 		int32 TressFXKBufferNodePoolSize;
 		SceneContext.GetTressFXKBufferResources(
 			  RHICmdList
 			, TressFXKBufferListHeads
-			, OpacityThreshholdingUAV
 			, TressFXKBufferNodes
 			, TressFXKBufferCounter
 			, TressFXKBufferNodePoolSize
@@ -1258,8 +1256,6 @@ void RenderKBufferResolvePasses(
 			TressFXKBufferNodes->AcquireTransientResource();
 			TressFXKBufferCounter->AcquireTransientResource();
 			ClearUAV(RHICmdList, *TressFXKBufferNodes, 0);
-			const uint32 ThresholdUAVClear[4] = { 0, 0, 0, 0 };
-			ClearUAV(RHICmdList, OpacityThreshholdingUAV->GetRenderTargetItem(), ThresholdUAVClear);
 
 			//starts at one so if it rolls over to 0 after max uint it wont try to add more
 			static const uint32 Values[4] = { 1, 1, 1, 1 };
@@ -1268,8 +1264,7 @@ void RenderKBufferResolvePasses(
 			FUnorderedAccessViewRHIParamRef UAVS[] = {
 				TressFXKBufferListHeads->GetRenderTargetItem().UAV,
 				TressFXKBufferNodes->UAV,
-				TressFXKBufferCounter->UAV,
-				OpacityThreshholdingUAV->GetRenderTargetItem().UAV
+				TressFXKBufferCounter->UAV
 			};
 			RHICmdList.TransitionResources(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToGfx, UAVS, ARRAY_COUNT(UAVS));
 
