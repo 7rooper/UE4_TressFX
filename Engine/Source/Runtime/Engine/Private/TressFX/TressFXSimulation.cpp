@@ -10,9 +10,6 @@
 #include "ShaderParameterUtils.h"
 #include "SceneUtils.h"
 
-#define TOTEXT(a) TEXT(#a)
-#define BIND_PARAM(p) p.Bind(Initializer.ParameterMap, TOTEXT(p))
-
 IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::None>, TEXT("/Engine/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
 IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::Morphs>, TEXT("/Engine/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
 IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::MorphsAndVelocity>, TEXT("/Engine/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
@@ -46,9 +43,9 @@ FVelocityShockPropagationCS::FVelocityShockPropagationCS()
 
 FVelocityShockPropagationCS::FVelocityShockPropagationCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 {
-	BIND_PARAM(g_HairVertexPositions);
-	BIND_PARAM(g_HairVertexPositionsPrev);
-	BIND_PARAM(g_HairVertexPositionsPrevPrev);
+	g_HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositions"));
+	g_HairVertexPositionsPrev.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositionsPrev"));
+	g_HairVertexPositionsPrevPrev.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositionsPrevPrev"));
 }
 
 bool FVelocityShockPropagationCS::Serialize(FArchive& Ar)
@@ -91,11 +88,10 @@ FLocalShapeConstraintsWithIterationCS::FLocalShapeConstraintsWithIterationCS()
 
 FLocalShapeConstraintsWithIterationCS::FLocalShapeConstraintsWithIterationCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 {
-	BIND_PARAM(g_GlobalRotations);
-	BIND_PARAM(g_HairRefVecsInLocalFrame);
-	BIND_PARAM(g_HairVertexPositions);
-	BIND_PARAM(g_HairVertexTangents);
-
+	g_GlobalRotations.Bind(Initializer.ParameterMap, TEXT("g_GlobalRotations"));
+	g_HairRefVecsInLocalFrame.Bind(Initializer.ParameterMap, TEXT("g_HairRefVecsInLocalFrame"));
+	g_HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositions"));
+	g_HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("g_HairVertexTangents"));
 }
 
 bool FLocalShapeConstraintsWithIterationCS::Serialize(FArchive& Ar)
@@ -136,10 +132,10 @@ FLengthConstriantsWindAndCollisionCS::FLengthConstriantsWindAndCollisionCS()
 
 FLengthConstriantsWindAndCollisionCS::FLengthConstriantsWindAndCollisionCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 {
-	BIND_PARAM(g_HairVertexPositions);
-	BIND_PARAM(g_HairVertexTangents);
-	BIND_PARAM(g_HairRestLengthSRV);
-	BIND_PARAM(g_HairVertexPositionsPrev);
+	g_HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositions"));
+	g_HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("g_HairVertexTangents"));
+	g_HairRestLengthSRV.Bind(Initializer.ParameterMap, TEXT("g_HairRestLengthSRV"));
+	g_HairVertexPositionsPrev.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositionsPrev"));
 }
 
 bool FLengthConstriantsWindAndCollisionCS::Serialize(FArchive& Ar)
@@ -183,8 +179,8 @@ FPrepareFollowHairBeforeTurningIntoGuideCS::FPrepareFollowHairBeforeTurningIntoG
 
 FPrepareFollowHairBeforeTurningIntoGuideCS::FPrepareFollowHairBeforeTurningIntoGuideCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 {
-	BIND_PARAM(g_HairVertexPositions);
-	BIND_PARAM(g_HairVertexPositionsPrev);
+	g_HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositions"));
+	g_HairVertexPositionsPrev.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositionsPrev"));
 	TressfxSimParametersUniformBuffer.Bind(Initializer.ParameterMap, TEXT("tressfxSimParameters"));
 }
 
@@ -227,10 +223,10 @@ FLocalShapeConstraintsCS::FLocalShapeConstraintsCS()
 
 FLocalShapeConstraintsCS::FLocalShapeConstraintsCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 {
-	BIND_PARAM(g_GlobalRotations);
-	BIND_PARAM(g_HairRefVecsInLocalFrame);
-	BIND_PARAM(g_HairVertexPositions);
-	BIND_PARAM(g_HairVertexTangents);
+	g_GlobalRotations.Bind(Initializer.ParameterMap, TEXT("g_GlobalRotations"));
+	g_HairRefVecsInLocalFrame.Bind(Initializer.ParameterMap, TEXT("g_HairRefVecsInLocalFrame"));
+	g_HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositions"));
+	g_HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("g_HairVertexTangents"));
 }
 
 bool FLocalShapeConstraintsCS::Serialize(FArchive& Ar)

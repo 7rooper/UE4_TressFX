@@ -12,8 +12,6 @@
 #include "ShaderCore.h"
 #include "GlobalShader.h"
 
-#pragma region "TressFX Simulation"
-
 static TAutoConsoleVariable<int32> CVarTFXSDFDisable(TEXT("tfx.SDFCollisionDisable"), 1, TEXT("Disable SDF Collision"), ECVF_RenderThreadSafe);
 
 struct FTressFXSimFeatures
@@ -336,9 +334,6 @@ public:
 	FShaderUniformBufferParameter TressfxSimParametersUniformBuffer;
 
 };
-
-
-#pragma endregion
 
 void ENGINE_API SimulateTressFX(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, int32 CPULocalShapeIterations);
 

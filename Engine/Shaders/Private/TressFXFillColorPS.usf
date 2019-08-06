@@ -589,7 +589,7 @@ float ApproximateDeepShadow(float3 FragmentWorldPos, float SelfshadowStrength)
 bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldPosition, float3 N, float3 ToLight, float3 L, float NoL, out float LightAttenuationNoShadow)
 {
 	float DistanceAttenuation = 1;
-    float LightRadiusMask = 1;
+    float LightMask = 1;
     float SpotFalloff = 1;
 
 	if(LightData.bRadialLight)
@@ -621,27 +621,31 @@ bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldP
 				DistanceAttenuation = 1 / (DistanceSqr + 1);
 			}
 
-			// TODO optimize
-			LightRadiusMask = Square(saturate(1 - Square(DistanceSqr * Square(LightData.InvRadius))));
-		}
+            LightMask = Square(saturate(1 - Square(DistanceSqr * Square(LightData.InvRadius))));
+        }
 		else
 		{
 			DistanceAttenuation = 1;
-            LightRadiusMask = RadialAttenuation(ToLight * LightData.InvRadius, LightData.FalloffExponent);
+            LightMask = RadialAttenuation(ToLight * LightData.InvRadius, LightData.FalloffExponent);
         }
 
 		if(LightData.bSpotLight)
 		{
 			SpotFalloff = SpotAttenuation(L, -LightData.Direction, LightData.SpotAngles);
-		}
-	}
+        }
+   //     if (LightData.bRectLight)
+   //     {
+			//// Rect normal points away from point
+   //         LightMask = dot(LightData.Direction, L) < 0 ? 0 : LightMask;
+   //     }
+    }
 
-	if(LightRadiusMask <= 0 || SpotFalloff <= 0)
+    if (LightMask <= 0 || SpotFalloff <= 0)
     {
         LightAttenuationNoShadow = 0;
         return false;
     }
-    LightAttenuationNoShadow = (DistanceAttenuation * LightRadiusMask * SpotFalloff);
+    LightAttenuationNoShadow = (DistanceAttenuation * LightMask * SpotFalloff);
     return true;
 }
 
@@ -977,9 +981,6 @@ void main(
 
     half3 BaseColor = GetMaterialBaseColor(PixelMaterialInputs);
     float Metallic = GetMaterialMetallic(PixelMaterialInputs);
-
-	//for lighter tips
-    //Metallic += lerp(0, Metallic, In.FactoryInterpolants.Root2Tip);
 
     half Specular = GetMaterialSpecular(PixelMaterialInputs);
     float MaterialAO = GetMaterialAmbientOcclusion(PixelMaterialInputs);

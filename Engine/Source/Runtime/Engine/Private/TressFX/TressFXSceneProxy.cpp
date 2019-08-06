@@ -86,7 +86,7 @@ FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName 
 	bIsTressFX = true;
 	TFXComponent = Cast<UTressFXComponent>(InComponent);
 	TressFXHairObject = InHairObject;
-
+	this->bCastShadowAsTwoSided = true;
 	Material = TFXComponent->HairMaterial;
 
 
