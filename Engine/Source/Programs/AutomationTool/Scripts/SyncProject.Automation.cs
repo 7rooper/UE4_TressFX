@@ -12,6 +12,7 @@ using Tools.DotNETCommon;
 [Help("project=<FortniteGame>", "Project to sync. Will search current path and paths in ueprojectdirs. If omitted will sync projectdirs")]
 [Help("threads=N", "How many threads to use when syncing. Default=2. When >1 all output happens first")]
 [Help("cl=< 12345 >", "Changelist to sync to. If omitted will sync to latest CL of the workspace path")]
+[Help("clean", "Clean old files before building")]
 [Help("build", "Build after syncing")]
 [Help("force", "force sync files (files opened for edit will be untouched)")]
 [Help("preview", "Shows commands that will be executed but performs no operations")]
@@ -85,7 +86,8 @@ class SyncProject : BuildCommand
 		}
 		else
 		{
-			if (!File.Exists(ProjectFileName))
+			// if they provided a name and not a path then find the file (requires that it's synced).
+			if (!ProjectFileName.Contains(Path.DirectorySeparatorChar) && !ProjectFileName.Contains(Path.AltDirectorySeparatorChar))
 			{
 				FileReference ProjectFile = ProjectUtils.FindProjectFileFromName(ProjectFileName);
 
@@ -137,7 +139,7 @@ class SyncProject : BuildCommand
 			{
 				SyncPaths.Add(CommandUtils.CombinePaths(PathSeparator.Slash, BranchRoot, "*"));
 				SyncPaths.Add(CommandUtils.CombinePaths(PathSeparator.Slash, BranchRoot, "Engine", "..."));
-				SyncPaths.Add(CommandUtils.CombinePaths(PathSeparator.Slash, CommandUtils.GetDirectoryName(ProjectFileRecord.DepotFile), "..."));
+				SyncPaths.Add(CommandUtils.CombinePaths(CommandUtils.GetDirectoryName(ProjectFileRecord.DepotFile), "..."));
 			}
 			else
 			{
@@ -204,6 +206,7 @@ class SyncProject : BuildCommand
 			if (ParseParam("build") && ExitStatus == ExitCode.Success)
 			{
 				BuildEditor BuildCmd = new BuildEditor();
+				BuildCmd.Clean = ParseParam("clean");
 				BuildCmd.ProjectName = ProjectFileName;
 				ExitStatus = BuildCmd.Execute();
 			}
