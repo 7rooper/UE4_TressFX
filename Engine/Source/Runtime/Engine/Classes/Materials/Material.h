@@ -839,6 +839,10 @@ public:
 	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Attenuate Shadow by alpha"))
 	uint32 bTressFXAttenuateShadowByAlpha : 1;
 
+	/** Option to enable glint calculations. Params can be set in the TressFXComponent */
+	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Enable Glint"))
+	uint32 bTressFXEnableGlint : 1;
+
 	/** use the "aproximate deep shadow" method for shadowing instead of shadow maps, this doesnt allow for shadow receiving from objects. Use "Self Shadow Strength" on the tressfx component to determine how strong this is. */
 	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Approximate Deep Shadow"))
 	uint32 bTressFXApproximateDeepShadow : 1;

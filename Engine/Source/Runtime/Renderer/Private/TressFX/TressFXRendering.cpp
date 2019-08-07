@@ -80,6 +80,7 @@ public:
 		OutEnvironment.SetDefine(TEXT("USE_HW_SHADER"), Material->TressFXUseHairworksShadingModel() ? TEXT("1") : TEXT("0"));
 		OutEnvironment.SetDefine(TEXT("APPROX_DEEP_SHADOW"), Material->TressFXApproximateDeepShadow() ? TEXT("1") : TEXT("0"));
 		OutEnvironment.SetDefine(TEXT("ATTENUATE_SHADOW_BY_ALPHA"), Material->TressFXAttenuateShadowByAlpha() ? TEXT("1") : TEXT("0"));
+		OutEnvironment.SetDefine(TEXT("ENABLE_GLINT"), Material->TressFXEnableGlint() ? TEXT("1") : TEXT("0"))
 
 		if (ColorPassType == ETressFXPass::FillColor_KBuffer)
 		{
