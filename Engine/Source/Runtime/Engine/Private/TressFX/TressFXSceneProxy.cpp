@@ -233,6 +233,15 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 		SpecularSettings.SpecularPrimaryOffset,
 		SpecularSettings.SpecularSecondaryOffset
 	);
+
+	ShadeParametersUniformBuffer.TressFXSettings3 = FVector4
+	(
+		SpecularSettings.GlintStrength,
+		SpecularSettings.GlintSize,
+		SpecularSettings.GlintPowerExponent,
+		0
+	);
+
 	ShadeParametersUniformBuffer.TressFXSpecularColor = FVector4(SpecularSettings.SpecularColor);
 
 	TressFXHairObject->SimParametersUniformBuffer = TUniformBufferRef<FTressFXSimParametersUniformBuffer>::CreateUniformBufferImmediate(SimParamsUniformBuffer, UniformBuffer_SingleFrame);

@@ -121,9 +121,7 @@ struct FTressFXSpecularSettings {
 
 	GENERATED_USTRUCT_BODY()
 public:
-	/** Specular color. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Color"))
-		FLinearColor SpecularColor = FLinearColor(0.65f, 0.65f, 0.65f);
+
 
 	/** Primary specular scale. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Primary Scale", ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
@@ -148,6 +146,22 @@ public:
 	//only used with hairworks shading model
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Primary Offset", ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
 		float SpecularPrimaryOffset = 0;
+
+		/** Specular color. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular|Color", meta = (DisplayName = "Color"))
+		FLinearColor SpecularColor = FLinearColor(0.65f, 0.65f, 0.65f);
+
+	/** Strength of the glint noise. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Glint Strength", ClampMin = "0", ClampMax = "1"))
+		float GlintStrength = 0;
+
+	/** Number of glint sparklers along each hair. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Glint Size", ClampMin = "1", ClampMax = "1024"))
+		float GlintSize = 128;
+
+	/** Glint power exponent. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specular", meta = (DisplayName = "Glint Power Exponent", ClampMin = "1", ClampMax = "16"))
+		float GlintPowerExponent = 1;
 
 	FTressFXSpecularSettings()
 	{

@@ -440,37 +440,34 @@ float TFX_Hair_F(float CosTheta)
 
 //modified from hairworks
 float ComputeHairGlint(
-	float glintSize, //strength
-	float glintPower, //exponent
+	float GlintSize, 
+	float GlintExponent, 
 	float Root2Tip,
 	float HairId
 )
 {
-
 	// seed along hair length
-    float lengthHash = glintSize * Root2Tip;
-    float lengthSeed = floor(lengthHash);
-    float lengthFrac = lengthHash - lengthSeed - 0.5f;
+    float LengthHash = GlintSize * Root2Tip;
+    float LengthSeed = floor(LengthHash);
+    float LengthFrac = LengthHash - LengthSeed - 0.5f;
 	
 	// seed for neighboring sample
-    float lengthSeedNeighbor = (lengthFrac < 0) ? lengthSeed - 1.0f : lengthSeed + 1.0f;
-    lengthSeedNeighbor = max(0, lengthSeedNeighbor);
+    float LengthSeedNeighbor = (LengthFrac < 0) ? LengthSeed - 1.0f : LengthSeed + 1.0f;
+    LengthSeedNeighbor = max(0, LengthSeedNeighbor);
 
-	// sample 4 noise values for bilinear interpolation
-    float seedSample0 = HairId + lengthSeed;
-    float seedSample1 = HairId + lengthSeedNeighbor;
+    float SeedSample0 = HairId + LengthSeed;
+    float SeedSample1 = HairId + LengthSeedNeighbor;
 
-    float noise0 = RandBBSfloat(seedSample0);
-    float noise1 = RandBBSfloat(seedSample1);
+    float Noise0 = RandBBSfloat(SeedSample0);
+    float Noise1 = RandBBSfloat(SeedSample1);
 
 	// interpolated noise sample
-    float noise = lerp(noise0, noise1, abs(lengthFrac));
+    float Noise = lerp(Noise0, Noise1, abs(LengthFrac));
 
 	// apply gamma like power function
-    noise = pow(noise, glintPower);
+    Noise = pow(Noise, GlintExponent);
 
-	// scale noise by user param
-    return noise;
+    return Noise;
 }
 
 float3 TressFXHairShading(
@@ -484,11 +481,13 @@ float3 TressFXHairShading(
    , float Root2Tip
    , float3 T
    , float Coverage
+   , float ComputedGlint
+   , float GlintScale
 )
 {
     float DiffuseBlend = GetDiffuseBlend();
     float NoL = saturate(dot(N, L));
-
+    float3 SpecularColor = GetTressFXSpecularColor();
     float3 S = 0;
 #if USE_HW_SHADER
     float HWDiffuseFactor = TressFX_ComputeHairDiffuseHW(L, TFXTangent, N, 1.0f, DiffuseBlend);
@@ -506,15 +505,20 @@ float3 TressFXHairShading(
 		, GetSecondarySpecularOffset()
 	);
     S = HWDiffuseFactor * GBuffer.BaseColor;
-    S += HWSpecularFactor * TressFXSpecularColor;
+    S += HWSpecularFactor * SpecularColor;
     S *= .07f;
 #else
+
     float3 SpecDiffuse = TressFX_ComputeDiffuseSpecFactors(V, L, T, DiffuseBlend);
     float VisibilityScale = lerp(1.0f, saturate(dot(N, L)), DiffuseBlend);
     SpecDiffuse.yz *= VisibilityScale;
     S = SpecDiffuse.x * GBuffer.BaseColor; // diffuse
-    S += SpecDiffuse.y; // 1st specular highlight	R
-    S += SpecDiffuse.z; // 2nd specular highlight TRT
+    S += SpecDiffuse.y; // 1st specular highlight	
+    S += SpecDiffuse.z; // 2nd specular highlight
+    if (GlintScale > 1e-5)
+    {
+        SpecDiffuse.yz = lerp(1.0f, ComputedGlint, GlintScale);
+    }   
 #endif
 
 #define EXPERIMENTAL_SCATTER 0
@@ -728,28 +732,26 @@ float3 GetTressFXDynamicLighting(
     ShadowAttenuation = lerp(1, ShadowAttenuation, 1 - TFXAlpha);
 #endif
     float AllShadow = LightAttenuationNoShadow * ApproxDeepShadow * ShadowAttenuation;
-    
-	// Add glint JAKETODO ?
+
     float GlintAmbient = 0;
-    float GlintStrength = -1.f;
-    if (GlintStrength > 0)
+    float GlintStrength = GetGlintStrength();
+    const float GlintSize = GetGlintSize();
+    if (GlintStrength > 1e-5)
     {
 		// 0 .. 1
-        float GlintSize = 256;
-        float GlintExponent = 2;
-        float GlintComputed = ComputeHairGlint(GlintSize, GlintExponent, Root2Tip, HairId);
-        float Luma = Luminance(LightData.Color.rgb);
+        const float GlintExponent = GetGlintExponent();
+        const float GlintComputed = ComputeHairGlint(GlintSize, GlintExponent, Root2Tip, HairId);
+        const float Luma = Luminance(LightData.Color.rgb);
         GlintAmbient = GlintStrength * GlintComputed * Luma;
         SpecularColor *= lerp(1.0, GlintComputed, GlintStrength);
     }
 
-
 	float3 Shading;
 	//NOTE: shadow is only used for scatter calc in TressFXHairShading
-    Shading = TressFXHairShading(GbufferData, L, V, N, AllShadow, 1, 0, Root2Tip, TFXTangent, Coverage);
+    Shading = TressFXHairShading(GbufferData, L, V, N, AllShadow, 1, 0, Root2Tip, TFXTangent, Coverage, GlintAmbient, GlintSize);
     
     float3 Lighting;
-	Lighting = LightData.Color * Shading;
+    Lighting = (LightData.Color * SpecularColor) * Shading;
     
 	// IES lighting
     Lighting *= ComputeLightProfileMultiplier(WorldPosition, DeferredLightUniforms.Position, -DeferredLightUniforms.Direction, DeferredLightUniforms.Tangent);
@@ -1046,7 +1048,7 @@ void main(
 		float3 L = normalize( V - N * dot(V,N) );
 		DiffuseDir = L;
 #if MATERIAL_SHADINGMODEL_TRESSFX
-        DiffuseColorForIndirect = 2 * PI * TressFXHairShading(GBuffer, L, V, N, 1, 0, 0.2, In.FactoryInterpolants.Root2Tip, TFXTangent, TFXCoverage);
+        DiffuseColorForIndirect = 2 * PI * TressFXHairShading(GBuffer, L, V, N, 1, 0, 0.2, In.FactoryInterpolants.Root2Tip, TFXTangent, TFXCoverage,0,0);
 #else
         DiffuseColorForIndirect = 2 * PI * HairShading(GBuffer, L, V, N, 1, 0, 0.2, uint2(0, 0));
 #endif

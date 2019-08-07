@@ -32,8 +32,24 @@ cbuffer TressfxShadeParameters
     float g_ratio;
     float4 TressFXSettings1;
     float4 TressFXSettings2;
+    float4 TressFXSettings3;
     float4 TressFXSpecularColor;
 };
+
+float GetGlintStrength()
+{
+    return TressFXSettings3.x;
+}
+
+float GetGlintSize()
+{
+    return TressFXSettings3.y;
+}
+
+float GetGlintExponent()
+{
+    return TressFXSettings3.z;
+}
 
 float GetPrimarySpecularScale()
 {
