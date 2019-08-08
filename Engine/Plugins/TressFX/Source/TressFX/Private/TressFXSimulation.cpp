@@ -1,17 +1,17 @@
-#include "TressFX/TressFXSimulation.h"
-#include "TressFX/TressFXSceneProxy.h"
-#include "TressFX/TressFXTypes.h"
-#include "TressFX/TressFXCollision.h"
-#include "Components/TressFXComponent.h"
-#include "Engine/TressFXAsset.h"
-#include "TressFX/TressFXBoneSkinning.h"
+#include "TressFXSimulation.h"
+#include "TressFXSceneProxy.h"
+#include "TressFXTypes.h"
+#include "TressFXCollision.h"
+#include "TressFXComponent.h"
+#include "TressFXAsset.h"
+#include "TressFXBoneSkinning.h"
 #include "ShaderParameterUtils.h"
 #include "SceneUtils.h"
 
-IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::None>, TEXT("/Engine/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
-IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::Morphs>, TEXT("/Engine/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
-IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::MorphsAndVelocity>, TEXT("/Engine/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
-IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::Velocity>, TEXT("/Engine/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::None>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::Morphs>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::MorphsAndVelocity>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::Velocity>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
 
 bool FVelocityShockPropagationCS::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
@@ -26,7 +26,7 @@ void FVelocityShockPropagationCS::ModifyCompilationEnvironment(const FGlobalShad
 
 const TCHAR* FVelocityShockPropagationCS::GetSourceFilename()
 {
-	return TEXT("/Engine/Private/TressFXSimulation.usf");
+	return TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf");
 }
 
 const TCHAR* FVelocityShockPropagationCS::GetFunctionName()
@@ -55,7 +55,7 @@ bool FVelocityShockPropagationCS::Serialize(FArchive& Ar)
 	return bShaderHasOutdatedParameters;
 }
 
-IMPLEMENT_SHADER_TYPE(, FVelocityShockPropagationCS, TEXT("/Engine/Private/TressFXSimulation.usf"), TEXT("VelocityShockPropagation"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(, FVelocityShockPropagationCS, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("VelocityShockPropagation"), SF_Compute);
 
 bool FLocalShapeConstraintsWithIterationCS::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
@@ -71,7 +71,7 @@ void FLocalShapeConstraintsWithIterationCS::ModifyCompilationEnvironment(const F
 
 const TCHAR* FLocalShapeConstraintsWithIterationCS::GetSourceFilename()
 {
-	return TEXT("/Engine/Private/TressFXSimulation.usf");
+	return TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf");
 }
 
 const TCHAR* FLocalShapeConstraintsWithIterationCS::GetFunctionName()
@@ -99,7 +99,7 @@ bool FLocalShapeConstraintsWithIterationCS::Serialize(FArchive& Ar)
 	return bShaderHasOutdatedParameters;
 }
 
-IMPLEMENT_SHADER_TYPE(, FLocalShapeConstraintsWithIterationCS, TEXT("/Engine/Private/TressFXSimulation.usf"), TEXT("LocalShapeConstraintsWithIteration"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(, FLocalShapeConstraintsWithIterationCS, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("LocalShapeConstraintsWithIteration"), SF_Compute);
 
 bool FLengthConstriantsWindAndCollisionCS::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
@@ -115,7 +115,7 @@ void FLengthConstriantsWindAndCollisionCS::ModifyCompilationEnvironment(const FG
 
 const TCHAR* FLengthConstriantsWindAndCollisionCS::GetSourceFilename()
 {
-	return TEXT("/Engine/Private/TressFXSimulation.usf");
+	return TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf");
 }
 
 const TCHAR* FLengthConstriantsWindAndCollisionCS::GetFunctionName()
@@ -145,9 +145,9 @@ bool FLengthConstriantsWindAndCollisionCS::Serialize(FArchive& Ar)
 	return bShaderHasOutdatedParameters;
 }
 
-IMPLEMENT_SHADER_TYPE(, FLengthConstriantsWindAndCollisionCS, TEXT("/Engine/Private/TressFXSimulation.usf"), TEXT("LengthConstriantsWindAndCollision"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(, FLengthConstriantsWindAndCollisionCS, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("LengthConstriantsWindAndCollision"), SF_Compute);
 
-IMPLEMENT_SHADER_TYPE(, FUpdateFollowHairVerticesCS, TEXT("/Engine/Private/TressFXSimulation.usf"), TEXT("UpdateFollowHairVertices"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(, FUpdateFollowHairVerticesCS, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("UpdateFollowHairVertices"), SF_Compute);
 
 bool FPrepareFollowHairBeforeTurningIntoGuideCS::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
@@ -162,7 +162,7 @@ void FPrepareFollowHairBeforeTurningIntoGuideCS::ModifyCompilationEnvironment(co
 
 const TCHAR* FPrepareFollowHairBeforeTurningIntoGuideCS::GetSourceFilename()
 {
-	return TEXT("/Engine/Private/TressFXSimulation.usf");
+	return TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf");
 }
 
 const TCHAR* FPrepareFollowHairBeforeTurningIntoGuideCS::GetFunctionName()
@@ -191,7 +191,7 @@ bool FPrepareFollowHairBeforeTurningIntoGuideCS::Serialize(FArchive& Ar)
 	return bShaderHasOutdatedParameters;
 }
 
-IMPLEMENT_SHADER_TYPE(, FPrepareFollowHairBeforeTurningIntoGuideCS, TEXT("/Engine/Private/TressFXSimulation.usf"), TEXT("PrepareFollowHairBeforeTurningIntoGuide"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(, FPrepareFollowHairBeforeTurningIntoGuideCS, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("PrepareFollowHairBeforeTurningIntoGuide"), SF_Compute);
 
 bool FLocalShapeConstraintsCS::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
@@ -206,7 +206,7 @@ void FLocalShapeConstraintsCS::ModifyCompilationEnvironment(const FGlobalShaderP
 
 const TCHAR* FLocalShapeConstraintsCS::GetSourceFilename()
 {
-	return TEXT("/Engine/Private/TressFXSimulation.usf");
+	return TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf");
 }
 
 const TCHAR* FLocalShapeConstraintsCS::GetFunctionName()
@@ -235,7 +235,7 @@ bool FLocalShapeConstraintsCS::Serialize(FArchive& Ar)
 	return bShaderHasOutdatedParameters;
 }
 
-IMPLEMENT_SHADER_TYPE(, FLocalShapeConstraintsCS, TEXT("/Engine/Private/TressFXSimulation.usf"), TEXT("LocalShapeConstraints"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(, FLocalShapeConstraintsCS, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("LocalShapeConstraints"), SF_Compute);
 
 static TAutoConsoleVariable<int32> CVarTFXMorphTargets(TEXT("tfx.MorphTargets"), 1, TEXT("Enable/Disable Morph Targets"), ECVF_RenderThreadSafe);
 static TAutoConsoleVariable<int32> CVarTFXSimPass1(TEXT("tfx.SimPass1"), 1, TEXT("Enable/Disable IntegrationAndGlobalShapeConstraints Pass"), ECVF_RenderThreadSafe);

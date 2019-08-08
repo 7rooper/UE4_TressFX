@@ -6,7 +6,7 @@ public class TressFX : ModuleRules
 {
 	public TressFX(ReadOnlyTargetRules Target) : base(Target)
 	{
-        //Definitions.Add("TRESSFX_SINGLE_PLUGIN=1");
+       // Definitions.Add("TRESSFX_STANDALONE_PLUGIN=1");
 
         bFasterWithoutUnity = true;
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;

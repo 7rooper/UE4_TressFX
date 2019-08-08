@@ -1,13 +1,13 @@
 
-#include "Components/TressFXComponent.h"
-#include "Engine/TressFXAsset.h"
-#include "Engine/TressFXMesh.h"
-#include "TressFX/TressFXSceneProxy.h"
-#include "TressFX/TressFXSimulation.h"
-#include "Engine/TressFXBoneSkinningAsset.h"
+#include "TressFXComponent.h"
+#include "TressFXAsset.h"
+#include "TressFXMesh.h"
+#include "TressFXSceneProxy.h"
+#include "TressFXSimulation.h"
+#include "TressFXBoneSkinningAsset.h"
 #include "Components/SkinnedMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
-#include "SkeletalRenderGPUSkin.h"
+#include "Engine/Private/SkeletalRenderGPUSkin.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "MaterialShared.h"
 #include "Materials/Material.h"
@@ -15,7 +15,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Runtime/Engine/Classes/Animation/AnimInstance.h"
 #include "Engine/Texture2D.h"
-#include "TressFX/TressFXUtils.h"
+#include "TressFXUtils.h"
 
 
 DEFINE_LOG_CATEGORY(TressFXComponentLog);

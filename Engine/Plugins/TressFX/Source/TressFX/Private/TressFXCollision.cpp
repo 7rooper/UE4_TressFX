@@ -1,17 +1,17 @@
 
-#include "TressFX/TressFXCollision.h"
-#include "TressFX/TressFXSceneProxy.h"
-#include "TressFX/TressFXTypes.h"
-#include "Engine/TressFXAsset.h"
-#include "TressFX/TressFXBoneSkinning.h"
+#include "TressFXCollision.h"
+#include "TressFXSceneProxy.h"
+#include "TressFXTypes.h"
+#include "TressFXAsset.h"
+#include "TressFXBoneSkinning.h"
 #include "ShaderParameterUtils.h"
 #include "SceneUtils.h"
 
-IMPLEMENT_SHADER_TYPE(, FInitializeSignedDistanceFieldCS, TEXT("/Engine/Private/TressFXSDFCollision.usf"), TEXT("InitializeSignedDistanceField"), SF_Compute)
-IMPLEMENT_SHADER_TYPE(, FConstructSignedDistanceFieldCS, TEXT("/Engine/Private/TressFXSDFCollision.usf"), TEXT("ConstructSignedDistanceField"), SF_Compute)
-IMPLEMENT_SHADER_TYPE(, FFinalizeSignedDistanceFieldCS, TEXT("/Engine/Private/TressFXSDFCollision.usf"), TEXT("FinalizeSignedDistanceField"), SF_Compute)
-IMPLEMENT_SHADER_TYPE(, FCollideHairVerticesWithSdf_forwardCS, TEXT("/Engine/Private/TressFXSDFCollision.usf"), TEXT("CollideHairVerticesWithSdf_forward"), SF_Compute)
-IMPLEMENT_SHADER_TYPE(, FCollideHairVerticesWithSdfCS, TEXT("/Engine/Private/TressFXSDFCollision.usf"), TEXT("CollideHairVerticesWithSdf"), SF_Compute)
+IMPLEMENT_SHADER_TYPE(, FInitializeSignedDistanceFieldCS, TEXT("/Plugin/TressFX/Private/TressFXSDFCollision.usf"), TEXT("InitializeSignedDistanceField"), SF_Compute)
+IMPLEMENT_SHADER_TYPE(, FConstructSignedDistanceFieldCS, TEXT("/Plugin/TressFX/Private/TressFXSDFCollision.usf"), TEXT("ConstructSignedDistanceField"), SF_Compute)
+IMPLEMENT_SHADER_TYPE(, FFinalizeSignedDistanceFieldCS, TEXT("/Plugin/TressFX/Private/TressFXSDFCollision.usf"), TEXT("FinalizeSignedDistanceField"), SF_Compute)
+IMPLEMENT_SHADER_TYPE(, FCollideHairVerticesWithSdf_forwardCS, TEXT("/Plugin/TressFX/Private/TressFXSDFCollision.usf"), TEXT("CollideHairVerticesWithSdf_forward"), SF_Compute)
+IMPLEMENT_SHADER_TYPE(, FCollideHairVerticesWithSdfCS, TEXT("/Plugin/TressFX/Private/TressFXSDFCollision.usf"), TEXT("CollideHairVerticesWithSdf"), SF_Compute)
 
 
 

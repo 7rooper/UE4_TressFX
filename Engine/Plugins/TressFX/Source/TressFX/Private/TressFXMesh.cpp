@@ -24,7 +24,7 @@
 
 //This code was modified for use with Unreal Engine 4 by Leon Rosengarten 2018.
 
-#include "Engine/TressFXMesh.h"
+#include "TressFXMesh.h"
 
 
 UTressFXMesh::UTressFXMesh(const class FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)

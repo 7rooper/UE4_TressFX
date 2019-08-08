@@ -239,7 +239,7 @@ public:
 	TArray<int32> SectionIds;
 
 	// @third party code - BEGIN TRessFX
-	void RequireSRV();
+	ENGINE_API void RequireSRV();
 	// @third party code - End TRessFX
 protected:
 	// guaranteed only to be valid if the vertex buffer is valid
@@ -325,7 +325,7 @@ public:
 	FSkinWeightVertexBuffer* GetSkinWeightVertexBuffer(int32 LODIndex) const;
 
 	// @BEGIN third party code TressFX
-	FMorphVertexBuffer& GetMorphVertexBuffer();
+	ENGINE_API FMorphVertexBuffer& GetMorphVertexBuffer();
 	// @End third party code TressFX
 
 	/** 

@@ -7,7 +7,7 @@
 class FTressBoneSkinningCS : public FGlobalShader
 {
 
-	DECLARE_EXPORTED_SHADER_TYPE(FTressBoneSkinningCS, Global, ENGINE_API)
+	DECLARE_EXPORTED_SHADER_TYPE(FTressBoneSkinningCS, Global, TRESSFX_API)
 
 public:
 

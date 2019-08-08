@@ -25,7 +25,7 @@
 //This code was modified for use with Unreal Engine 4 by Leon Rosengarten 2018.
 
 #pragma once
-#include "Factory.h"
+#include "Factories/Factory.h"
 #include "CoreMinimal.h"
 #include "TressFXImportUI.h"
 #include "UObject/ObjectMacros.h"
@@ -35,7 +35,7 @@
  *TressFX asset (.tfx) factory
  */
 UCLASS()
-class UNREALED_API UTressFXFactory : public UFactory
+class TRESSFXEDITOR_API UTressFXFactory : public UFactory
 {
 
 	GENERATED_UCLASS_BODY()
@@ -56,7 +56,7 @@ protected:
 };
 
 UCLASS()
-class UNREALED_API UTressFXJSONFactory : public UFactory
+class TRESSFXEDITOR_API UTressFXJSONFactory : public UFactory
 {
 
 	GENERATED_UCLASS_BODY()
@@ -79,7 +79,7 @@ protected:
  *TressFX Skinning data factory
  */
 UCLASS()
-class UNREALED_API UTressFXBoneSkinningFactory : public UFactory
+class TRESSFXEDITOR_API UTressFXBoneSkinningFactory : public UFactory
 {
 	GENERATED_UCLASS_BODY()
 
@@ -101,7 +101,7 @@ private:
  *TressFX json Skinning data factory
  */
 UCLASS()
-class UNREALED_API UTressFXBoneSkinningJSONFactory : public UFactory
+class TRESSFXEDITOR_API UTressFXBoneSkinningJSONFactory : public UFactory
 {
 	GENERATED_UCLASS_BODY()
 

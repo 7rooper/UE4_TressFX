@@ -3,7 +3,6 @@
 #include "SceneRendering.h"
 #include "BasePassRendering.h"
 #include "PrimitiveSceneInfo.h"
-#include "TressFX/TressFXSceneProxy.h"
 
 IMPLEMENT_GLOBAL_SHADER(FTressFXResolveVelocityPs, "/Engine/Private/TressFXCopyVelocityDepth.usf", "ResolveVelocityPS", SF_Pixel);
 

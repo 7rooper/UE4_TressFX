@@ -9,10 +9,10 @@
 #include "Containers/ResourceArray.h"
 #include "RHIResources.h"
 #include "UniformBuffer.h"
-#include "Components/TressFXComponent.h"
-#include "Engine/TressFXBoneSkinningAsset.h"
+#include "TressFXComponent.h"
+#include "TressFXBoneSkinningAsset.h"
 #include "TressFXVertexFactory.h"
-
+#include "TressFXPublicDef.h"
 
 struct FBoneSkinningData
 {
@@ -118,7 +118,7 @@ public:
 
 };
 
-class ENGINE_API FTressFXSceneProxy : public FPrimitiveSceneProxy
+class TRESSFX_API FTressFXSceneProxy : public FPrimitiveSceneProxy, public ITressFXSceneProxy
 {
 
 public:
@@ -198,7 +198,7 @@ public:
 	UMaterialInterface* Material;
 
 	virtual void GetDynamicMeshElements(const TArray<const FSceneView *>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, class FMeshElementCollector& Collector) const override;
-
+	virtual FUniformBufferRHIParamRef GetHairObjectShaderUniformBufferParam() override;
 private:
 
 	FMaterialRelevance MaterialRelevance;

@@ -35,7 +35,7 @@
 	#define AMD_TRESSFX_MAX_NUM_BONES 256
 #endif 
 
-BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXShadeParametersUniformBuffer, ENGINE_API)
+BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXShadeParametersUniformBuffer, TRESSFX_API)
 	SHADER_PARAMETER(float, g_FiberRadius)
 	SHADER_PARAMETER(float, g_FiberSpacing)
 	SHADER_PARAMETER(int32, g_NumVerticesPerStrand)
@@ -47,7 +47,7 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXShadeParametersUni
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 
-BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXSimParametersUniformBuffer, ENGINE_API)
+BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXSimParametersUniformBuffer, TRESSFX_API)
 	SHADER_PARAMETER(FVector4, Wind)
 	SHADER_PARAMETER(FVector4, g_Shape)
 	SHADER_PARAMETER(FVector4, g_GravTimeTip)
@@ -68,13 +68,13 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXSimParametersUnifo
 
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
-BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXBoneSkinningUniformBuffer, ENGINE_API)
+BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXBoneSkinningUniformBuffer, TRESSFX_API)
 	SHADER_PARAMETER_ARRAY(FMatrix, BoneSkinningMatrix, [AMD_TRESSFX_MAX_NUM_BONES])
 	SHADER_PARAMETER(int32, NumMeshVertices)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 
-BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXSDFUniformBuffer, ENGINE_API)
+BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXSDFUniformBuffer, TRESSFX_API)
 	SHADER_PARAMETER(FVector4, g_Origin)
 	SHADER_PARAMETER(float, g_CellSize)
 	SHADER_PARAMETER(int32, g_NumCellsX)
@@ -126,7 +126,7 @@ struct FTressFXBoneSkinngAssetType
 
 
 //Literally just a map of bone index, to bone Weights in the parent skel
-struct ENGINE_API FTressFXBoneSkinningData
+struct TRESSFX_API FTressFXBoneSkinningData
 {
 public:
 
@@ -149,7 +149,7 @@ public:
 
 };
 
-class ENGINE_API FTressFXImportData
+class TRESSFX_API FTressFXImportData
 {
 
 public:
@@ -180,7 +180,7 @@ public:
 };
 
 /** Index Buffer */
-class ENGINE_API FTressFXIndexBuffer : public FIndexBuffer
+class TRESSFX_API FTressFXIndexBuffer : public FIndexBuffer
 {
 public:
 	TArray<int32> Indices;
@@ -190,7 +190,7 @@ public:
 };
 
 
-class ENGINE_API FTressFXRuntimeData : public FTressFXImportData
+class TRESSFX_API FTressFXRuntimeData : public FTressFXImportData
 {
 public:
 
@@ -251,7 +251,7 @@ public:
 
 };
 
-class ENGINE_API FReadStructedBuffer
+class TRESSFX_API FReadStructedBuffer
 {
 
 public:
@@ -269,7 +269,7 @@ public:
 
 };
 
-class ENGINE_API FTressFXPosTanCollection
+class TRESSFX_API FTressFXPosTanCollection
 {
 
 public:
@@ -306,7 +306,7 @@ public:
 
 extern void UploadGPUData(FStructuredBufferRHIParamRef Buffer, int32 ElementSize, int32 ElementCount, void* InData);
 
-class ENGINE_API FTressFXHairObject : public FRenderResource
+class TRESSFX_API FTressFXHairObject : public FRenderResource
 {
 
 public:
@@ -363,7 +363,7 @@ public:
 };
 
 
-struct ENGINE_API FTressFXMeshVertex
+struct TRESSFX_API FTressFXMeshVertex
 {
 
 public:
@@ -386,7 +386,7 @@ public:
 
 };
 
-struct ENGINE_API FTressFXMeshData
+struct TRESSFX_API FTressFXMeshData
 {
 
 public:
@@ -438,7 +438,7 @@ public:
 
 };
 
-class ENGINE_API FTressFXMeshResources : public FRenderResource
+class TRESSFX_API FTressFXMeshResources : public FRenderResource
 {
 
 public:

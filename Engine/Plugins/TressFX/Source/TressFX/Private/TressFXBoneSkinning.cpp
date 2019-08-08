@@ -1,6 +1,6 @@
 
-#include "TressFX/TressFXBoneSkinning.h"
-#include "Engine/Public/TressFX/TressFXTypes.h"
+#include "TressFXBoneSkinning.h"
+#include "TressFXTypes.h"
 
 bool FTressBoneSkinningCS::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
@@ -39,4 +39,4 @@ bool FTressBoneSkinningCS::Serialize(FArchive& Ar)
 	return bShaderHasOutdatedParameters;
 }
 
-IMPLEMENT_SHADER_TYPE(, FTressBoneSkinningCS, TEXT("/Engine/Private/TressFXBoneSkinning.usf"), TEXT("BoneSkinning"), SF_Compute)
+IMPLEMENT_SHADER_TYPE(, FTressBoneSkinningCS, TEXT("/Plugin/TressFX/Private/TressFXBoneSkinning.usf"), TEXT("BoneSkinning"), SF_Compute)

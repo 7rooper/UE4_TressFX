@@ -24,9 +24,9 @@
 
 //This code was modified for use with Unreal Engine 4 by Leon Rosengarten 2018.
 
-#include "Factories/TressFXMeshFactory.h"
-#include "Engine/TressFXMesh.h"
-#include "TressFX/TressFXTypes.h"
+#include "TressFXMeshFactory.h"
+#include "TressFXMesh.h"
+#include "TressFXTypes.h"
 #include "Engine/SkeletalMesh.h"
 #include "CoreMinimal.h"
 #include "Misc/Paths.h"

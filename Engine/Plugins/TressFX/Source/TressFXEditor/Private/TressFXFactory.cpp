@@ -24,10 +24,10 @@
 
 //This code was modified for use with Unreal Engine 4 by Leon Rosengarten 2018.
 
-#include "Factories/TressFXFactory.h"
-#include "Engine/TressFXAsset.h"
-#include "Engine/TressFXBoneSkinningAsset.h"
-#include "Factories/TressFXImportUI.h"
+#include "TressFXFactory.h"
+#include "TressFXAsset.h"
+#include "TressFXBoneSkinningAsset.h"
+#include "TressFXImportUI.h"
 #include "Animation/Skeleton.h"
 
 #include "CoreMinimal.h"

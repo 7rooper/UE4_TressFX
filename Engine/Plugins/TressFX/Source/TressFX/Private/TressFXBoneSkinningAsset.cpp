@@ -1,7 +1,7 @@
 
-#include "Engine/TressFXBoneSkinningAsset.h"
-#include "Engine/TressFXAsset.h"
-#include "TressFX/TressFXTypes.h"
+#include "TressFXBoneSkinningAsset.h"
+#include "TressFXAsset.h"
+#include "TressFXTypes.h"
 #include "Animation/Skeleton.h"
 
 struct FTressFXTFXBoneFileHeader

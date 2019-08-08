@@ -20,7 +20,7 @@ public:
 
 
 
-class ENGINE_API FTressFXVertexFactory : public FVertexFactory
+class TRESSFX_API FTressFXVertexFactory : public FVertexFactory
 {
 
 	DECLARE_VERTEX_FACTORY_TYPE(FTressFXVertexFactory);

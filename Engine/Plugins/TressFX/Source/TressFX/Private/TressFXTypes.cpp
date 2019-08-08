@@ -1,4 +1,4 @@
-#include "TressFX/TressFXTypes.h"
+#include "TressFXTypes.h"
 
 
 void FTressFXImportData::Serialize(FArchive& Ar)

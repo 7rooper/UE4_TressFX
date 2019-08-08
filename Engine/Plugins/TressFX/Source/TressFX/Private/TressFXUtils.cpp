@@ -1,5 +1,5 @@
 
-#include "TressFX/TressFXUtils.h"
+#include "TressFXUtils.h"
 #include "Components/SkeletalMeshComponent.h"
 
 int32 FTressFXUtils::FindEngineBoneIndex(const USkeletalMesh* SkelMesh, const FName BoneName, bool bSuppportVirtualBones /*= true*/)

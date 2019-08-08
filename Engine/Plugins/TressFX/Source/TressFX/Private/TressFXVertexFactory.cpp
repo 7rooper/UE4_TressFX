@@ -1,5 +1,5 @@
 
-#include "TressFX/TressFXVertexFactory.h"
+#include "TressFXVertexFactory.h"
 #include "SceneView.h"
 #include "MeshBatch.h"
 #include "ShaderParameterUtils.h"
@@ -73,7 +73,11 @@ FVertexFactoryShaderParameters* FTressFXVertexFactory::ConstructShaderParameters
 
 bool FTressFXVertexFactory::ShouldCompilePermutation(EShaderPlatform Platform, const class FMaterial* Material, const class FShaderType* ShaderType)
 {
+#ifdef TRESSFX_SINGLE_PLUGIN
+	return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::Type::SM5) && (Material->IsSpecialEngineMaterial());
+#else
 	return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::Type::SM5) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial());
+#endif
 }
 
 void FTressFXVertexFactory::ModifyCompilationEnvironment(const FVertexFactoryType* Type, EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)

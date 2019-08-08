@@ -26,16 +26,16 @@
 
 #pragma once
 #include "CoreMinimal.h"
-#include "TressFX/TressFXTypes.h"
+#include "TressFXTypes.h"
 #include "UObject/ObjectMacros.h"
-#include "Engine/TressFXBoneSkinningAsset.h"
+#include "TressFXBoneSkinningAsset.h"
 #include "Animation/Skeleton.h"
 #include "TressFXAsset.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(TressFXAssetLog, Log, All);
 
 UCLASS()
-class ENGINE_API UTressFXAsset : public UObject
+class TRESSFX_API UTressFXAsset : public UObject
 {
 
 	GENERATED_UCLASS_BODY()

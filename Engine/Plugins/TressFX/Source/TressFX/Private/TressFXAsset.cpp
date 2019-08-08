@@ -1,11 +1,11 @@
 
-#include "Engine/TressFXAsset.h"
+#include "TressFXAsset.h"
 #include "Animation/AnimInstance.h"
-#include "Components/TressFXComponent.h"
+#include "TressFXComponent.h"
 #include "Animation/Skeleton.h"
-#include "Engine/TressFXBoneSkinningAsset.h"
+#include "TressFXBoneSkinningAsset.h"
 #include "Uobject/UObjectIterator.h"
-#include "TressFX/TressFXUtils.h"
+#include "TressFXUtils.h"
 
 
 DEFINE_LOG_CATEGORY(TressFXAssetLog);

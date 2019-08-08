@@ -23,16 +23,16 @@
 //
 
 //This code was modified for use with Unreal Engine 4 by Leon Rosengarten 2018.
-
+#pragma once
 #include "CoreMinimal.h"
-#include "TressFX/TressFXTypes.h"
+#include "TressFXTypes.h"
 #include "UObject/ObjectMacros.h"
 #include "UObject/Object.h"
 #include "UObject/UObjectGlobals.h"
 #include "TressFXMesh.generated.h"
 
 UCLASS()
-class ENGINE_API UTressFXMesh : public UObject
+class TRESSFX_API UTressFXMesh : public UObject
 {
 
 	GENERATED_UCLASS_BODY()

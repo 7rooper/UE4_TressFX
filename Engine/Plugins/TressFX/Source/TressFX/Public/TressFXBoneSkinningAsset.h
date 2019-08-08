@@ -2,11 +2,11 @@
 #pragma once
 #include "EditorFramework/AssetImportData.h"
 #include "CoreMinimal.h"
-#include "TressFX/TressFXTypes.h"
+#include "TressFXTypes.h"
 #include "UObject/ObjectMacros.h"
 #include "TressFXBoneSkinningAsset.generated.h"
 
-struct ENGINE_API FTressFXBoneSkinningJSONImportData
+struct TRESSFX_API FTressFXBoneSkinningJSONImportData
 {
 public:
 
@@ -34,7 +34,7 @@ public:
  *TressFX bone skinning data, literally just maps bones to bone weights in the parent mesh
  */
 UCLASS(BlueprintType, Blueprintable)
-class ENGINE_API UTressFXBoneSkinningAsset : public UObject
+class TRESSFX_API UTressFXBoneSkinningAsset : public UObject
 {
 
 	GENERATED_UCLASS_BODY()

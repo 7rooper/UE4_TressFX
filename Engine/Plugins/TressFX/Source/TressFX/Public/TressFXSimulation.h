@@ -4,7 +4,7 @@
 #include "Stats/Stats.h"
 #include "HAL/IConsoleManager.h"
 #include "RHI.h"
-#include "TressFX/TressFXTypes.h"
+#include "TressFXTypes.h"
 #include "RenderResource.h"
 #include "ShaderParameters.h"
 #include "UniformBuffer.h"
@@ -251,7 +251,7 @@ public:
 class FUpdateFollowHairVerticesCS : public FGlobalShader
 {
 
-	DECLARE_EXPORTED_SHADER_TYPE(FUpdateFollowHairVerticesCS, Global, ENGINE_API);
+	DECLARE_EXPORTED_SHADER_TYPE(FUpdateFollowHairVerticesCS, Global, TRESSFX_API);
 
 public:
 
@@ -268,7 +268,7 @@ public:
 
 	static const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFXSimulation.usf");
+		return TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf");
 	}
 
 	static const TCHAR* GetFunctionName()
@@ -335,7 +335,7 @@ public:
 
 };
 
-void ENGINE_API SimulateTressFX(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, int32 CPULocalShapeIterations);
+void TRESSFX_API SimulateTressFX(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, int32 CPULocalShapeIterations);
 
 template <FTressFXSimFeatures::Type TSimFeatures>
 void SimulateTressFX_impl(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, int32 CPULocalShapeIterations);

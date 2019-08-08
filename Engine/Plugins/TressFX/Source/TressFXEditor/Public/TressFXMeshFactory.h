@@ -25,8 +25,7 @@
 //This code was modified for use with Unreal Engine 4 by Leon Rosengarten 2018.
 
 #pragma once
-
-#include "Factory.h"
+#include "Factories/Factory.h"
 #include "CoreMinimal.h"
 #include "TressFXImportUI.h"
 #include "UObject/ObjectMacros.h"
@@ -36,7 +35,7 @@ struct FAssetData;
 class SWindow;
 
 UCLASS()
-class UNREALED_API UTressFXMeshFactory : public UFactory
+class TRESSFXEDITOR_API UTressFXMeshFactory : public UFactory
 {
 	GENERATED_UCLASS_BODY()
 

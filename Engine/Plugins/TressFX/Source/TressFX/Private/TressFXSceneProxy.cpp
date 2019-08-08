@@ -1,16 +1,23 @@
-#include "TressFX/TressFXSceneProxy.h"
+#include "TressFXSceneProxy.h"
 #include "PrimitiveViewRelevance.h"
-#include "Engine/TressFXAsset.h"
-#include "Engine/TressFXBoneSkinningAsset.h"
+#include "TressFXAsset.h"
+#include "TressFXBoneSkinningAsset.h"
 #include "RenderResource.h"
 #include "Engine/Texture2D.h"
 #include "SceneManagement.h"
 #include "ShaderParameterUtils.h"
-#include "TressFX/TressFXSimulation.h"
-#include "TressFX/TressFXVertexFactory.h"
-#include "SkeletalRenderGPUSkin.h"
+#include "TressFXSimulation.h"
+#include "TressFXVertexFactory.h"
 #include "MaterialShared.h"
 #include "Materials/Material.h"
+
+#ifdef TRESSFX_SINGLE_PLUGIN
+	#define TRESSFX_SHOW_FLAG StaticMeshes
+#else
+	#include "SkeletalRenderPublic.h"
+	//#include "SkeletalRenderGPUSkin.h"
+	#define TRESSFX_SHOW_FLAG TressFX
+#endif
 
 class FTressFXCopyMorphDeltasCS : public FGlobalShader
 {
@@ -51,7 +58,7 @@ class FTressFXCopyMorphDeltasCS : public FGlobalShader
 	FShaderResourceParameter MorphPositionDeltaBuffer;
 };
 
-IMPLEMENT_GLOBAL_SHADER(FTressFXCopyMorphDeltasCS, "/Engine/Private/TressFXSimulation.usf", "CopyMorphDeltas", SF_Compute);
+IMPLEMENT_GLOBAL_SHADER(FTressFXCopyMorphDeltasCS, "/Plugin/TressFX/Private/TressFXSimulation.usf", "CopyMorphDeltas", SF_Compute);
 
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXShadeParametersUniformBuffer, "TressFXShadeParameters");
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXSimParametersUniformBuffer, "TressFXSimParameters");
@@ -90,10 +97,17 @@ FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName 
 	Material = TFXComponent->HairMaterial;
 
 
+#ifdef TRESSFX_SINGLE_PLUGIN
+	if (!Material || !Material->CheckMaterialUsage_Concurrent(MATUSAGE_SkeletalMesh))
+	{
+		Material = UMaterial::GetDefaultMaterial(MD_Surface);
+	}
+#else
 	if (!Material || !Material->CheckMaterialUsage_Concurrent(MATUSAGE_TressFX))
 	{
 		Material = UMaterial::GetDefaultMaterial(MD_Surface);
 	}
+#endif
 
 	MaterialRelevance = Material->GetRelevance(InComponent->GetScene()->GetFeatureLevel());
 	BeginInitResource(&VertexFactory);
@@ -116,9 +130,9 @@ FPrimitiveViewRelevance FTressFXSceneProxy::GetViewRelevance(const FSceneView * 
 	FPrimitiveViewRelevance ViewRel;
 	MaterialRelevance.SetPrimitiveViewRelevance(ViewRel);
 	ViewRel.bDrawRelevance = IsShown(View);
-	ViewRel.bShadowRelevance = View->Family->EngineShowFlags.TressFX;;
+	ViewRel.bShadowRelevance = View->Family->EngineShowFlags.TRESSFX_SHOW_FLAG;
 	ViewRel.bDynamicRelevance = true;
-	ViewRel.bRenderInMainPass = View->Family->EngineShowFlags.TressFX;
+	ViewRel.bRenderInMainPass = View->Family->EngineShowFlags.TRESSFX_SHOW_FLAG;
 	ViewRel.bTressFX = View->Family->EngineShowFlags.TressFX;
 	return ViewRel;
 }
@@ -367,6 +381,12 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 		}
 	}
 }
+
+FUniformBufferRHIParamRef FTressFXSceneProxy::GetHairObjectShaderUniformBufferParam()
+{
+	return TressFXHairObject->ShadeParametersUniformBuffer;
+}
+
 
 void FTressFXSimParameters::UpdateSimulationParameters(const FTressFXSimulationSettings& InSettings, uint32 Frame, FTressFXHairObject* HairObject)
 {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Factories/TressFXImportUI.h"
+#include "TressFXImportUI.h"
 #include "CoreMinimal.h"
 #include "Misc/Paths.h"
 #include "Misc/FeedbackContext.h"

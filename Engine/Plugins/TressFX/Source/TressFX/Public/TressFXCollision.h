@@ -7,7 +7,7 @@
 class FInitializeSignedDistanceFieldCS : public FGlobalShader
 {
 
-	DECLARE_EXPORTED_SHADER_TYPE(FInitializeSignedDistanceFieldCS, Global, ENGINE_API)
+	DECLARE_EXPORTED_SHADER_TYPE(FInitializeSignedDistanceFieldCS, Global, TRESSFX_API)
 
 public:
 
@@ -59,7 +59,7 @@ public:
 class FConstructSignedDistanceFieldCS : public FGlobalShader
 {
 
-	DECLARE_EXPORTED_SHADER_TYPE(FConstructSignedDistanceFieldCS, Global, ENGINE_API)
+	DECLARE_EXPORTED_SHADER_TYPE(FConstructSignedDistanceFieldCS, Global, TRESSFX_API)
 
 public:
 
@@ -113,7 +113,7 @@ public:
 class FFinalizeSignedDistanceFieldCS : public FGlobalShader
 {
 
-	DECLARE_EXPORTED_SHADER_TYPE(FFinalizeSignedDistanceFieldCS, Global, ENGINE_API)
+	DECLARE_EXPORTED_SHADER_TYPE(FFinalizeSignedDistanceFieldCS, Global, TRESSFX_API)
 
 public:
 
@@ -165,7 +165,7 @@ public:
 class FCollideHairVerticesWithSdf_forwardCS : public FGlobalShader
 {
 
-	DECLARE_EXPORTED_SHADER_TYPE(FCollideHairVerticesWithSdf_forwardCS, Global, ENGINE_API)
+	DECLARE_EXPORTED_SHADER_TYPE(FCollideHairVerticesWithSdf_forwardCS, Global, TRESSFX_API)
 
 public:
 
@@ -220,7 +220,7 @@ public:
 class FCollideHairVerticesWithSdfCS : public FGlobalShader
 {
 
-	DECLARE_EXPORTED_SHADER_TYPE(FCollideHairVerticesWithSdfCS, Global, ENGINE_API)
+	DECLARE_EXPORTED_SHADER_TYPE(FCollideHairVerticesWithSdfCS, Global, TRESSFX_API)
 
 public:
 
@@ -272,5 +272,5 @@ public:
 };
 
 static TAutoConsoleVariable<int32> CVarTFXSDFApply(TEXT("tfx.SDFCollisionApply"), 0, TEXT("Final SDF Collision Apply Pass toggle."), ECVF_RenderThreadSafe);
-void ENGINE_API UpdateSDF(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy);
-FComputeFenceRHIRef ENGINE_API ApplySDF(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, FComputeFenceRHIRef InFence, FUnorderedAccessViewRHIParamRef SimResources[]);
+void TRESSFX_API UpdateSDF(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy);
+FComputeFenceRHIRef TRESSFX_API ApplySDF(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, FComputeFenceRHIRef InFence, FUnorderedAccessViewRHIParamRef SimResources[]);

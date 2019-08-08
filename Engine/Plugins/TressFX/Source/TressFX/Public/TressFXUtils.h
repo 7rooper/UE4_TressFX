@@ -8,7 +8,7 @@
 #include "RHIResources.h"
 
 
-class ENGINE_API FTressFXUtils
+class TRESSFX_API FTressFXUtils
 {
 public:
 

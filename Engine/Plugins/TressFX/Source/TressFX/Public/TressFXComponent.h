@@ -1,9 +1,10 @@
 
 #pragma once
 #include "CoreMinimal.h"
-#include "TressFX/TressFXTypes.h"
+#include "TressFXMesh.h"
+#include "TressFXTypes.h"
 #include "UObject/ObjectMacros.h"
-#include "PrimitiveComponent.h"
+#include "Components/PrimitiveComponent.h"
 #include "TressFXComponent.generated.h"
 
 #pragma warning( push )
