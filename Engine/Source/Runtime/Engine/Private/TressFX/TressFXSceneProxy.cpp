@@ -208,7 +208,7 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 	SimParamsUniformBuffer.g_centerAndRadius0 = DynamicData.CollisionCapsuleCenterAndRadius0;
 	SimParamsUniformBuffer.g_centerAndRadius1 = DynamicData.CollisionCapsuleCenterAndRadius1;
 	SimParamsUniformBuffer.g_numCollisionCapsules = DynamicData.NumCollisionCapsules;
-	SimParamsUniformBuffer.g_BoneSkinningMatrix = DynamicData.BoneTransforms;
+	SimParamsUniformBuffer.BoneSkinningMatrix = DynamicData.BoneTransforms;
 
 	//Shade Params
 	FTressFXShadeParametersUniformBuffer ShadeParametersUniformBuffer;
@@ -251,8 +251,8 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 	if (CVarTFXSDFDisable.GetValueOnAnyThread() == 0 && CollisionType == ETressFXCollisionType::TFXCollsion_SDF && this->SDFMeshResources)
 	{
 		FTressFXBoneSkinningUniformBuffer BoneSkinBuffer;
-		BoneSkinBuffer.g_BoneSkinningMatrix = DynamicData.BoneTransforms; 
-		BoneSkinBuffer.g_NumMeshVertices = DynamicData.SDFMeshResources->MeshData.Vertices.Num();
+		BoneSkinBuffer.BoneSkinningMatrix = DynamicData.BoneTransforms; 
+		BoneSkinBuffer.NumMeshVertices = DynamicData.SDFMeshResources->MeshData.Vertices.Num();
 		TressFXHairObject->BoneSkinningUniformBuffer = TUniformBufferRef<FTressFXBoneSkinningUniformBuffer>::CreateUniformBufferImmediate(BoneSkinBuffer, UniformBuffer_SingleFrame);
 
 		//SDF Uniform Buffer
@@ -436,22 +436,7 @@ void FTressFXSimParameters::SetWind(const FVector& windDir, float windMag, int32
 		FVector(0, -1.0, 0),
 		AngleToWideWindCone,
 		Magnitude,
-		m_Wind);
-	SetWindCorner(RotFromXAxisToWindDir,
-		FVector(0, 1.0, 0),
-		AngleToWideWindCone,
-		Magnitude,
-		m_Wind1);
-	SetWindCorner(RotFromXAxisToWindDir,
-		FVector(0, 0, -1.0),
-		AngleToWideWindCone,
-		Magnitude,
-		m_Wind2);
-	SetWindCorner(RotFromXAxisToWindDir,
-		FVector(0, 0, 1.0),
-		AngleToWideWindCone,
-		Magnitude,
-		m_Wind3);
+		Wind);
 
 	// fourth component unused. (used to store frame number, but no longer used).
 }
@@ -465,10 +450,7 @@ FTressFXSimParametersUniformBuffer FTressFXSimParameters::GetBuffer()
 	Result.g_Shape = m_Shape;
 	Result.g_SimInts = m_SimInts;
 	Result.g_VSP = m_VSP;
-	Result.g_Wind = m_Wind;
-	Result.g_Wind1 = m_Wind1;
-	Result.g_Wind2 = m_Wind2;
-	Result.g_Wind3 = m_Wind3;
+	Result.Wind = Wind;
 	return Result;
 }
 

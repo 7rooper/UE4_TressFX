@@ -34,6 +34,7 @@
 
 #define AMD_TRESSFX_KERNEL_SIZE 5
 
+#define TAME_FACTOR .07f
 
 
 struct HairShadeParams
@@ -152,29 +153,8 @@ float3 TressFX_ComputeDiffuseSpecFactors(float3 eyeDir, float3 lightDir, float3 
     float3 diffuseSpecular = float3(Kd * diffuse, Ks1 * pow(primarySpecular, Ex1), Ks2 * pow(secundarySpecular, Ex2));
 	// from confetti sample: Reduce light intensity to account for extremely bright lights used in PBR
 	// https://github.com/ConfettiFX/The-Forge#6-material-playground
-    diffuseSpecular *= 0.07f; 
+    diffuseSpecular *= TAME_FACTOR;
     return diffuseSpecular;
-}
-
-
-//from hairworks
-float TressFX_ComputeHairDiffuseHW(
-	float3 Ldir, // light direction
-	float3 T,
-	float3 N,
-	float diffuseScale,
-	float diffuseBlend
-	)
-{
-	// diffuse hair shading
-    float TdotL = clamp(dot(T, Ldir), -1.0f, 1.0f);
-
-    float diffuseSkin = max(0, dot(N, Ldir));
-    float diffuseHair = sqrt(1.0f - TdotL * TdotL);
-
-    float diffuse = lerp(diffuseHair, diffuseSkin, diffuseBlend);
-    float result = diffuseScale * saturate(diffuse);
-    return max(0, result);
 }
 
 float TressFX_ComputeHairSpecularHW(

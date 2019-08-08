@@ -1,5 +1,3 @@
-
-#pragma once
 #include "TressFX/TressFXSimulation.h"
 #include "TressFX/TressFXSceneProxy.h"
 #include "TressFX/TressFXTypes.h"
@@ -43,16 +41,16 @@ FVelocityShockPropagationCS::FVelocityShockPropagationCS()
 
 FVelocityShockPropagationCS::FVelocityShockPropagationCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 {
-	g_HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositions"));
-	g_HairVertexPositionsPrev.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositionsPrev"));
-	g_HairVertexPositionsPrevPrev.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositionsPrevPrev"));
+	HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("HairVertexPositions"));
+	HairVertexPositionsPrev.Bind(Initializer.ParameterMap, TEXT("HairVertexPositionsPrev"));
+	HairVertexPositionsPrevPrev.Bind(Initializer.ParameterMap, TEXT("HairVertexPositionsPrevPrev"));
 }
 
 bool FVelocityShockPropagationCS::Serialize(FArchive& Ar)
 {
 	bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
 
-	Ar << g_HairVertexPositions << g_HairVertexPositionsPrev << g_HairVertexPositionsPrevPrev;
+	Ar << HairVertexPositions << HairVertexPositionsPrev << HairVertexPositionsPrevPrev;
 
 	return bShaderHasOutdatedParameters;
 }
@@ -88,16 +86,16 @@ FLocalShapeConstraintsWithIterationCS::FLocalShapeConstraintsWithIterationCS()
 
 FLocalShapeConstraintsWithIterationCS::FLocalShapeConstraintsWithIterationCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 {
-	g_GlobalRotations.Bind(Initializer.ParameterMap, TEXT("g_GlobalRotations"));
-	g_HairRefVecsInLocalFrame.Bind(Initializer.ParameterMap, TEXT("g_HairRefVecsInLocalFrame"));
-	g_HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositions"));
-	g_HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("g_HairVertexTangents"));
+	GlobalRotations.Bind(Initializer.ParameterMap, TEXT("GlobalRotations"));
+	HairRefVecsInLocalFrame.Bind(Initializer.ParameterMap, TEXT("HairRefVecsInLocalFrame"));
+	HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("HairVertexPositions"));
+	HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("HairVertexTangents"));
 }
 
 bool FLocalShapeConstraintsWithIterationCS::Serialize(FArchive& Ar)
 {
 	bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-	Ar << g_GlobalRotations << g_HairRefVecsInLocalFrame << g_HairVertexPositions << g_HairVertexTangents;
+	Ar << GlobalRotations << HairRefVecsInLocalFrame << HairVertexPositions << HairVertexTangents;
 	return bShaderHasOutdatedParameters;
 }
 
@@ -132,17 +130,17 @@ FLengthConstriantsWindAndCollisionCS::FLengthConstriantsWindAndCollisionCS()
 
 FLengthConstriantsWindAndCollisionCS::FLengthConstriantsWindAndCollisionCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 {
-	g_HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositions"));
-	g_HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("g_HairVertexTangents"));
-	g_HairRestLengthSRV.Bind(Initializer.ParameterMap, TEXT("g_HairRestLengthSRV"));
-	g_HairVertexPositionsPrev.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositionsPrev"));
+	HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("HairVertexPositions"));
+	HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("HairVertexTangents"));
+	HairRestLengthSRV.Bind(Initializer.ParameterMap, TEXT("HairRestLengthSRV"));
+	HairVertexPositionsPrev.Bind(Initializer.ParameterMap, TEXT("HairVertexPositionsPrev"));
 }
 
 bool FLengthConstriantsWindAndCollisionCS::Serialize(FArchive& Ar)
 {
 	bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
 
-	Ar << g_HairVertexPositions << g_HairVertexTangents << g_HairRestLengthSRV << g_HairVertexPositionsPrev;
+	Ar << HairVertexPositions << HairVertexTangents << HairRestLengthSRV << HairVertexPositionsPrev;
 
 	return bShaderHasOutdatedParameters;
 }
@@ -179,16 +177,16 @@ FPrepareFollowHairBeforeTurningIntoGuideCS::FPrepareFollowHairBeforeTurningIntoG
 
 FPrepareFollowHairBeforeTurningIntoGuideCS::FPrepareFollowHairBeforeTurningIntoGuideCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 {
-	g_HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositions"));
-	g_HairVertexPositionsPrev.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositionsPrev"));
-	TressfxSimParametersUniformBuffer.Bind(Initializer.ParameterMap, TEXT("tressfxSimParameters"));
+	HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("HairVertexPositions"));
+	HairVertexPositionsPrev.Bind(Initializer.ParameterMap, TEXT("HairVertexPositionsPrev"));
+	TressfxSimParametersUniformBuffer.Bind(Initializer.ParameterMap, TEXT("TressfxSimParameters"));
 }
 
 bool FPrepareFollowHairBeforeTurningIntoGuideCS::Serialize(FArchive& Ar)
 {
 	bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
 
-	Ar << g_HairVertexPositions << g_HairVertexPositionsPrev << TressfxSimParametersUniformBuffer;
+	Ar << HairVertexPositions << HairVertexPositionsPrev << TressfxSimParametersUniformBuffer;
 
 	return bShaderHasOutdatedParameters;
 }
@@ -223,17 +221,17 @@ FLocalShapeConstraintsCS::FLocalShapeConstraintsCS()
 
 FLocalShapeConstraintsCS::FLocalShapeConstraintsCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 {
-	g_GlobalRotations.Bind(Initializer.ParameterMap, TEXT("g_GlobalRotations"));
-	g_HairRefVecsInLocalFrame.Bind(Initializer.ParameterMap, TEXT("g_HairRefVecsInLocalFrame"));
-	g_HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositions"));
-	g_HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("g_HairVertexTangents"));
+	GlobalRotations.Bind(Initializer.ParameterMap, TEXT("GlobalRotations"));
+	HairRefVecsInLocalFrame.Bind(Initializer.ParameterMap, TEXT("HairRefVecsInLocalFrame"));
+	HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("HairVertexPositions"));
+	HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("HairVertexTangents"));
 }
 
 bool FLocalShapeConstraintsCS::Serialize(FArchive& Ar)
 {
 	bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
 
-	Ar << g_GlobalRotations << g_HairRefVecsInLocalFrame << g_HairVertexPositions << g_HairVertexTangents;
+	Ar << GlobalRotations << HairRefVecsInLocalFrame << HairVertexPositions << HairVertexTangents;
 	return bShaderHasOutdatedParameters;
 }
 
@@ -339,16 +337,16 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 			Proxy->TressFXHairObject->PosTanCollection.SetUAVs(RHICmdList, Shader->GetComputeShader());
 			SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSimParametersUniformBuffer>(), Proxy->TressFXHairObject->SimParametersUniformBuffer);
 
-			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->g_InitialHairPositions, Proxy->TressFXHairObject->InitialHairPositionsBuffer.SRV);
-			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->g_BoneSkinningData, Proxy->TressFXHairObject->BoneSkinningDataBuffer.SRV);
+			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->InitialHairPositions, Proxy->TressFXHairObject->InitialHairPositionsBuffer.SRV);
+			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->BoneSkinningData, Proxy->TressFXHairObject->BoneSkinningDataBuffer.SRV);
 
 			if (bUseMorphs)
 			{
-				SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->g_MorphDeltas, Proxy->MorphPositionDeltaBuffer.SRV);
+				SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->MorphDeltas, Proxy->MorphPositionDeltaBuffer.SRV);
 			}
 			if (bNeedsVelocity)
 			{
-				SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->g_FollowHairRootOffset, Proxy->TressFXHairObject->FollowHairRootOffsetBuffer.SRV);
+				SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->FollowHairRootOffset, Proxy->TressFXHairObject->FollowHairRootOffsetBuffer.SRV);
 			}
 			
 			DispatchComputeShader(RHICmdList, *Shader, NumGroupsForCS_VertexLevel, 1, 1);
@@ -377,8 +375,8 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 
 			RHICmdList.SetComputeShader(LocalShapeConstraintsCS->GetComputeShader());
 
-			SetSRVParameter(RHICmdList, LocalShapeConstraintsCS->GetComputeShader(), LocalShapeConstraintsCS->g_GlobalRotations, Proxy->TressFXHairObject->GlobalRotationsBuffer.SRV);
-			SetSRVParameter(RHICmdList, LocalShapeConstraintsCS->GetComputeShader(), LocalShapeConstraintsCS->g_HairRefVecsInLocalFrame, Proxy->TressFXHairObject->HairRefVecsInLocalFrameBuffer.SRV);
+			SetSRVParameter(RHICmdList, LocalShapeConstraintsCS->GetComputeShader(), LocalShapeConstraintsCS->GlobalRotations, Proxy->TressFXHairObject->GlobalRotationsBuffer.SRV);
+			SetSRVParameter(RHICmdList, LocalShapeConstraintsCS->GetComputeShader(), LocalShapeConstraintsCS->HairRefVecsInLocalFrame, Proxy->TressFXHairObject->HairRefVecsInLocalFrameBuffer.SRV);
 			for (int32 i = 0; i < CPULocalShapeIterations; ++i)
 			{
 				auto Fence = RHICreateComputeFence(TEXT("LocalShapeConstraintsCSFence"));
@@ -393,7 +391,7 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 			TShaderMapRef<FLengthConstriantsWindAndCollisionCS> LengthConstriantsWindAndCollisionCS(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 
 			RHICmdList.SetComputeShader(LengthConstriantsWindAndCollisionCS->GetComputeShader());
-			SetSRVParameter(RHICmdList, LengthConstriantsWindAndCollisionCS->GetComputeShader(), LengthConstriantsWindAndCollisionCS->g_HairRestLengthSRV, Proxy->TressFXHairObject->HairRestLengthSRVBuffer.SRV);
+			SetSRVParameter(RHICmdList, LengthConstriantsWindAndCollisionCS->GetComputeShader(), LengthConstriantsWindAndCollisionCS->HairRestLengthSRV, Proxy->TressFXHairObject->HairRestLengthSRVBuffer.SRV);
 
 			DispatchComputeShader(RHICmdList, *LengthConstriantsWindAndCollisionCS, NumGroupsForCS_VertexLevel, 1, 1);
 			Proxy->TressFXHairObject->PosTanCollection.UAVBarrier(RHICmdList, Fence);
@@ -408,10 +406,10 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 			TShaderMapRef<FUpdateFollowHairVerticesCS> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 			RHICmdList.SetComputeShader(Shader->GetComputeShader());
 			Proxy->TressFXHairObject->PosTanCollection.SetUAVs(RHICmdList, Shader->GetComputeShader());
-			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->g_FollowHairRootOffset, Proxy->TressFXHairObject->FollowHairRootOffsetBuffer.SRV);
+			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->FollowHairRootOffset, Proxy->TressFXHairObject->FollowHairRootOffsetBuffer.SRV);
 			SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSimParametersUniformBuffer>(), Proxy->TressFXHairObject->SimParametersUniformBuffer);
 			DispatchComputeShader(RHICmdList, *Shader, NumGroupsForCS_VertexLevel, 1, 1);
-			Shader->g_HairVertexTangents.UnsetUAV(RHICmdList, Shader->GetComputeShader());
+			Shader->HairVertexTangents.UnsetUAV(RHICmdList, Shader->GetComputeShader());
 			Proxy->TressFXHairObject->PosTanCollection.UnsetUAVs(RHICmdList, Shader->GetComputeShader());
 		}
 

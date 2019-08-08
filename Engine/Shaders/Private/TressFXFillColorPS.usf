@@ -32,10 +32,6 @@
 	#define TFX_PPLL 0
 #endif
 
-#ifndef USE_HW_SHADER
-	#define USE_HW_SHADER 0
-#endif
-
 #ifndef APPROX_DEEP_SHADOW
 	#define APPROX_DEEP_SHADOW 0
 #endif
@@ -495,32 +491,6 @@ float3 TressFXHairShading(
     float NoL = saturate(dot(N, L));
     float3 SpecularColor = GetTressFXSpecularColor();
     float3 S = 0;
-#if USE_HW_SHADER
-    float HWDiffuseFactor = TressFX_ComputeHairDiffuseHW(L, TFXTangent, N, 1.0f, DiffuseBlend);
-    float HWSpecularFactor = TressFX_ComputeHairSpecularHW(
-		  V
-		, L
-		, T
-		, N
-		, DiffuseBlend
-		, GetPrimarySpecularScale()
-		, GetSecondarySpecularScale()
-		, GetPrimarySpecularExponent()
-		, GetSecondarySpecularExponent()
-		, GetPrimarySpecularOffset()
-		, GetSecondarySpecularOffset()
-	);
-    S = HWDiffuseFactor * GBuffer.BaseColor;
-	#if ENABLE_GLINT
-    if (GlintScale > 1e-5)
-    {
-        HWSpecularFactor *= lerp(1.0f, ComputedGlint, GlintScale);
-    }   
-	#endif
-    S += HWSpecularFactor * SpecularColor;
-    S *= .07f;
-#else
-
     float3 SpecDiffuse = TressFX_ComputeDiffuseSpecFactors(V, L, T, DiffuseBlend);
     float VisibilityScale = lerp(1.0f, saturate(dot(N, L)), DiffuseBlend);
     SpecDiffuse.yz *= VisibilityScale;
@@ -533,7 +503,7 @@ float3 TressFXHairShading(
         SpecDiffuse.yz *= lerp(1.0f, ComputedGlint, GlintScale);
     }   
 	#endif
-#endif
+
 
 #define EXPERIMENTAL_SCATTER 0
 #if EXPERIMENTAL_SCATTER
@@ -555,8 +525,8 @@ float3 TressFXHairShading(
 		const float2 BaseColorTintPower = float2(0.6, 1.2) / ColorTintFactor;
 		float3 TTColorTint = pow(GBuffer.BaseColor, BaseColorTintPower.x);
 		float3 TRTColorTint = pow(GBuffer.BaseColor, BaseColorTintPower.y);
-		S += TTColorTint * GBuffer.Metallic * .07;
-        S += TTColorTint * GBuffer.Metallic * .07;
+		S += TTColorTint * GBuffer.Metallic * TAME_FACTOR;
+        S += TTColorTint * GBuffer.Metallic * TAME_FACTOR;
     }
 #else
 
@@ -731,9 +701,6 @@ float3 GetTressFXDynamicLighting(
     if (LightData.ShadowedBits)
     {
         GetShadowTerms(GbufferData, LightData, WorldPosition, L, LightAttenuation, Dither, ShadowTerms);
-		// greatly reduces shadow mapping artifacts
-		//JAKENOTE, actually looks terrible
-        //ShadowTerms.SurfaceShadow *= saturate(dot(N, L) * 6 - 0.2);
     }
     else
     {
@@ -757,10 +724,7 @@ float3 GetTressFXDynamicLighting(
         const float GlintComputed = ComputeHairGlint(GlintSize, GlintExponent, Root2Tip, HairId);
         const float Luma = Luminance(LightData.Color.rgb);
         GlintAmbient = GlintStrength * GlintComputed * Luma;
-		#if !USE_HW_SHADER
-		//this happens elsewhere in that case
         SpecularColor *= lerp(1.0, GlintComputed, GlintStrength);
-		#endif
     }
 
 	float3 Shading;
@@ -779,7 +743,7 @@ float3 GetTressFXDynamicLighting(
 		, Coverage
 #if ENABLE_GLINT
 		, GlintAmbient
-		, GlintSize
+		, GlintStrength
 #endif
 	);
     

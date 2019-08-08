@@ -847,10 +847,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Approximate Deep Shadow"))
 	uint32 bTressFXApproximateDeepShadow : 1;
 
-	/** Experimental */
-	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Use Hairworks Shading Model"))
-	uint32 bTressFXUseHairworksShadingModel : 1;
-
 	/*@End Third party code TressFX*/
 
 	/** When true, translucent materials are fogged. Defaults to true. */

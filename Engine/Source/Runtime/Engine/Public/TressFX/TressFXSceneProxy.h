@@ -25,10 +25,7 @@ struct FTressFXSimParameters
 
 public:
 
-	FVector4 m_Wind;
-	FVector4 m_Wind1;
-	FVector4 m_Wind2;
-	FVector4 m_Wind3;
+	FVector4 Wind;
 
 	// damping, local stiffness, global stiffness, global range.
 	// X: m_Damping;

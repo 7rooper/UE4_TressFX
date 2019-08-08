@@ -1280,7 +1280,6 @@ public:
 	virtual bool TressFXAttenuateShadowByAlpha() const { return true; }
 	virtual bool TressFXEnableGlint() const { return false; }
 	virtual bool TressFXApproximateDeepShadow() const { return false; }
-	virtual bool TressFXUseHairworksShadingModel() const { return false; }
 	/*@End Third party code TressFX*/
 
 	virtual bool ComputeFogPerPixel() const { return false; }
@@ -1979,7 +1978,6 @@ public:
 	ENGINE_API virtual bool TressFXAttenuateShadowByAlpha() const override;
 	ENGINE_API virtual bool TressFXEnableGlint() const override;
 	ENGINE_API virtual bool TressFXApproximateDeepShadow() const override;
-	ENGINE_API virtual bool TressFXUseHairworksShadingModel() const override;
 	/*@End Third party code TressFX*/
 
 	ENGINE_API virtual bool ComputeFogPerPixel() const override;

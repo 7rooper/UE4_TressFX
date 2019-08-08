@@ -26,9 +26,9 @@ const TCHAR* FTressBoneSkinningCS::GetFunctionName()
 
 FTressBoneSkinningCS::FTressBoneSkinningCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) :FGlobalShader(Initializer)
 {
-	BoneSkinningData.Bind(Initializer.ParameterMap, TEXT("g_BoneSkinningData"));
-	InitialVertexPositions.Bind(Initializer.ParameterMap, TEXT("initialVertexPositions"));
-	ColMeshVertexPositions.Bind(Initializer.ParameterMap, TEXT("collMeshVertexPositions"));
+	BoneSkinningData.Bind(Initializer.ParameterMap, TEXT("BoneSkinningData"));
+	InitialVertexPositions.Bind(Initializer.ParameterMap, TEXT("InitialVertexPositions"));
+	ColMeshVertexPositions.Bind(Initializer.ParameterMap, TEXT("CollMeshVertexPositions"));
 	TressFXBoneSkinningParametersUniformBuffer.Bind(Initializer.ParameterMap, TEXT("TressFXBoneSkinningParameters"));
 }
 

@@ -65,25 +65,25 @@ public:
 
 	FIntegrationAndGlobalShapeConstraintsCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 	{
-		g_HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositions"));
-		g_HairVertexPositionsPrev.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositionsPrev"));
-		g_HairVertexPositionsPrevPrev.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositionsPrevPrev"));
-		g_HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("g_HairVertexTangents"));
-		g_BoneSkinningData.Bind(Initializer.ParameterMap, TEXT("g_BoneSkinningData"));
-		g_InitialHairPositions.Bind(Initializer.ParameterMap, TEXT("g_InitialHairPositions"));
+		HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("HairVertexPositions"));
+		HairVertexPositionsPrev.Bind(Initializer.ParameterMap, TEXT("HairVertexPositionsPrev"));
+		HairVertexPositionsPrevPrev.Bind(Initializer.ParameterMap, TEXT("HairVertexPositionsPrevPrev"));
+		HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("HairVertexTangents"));
+		BoneSkinningData.Bind(Initializer.ParameterMap, TEXT("BoneSkinningData"));
+		InitialHairPositions.Bind(Initializer.ParameterMap, TEXT("InitialHairPositions"));
 
 		const bool bHasMorphs = TSimFeatures == FTressFXSimFeatures::Morphs || TSimFeatures == FTressFXSimFeatures::MorphsAndVelocity;
 		if (bHasMorphs)
 		{
-			g_MorphDeltas.Bind(Initializer.ParameterMap, TEXT("g_MorphDeltas"));
+			MorphDeltas.Bind(Initializer.ParameterMap, TEXT("MorphDeltas"));
 		}
 		const bool bHasVelocity = TSimFeatures == FTressFXSimFeatures::Velocity || TSimFeatures == FTressFXSimFeatures::MorphsAndVelocity;
 		if (bHasVelocity)
 		{
-			g_FollowHairRootOffset.Bind(Initializer.ParameterMap, TEXT("g_FollowHairRootOffset"));
+			FollowHairRootOffset.Bind(Initializer.ParameterMap, TEXT("FollowHairRootOffset"));
 		}
 
-		TressfxSimParametersUniformBuffer.Bind(Initializer.ParameterMap, TEXT("tressfxSimParameters"));
+		TressfxSimParametersUniformBuffer.Bind(Initializer.ParameterMap, TEXT("TressfxSimParameters"));
 	};
 
 
@@ -93,18 +93,18 @@ public:
 	{
 		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
 
-		Ar << g_HairVertexPositions << g_HairVertexPositionsPrev << g_HairVertexPositionsPrevPrev
-			<< g_HairVertexTangents << g_BoneSkinningData << g_InitialHairPositions;
+		Ar << HairVertexPositions << HairVertexPositionsPrev << HairVertexPositionsPrevPrev
+			<< HairVertexTangents << BoneSkinningData << InitialHairPositions;
 
 		const bool bHasMorphs = TSimFeatures == FTressFXSimFeatures::Morphs || TSimFeatures == FTressFXSimFeatures::MorphsAndVelocity;
 		if (bHasMorphs)
 		{
-			Ar << g_MorphDeltas;
+			Ar << MorphDeltas;
 		}
 		const bool bHasVelocity = TSimFeatures == FTressFXSimFeatures::Velocity || TSimFeatures == FTressFXSimFeatures::MorphsAndVelocity;
 		if (bHasVelocity)
 		{
-			Ar << g_FollowHairRootOffset;
+			Ar << FollowHairRootOffset;
 		}
 
 		return bShaderHasOutdatedParameters;
@@ -113,15 +113,15 @@ public:
 
 public:
 
-	FRWShaderParameter g_HairVertexPositions;
-	FRWShaderParameter g_HairVertexPositionsPrev;
-	FRWShaderParameter g_HairVertexPositionsPrevPrev;
-	FRWShaderParameter g_HairVertexTangents;
+	FRWShaderParameter HairVertexPositions;
+	FRWShaderParameter HairVertexPositionsPrev;
+	FRWShaderParameter HairVertexPositionsPrevPrev;
+	FRWShaderParameter HairVertexTangents;
 
-	FShaderResourceParameter g_BoneSkinningData;
-	FShaderResourceParameter g_InitialHairPositions;
-	FShaderResourceParameter g_MorphDeltas;
-	FShaderResourceParameter g_FollowHairRootOffset;
+	FShaderResourceParameter BoneSkinningData;
+	FShaderResourceParameter InitialHairPositions;
+	FShaderResourceParameter MorphDeltas;
+	FShaderResourceParameter FollowHairRootOffset;
 
 	FShaderUniformBufferParameter TressfxSimParametersUniformBuffer;
 
@@ -151,9 +151,9 @@ public:
 
 public:
 
-	FRWShaderParameter g_HairVertexPositions;
-	FRWShaderParameter g_HairVertexPositionsPrev;
-	FRWShaderParameter g_HairVertexPositionsPrevPrev;
+	FRWShaderParameter HairVertexPositions;
+	FRWShaderParameter HairVertexPositionsPrev;
+	FRWShaderParameter HairVertexPositionsPrevPrev;
 
 };
 
@@ -181,10 +181,10 @@ public:
 
 public:
 
-	FShaderResourceParameter g_GlobalRotations;
-	FShaderResourceParameter g_HairRefVecsInLocalFrame;
-	FRWShaderParameter g_HairVertexPositions;
-	FRWShaderParameter g_HairVertexTangents;
+	FShaderResourceParameter GlobalRotations;
+	FShaderResourceParameter HairRefVecsInLocalFrame;
+	FRWShaderParameter HairVertexPositions;
+	FRWShaderParameter HairVertexTangents;
 
 
 };
@@ -213,10 +213,10 @@ public:
 
 
 public:
-	FShaderResourceParameter g_GlobalRotations;
-	FShaderResourceParameter g_HairRefVecsInLocalFrame;
-	FRWShaderParameter g_HairVertexPositions;
-	FRWShaderParameter g_HairVertexTangents;
+	FShaderResourceParameter GlobalRotations;
+	FShaderResourceParameter HairRefVecsInLocalFrame;
+	FRWShaderParameter HairVertexPositions;
+	FRWShaderParameter HairVertexTangents;
 };
 
 
@@ -241,10 +241,10 @@ public:
 
 public:
 
-	FRWShaderParameter g_HairVertexPositions;
-	FRWShaderParameter g_HairVertexTangents;
-	FRWShaderParameter g_HairVertexPositionsPrev;
-	FShaderResourceParameter g_HairRestLengthSRV;
+	FRWShaderParameter HairVertexPositions;
+	FRWShaderParameter HairVertexTangents;
+	FRWShaderParameter HairVertexPositionsPrev;
+	FShaderResourceParameter HairRestLengthSRV;
 
 };
 
@@ -278,9 +278,9 @@ public:
 
 	FUpdateFollowHairVerticesCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 	{
-		g_FollowHairRootOffset.Bind(Initializer.ParameterMap, TEXT("g_FollowHairRootOffset"));
-		g_HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("g_HairVertexTangents"));
-		g_HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositions"));
+		FollowHairRootOffset.Bind(Initializer.ParameterMap, TEXT("FollowHairRootOffset"));
+		HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("HairVertexTangents"));
+		HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("HairVertexPositions"));
 	}
 
 
@@ -292,15 +292,15 @@ public:
 	virtual bool Serialize(FArchive& Ar) override
 	{
 		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-		Ar << g_HairVertexPositions << g_HairVertexTangents << g_FollowHairRootOffset;
+		Ar << HairVertexPositions << HairVertexTangents << FollowHairRootOffset;
 		return bShaderHasOutdatedParameters;
 	}
 
 
 public:
-	FRWShaderParameter g_HairVertexPositions;
-	FRWShaderParameter g_HairVertexTangents;
-	FShaderResourceParameter g_FollowHairRootOffset;
+	FRWShaderParameter HairVertexPositions;
+	FRWShaderParameter HairVertexTangents;
+	FShaderResourceParameter FollowHairRootOffset;
 };
 
 
@@ -329,8 +329,8 @@ public:
 
 public:
 
-	FRWShaderParameter g_HairVertexPositions;
-	FRWShaderParameter g_HairVertexPositionsPrev;
+	FRWShaderParameter HairVertexPositions;
+	FRWShaderParameter HairVertexPositionsPrev;
 	FShaderUniformBufferParameter TressfxSimParametersUniformBuffer;
 
 };
