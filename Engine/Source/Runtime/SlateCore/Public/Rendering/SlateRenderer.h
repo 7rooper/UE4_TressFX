@@ -9,9 +9,11 @@
 #include "Templates/RefCounting.h"
 
 class FRHITexture2D;
+class FRenderTarget;
 class FSlateDrawBuffer;
 class FSlateUpdatableTexture;
 class ILayoutCache;
+class ISlate3DRenderer;
 class ISlateAtlasProvider;
 class ISlateStyle;
 class SWindow;
@@ -30,8 +32,8 @@ struct FRenderThreadUpdateContext
 	float WorldTimeSeconds;
 	float DeltaTimeSeconds;
 	float RealTimeSeconds;
-	void* RenderTargetResource;
-	void* Renderer;
+	FRenderTarget* RenderTarget;
+	ISlate3DRenderer* Renderer;
 	bool bClearTarget;
 };
 
