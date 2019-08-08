@@ -2,7 +2,6 @@
 #include "CoreMinimal.h"
 #include "RendererInterface.h"
 #include "MeshMaterialShader.h"
-//#include "TressFX/TressFXSceneProxy.h"
 #include "ShaderBaseClasses.h"
 #include "GlobalShader.h"
 
@@ -45,7 +44,7 @@ class FTressFXCopyOpaqueDepthPS : public FGlobalShader
 
 	const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFXCopyVelocityDepth.usf");
+		return TEXT("/Plugin/TressFX/Private/TressFXCopyVelocityDepth.usf");
 	}
 
 	const TCHAR* GetFunctionName()
@@ -331,7 +330,7 @@ class FTressFXResolveVelocityPs : public FGlobalShader
 
 	const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFXCopyVelocityDepth.usf");
+		return TEXT("/Plugin/TressFX/Private/TressFXCopyVelocityDepth.usf");
 	}
 
 	const TCHAR* GetFunctionName()
@@ -385,7 +384,7 @@ public:
 
 	static const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFXShortCutResolveDepthPS.usf");
+		return TEXT("/Plugin/TressFX/Private/TressFXShortCutResolveDepthPS.usf");
 	}
 
 	static const TCHAR* GetFunctionName()
@@ -464,7 +463,7 @@ public:
 
 	static const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFXShortCutResolveColorPS.usf");
+		return TEXT("/Plugin/TressFX/Private/TressFXShortCutResolveColorPS.usf");
 	}
 
 	static const TCHAR* GetFunctionName()
@@ -525,7 +524,7 @@ public:
 
 	static const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFXShortCutResolveColorPS.usf");
+		return TEXT("/Plugin/TressFX/Private/TressFXShortCutResolveColorPS.usf");
 	}
 
 	static const TCHAR* GetFunctionName()
@@ -592,7 +591,7 @@ public:
 
 	static const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFXPPLLResolve.usf");
+		return TEXT("/Plugin/TressFX/Private/TressFXPPLLResolve.usf");
 	}
 
 	static const TCHAR* GetFunctionName()
