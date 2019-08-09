@@ -10,8 +10,13 @@
 #include "RHIResources.h"
 #include "../Private/SkeletalRenderGPUSkin.h"
 
-class ITressFXSceneProxy
+class ITressFXSceneProxy : public FPrimitiveSceneProxy
 {
 public:
+	ITressFXSceneProxy(class UPrimitiveComponent* InComponent, FName ResourceName = NAME_None, class FTressFXHairObject* InHairObject = nullptr)
+		: FPrimitiveSceneProxy(InComponent, ResourceName)
+	{
+	
+	}
 	virtual FUniformBufferRHIParamRef GetHairObjectShaderUniformBufferParam() = 0;
 };

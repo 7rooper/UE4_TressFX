@@ -118,7 +118,7 @@ public:
 
 };
 
-class TRESSFX_API FTressFXSceneProxy : public FPrimitiveSceneProxy, public ITressFXSceneProxy
+class TRESSFX_API FTressFXSceneProxy : public ITressFXSceneProxy
 {
 
 public:

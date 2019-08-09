@@ -86,7 +86,7 @@ FTressFXSDFUniformBuffer::FTressFXSDFUniformBuffer()
 }
 
 FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName ResourceName, FTressFXHairObject* InHairObject) 
-	: FPrimitiveSceneProxy(InComponent, ResourceName)
+	: ITressFXSceneProxy(InComponent, ResourceName)
 	, VertexFactory(GetScene().GetFeatureLevel())
 {
 	bIsTressFX = true;

@@ -5,6 +5,7 @@
 #include "GlobalShader.h"
 #include "RHIDefinitions.h"
 #include "HitProxies.h"
+#include "TressFXPublicDef.h"
 #include "RHI.h"
 #include "TressFXShaders.h"
 #include "MeshPassProcessor.h"
@@ -64,7 +65,7 @@ struct FPPLL_Struct
 struct FTressFXMeshBatch
 {
 	const FMeshBatch* Mesh;
-	const FPrimitiveSceneProxy* Proxy;
+	const ITressFXSceneProxy* Proxy;
 };
 
 class FPrimitiveSceneProxy;
