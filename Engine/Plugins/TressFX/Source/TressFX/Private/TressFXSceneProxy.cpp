@@ -11,11 +11,10 @@
 #include "MaterialShared.h"
 #include "Materials/Material.h"
 
-#ifdef TRESSFX_SINGLE_PLUGIN
+#ifdef TRESSFX_STANDALONE_PLUGIN
 	#define TRESSFX_SHOW_FLAG StaticMeshes
 #else
 	#include "SkeletalRenderPublic.h"
-	//#include "SkeletalRenderGPUSkin.h"
 	#define TRESSFX_SHOW_FLAG TressFX
 #endif
 
@@ -97,7 +96,7 @@ FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName 
 	Material = TFXComponent->HairMaterial;
 
 
-#ifdef TRESSFX_SINGLE_PLUGIN
+#ifdef TRESSFX_STANDALONE_PLUGIN
 	if (!Material || !Material->CheckMaterialUsage_Concurrent(MATUSAGE_SkeletalMesh))
 	{
 		Material = UMaterial::GetDefaultMaterial(MD_Surface);
@@ -133,7 +132,9 @@ FPrimitiveViewRelevance FTressFXSceneProxy::GetViewRelevance(const FSceneView * 
 	ViewRel.bShadowRelevance = View->Family->EngineShowFlags.TRESSFX_SHOW_FLAG;
 	ViewRel.bDynamicRelevance = true;
 	ViewRel.bRenderInMainPass = View->Family->EngineShowFlags.TRESSFX_SHOW_FLAG;
+#ifndef TRESSFX_STANDALONE_PLUGIN
 	ViewRel.bTressFX = View->Family->EngineShowFlags.TressFX;
+#endif
 	return ViewRel;
 }
 
@@ -202,6 +203,10 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 	this->SDFMeshResources = DynamicData.SDFMeshResources;
 	this->bEnableMorphTargets = DynamicData.bEnableMorphTargets;
 
+#ifdef TRESSFX_STANDALONE_PLUGIN
+	this->MorphVertexBuffer = nullptr;
+	this->MorphVertexUpdateFrameNumber = 0;
+#else
 	// Morph data. It's too early to update morph data here. It's not ready yet. Delay it just before simulation.
 	if (this->bEnableMorphTargets && DynamicData.ParentSkin != nullptr && DynamicData.ParentSkin->GetMorphVertexBuffer().bHasBeenUpdated)
 	{
@@ -212,6 +217,8 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 	{
 		this->MorphVertexBuffer = nullptr;
 	}
+	this->MorphVertexUpdateFrameNumber = GFrameNumberRenderThread;
+#endif
 
 	this->MorphVertexUpdateFrameNumber = GFrameNumberRenderThread;
 
@@ -329,7 +336,11 @@ void FTressFXSceneProxy::CopyMorphs(FRHICommandList& RHICmdList)
 
 bool FTressFXSceneProxy::WantsVelocityDraw()
 {
+#ifdef TRESSFX_STANDALONE_PLUGIN
+	return Material && Material->GetMaterial();
+#else
 	return Material && Material->GetMaterial() ? Material->GetMaterial()->bTressFXRenderVelocity : false;
+#endif
 }
 
 void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, class FMeshElementCollector& Collector) const
@@ -351,7 +362,9 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 			{
 				// Draw the mesh.
 				FMeshBatch& Mesh = Collector.AllocateMesh();
+#ifndef TRESSFX_STANDALONE_PLUGIN
 				Mesh.bTressFX = true;
+#endif
 				FMeshBatchElement& BatchElement = Mesh.Elements[0];
 				BatchElement.IndexBuffer = &TressFXHairObject->IndexBuffer;
 				//Mesh.bWireframe = bWireframe;
@@ -367,7 +380,9 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 				BatchElement.PrimitiveUniformBuffer = DynamicPrimitiveUniformBuffer.UniformBuffer.GetUniformBufferRHI();
 
 				BatchElement.FirstIndex = 0;
+#ifndef TRESSFX_STANDALONE_PLUGIN
 				BatchElement.NumIndices = TressFXHairObject->mtotalIndices;
+#endif
 				BatchElement.NumPrimitives = TressFXHairObject->mtotalIndices / 3;
 				BatchElement.MinVertexIndex = 0;
 				BatchElement.MaxVertexIndex = TressFXHairObject->PosTanCollection.PositionsData.Num() - 1;

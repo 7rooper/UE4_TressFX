@@ -73,7 +73,7 @@ FVertexFactoryShaderParameters* FTressFXVertexFactory::ConstructShaderParameters
 
 bool FTressFXVertexFactory::ShouldCompilePermutation(EShaderPlatform Platform, const class FMaterial* Material, const class FShaderType* ShaderType)
 {
-#ifdef TRESSFX_SINGLE_PLUGIN
+#ifdef TRESSFX_STANDALONE_PLUGIN
 	return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::Type::SM5) && (Material->IsSpecialEngineMaterial());
 #else
 	return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::Type::SM5) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial());
@@ -87,6 +87,9 @@ void FTressFXVertexFactory::ModifyCompilationEnvironment(const FVertexFactoryTyp
 	OutEnvironment.SetDefine(TEXT("TRESSFX_VERTEX_FACTORY"), 1);
 	OutEnvironment.SetDefine(TEXT("WITH_TRESSFX_VERTEX_FACTORY"), 1);
 	OutEnvironment.SetDefine(TEXT("USE_TRESSFX"), 1);
+#ifdef TRESSFX_STANDALONE_PLUGIN
+	OutEnvironment.SetDefine(TEXT("TRESSFX_STANDALONE_PLUGIN"), 1);
+#endif
 }
 
 void FTressFXVertexFactory::InitRHI()
@@ -94,4 +97,4 @@ void FTressFXVertexFactory::InitRHI()
 	SetDeclaration(GEmptyVertexDeclaration.VertexDeclarationRHI);
 }
 
-IMPLEMENT_VERTEX_FACTORY_TYPE(FTressFXVertexFactory, "/Engine/Private/TressFXVertexFactory.ush", true, false, true, false, false);
+IMPLEMENT_VERTEX_FACTORY_TYPE(FTressFXVertexFactory, "/Engine/Private/TressFX/TressFXVertexFactory.ush", true, false, true, false, false);

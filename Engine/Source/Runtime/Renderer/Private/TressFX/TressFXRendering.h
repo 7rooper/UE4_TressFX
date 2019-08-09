@@ -6,8 +6,8 @@
 #include "RHIDefinitions.h"
 #include "HitProxies.h"
 #include "RHI.h"
-#include "MeshPassProcessor.h"
 #include "TressFXShaders.h"
+#include "MeshPassProcessor.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(TressFXRenderingLog, Log, All);
 
@@ -18,6 +18,25 @@ DECLARE_LOG_CATEGORY_EXTERN(TressFXRenderingLog, Log, All);
 #define MAX_TFX_KBUFFER_SIZE 16
 #define MIN_TFX_KBUFFER_SIZE 2
 #define TFX_PPLL_NULL 0xffffffff
+
+class FTressFXShaderElementData : public FMeshMaterialShaderElementData
+{
+public:
+	FTressFXShaderElementData(ETressFXPass::Type InTFXPass, const FSceneView* InViewIfDynamicMeshCommand) :
+		TFXPass(InTFXPass)
+	{
+		if (InViewIfDynamicMeshCommand)
+		{
+			auto ViewSize = InViewIfDynamicMeshCommand->UnscaledViewRect.Size();
+			FragmentBufferSize = FVector4(ViewSize.X, ViewSize.Y, ViewSize.X*ViewSize.Y, 0);
+			ViewRect = InViewIfDynamicMeshCommand->UnscaledViewRect;
+		}
+	}
+	ETressFXPass::Type TFXPass;
+	FVector4 FragmentBufferSize;
+	FIntRect ViewRect;
+
+};
 
 struct ETressFXRenderType
 {

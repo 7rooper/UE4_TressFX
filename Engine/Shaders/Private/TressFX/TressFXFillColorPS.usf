@@ -1,24 +1,24 @@
 
 #define OpaqueBasePass TressFXColorFillPass
 
-#include "Common.ush"
-#include "SHCommon.ush"
+#include "../Common.ush"
+#include "../SHCommon.ush"
 #include "/Engine/Generated/Material.ush"
-#include "BasePassCommon.ush"
+#include "../BasePassCommon.ush"
 #include "/Engine/Generated/VertexFactory.ush"
-#include "LightmapCommon.ush" 
-#include "PlanarReflectionShared.ush"
-#include "BRDF.ush"
-#include "Random.ush"
-#include "LightAccumulator.ush"
-#include "DeferredShadingCommon.ush"
-#include "VelocityCommon.ush"
-#include "SphericalGaussian.ush"
+#include "../LightmapCommon.ush" 
+#include "../PlanarReflectionShared.ush"
+#include "../BRDF.ush"
+#include "../Random.ush"
+#include "../LightAccumulator.ush"
+#include "../DeferredShadingCommon.ush"
+#include "../VelocityCommon.ush"
+#include "../SphericalGaussian.ush"
 #include "TressFXCommon.ush"
 #include "TressFXShortCutCommon.ush"
 #include "TressFXRendering.ush"
-#include "ReflectionEnvironmentShared.ush"
-#include "ShadowFilteringCommon.ush"
+#include "../ReflectionEnvironmentShared.ush"
+#include "../ShadowFilteringCommon.ush"
 
 #ifndef TFX_SHORTCUT
 	#define TFX_SHORTCUT 1

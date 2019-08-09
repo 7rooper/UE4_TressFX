@@ -186,6 +186,8 @@ void UTressFXComponent::SetUpMorphMapping()
 		return;
 	}
 
+#ifndef TRESSFX_STANDALONE_PLUGIN
+
 	UE_LOG(TressFXComponentLog, Warning, TEXT("SetupMorphMapping Called"), *this->GetFName().ToString());
 	// Setup morph index mapping
 	do
@@ -296,6 +298,7 @@ void UTressFXComponent::SetUpMorphMapping()
 	{
 		UE_LOG(TressFXComponentLog, Warning, TEXT("No scene proxy found, cannot call UpdateMorphIndices_RenderThread"), *this->GetFName().ToString());
 	}
+#endif
 }
 
 void UTressFXComponent::SendRenderDynamicData_Concurrent()
@@ -331,13 +334,16 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 		{
 			break;
 		}
-
+#ifndef TRESSFX_STANDALONE_PLUGIN
 		if (ParentSkeletalMeshComponent->MeshObject->IsCPUSkinned())
 		{
 			break;
 		}
 
 		DynamicRenderData->ParentSkin = static_cast<FSkeletalMeshObjectGPUSkin*>(ParentSkeletalMeshComponent->MeshObject);
+#else
+		DynamicRenderData->ParentSkin = nullptr;
+#endif
 	} while (false);
 
 	DynamicRenderData->bEnableMorphTargets = this->bEnableMorphTargets;

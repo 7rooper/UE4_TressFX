@@ -26,9 +26,6 @@
 
 //Unreal Engine 4 integration written by Leon Rosengarten and Jacob Kostenick 2019
 
-#include "Common.ush"
-
-
 #ifndef THREAD_GROUP_SIZE
 #define THREAD_GROUP_SIZE 64
 #endif

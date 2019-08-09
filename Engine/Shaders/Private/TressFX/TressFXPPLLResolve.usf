@@ -1,8 +1,8 @@
 
 #define KBUFFER_RESOLVE_PASS 1
 
-#include "Common.ush"
-#include "SHCommon.ush"
+#include "../Common.ush"
+#include "../SHCommon.ush"
 #include "TressFXPPLL.ush"
 
 // currently always true because max k-buffer size is 16. if you want a buffer bigger than that you must have unlimited memory

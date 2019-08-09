@@ -27,7 +27,7 @@
 
 #pragma once
 #include "TressFXCommon.ush"
-#include "Common.ush"
+#include "../Common.ush"
 
 #define AMD_PI 3.1415926
 #define AMD_e 2.71828183

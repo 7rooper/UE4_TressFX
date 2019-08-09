@@ -1800,24 +1800,3 @@ extern FFastVramConfig GFastVRamConfig;
 
 extern bool UseCachedMeshDrawCommands();
 extern bool IsDynamicInstancingEnabled(ERHIFeatureLevel::Type FeatureLevel);
-
-//@BEGIN third party code TressFX
-class FTressFXShaderElementData : public FMeshMaterialShaderElementData
-{
-public:
-	FTressFXShaderElementData(ETressFXPass::Type InTFXPass, const FSceneView* InViewIfDynamicMeshCommand) :
-		TFXPass(InTFXPass)
-	{
-		if (InViewIfDynamicMeshCommand)
-		{
-			auto ViewSize = InViewIfDynamicMeshCommand->UnscaledViewRect.Size();
-			FragmentBufferSize = FVector4(ViewSize.X, ViewSize.Y, ViewSize.X*ViewSize.Y, 0);
-			ViewRect = InViewIfDynamicMeshCommand->UnscaledViewRect;
-		}
-	}
-	ETressFXPass::Type TFXPass;
-	FVector4 FragmentBufferSize;
-	FIntRect ViewRect;
-
-};
-//@END third party code TressFX

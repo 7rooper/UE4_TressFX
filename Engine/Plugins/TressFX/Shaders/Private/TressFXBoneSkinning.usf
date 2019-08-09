@@ -1,4 +1,3 @@
-#include "Common.ush"
 
 #ifndef THREAD_GROUP_SIZE
 	#define THREAD_GROUP_SIZE 64

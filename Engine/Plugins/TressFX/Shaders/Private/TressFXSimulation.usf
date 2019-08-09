@@ -30,8 +30,6 @@
 // Physics simulation of hair using compute shaders
 //--------------------------------------------------------------------------------------
 
-#include "TressFXCommon.ush"
-
 #define USE_MESH_BASED_HAIR_TRANSFORM 0
 
 // Whether bones are specified by dual quaternion.

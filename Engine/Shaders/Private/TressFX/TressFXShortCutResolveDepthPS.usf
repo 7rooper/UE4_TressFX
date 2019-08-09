@@ -23,7 +23,7 @@
 //Unreal Engine 4 integration written by Leon Rosengarten and Jacob Kostenick 2019
 
 #include "TressFXShortCutCommon.ush"
-#include "DeferredShadingCommon.ush"
+#include "../DeferredShadingCommon.ush"
 
 Texture2DArray<uint> FragmentDepthsTexture;
 float MinAlphaForSceneDepth;

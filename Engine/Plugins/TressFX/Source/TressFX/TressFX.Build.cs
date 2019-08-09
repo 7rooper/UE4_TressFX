@@ -25,7 +25,7 @@ public class TressFX : ModuleRules
 		
 		PrivateIncludePaths.AddRange(
 				new string[] {
-					"TressFX/Private",
+					"TressFX/Private"
 					// ... add other private include paths required here ...
 				}
 			);

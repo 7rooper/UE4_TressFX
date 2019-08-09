@@ -23,8 +23,8 @@
 // THE SOFTWARE.
 //
 #pragma once
-#include "Common.ush"
-#include "SHCommon.ush"
+#include "../Common.ush"
+#include "../SHCommon.ush"
 #include "TressFXCommon.ush"
 
 #define SHORTCUT_MIN_ALPHA 0.02
