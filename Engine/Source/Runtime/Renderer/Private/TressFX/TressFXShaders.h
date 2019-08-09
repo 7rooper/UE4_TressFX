@@ -44,7 +44,7 @@ class FTressFXCopyOpaqueDepthPS : public FGlobalShader
 
 	const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFX/TressFXCopyVelocityDepth.usf");
+		return TEXT("/Engine/Private/TressFXCopyVelocityDepth.usf");
 	}
 
 	const TCHAR* GetFunctionName()
@@ -330,7 +330,7 @@ class FTressFXResolveVelocityPs : public FGlobalShader
 
 	const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFX/TressFXCopyVelocityDepth.usf");
+		return TEXT("/Engine/Private/TressFXCopyVelocityDepth.usf");
 	}
 
 	const TCHAR* GetFunctionName()
@@ -384,7 +384,7 @@ public:
 
 	static const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFX/TressFXShortCutResolveDepthPS.usf");
+		return TEXT("/Engine/Private/TressFXShortCutResolveDepthPS.usf");
 	}
 
 	static const TCHAR* GetFunctionName()
@@ -463,7 +463,7 @@ public:
 
 	static const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFX/TressFXShortCutResolveColorPS.usf");
+		return TEXT("/Engine/Private/TressFXShortCutResolveColorPS.usf");
 	}
 
 	static const TCHAR* GetFunctionName()
@@ -524,7 +524,7 @@ public:
 
 	static const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFX/TressFXShortCutResolveColorPS.usf");
+		return TEXT("/Engine/Private/TressFXShortCutResolveColorPS.usf");
 	}
 
 	static const TCHAR* GetFunctionName()
@@ -591,7 +591,7 @@ public:
 
 	static const TCHAR* GetSourceFilename()
 	{
-		return TEXT("/Engine/Private/TressFX/TressFXPPLLResolve.usf");
+		return TEXT("/Engine/Private/TressFXPPLLResolve.usf");
 	}
 
 	static const TCHAR* GetFunctionName()

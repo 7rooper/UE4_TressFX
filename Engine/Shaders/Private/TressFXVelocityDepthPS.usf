@@ -22,7 +22,7 @@
 
 #pragma once
 #include "TressFXShortCutCommon.ush"
-#include "../VelocityCommon.ush"
+#include "VelocityCommon.ush"
 
 
 #include "/Engine/Generated/Material.ush"

@@ -4,13 +4,13 @@
 #include "BasePassRendering.h"
 #include "PrimitiveSceneInfo.h"
 
-IMPLEMENT_GLOBAL_SHADER(FTressFXResolveVelocityPs, "/Engine/Private/TressFX/TressFXCopyVelocityDepth.usf", "ResolveVelocityPS", SF_Pixel);
+IMPLEMENT_GLOBAL_SHADER(FTressFXResolveVelocityPs, "/Engine/Private/TressFXCopyVelocityDepth.usf", "ResolveVelocityPS", SF_Pixel);
 
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXCopyOpaqueDepthPS - copies hair depth to scene depth using threshold
 ////////////////////////////////////////////////////////////////////////////////
 
-IMPLEMENT_GLOBAL_SHADER(FTressFXCopyOpaqueDepthPS, "/Engine/Private/TressFX/TressFXCopyVelocityDepth.usf", "CopyOpaqueDepthPs", SF_Pixel);
+IMPLEMENT_GLOBAL_SHADER(FTressFXCopyOpaqueDepthPS, "/Engine/Private/TressFXCopyVelocityDepth.usf", "CopyOpaqueDepthPs", SF_Pixel);
 
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXCopyDepthPS - Simple Depth Copy Shader
@@ -28,7 +28,7 @@ void FTressFXCopyDepthPS::ModifyCompilationEnvironment(const FGlobalShaderPermut
 
 const TCHAR* FTressFXCopyDepthPS::GetSourceFilename()
 {
-	return TEXT("/Engine/Private/TressFX/TressFXCopyVelocityDepth.usf");
+	return TEXT("/Engine/Private/TressFXCopyVelocityDepth.usf");
 }
 
 const TCHAR* FTressFXCopyDepthPS::GetFunctionName()
@@ -55,7 +55,7 @@ void FTressFXCopyDepthPS::SetParameters(FRHICommandList& RHICmdList, const FScen
 	SceneTextureShaderParameters.Set(RHICmdList, GetPixelShader(), View.FeatureLevel, ESceneTextureSetupMode::All);
 }
 
-IMPLEMENT_GLOBAL_SHADER(FTressFXCopyDepthPS, "/Engine/Private/TressFX/TressFXCopyVelocityDepth.usf", "CopyDepthPS", SF_Pixel);
+IMPLEMENT_GLOBAL_SHADER(FTressFXCopyDepthPS, "/Engine/Private/TressFXCopyVelocityDepth.usf", "CopyDepthPS", SF_Pixel);
 
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -63,16 +63,16 @@ IMPLEMENT_GLOBAL_SHADER(FTressFXCopyDepthPS, "/Engine/Private/TressFX/TressFXCop
 ////////////////////////////////////////////////////////////////////////////////
 
 
-IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVS<false>, TEXT("/Engine/Private/TressFX/TressFXVertexShader.usf"), TEXT("VF_MainVS"), SF_Vertex);
-IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVS<true>, TEXT("/Engine/Private/TressFX/TressFXVertexShader.usf"), TEXT("VF_MainVS"), SF_Vertex);
+IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVS<false>, TEXT("/Engine/Private/TressFXVertexShader.usf"), TEXT("VF_MainVS"), SF_Vertex);
+IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVS<true>, TEXT("/Engine/Private/TressFXVertexShader.usf"), TEXT("VF_MainVS"), SF_Vertex);
 
 
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFX_DepthsAlphaPS - Pixel shader for First pass of shortcut
 ////////////////////////////////////////////////////////////////////////////////
 
-IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXDepthsAlphaPS<true>, TEXT("/Engine/Private/TressFX/TressFXShortCutDepthsAlphaPS.usf"), TEXT("main"), SF_Pixel);
-IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXDepthsAlphaPS<false>, TEXT("/Engine/Private/TressFX/TressFXShortCutDepthsAlphaPS.usf"), TEXT("main"), SF_Pixel);
+IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXDepthsAlphaPS<true>, TEXT("/Engine/Private/TressFXShortCutDepthsAlphaPS.usf"), TEXT("main"), SF_Pixel);
+IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXDepthsAlphaPS<false>, TEXT("/Engine/Private/TressFXShortCutDepthsAlphaPS.usf"), TEXT("main"), SF_Pixel);
 
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -82,8 +82,8 @@ IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXDepthsAlphaPS<false>, TEXT("/
 #define IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(TFXRenderType) \
 	typedef FTressFXVelocityDepthPS<true, TFXRenderType> FTressFXVelocityDepthPS##WithVelocity##TFXRenderType; \
 	typedef FTressFXVelocityDepthPS<false, TFXRenderType> FTressFXVelocityDepthPS##NoVelocity##TFXRenderType; \
-	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS##WithVelocity##TFXRenderType, TEXT("/Engine/Private/TressFX/TressFXVelocityDepthPS.usf"), TEXT("TRessFXVelocityDepthPS"), SF_Pixel); \
-	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS##NoVelocity##TFXRenderType, TEXT("/Engine/Private/TressFX/TressFXVelocityDepthPS.usf"), TEXT("TRessFXVelocityDepthPS"), SF_Pixel);
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS##WithVelocity##TFXRenderType, TEXT("/Engine/Private/TressFXVelocityDepthPS.usf"), TEXT("TRessFXVelocityDepthPS"), SF_Pixel); \
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS##NoVelocity##TFXRenderType, TEXT("/Engine/Private/TressFXVelocityDepthPS.usf"), TEXT("TRessFXVelocityDepthPS"), SF_Pixel);
 
 IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(0); //opaque
 IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(1); //shortcut
@@ -121,7 +121,7 @@ IMPLEMENT_FTressFXShortCutResolveDepthPS_SetParameters(false, true)
 
 #define IMPLEMENT_FTressFXShortCutResolveDepthPS(bWriteClosestDepth, bWriteShadingModelToGBuffer)		\
 	typedef FTressFXShortCutResolveDepthPS<bWriteClosestDepth, bWriteShadingModelToGBuffer> FTressFXShortCutResolveDepthPS##bWriteClosestDepth##bWriteShadingModelToGBuffer; \
-	IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveDepthPS##bWriteClosestDepth##bWriteShadingModelToGBuffer, "/Engine/Private/TressFX/TressFXShortCutResolveDepthPS.usf", "main", SF_Pixel);
+	IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveDepthPS##bWriteClosestDepth##bWriteShadingModelToGBuffer, "/Engine/Private/TressFXShortCutResolveDepthPS.usf", "main", SF_Pixel);
 
 IMPLEMENT_FTressFXShortCutResolveDepthPS(true, true)
 IMPLEMENT_FTressFXShortCutResolveDepthPS(true, false)
@@ -142,7 +142,7 @@ void FTressFXShortCutResolveColorPS::SetParameters(FRHICommandList& RHICmdList, 
 	SetTextureParameter(RHICmdList, GetPixelShader(), AccumInvAlpha, SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().ShaderResourceTexture);
 }
 
-IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveColorPS, "/Engine/Private/TressFX/TressFXShortCutResolveColorPS.usf", "ShortcutResolvePS", SF_Pixel);
+IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveColorPS, "/Engine/Private/TressFXShortCutResolveColorPS.usf", "ShortcutResolvePS", SF_Pixel);
 
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -173,7 +173,7 @@ void FTressFXShortCutResolveColorCS::UnsetParameters(FRHICommandList& RHICmdList
 	RHICmdList.SetUAVParameter(ShaderRHI, SceneColorTex.GetBaseIndex(), NULL);
 }
 
-IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveColorCS, "/Engine/Private/TressFX/TressFXShortCutResolveColorPS.usf", "ShortcutResolveCS", SF_Compute);
+IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveColorCS, "/Engine/Private/TressFXShortCutResolveColorPS.usf", "ShortcutResolveCS", SF_Compute);
 
 
 
@@ -199,7 +199,7 @@ void FTressFXFKBufferResolvePS::SetParameters(FRHICommandList& RHICmdList, const
 	SetTextureParameter(RHICmdList, ShaderRHI, FragmentListHead, InHeadListSRV);
 }
 
-IMPLEMENT_GLOBAL_SHADER(FTressFXFKBufferResolvePS, "/Engine/Private/TressFX/TressFXPPLLResolve.usf", "ResolvePPLL", SF_Pixel);
+IMPLEMENT_GLOBAL_SHADER(FTressFXFKBufferResolvePS, "/Engine/Private/TressFXPPLLResolve.usf", "ResolvePPLL", SF_Pixel);
 
 ///////////////////////////////////////////////////////////////////////////////
 // TressFXFKBufferResolveCS
@@ -239,4 +239,4 @@ void FTressFXFKBufferResolveCS::UnsetParameters(FRHICommandList& RHICmdList)
 	RHICmdList.SetUAVParameter(ShaderRHI, SceneColorTex.GetBaseIndex(), NULL);
 }
 
-IMPLEMENT_GLOBAL_SHADER(FTressFXFKBufferResolveCS, "/Engine/Private/TressFX/TressFXPPLLResolve.usf", "ResolvePPLL_CS", SF_Compute);
+IMPLEMENT_GLOBAL_SHADER(FTressFXFKBufferResolveCS, "/Engine/Private/TressFXPPLLResolve.usf", "ResolvePPLL_CS", SF_Compute);

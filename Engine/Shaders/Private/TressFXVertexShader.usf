@@ -25,7 +25,6 @@
 
 
 #include "TressFXShortCutCommon.ush"
-#include "TressFXRendering.ush"
 
 #if WITH_TRESSFX_VERTEX_FACTORY
 	#include "/Engine/Generated/Material.ush"

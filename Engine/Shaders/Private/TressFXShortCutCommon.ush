@@ -22,11 +22,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-#pragma once
-#include "../Common.ush"
-#include "../SHCommon.ush"
-#include "TressFXCommon.ush"
-
+#ifndef TRESS_FX_SHORTCUT_COMMON_USH
+#define TRESS_FX_SHORTCUT_COMMON_USH
+#include "Common.ush"
+#include "SHCommon.ush"
+#include "TressFXRendering.ush"
 #define SHORTCUT_MIN_ALPHA 0.02
 #define TRESSFX_MIN_ALPHA_FOR_SCENE_DEPTH 0.5f
 
@@ -120,3 +120,4 @@ float3 GetWorldPos(float4 vScreenPos, float4 viewport, float4x4 invViewProj)
 	
     return pos.xyz / pos.w;
 }
+#endif

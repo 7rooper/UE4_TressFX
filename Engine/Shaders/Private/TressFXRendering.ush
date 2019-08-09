@@ -24,10 +24,10 @@
 //
 
 //Unreal Engine 4 integration written by Leon Rosengarten and Jacob Kostenick 2019
-
-#pragma once
+#ifndef TRESS_FX_RENDERING_USH
+#define TRESS_FX_RENDERING_USH
 #include "TressFXCommon.ush"
-#include "../Common.ush"
+#include "Common.ush"
 
 #define AMD_PI 3.1415926
 #define AMD_e 2.71828183
@@ -290,3 +290,4 @@ float4 PoissonSampleFloat4(float2 UVs, float Radius, float2 TexelSize, Texture2D
     return Value;
 }
 
+#endif

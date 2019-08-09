@@ -97,4 +97,4 @@ void FTressFXVertexFactory::InitRHI()
 	SetDeclaration(GEmptyVertexDeclaration.VertexDeclarationRHI);
 }
 
-IMPLEMENT_VERTEX_FACTORY_TYPE(FTressFXVertexFactory, "/Engine/Private/TressFX/TressFXVertexFactory.ush", true, false, true, false, false);
+IMPLEMENT_VERTEX_FACTORY_TYPE(FTressFXVertexFactory, "/Engine/Private/TressFXVertexFactory.ush", true, false, true, false, false);

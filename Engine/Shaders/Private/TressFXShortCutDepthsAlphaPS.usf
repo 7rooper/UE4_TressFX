@@ -23,9 +23,9 @@
 //Unreal Engine 4 integration written by Leon Rosengarten and Jacob Kostenick 2019
 #pragma once
 #include "TressFXShortCutCommon.ush"
-#include "../DeferredShadingCommon.ush"
-#include "../VelocityCommon.ush"
-#include "../ShadingCommon.ush"
+#include "DeferredShadingCommon.ush"
+#include "VelocityCommon.ush"
+#include "ShadingCommon.ush"
 
 
 #include "/Engine/Generated/Material.ush"

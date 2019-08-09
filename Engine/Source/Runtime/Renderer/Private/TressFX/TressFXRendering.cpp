@@ -142,11 +142,11 @@ public:
 };
 
 typedef FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut,0> FTressFXFillColorPS_Shortcut;
-IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_Shortcut, TEXT("/Engine/Private/TressFX/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
+IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_Shortcut, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
 
 #define IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(KBufferSize) \
 	typedef FTressFXFillColorPS<ETressFXPass::FillColor_KBuffer, KBufferSize> FTressFXFillColorPS_KBuffer##KBufferSize; \
-	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_KBuffer##KBufferSize, TEXT("/Engine/Private/TressFX/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXFillColorPS_KBuffer##KBufferSize, TEXT("/Engine/Private/TressFXFillColorPS.usf"), TEXT("main"), SF_Pixel);
 
 static_assert(2 >= MIN_TFX_KBUFFER_SIZE, "MIN_TFX_KBUFFER_SIZE is not >= 2!");
 IMPLEMENT_TRESSFX_KBUFFER_FILL_PASS(2)
