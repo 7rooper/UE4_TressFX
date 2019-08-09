@@ -72,7 +72,7 @@ UMediaSoundComponent::UMediaSoundComponent(const FObjectInitializer& ObjectIniti
 	bVisualizeComponent = true;
 #endif
 
-#if PLATFORM_PS4 || PLATFORM_SWITCH || PLATFORM_XBOXONE
+#if PLATFORM_PS4 || PLATFORM_XBOXONE
 	bSyncAudioAfterDropouts = true;
 #else
 	bSyncAudioAfterDropouts = false;
@@ -428,6 +428,11 @@ int32 UMediaSoundComponent::OnGenerateAudio(float* OutAudio, int32 NumSamples)
 			if (FramesWritten == 0)
 			{
 				return 0; // no samples available
+			}
+
+			if (FramesWritten < FramesRequested)
+			{
+				memset(OutAudio + FramesWritten * NumChannels, 0, (NumSamples - FramesWritten * NumChannels) * sizeof(float));
 			}
 		}
 
