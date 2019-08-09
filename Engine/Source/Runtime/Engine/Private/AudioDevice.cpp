@@ -336,7 +336,7 @@ bool FAudioDevice::Init(int32 InMaxChannels)
 	GlobalMaxPitch = FMath::Clamp(AudioSettings->GlobalMaxPitchScale, 0.0001f, 4.0f);
 	bAllowCenterChannel3DPanning = AudioSettings->bAllowCenterChannel3DPanning;
 	bAllowPlayWhenSilent = AudioSettings->bAllowPlayWhenSilent;
-	DefaultReverbSendLevel = AudioSettings->DefaultReverbSendLevel;
+	DefaultReverbSendLevel = AudioSettings->DefaultReverbSendLevel_DEPRECATED;
 
 	const FSoftObjectPath DefaultBaseSoundMixName = GetDefault<UAudioSettings>()->DefaultBaseSoundMix;
 	if (DefaultBaseSoundMixName.IsValid())
