@@ -3,7 +3,7 @@
 	"Version": 1,
 	"VersionName": "1.0",
 	"FriendlyName": "TressFX",
-	"Description": "A implementation of AMD TressFX's subset as plugin. ",
+	"Description": "A implementation of AMD TressFX's subset as plugin.",
 	"Category": "Other",
 	"CreatedBy": "Game Science Inc.",
 	"CreatedByURL": "",
