@@ -86,14 +86,4 @@ float3 GetTressFXSpecularColor()
 {
     return TressFXSpecularColor.xyz;
 }
-
-float GetPrimarySpecularOffset()
-{
-    return TressFXSettings2.z;
-}
-
-float GetSecondarySpecularOffset()
-{
-    return TressFXSettings2.w;
-}
 #endif 
