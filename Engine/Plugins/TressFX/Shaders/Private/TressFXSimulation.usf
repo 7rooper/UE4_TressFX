@@ -759,7 +759,7 @@ void IntegrationAndGlobalShapeConstraints(
     float StiffnessForGlobalShapeMatching = GetGlobalStiffness(Indices.StrandType);
     float GlobalShapeMatchingEffectiveRange = GetGlobalRange(Indices.StrandType);
 
-    if (StiffnessForGlobalShapeMatching > 0 && GlobalShapeMatchingEffectiveRange)
+    if (StiffnessForGlobalShapeMatching > 0.0f && GlobalShapeMatchingEffectiveRange > 0.0f)
     {
         if (IsMovable(SharedPos[Indices.IndexForSharedMem]))
         {
@@ -802,32 +802,32 @@ void VelocityShockPropagation(
     FStrandIndices Indices = CalcIndicesInStrandLevelMaster(GroupIndex, GroupId.x);
 
     float4 PosPrevPrev[2]; // previous previous positions for vertex 0 (root) and vertex 1.
-    float4 PosOld[2]; // previous positions for vertex 0 (root) and vertex 1.
+    float4 PosPrev[2]; // previous positions for vertex 0 (root) and vertex 1.
     float4 PosNew[2]; // current positions for vertex 0 (root) and vertex 1.
 
     PosPrevPrev[0] = HairVertexPositionsPrevPrev[Indices.GlobalRootVertexIndex];
     PosPrevPrev[1] = HairVertexPositionsPrevPrev[Indices.GlobalRootVertexIndex + 1];
 
-    PosOld[0] = HairVertexPositionsPrev[Indices.GlobalRootVertexIndex];
-    PosOld[1] = HairVertexPositionsPrev[Indices.GlobalRootVertexIndex + 1];
+    PosPrev[0] = HairVertexPositionsPrev[Indices.GlobalRootVertexIndex];
+    PosPrev[1] = HairVertexPositionsPrev[Indices.GlobalRootVertexIndex + 1];
 	
     PosNew[0] = HairVertexPositions[Indices.GlobalRootVertexIndex];
     PosNew[1] = HairVertexPositions[Indices.GlobalRootVertexIndex + 1];
 
-    float3 U = normalize(PosOld[1].xyz - PosOld[0].xyz);
+    float3 U = normalize(PosPrev[1].xyz - PosPrev[0].xyz);
     float3 V = normalize(PosNew[1].xyz - PosNew[0].xyz);
 
     // Compute rotation and translation which transform PosOld to PosNew. 
     // Since the first two vertices are immovable, we can assume that there is no scaling during tranform. 
     float4 Rot = QuatFromTwoUnitVectors(U, V);
-    float3 Trans = PosNew[0].xyz - MultQuaternionAndVector(Rot, PosOld[0].xyz);
+    float3 Trans = PosNew[0].xyz - MultQuaternionAndVector(Rot, PosPrev[0].xyz);
 
     float VspCoeff = GetVelocityShockPropogation();
     float RestLength0 = HairRestLengthSRV[Indices.GlobalRootVertexIndex];
     float VspAccelThreshold = GetVSPAccelThreshold();
 
     // Increate the VSP coefficient by checking pseudo-acceleration to handle over-stretching when the character moves very fast 
-    float Accel = length(PosNew[1] - 2.0 * PosOld[1] + PosPrevPrev[1]);
+    float Accel = length(PosNew[1] - 2.0 * PosPrev[1] + PosPrevPrev[1]);
 
     if (Accel > VspAccelThreshold) // TODO: expose this value?
     {
