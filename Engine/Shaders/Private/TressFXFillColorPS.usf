@@ -460,6 +460,7 @@ float ComputeHairGlint(
     float SeedSample0 = HairId + LengthSeed;
     float SeedSample1 = HairId + LengthSeedNeighbor;
 
+	//TODO use noise texture instead
     float Noise0 = RandBBSfloat(SeedSample0);
     float Noise1 = RandBBSfloat(SeedSample1);
 
@@ -575,7 +576,6 @@ float ApproximateDeepShadow(float3 FragmentWorldPos, float SelfshadowStrength)
     return ComputeHairShadowAttenuation(shadowRange, g_FiberSpacing, g_FiberRadius, SelfshadowStrength);
 }
 
-//JAKETODO rect lights
 bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldPosition, float3 N, float3 ToLight, float3 L, float NoL, out float LightAttenuationNoShadow)
 {
 	float DistanceAttenuation = 1;
@@ -597,7 +597,7 @@ bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldP
                 BRANCH
                 if (SourceLength > 0)
                 {
-				// Line segment irradiance
+					// Line segment irradiance
                     float3 L01 = LightData.Direction * SourceLength;
                     float3 L0 = ToLight - 0.5 * L01;
                     float3 L1 = ToLight + 0.5 * L01;
@@ -641,6 +641,42 @@ bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldP
     return true;
 }
 
+bool GetTressFXRectLight(
+	float3 N, 
+	FRect Rect, 
+	FRectTexture SourceTexture, 
+	bool bShouldSampleSource, 
+	out float Falloff, 
+	out float3 L,
+	out FAreaLight AreaLight
+)
+{
+    float NoL;
+	
+	// No-visible rect light due to barn door occlusion
+    if (Rect.Extent.x == 0 || Rect.Extent.y == 0)
+    {
+        Falloff = 0;
+        L = 0;
+        return false;
+    }
+    L = RectIrradianceLambert(N, Rect, Falloff, NoL);
+    float3 FalloffColor = 1;
+	if(bShouldSampleSource)
+	{
+        FalloffColor = SampleSourceTexture(L, Rect, SourceTexture);
+    }
+    AreaLight.SphereSinAlpha = 0;
+    AreaLight.SphereSinAlphaSoft = 0;
+    AreaLight.LineCosSubtended = 1;
+    AreaLight.FalloffColor = FalloffColor;
+    AreaLight.Rect = Rect;
+    AreaLight.Texture = SourceTexture;
+    AreaLight.bIsRect = true;
+    return true;
+}
+
+
 float3 GetTressFXDynamicLighting(
 	  float3 WorldPosition
 	, float3 CameraVector
@@ -660,11 +696,7 @@ float3 GetTressFXDynamicLighting(
 	, float Coverage
 )
 {
-	// Check lighting channels
-#if USE_LIGHTING_CHANNELS
-	if((GetPrimitiveData(PrimitiveId).LightingChannelMask & DeferredLightUniforms.LightingChannelMask) == 0)
-		return 0;
-#endif
+
     float DiffuseBlend = GetDiffuseBlend();
 	
 	// Use 1 for diffuse blend for un-shadowed light, to darken hairs at back faces. 
@@ -694,6 +726,7 @@ float3 GetTressFXDynamicLighting(
     
     FShadowTerms ShadowTerms;
     ShadowTerms.SurfaceShadow = 1;	
+    ShadowTerms.TransmissionShadow = 1;
     
 	float ApproxDeepShadow = 1.0f;
 #if APPROX_DEEP_SHADOW
@@ -712,10 +745,11 @@ float3 GetTressFXDynamicLighting(
     }
 #endif
 
-    float ShadowAttenuation = saturate(ShadowTerms.SurfaceShadow);
+    float ShadowAttenuation = saturate(ShadowTerms.TransmissionShadow);
 #if ATTENUATE_SHADOW_BY_ALPHA && !APPROX_DEEP_SHADOW
     ShadowAttenuation = lerp(1, ShadowAttenuation, 1 - TFXAlpha);
 #endif
+
     float AllShadow = LightAttenuationNoShadow * ApproxDeepShadow * ShadowAttenuation;
 
     float GlintAmbient = 0;
@@ -729,6 +763,20 @@ float3 GetTressFXDynamicLighting(
         const float Luma = Luminance(LightData.Color.rgb);
         GlintAmbient = GlintStrength * GlintComputed * Luma;
         SpecularColor *= lerp(1.0, GlintComputed, GlintStrength);
+    }
+
+    float3 Lighting;
+    Lighting = (LightData.Color * SpecularColor);
+	
+    if (LightData.bRectLight)
+    {
+        FRect Rect = GetRect(ToLight, LightData);
+        float RectFalloff;
+        FAreaLight RectAreaLight;
+        if (GetTressFXRectLight(N, Rect, SourceTexture, false, RectFalloff, L, RectAreaLight))
+        {
+            Lighting *= RectAreaLight.FalloffColor * RectFalloff;
+        }
     }
 
 	float3 Shading;
@@ -750,12 +798,12 @@ float3 GetTressFXDynamicLighting(
 		, GlintStrength
 #endif
 	);
-    
-    float3 Lighting;
-    Lighting = (LightData.Color * SpecularColor) * Shading;
+
+    Lighting *= Shading;
+
     
 	// IES lighting
-    Lighting *= ComputeLightProfileMultiplier(WorldPosition, DeferredLightUniforms.Position, -DeferredLightUniforms.Direction, DeferredLightUniforms.Tangent);
+    Lighting *= ComputeLightProfileMultiplier(WorldPosition, LightData.Position, -LightData.Direction, LightData.Tangent);
 	
 	OutColor += Lighting * AllShadow;
 #if ENABLE_GLINT

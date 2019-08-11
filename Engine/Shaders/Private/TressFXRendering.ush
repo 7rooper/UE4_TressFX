@@ -157,44 +157,6 @@ float3 TressFX_ComputeDiffuseSpecFactors(float3 eyeDir, float3 lightDir, float3 
     return diffuseSpecular;
 }
 
-float TressFX_ComputeHairSpecularHW(
-	  float3 V
-	, float3 L
-	, float3 T
-	, float3 N
-	, float DiffuseBlend
-	, float PrimaryScale
-	, float SecondaryScale
-	, float PrimaryShininess
-	, float SecondaryShininess
-	, float PrimaryOffset
-	, float SecondaryOffset
-)
-{
-		// primary specular
-		float3 H = normalize(V + L);
-		float TdotH = clamp(dot(T, H), -1.0f, 1.0f);
-
-		float TdotHshifted = clamp(TdotH + PrimaryOffset, -1.0f, 1.0f);
-		float specPrimary = sqrt(1.0f - TdotHshifted*TdotHshifted);
-
-		specPrimary = pow(max(0, specPrimary), PrimaryShininess);
-
-		// secondary
-		TdotH = clamp(TdotH + SecondaryOffset, -1.0, 1.0);
-		float SpecSecondary = sqrt(1 - TdotH*TdotH);
-		SpecSecondary = pow(max(0, SpecSecondary), SecondaryShininess);
-
-		// specular sum
-		float SpecularSum = PrimaryScale * specPrimary + SecondaryScale * SpecSecondary;
-
-		// visibility due to diffuse normal
-		float visibilityScale = lerp(1.0f, saturate(dot(N, L)), DiffuseBlend);
-		SpecularSum *= visibilityScale;
-
-        return max(0, SpecularSum);
-}
-
 //--------------------------------------------------------------------------------------
 // ComputeCoverage
 //
