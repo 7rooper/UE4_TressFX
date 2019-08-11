@@ -82,6 +82,7 @@ IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FOpaqueBasePassUniformParameters, "Opaq
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTranslucentBasePassUniformParameters, "TranslucentBasePass");
 
 /*  @BEGIN third party code TressFX */
+IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXRectLightData, "TressFXRectLightInfo");
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, "TressFXColorFillPass");
 /*  @END third party code TressFX */
 
@@ -531,7 +532,7 @@ void CreateTressFXColorPassUniformBuffer(
 	TUniformBufferRef<FTressFXColorPassUniformParameters>& TFXColorPassUniformBuffer,
 	const FSortedShadowMaps& SortedShadowsForShadowDepthPass,
 	const TArray<FProjectedShadowInfo*>& TressFXPerObjectShadowInfos,
-	const FTressFXRectLightInfo& RectLightInfos,
+	const FTressFXRectLightData& RectLightInfos,
 	uint32 KbufferNodePoolSize /*= 0*/
 )
 {

@@ -1027,11 +1027,11 @@ TArray<FProjectedShadowInfo*> GatherTressFXProjectionShadows(TArray<FVisibleLigh
 	return TressFXPerObjectShadowInfos;
 }
 
-FTressFXRectLightInfo GetRectLightInfos(const FScene* Scene, TArray<FVisibleLightInfo, SceneRenderingAllocator> VisibleLightInfos, const FViewInfo& View)
+FTressFXRectLightData GetRectLightInfos(const FScene* Scene, TArray<FVisibleLightInfo, SceneRenderingAllocator> VisibleLightInfos, const FViewInfo& View)
 {
-	FTressFXRectLightInfo RectLightInfo;
+	FTressFXRectLightData RectLightData;
 	// value < 0 will indicate not rect light
-	RectLightInfo.RectLightShadowChannelFlags = FIntVector4(-1,-1,-1,-1);
+	RectLightData.RectLightShadowChannelFlags = FIntVector4(-1,-1,-1,-1);
 
 	for (TSparseArray<FLightSceneInfoCompact>::TConstIterator LightIt(Scene->Lights); LightIt; ++LightIt)
 	{
@@ -1057,14 +1057,14 @@ FTressFXRectLightInfo GetRectLightInfos(const FScene* Scene, TArray<FVisibleLigh
 
 			// we can use the dynamic shadow map channel to look up whether its a rect light or not
 			// mark as rect light
-			RectLightInfo.RectLightShadowChannelFlags[ShadowMapChannel] = 1;
+			RectLightData.RectLightShadowChannelFlags[ShadowMapChannel] = 1;
 
 			const FRectLightSceneProxy* RectProxy = (const FRectLightSceneProxy*)LightProxy;
 
 			FLightShaderParameters RectLightShaderParameters;
 			RectProxy->GetLightShaderParameters(RectLightShaderParameters);
 
-			RectLightInfo.RectLightInfos[ShadowMapChannel] = FVector4(
+			RectLightData.RectLightInfos[ShadowMapChannel] = FVector4(
 				RectLightShaderParameters.RectLightBarnCosAngle,
 				RectLightShaderParameters.RectLightBarnLength,
 				RectLightShaderParameters.SourceRadius,
@@ -1072,14 +1072,31 @@ FTressFXRectLightInfo GetRectLightInfos(const FScene* Scene, TArray<FVisibleLigh
 			);
 
 			//TODO, do i need color or do we already have that in forward light data?
+			TAlignedShaderParameterPtr<FTextureRHIParamRef>* RectTex = nullptr;
+			if (ShadowMapChannel == 0) 
+			{
+				RectTex = &RectLightData.RectTexture0;
+			}
+			else if (ShadowMapChannel == 1)
+			{
+				RectTex = &RectLightData.RectTexture1;
+			}
+			else if (ShadowMapChannel == 2)
+			{
+				RectTex = &RectLightData.RectTexture2;
+			}
+			else if (ShadowMapChannel == 3)
+			{
+				RectTex = &RectLightData.RectTexture3;
+			}
 
 			if (RectProxy->HasSourceTexture()) 
 			{
-				RectLightInfo.RectTextures[ShadowMapChannel] = RectProxy->GetIESTextureResource()->TextureRHI;
+				*RectTex = RectProxy->GetIESTextureResource()->TextureRHI;
 			}
 			else 
 			{
-				RectLightInfo.RectTextures[ShadowMapChannel] = GSystemTextures.WhiteDummy->GetRenderTargetItem().TargetableTexture;
+				*RectTex = GSystemTextures.WhiteDummy->GetRenderTargetItem().TargetableTexture;
 			}
 
 		} while (false);		
@@ -1088,14 +1105,17 @@ FTressFXRectLightInfo GetRectLightInfos(const FScene* Scene, TArray<FVisibleLigh
 	//initialize to dummy values if not a rect light
 	for (int32 ChannelIndex = 0; ChannelIndex < 4; ChannelIndex++)
 	{
-		if (RectLightInfo.RectLightShadowChannelFlags[ChannelIndex] < 0)
+		if (RectLightData.RectLightShadowChannelFlags[ChannelIndex] < 0)
 		{
-			RectLightInfo.RectTextures[ChannelIndex] = GSystemTextures.WhiteDummy->GetRenderTargetItem().TargetableTexture;
-			RectLightInfo.RectLightInfos[ChannelIndex] = FVector4(-1.f, -1.f, -1.f, -1.f);
+			RectLightData.RectLightInfos[ChannelIndex] = FVector4(-1.f, -1.f, -1.f, -1.f);
 		}
 	}
+	RectLightData.RectTexture0 = RectLightData.RectTexture0 && RectLightData.RectTexture0->IsValid() ? RectLightData.RectTexture0 : GSystemTextures.WhiteDummy->GetRenderTargetItem().TargetableTexture;
+	RectLightData.RectTexture1 = RectLightData.RectTexture1 && RectLightData.RectTexture1->IsValid() ? RectLightData.RectTexture1 : GSystemTextures.WhiteDummy->GetRenderTargetItem().TargetableTexture;
+	RectLightData.RectTexture2 = RectLightData.RectTexture2 && RectLightData.RectTexture2->IsValid() ? RectLightData.RectTexture2 : GSystemTextures.WhiteDummy->GetRenderTargetItem().TargetableTexture;
+	RectLightData.RectTexture3 = RectLightData.RectTexture3 && RectLightData.RectTexture3->IsValid() ? RectLightData.RectTexture3 : GSystemTextures.WhiteDummy->GetRenderTargetItem().TargetableTexture;
 
-	return RectLightInfo;
+	return RectLightData;
 }
 
 void RenderShortcutResolvePass(
@@ -1147,7 +1167,7 @@ void RenderShortcutResolvePass(
 			);
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXFillColor"));
 
-			FTressFXRectLightInfo RectLightInfo = GetRectLightInfos(Scene, VisibleLightInfos, View);
+			FTressFXRectLightData RectLightInfo = GetRectLightInfos(Scene, VisibleLightInfos, View);
 
 			TUniformBufferRef<FTressFXColorPassUniformParameters> TFXColorPassUniformBuffer;
 
@@ -1345,7 +1365,7 @@ void RenderKBufferResolvePasses(
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXFillKBuffer"));
 
-			FTressFXRectLightInfo RectLightInfo = GetRectLightInfos(Scene, VisibleLightInfos, View);
+			FTressFXRectLightData RectLightInfo = GetRectLightInfos(Scene, VisibleLightInfos, View);
 
 			TUniformBufferRef<FTressFXColorPassUniformParameters> TFXColorPassUniformBuffer;
 
