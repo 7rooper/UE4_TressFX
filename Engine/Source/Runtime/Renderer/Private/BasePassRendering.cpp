@@ -524,7 +524,6 @@ void SetupSharedBasePassParameters(
 }
 
 /*  @BEGIN third party code TressFX */
-// very similar to opaque bass pass buffer
 void CreateTressFXColorPassUniformBuffer(
 	FRHICommandListImmediate& RHICmdList,
 	const FViewInfo& View,
@@ -532,15 +531,16 @@ void CreateTressFXColorPassUniformBuffer(
 	TUniformBufferRef<FTressFXColorPassUniformParameters>& TFXColorPassUniformBuffer,
 	const FSortedShadowMaps& SortedShadowsForShadowDepthPass,
 	const TArray<FProjectedShadowInfo*>& TressFXPerObjectShadowInfos,
+	const FTressFXRectLightInfo& RectLightInfos,
 	uint32 KbufferNodePoolSize /*= 0*/
 )
 {
 	FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
 
 	FTressFXColorPassUniformParameters ColorPassParams;
+	ColorPassParams.RectLightData = RectLightInfos;
 	SetupSharedBasePassParameters(RHICmdList, View, SceneRenderTargets, ColorPassParams.Shared);
-
-	//first atlas is for whole scene shadows, second one holds per-object shadows, if any
+	//first atlas is for whole scene shadows, second one holds per-object shadows, if any (i think)
 	if (SortedShadowsForShadowDepthPass.ShadowMapAtlases.Num() > 1)
 	{
 		const FSortedShadowMapAtlas& ShadowMapAtlas = SortedShadowsForShadowDepthPass.ShadowMapAtlases.Last();

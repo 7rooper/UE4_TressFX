@@ -1243,6 +1243,9 @@ public:
 	inline bool HasStaticLighting() const { return bStaticLighting; }
 	inline bool HasStaticShadowing() const { return bStaticShadowing; }
 	inline bool CastsDynamicShadow() const { return bCastDynamicShadow; }
+	//@BEGIN third party code TressFX
+	inline bool CastsTressFXDynamicShadow() const { return bCastDynamicShadow && bCastTressFXDynamicShadows; }
+	//@END third party code TressFX
 	inline bool CastsStaticShadow() const { return bCastStaticShadow; }
 	inline bool CastsTranslucentShadows() const { return bCastTranslucentShadows; }
 	inline bool CastsVolumetricShadow() const { return bCastVolumetricShadow; }

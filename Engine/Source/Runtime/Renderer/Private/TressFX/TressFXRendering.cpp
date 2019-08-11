@@ -27,6 +27,7 @@
 #include "Engine/Public/TressFXPublicDef.h"
 #include "PostProcess/RenderingCompositionGraph.h"
 #include "PostProcess/PostProcessing.h"
+#include "RectLightSceneProxy.h"
 #include "PipelineStateCache.h"
 
 DEFINE_LOG_CATEGORY(TressFXRenderingLog);
@@ -988,7 +989,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 		}
 
 		// shortcut pass 2, resolve depths closer to the camera to ue4 scene depth, mainly for shadows and lighting
-		// also needs to write to gbufferb
+		// also needs to write to gbufferb, doesnt actually write the shading model, just the TressFX mask.
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, ResolveCloserDepthsToSceneDepth);
 			ShortcutDepthsResolve_Impl<true, true>(
@@ -1004,7 +1005,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 }
 
 // gather shadow infos for Approximate deep shadows. Only supported for a single directional light ATM.
-// And for now I am assuming a single directional light in the scene
+// And for now I am assuming a single directional light in the scene. This is mainly just to show how to do it, i dont plan on using.
 TArray<FProjectedShadowInfo*> GatherTressFXProjectionShadows(TArray<FVisibleLightInfo, SceneRenderingAllocator> VisibleLightInfos)
 {
 	TArray<FProjectedShadowInfo*> TressFXPerObjectShadowInfos;
@@ -1024,6 +1025,77 @@ TArray<FProjectedShadowInfo*> GatherTressFXProjectionShadows(TArray<FVisibleLigh
 		}
 	}
 	return TressFXPerObjectShadowInfos;
+}
+
+FTressFXRectLightInfo GetRectLightInfos(const FScene* Scene, TArray<FVisibleLightInfo, SceneRenderingAllocator> VisibleLightInfos, const FViewInfo& View)
+{
+	FTressFXRectLightInfo RectLightInfo;
+	// value < 0 will indicate not rect light
+	RectLightInfo.RectLightShadowChannelFlags = FIntVector4(-1,-1,-1,-1);
+
+	for (TSparseArray<FLightSceneInfoCompact>::TConstIterator LightIt(Scene->Lights); LightIt; ++LightIt)
+	{
+		const FLightSceneInfoCompact& LightSceneInfoCompact = *LightIt;
+		const FLightSceneInfo* const LightSceneInfo = LightSceneInfoCompact.LightSceneInfo;
+		const FVisibleLightInfo& VisibleLightInfo = VisibleLightInfos[LightSceneInfo->Id];
+		const FLightSceneProxy* LightProxy = LightSceneInfo->Proxy;
+		do 
+		{
+			if (!(LightProxy->IsRectLight() && LightProxy->CastsTressFXDynamicShadow()))
+			{
+				break;
+			}
+			if (!LightSceneInfo->ShouldRenderLight(View))
+			{
+				break;
+			}
+			const int32 ShadowMapChannel = LightSceneInfo->GetDynamicShadowMapChannel();
+			if (ShadowMapChannel < 0 || ShadowMapChannel > 3) 
+			{
+				break;
+			}
+
+			// we can use the dynamic shadow map channel to look up whether its a rect light or not
+			// mark as rect light
+			RectLightInfo.RectLightShadowChannelFlags[ShadowMapChannel] = 1;
+
+			const FRectLightSceneProxy* RectProxy = (const FRectLightSceneProxy*)LightProxy;
+
+			FLightShaderParameters RectLightShaderParameters;
+			RectProxy->GetLightShaderParameters(RectLightShaderParameters);
+
+			RectLightInfo.RectLightInfos[ShadowMapChannel] = FVector4(
+				RectLightShaderParameters.RectLightBarnCosAngle,
+				RectLightShaderParameters.RectLightBarnLength,
+				RectLightShaderParameters.SourceRadius,
+				RectLightShaderParameters.SourceLength
+			);
+
+			//TODO, do i need color or do we already have that in forward light data?
+
+			if (RectProxy->HasSourceTexture()) 
+			{
+				RectLightInfo.RectTextures[ShadowMapChannel] = RectProxy->GetIESTextureResource()->TextureRHI;
+			}
+			else 
+			{
+				RectLightInfo.RectTextures[ShadowMapChannel] = GSystemTextures.WhiteDummy->GetRenderTargetItem().TargetableTexture;
+			}
+
+		} while (false);		
+	}
+
+	//initialize to dummy values if not a rect light
+	for (int32 ChannelIndex = 0; ChannelIndex < 4; ChannelIndex++)
+	{
+		if (RectLightInfo.RectLightShadowChannelFlags[ChannelIndex] < 0)
+		{
+			RectLightInfo.RectTextures[ChannelIndex] = GSystemTextures.WhiteDummy->GetRenderTargetItem().TargetableTexture;
+			RectLightInfo.RectLightInfos[ChannelIndex] = FVector4(-1.f, -1.f, -1.f, -1.f);
+		}
+	}
+
+	return RectLightInfo;
 }
 
 void RenderShortcutResolvePass(
@@ -1075,6 +1147,8 @@ void RenderShortcutResolvePass(
 			);
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXFillColor"));
 
+			FTressFXRectLightInfo RectLightInfo = GetRectLightInfos(Scene, VisibleLightInfos, View);
+
 			TUniformBufferRef<FTressFXColorPassUniformParameters> TFXColorPassUniformBuffer;
 
 			CreateTressFXColorPassUniformBuffer(
@@ -1084,6 +1158,7 @@ void RenderShortcutResolvePass(
 				, TFXColorPassUniformBuffer
 				, SortedShadowsForShadowDepthPass
 				, TressFXPerObjectShadowInfos
+				, RectLightInfo
 			);
 			FMeshPassProcessorRenderState DrawRenderState(View, TFXColorPassUniformBuffer);
 			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
@@ -1270,9 +1345,20 @@ void RenderKBufferResolvePasses(
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXFillKBuffer"));
 
+			FTressFXRectLightInfo RectLightInfo = GetRectLightInfos(Scene, VisibleLightInfos, View);
+
 			TUniformBufferRef<FTressFXColorPassUniformParameters> TFXColorPassUniformBuffer;
 
-			CreateTressFXColorPassUniformBuffer(RHICmdList, View, ScreenShadowMaskTexture, TFXColorPassUniformBuffer, SortedShadowsForShadowDepthPass, TressFXPerObjectShadowInfos ,TressFXKBufferNodePoolSize);
+			CreateTressFXColorPassUniformBuffer(
+				RHICmdList, 
+				View, 
+				ScreenShadowMaskTexture, 
+				TFXColorPassUniformBuffer, 
+				SortedShadowsForShadowDepthPass, 
+				TressFXPerObjectShadowInfos,
+				RectLightInfo,
+				TressFXKBufferNodePoolSize
+			);
 			FMeshPassProcessorRenderState DrawRenderState(View, TFXColorPassUniformBuffer);
 			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);

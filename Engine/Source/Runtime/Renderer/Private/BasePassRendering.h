@@ -99,8 +99,16 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTranslucentBasePassUniformParameters,)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 /*  @BEGIN third party code TressFX */
+
+BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXRectLightInfo, )
+	SHADER_PARAMETER(FIntVector4, RectLightShadowChannelFlags)
+	SHADER_PARAMETER_ARRAY(FVector4, RectLightInfos, [4])
+	SHADER_PARAMETER_TEXTURE_ARRAY(Texture2D, RectTextures, [4])
+END_GLOBAL_SHADER_PARAMETER_STRUCT()
+
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, )
 	SHADER_PARAMETER_STRUCT(FSharedBasePassUniformParameters, Shared)
+	SHADER_PARAMETER_STRUCT(FTressFXRectLightInfo, RectLightData)
 	SHADER_PARAMETER(FMatrix, DirectionalLightWorldToShadowMatrix)
 	SHADER_PARAMETER(FVector4, ShadowBufferSize)
 	SHADER_PARAMETER(uint32, NodePoolSize)
@@ -121,6 +129,7 @@ extern void CreateTressFXColorPassUniformBuffer(
 	TUniformBufferRef<FTressFXColorPassUniformParameters>& TFXColorPassUniformBuffer,
 	const FSortedShadowMaps& SortedShadowsForShadowDepthPass,
 	const TArray<FProjectedShadowInfo*>& TressFXPerObjectShadowInfos,
+	const FTressFXRectLightInfo& RectLightInfos,
 	uint32 KbufferNodePoolSize = 0
 );
 /*  @END third party code TressFX */
