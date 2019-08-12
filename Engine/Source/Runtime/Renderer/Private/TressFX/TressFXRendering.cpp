@@ -1068,7 +1068,7 @@ FTressFXRectLightData GetRectLightInfos(const FScene* Scene, TArray<FVisibleLigh
 				RectLightShaderParameters.RectLightBarnCosAngle,
 				RectLightShaderParameters.RectLightBarnLength,
 				RectLightShaderParameters.SourceRadius,
-				RectLightShaderParameters.SourceLength
+				-1
 			);
 
 			//TODO, do i need color or do we already have that in forward light data?
@@ -1093,6 +1093,7 @@ FTressFXRectLightData GetRectLightInfos(const FScene* Scene, TArray<FVisibleLigh
 			if (RectProxy->HasSourceTexture()) 
 			{
 				*RectTex = RectProxy->GetIESTextureResource()->TextureRHI;
+				RectLightData.RectLightInfos[ShadowMapChannel].W = 1; // use one to indicate it has a source tex, else -1
 			}
 			else 
 			{
