@@ -28,7 +28,7 @@ public:
 
 public:
 	/** Creates a new emitter editor view model with the supplied emitter handle and simulation. */
-	FNiagaraEmitterViewModel(UNiagaraEmitter* InEmitter, TWeakPtr<FNiagaraEmitterInstance, ESPMode::ThreadSafe> InSimulation);
+	FNiagaraEmitterViewModel();
 	virtual ~FNiagaraEmitterViewModel();
 
 	/** Reuse this view model with new parameters.*/

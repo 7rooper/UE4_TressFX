@@ -20,11 +20,16 @@
 
 #define LOCTEXT_NAMESPACE "EmitterHandleViewModel"
 
-FNiagaraEmitterHandleViewModel::FNiagaraEmitterHandleViewModel(FNiagaraEmitterHandle* InEmitterHandle, TWeakPtr<FNiagaraEmitterInstance, ESPMode::ThreadSafe> InSimulation, UNiagaraSystem& InOwningSystem)
-	: EmitterHandle(InEmitterHandle)
+FNiagaraEmitterHandleViewModel::FNiagaraEmitterHandleViewModel(UNiagaraSystem& InOwningSystem)
+	: EmitterHandle(nullptr)
 	, OwningSystem(InOwningSystem)
-	, EmitterViewModel(MakeShareable(new FNiagaraEmitterViewModel((InEmitterHandle ? InEmitterHandle->GetInstance() : nullptr), InSimulation)))
+	, EmitterViewModel(MakeShared<FNiagaraEmitterViewModel>())
 {
+}
+
+bool FNiagaraEmitterHandleViewModel::IsValid() const
+{
+	return EmitterHandle != nullptr;
 }
 
 void FNiagaraEmitterHandleViewModel::Cleanup()
@@ -42,14 +47,9 @@ FNiagaraEmitterHandleViewModel::~FNiagaraEmitterHandleViewModel()
 	Cleanup();
 }
 
-bool FNiagaraEmitterHandleViewModel::Set(FNiagaraEmitterHandle* InEmitterHandle, TWeakPtr<FNiagaraEmitterInstance, ESPMode::ThreadSafe> InSimulation, UNiagaraSystem& InOwningSystem)
+void FNiagaraEmitterHandleViewModel::Set(FNiagaraEmitterHandle* InEmitterHandle, TWeakPtr<FNiagaraEmitterInstance, ESPMode::ThreadSafe> InSimulation)
 {
-	if (&OwningSystem != &InOwningSystem)
-	{
-		return false;
-	}
-
-	SetEmitterHandle(InEmitterHandle);
+	EmitterHandle = InEmitterHandle;
 	SetSimulation(InSimulation);
 	
 	UNiagaraEmitter* EmitterProperties = nullptr;
@@ -58,13 +58,7 @@ bool FNiagaraEmitterHandleViewModel::Set(FNiagaraEmitterHandle* InEmitterHandle,
 		EmitterProperties = InEmitterHandle->GetInstance();
 	}
 	check(EmitterViewModel.IsValid());
-	return EmitterViewModel->Set(EmitterProperties, InSimulation);
-}
-
-
-void FNiagaraEmitterHandleViewModel::SetEmitterHandle(FNiagaraEmitterHandle* InEmitterHandle)
-{
-	EmitterHandle = InEmitterHandle;
+	EmitterViewModel->Set(EmitterProperties, InSimulation);
 }
 
 void FNiagaraEmitterHandleViewModel::SetSimulation(TWeakPtr<FNiagaraEmitterInstance, ESPMode::ThreadSafe> InSimulation)

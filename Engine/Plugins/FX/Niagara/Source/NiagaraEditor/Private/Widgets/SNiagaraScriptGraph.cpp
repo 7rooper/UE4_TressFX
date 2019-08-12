@@ -144,13 +144,14 @@ TSharedRef<SGraphEditor> SNiagaraScriptGraph::ConstructGraphEditor()
 	Events.OnVerifyTextCommit = FOnNodeVerifyTextCommit::CreateSP(this, &SNiagaraScriptGraph::OnVerifyNodeTextCommit);
 	Events.OnSpawnNodeByShortcut = SGraphEditor::FOnSpawnNodeByShortcut::CreateSP(this, &SNiagaraScriptGraph::OnSpawnGraphNodeByShortcut);
 
-	TSharedRef<FUICommandList> Commands = ViewModel->GetCommands();
+	TSharedRef<FUICommandList> Commands = MakeShared<FUICommandList>();
+	Commands->Append(ViewModel->GetCommands());
 	Commands->MapAction(
 		FNiagaraEditorCommands::Get().FindInCurrentView,
 		FExecuteAction::CreateRaw(this, &SNiagaraScriptGraph::FocusGraphSearchBox));
 	
 	TSharedRef<SGraphEditor> CreatedGraphEditor = SNew(SGraphEditor)
-		.AdditionalCommands(ViewModel->GetCommands())
+		.AdditionalCommands(Commands)
 		.Appearance(AppearanceInfo)
 		.TitleBar(TitleBarWidget)
 		.GraphToEdit(ViewModel->GetGraph())

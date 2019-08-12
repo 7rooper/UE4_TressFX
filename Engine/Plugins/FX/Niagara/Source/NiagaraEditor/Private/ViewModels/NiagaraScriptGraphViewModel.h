@@ -23,7 +23,7 @@ public:
 
 public:
 	/** Create a new view model with the supplied script. */
-	FNiagaraScriptGraphViewModel(UNiagaraScriptSource* InScriptSource, FText InDisplayName);
+	FNiagaraScriptGraphViewModel(FText InDisplayName);
 
 	~FNiagaraScriptGraphViewModel();
 

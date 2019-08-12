@@ -179,7 +179,6 @@ void UNiagaraSystem::Serialize(FArchive& Ar)
 void UNiagaraSystem::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	FNiagaraSystemUpdateContext(this, true);
 
 	ThumbnailImageOutOfDate = true;
 	
