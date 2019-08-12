@@ -752,6 +752,7 @@ float3 GetTressFXDynamicLighting(
 
     float AllShadow = LightAttenuationNoShadow * ApproxDeepShadow * ShadowAttenuation;
 
+#if ENABLE_GLINT
     float GlintAmbient = 0;
     float GlintStrength = GetGlintStrength();
     const float GlintSize = GetGlintSize();
@@ -764,6 +765,7 @@ float3 GetTressFXDynamicLighting(
         GlintAmbient = GlintStrength * GlintComputed * Luma;
         SpecularColor *= lerp(1.0, GlintComputed, GlintStrength);
     }
+#endif
 
     float3 Lighting;
     Lighting = (LightData.Color * SpecularColor);
