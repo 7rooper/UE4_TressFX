@@ -377,10 +377,9 @@ FAutoConsoleVariableRef CVarTressFXUseComputeResolves(
 	ECVF_RenderThreadSafe
 );
 
-int32 GBTressFXSupportRectLights = 0;
-FAutoConsoleVariableRef CVarTressFXUseComputeResolves(
+static TAutoConsoleVariable<int32> TressFXSupportRectLights(
 	TEXT("tfx.SupportRectLights"),
-	GBTressFXSupportRectLights,
+	0,
 	TEXT("0 (default): No support for rect lights on hair, they treated as point lights")
 	TEXT("1: Full support for rect lights. Very Expensive"),
 	ECVF_RenderThreadSafe
