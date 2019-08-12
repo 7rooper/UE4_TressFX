@@ -576,7 +576,7 @@ float ApproximateDeepShadow(float3 FragmentWorldPos, float SelfshadowStrength)
     return ComputeHairShadowAttenuation(shadowRange, g_FiberSpacing, g_FiberRadius, SelfshadowStrength);
 }
 
-bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldPosition, float3 N, float3 ToLight, float3 L, float NoL, out float LightAttenuationNoShadow)
+bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldPosition, float3 N, inout float3 ToLight, inout float3 L, inout float NoL, out float LightAttenuationNoShadow)
 {
 	float DistanceAttenuation = 1;
     float LightMask = 1;
@@ -745,7 +745,7 @@ float3 GetTressFXDynamicLighting(
     }
 #endif
 
-    float ShadowAttenuation = saturate(ShadowTerms.TransmissionShadow);
+    float ShadowAttenuation = saturate(ShadowTerms.SurfaceShadow);
 #if ATTENUATE_SHADOW_BY_ALPHA && !APPROX_DEEP_SHADOW
     ShadowAttenuation = lerp(1, ShadowAttenuation, 1 - TFXAlpha);
 #endif
@@ -776,6 +776,10 @@ float3 GetTressFXDynamicLighting(
         if (GetTressFXRectLight(N, Rect, SourceTexture, false, RectFalloff, L, RectAreaLight))
         {
             Lighting *= RectAreaLight.FalloffColor * RectFalloff;
+        }
+        else
+        {
+            return 0;
         }
     }
 
