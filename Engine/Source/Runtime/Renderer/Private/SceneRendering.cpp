@@ -377,11 +377,20 @@ FAutoConsoleVariableRef CVarTressFXUseComputeResolves(
 	ECVF_RenderThreadSafe
 );
 
+int32 GBTressFXSupportRectLights = 0;
+FAutoConsoleVariableRef CVarTressFXUseComputeResolves(
+	TEXT("tfx.SupportRectLights"),
+	GBTressFXSupportRectLights,
+	TEXT("0 (default): No support for rect lights on hair, they treated as point lights")
+	TEXT("1: Full support for rect lights. Very Expensive"),
+	ECVF_RenderThreadSafe
+);
+
 float GTressFXMinAlphaForDepth = 0.95f;
 FAutoConsoleVariableRef CVarTressFXMinAlphaForSceneDepth(
 	TEXT("tfx.MinAlphaForSceneDepth"),
 	GTressFXMinAlphaForDepth,
-	TEXT("The minimum alpha value for hair to be considered for shadows"),
+	TEXT("The minimum alpha value for hair to be considered for hair shadows. Shadows cast by hair onto the scene dont yet take opacity into account."),
 	ECVF_RenderThreadSafe
 );
 /*@END Third party code TressFX*/

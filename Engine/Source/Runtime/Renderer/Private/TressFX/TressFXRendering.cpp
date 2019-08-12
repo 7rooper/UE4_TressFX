@@ -36,6 +36,7 @@ extern int32 GTressFXRenderType;
 extern int32 GBTressFXPreferCompute;
 extern float GTressFXMinAlphaForDepth;
 extern int32 GTressFXKBufferSize;
+extern int32 GBTressFXSupportRectLights;
 
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXFillColorPS - Pixel shader for Third pass of shortcut, and PPLL build of kbuffer
