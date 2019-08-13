@@ -11,6 +11,7 @@
 #define WAVE_FORMAT_LPCM  1
 #define WAVE_FORMAT_ADPCM 2
 
+
 namespace ADPCM
 {
 	const uint32 MaxChunkSize = 256 * 1024;
@@ -276,28 +277,33 @@ bool FADPCMAudioInfo::ReadCompressedData(uint8* Destination, bool bLooping, uint
 	}
 	else
 	{
-		uint32 DecompressedSamplesToCopy = BufferSize / ChannelSampleSize;
-
-		// Ensure we don't go over the number of samples left in the audio data
-		if(DecompressedSamplesToCopy > TotalSamplesPerChannel - TotalSamplesStreamed)
+		uint32 OutDataOffset = 0;
+		while (BufferSize > 0)
 		{
-			DecompressedSamplesToCopy = TotalSamplesPerChannel - TotalSamplesStreamed;
-		}
+			uint32 DecompressedSamplesToCopy = BufferSize / ChannelSampleSize;
 
-		FMemory::Memcpy(OutData, WaveInfo.SampleDataStart + (TotalSamplesStreamed * ChannelSampleSize), DecompressedSamplesToCopy * ChannelSampleSize);
-		TotalSamplesStreamed += DecompressedSamplesToCopy;
-		BufferSize -= DecompressedSamplesToCopy * ChannelSampleSize;
-
-		// Check for the end of the audio samples and loop if needed
-		if(TotalSamplesStreamed >= TotalSamplesPerChannel)
-		{
-			ReachedEndOfSamples = true;
-			TotalSamplesStreamed = 0;
-			if(!bLooping)
+			// Ensure we don't go over the number of samples left in the audio data
+			if (DecompressedSamplesToCopy > TotalSamplesPerChannel - TotalSamplesStreamed)
 			{
-				// Zero remaining buffer
-				FMemory::Memzero(OutData, BufferSize);
-				return true;
+				DecompressedSamplesToCopy = TotalSamplesPerChannel - TotalSamplesStreamed;
+			}
+
+			FMemory::Memcpy(OutData + OutDataOffset, WaveInfo.SampleDataStart + (TotalSamplesStreamed * ChannelSampleSize), DecompressedSamplesToCopy * ChannelSampleSize);
+			TotalSamplesStreamed += DecompressedSamplesToCopy;
+			BufferSize -= DecompressedSamplesToCopy * ChannelSampleSize;
+			OutDataOffset += DecompressedSamplesToCopy;
+
+			// Check for the end of the audio samples and loop if needed
+			if (TotalSamplesStreamed >= TotalSamplesPerChannel)
+			{
+				ReachedEndOfSamples = true;
+				TotalSamplesStreamed = 0;
+				if (!bLooping)
+				{
+					// Zero remaining buffer
+					FMemory::Memzero(OutData, BufferSize);
+					return true;
+				}
 			}
 		}
 	}
