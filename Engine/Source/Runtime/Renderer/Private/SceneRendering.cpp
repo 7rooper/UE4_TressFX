@@ -353,10 +353,10 @@ static TAutoConsoleVariable<int32> CVarTestSecondaryUpscaleOverride(
 /*@BEGIN Third party code TressFX*/
 int32 GTressFXRenderType = 0;
 FAutoConsoleVariableRef CVarTressFXType(
-	TEXT("tfx.type"),
+	TEXT("tfx.Type"),
 	GTressFXRenderType,
-	TEXT("0: Opaque")
-	TEXT("1: ShortCut")
+	TEXT("0: Opaque\n")
+	TEXT("1: ShortCut\n")
 	TEXT("2: KBuffer"),
 	ECVF_RenderThreadSafe
 );
@@ -365,33 +365,10 @@ int32 GTressFXKBufferSize = 8;
 FAutoConsoleVariableRef CVarTressFXKBufferSize(
 	TEXT("tfx.KBuffer.Size"),
 	GTressFXKBufferSize,
-	TEXT("Size of OIT K-Buffer"),
+	TEXT("Size of OIT K-Buffer if using the k-buffer path"),
 	ECVF_RenderThreadSafe
 );
 
-int32 GBTressFXPreferCompute = 1;
-FAutoConsoleVariableRef CVarTressFXUseComputeResolves(
-	TEXT("tfx.PreferCompute"),
-	GBTressFXPreferCompute,
-	TEXT("Use compute shaders for resolve passes, if supported."),
-	ECVF_RenderThreadSafe
-);
-
-static TAutoConsoleVariable<int32> TressFXSupportRectLights(
-	TEXT("tfx.SupportRectLights"),
-	0,
-	TEXT("0 (default): No support for rect lights on hair, they treated as point lights")
-	TEXT("1: Full support for rect lights. Very Expensive"),
-	ECVF_RenderThreadSafe
-);
-
-float GTressFXMinAlphaForDepth = 0.95f;
-FAutoConsoleVariableRef CVarTressFXMinAlphaForSceneDepth(
-	TEXT("tfx.MinAlphaForSceneDepth"),
-	GTressFXMinAlphaForDepth,
-	TEXT("The minimum alpha value for hair to be considered for hair shadows. Shadows cast by hair onto the scene dont yet take opacity into account."),
-	ECVF_RenderThreadSafe
-);
 /*@END Third party code TressFX*/
 
 static FParallelCommandListSet* GOutstandingParallelCommandListSet = nullptr;

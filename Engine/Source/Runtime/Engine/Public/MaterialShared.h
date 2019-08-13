@@ -1279,6 +1279,7 @@ public:
 	virtual bool TressFXShouldRenderVelocity() const { return true; }
 	virtual bool TressFXAttenuateShadowByAlpha() const { return true; }
 	virtual bool TressFXEnableGlint() const { return false; }
+	virtual bool TressFXEnableRectLights() const { return false; }
 	virtual bool TressFXApproximateDeepShadow() const { return false; }
 	/*@End Third party code TressFX*/
 
@@ -1977,6 +1978,7 @@ public:
 	ENGINE_API virtual bool TressFXShouldRenderVelocity() const override;
 	ENGINE_API virtual bool TressFXAttenuateShadowByAlpha() const override;
 	ENGINE_API virtual bool TressFXEnableGlint() const override;
+	ENGINE_API virtual bool TressFXEnableRectLights() const override;
 	ENGINE_API virtual bool TressFXApproximateDeepShadow() const override;
 	/*@End Third party code TressFX*/
 

@@ -1247,6 +1247,7 @@ bool FMaterialResource::TressFXShouldRenderVelocity() const { return Material->b
 bool FMaterialResource::TressFXApproximateDeepShadow() const { return Material->bTressFXApproximateDeepShadow; }
 bool FMaterialResource::TressFXAttenuateShadowByAlpha() const { return Material->bTressFXAttenuateShadowByAlpha; }
 bool FMaterialResource::TressFXEnableGlint() const { return Material->bTressFXEnableGlint; }
+bool FMaterialResource::TressFXEnableRectLights() const { return Material->bTressFXEnableRectLights; }
 /*@End Third party code TressFX*/
 
 bool FMaterialResource::ComputeFogPerPixel() const {return Material->bComputeFogPerPixel;}

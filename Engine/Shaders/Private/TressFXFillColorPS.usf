@@ -42,6 +42,9 @@
 	#define ATTENUATE_SHADOW_BY_ALPHA 1
 #endif
 
+#ifndef SUPPORT_RECT_LIGHT
+	#define SUPPORT_RECT_LIGHT 0
+#endif
 
 #ifndef ENABLE_SKY_LIGHT
 	#define ENABLE_SKY_LIGHT 1
@@ -591,8 +594,10 @@ bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldP
 
 		if(LightData.bInverseSquared)
 		{
+#if SUPPORT_RECT_LIGHT
             if (!LightData.bRectLight)
             {
+#endif
                 const float SourceLength = LightData.SourceLength;
                 BRANCH
                 if (SourceLength > 0)
@@ -612,7 +617,9 @@ bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldP
 					// Sphere irradiance (technically just 1/d^2 but this avoids inf)
                     DistanceAttenuation = 1 / (DistanceSqr + 1);
                 }
+#if SUPPORT_RECT_LIGHT
             }
+#endif
             LightMask = Square(saturate(1 - Square(DistanceSqr * Square(LightData.InvRadius))));
         }
 		else
@@ -625,11 +632,14 @@ bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldP
 		{
 			SpotFalloff = SpotAttenuation(L, -LightData.Direction, LightData.SpotAngles);
         }
+
+#if SUPPORT_RECT_LIGHT
         if (LightData.bRectLight)
         {
 			// Rect normal points away from point
             LightMask = dot(LightData.Direction, L) < 0 ? 0 : LightMask;
         }
+#endif
     }
 
     if (LightMask <= 0 || SpotFalloff <= 0)
@@ -641,31 +651,36 @@ bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldP
     return true;
 }
 
-bool GetTressFXRectLight(
+FAreaLight GetTressFXRectLight(
 	float3 N, 
 	FRect Rect, 
 	FRectTexture SourceTexture, 
 	bool bShouldSampleSource, 
 	out float Falloff, 
 	out float3 L,
-	out FAreaLight AreaLight
+	out bool bHasLight
 )
 {
+    FAreaLight AreaLight;
     float NoL;
-	
 	// No-visible rect light due to barn door occlusion
     if (Rect.Extent.x == 0 || Rect.Extent.y == 0)
     {
         Falloff = 0;
         L = 0;
-        return false;
+        AreaLight.FalloffColor = 0;
+        bHasLight = false;
+        return AreaLight;
     }
+
     L = RectIrradianceLambert(N, Rect, Falloff, NoL);
-    float3 FalloffColor = 1;
+    float3 FalloffColor = float3(1,1,1);
+	#if 0 //compile error
 	if(bShouldSampleSource)
 	{
         FalloffColor = SampleSourceTexture(L, Rect, SourceTexture);
     }
+	#endif
     AreaLight.SphereSinAlpha = 0;
     AreaLight.SphereSinAlphaSoft = 0;
     AreaLight.LineCosSubtended = 1;
@@ -673,7 +688,8 @@ bool GetTressFXRectLight(
     AreaLight.Rect = Rect;
     AreaLight.Texture = SourceTexture;
     AreaLight.bIsRect = true;
-    return true;
+    bHasLight = true;
+    return AreaLight;
 }
 
 
@@ -711,7 +727,6 @@ float3 GetTressFXDynamicLighting(
     float3 L = LightData.Direction; // Already normalized
     float3 ToLight = L;
     float NoL = saturate(dot(N, L));
-    float VoL = dot(V, L);
 	
     float LightAttenuationNoShadow;
     if (!ComputeLightAttenuationNoShadow(LightData, WorldPosition, N, ToLight, L, NoL, LightAttenuationNoShadow))
@@ -765,12 +780,14 @@ float3 GetTressFXDynamicLighting(
     float3 Lighting;
     Lighting = (LightData.Color * SpecularColor);
 	
+#if SUPPORT_RECT_LIGHT
     if (LightData.bRectLight)
     {
         FRect Rect = GetRect(ToLight, LightData);
         float RectFalloff;
-        FAreaLight RectAreaLight;
-        if (GetTressFXRectLight(N, Rect, SourceTexture, bSampleRectSourceTex, RectFalloff, L, RectAreaLight))
+        bool bHasLight;
+        FAreaLight RectAreaLight = GetTressFXRectLight(N, Rect, SourceTexture, bSampleRectSourceTex, RectFalloff, L, bHasLight);
+        if (bHasLight)
         {
             Lighting *= RectAreaLight.FalloffColor * RectFalloff;
         }
@@ -779,9 +796,10 @@ float3 GetTressFXDynamicLighting(
             return 0;
         }
     }
+#endif
 
 	float3 Shading;
-	//NOTE: shadow is only used for scatter calc in TressFXHairShading
+	//NOTE: shadow is only used for the scatter calc in TressFXHairShading
     Shading = TressFXHairShading
 	(
 		GbufferData
@@ -816,14 +834,6 @@ float3 GetTressFXDynamicLighting(
 bool IsRectLight(int DynamicShadowMapChannel)
 {
 	return TFXRectLightData.RectLightShadowChannelFlags[DynamicShadowMapChannel] > 0;
-}
-
-Texture2D GetTFXRectTex(int DynamicShadowMapChannel)
-{
-	if(DynamicShadowMapChannel == 0) { return TFXRectLightData.RectTexture0; }
-	else if(DynamicShadowMapChannel == 1) { return TFXRectLightData.RectTexture1; }
-	else if(DynamicShadowMapChannel == 2) { return TFXRectLightData.RectTexture2; }
-	else { return TFXRectLightData.RectTexture3; }
 }
 
 int GetDynamicShadowChannel(float4 PreviewShadowMapChannelMask)
@@ -872,7 +882,7 @@ float3 GetForwardDirectLightingTressFX(
 	uint LightingChannelMask = GetPrimitiveData(PrimitiveId).LightingChannelMask;
 
 	const FDirectionalLightData DirectionalLightData = GetDirectionalLightData(EyeIndex);
-	FRectTexture RectTexture = InitRectTexture(DeferredLightUniforms.SourceTexture);
+	FRectTexture RectTexture = InitRectTexture(TFXRectLightData.RectTextureDummy);
 
 	BRANCH
 	if (DirectionalLightData.HasDirectionalLight)
@@ -965,7 +975,7 @@ float3 GetForwardDirectLightingTressFX(
 		float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
 		float4 LightAttenuation = float4(1, 1, DynamicShadowing.x, DynamicShadowing.x);
         bool bSampleRectSourceTex = false;
-#if MATERIAL_SHADINGMODEL_TRESSFX
+#if MATERIAL_SHADINGMODEL_TRESSFX && SUPPORT_RECT_LIGHT
         int DynamicShadowChannel = GetDynamicShadowChannel(PreviewShadowMapChannelMask);
         if (DynamicShadowChannel > -1)
         {
@@ -980,16 +990,10 @@ float3 GetForwardDirectLightingTressFX(
         {
             LightData.RectLightBarnCosAngle = TFXRectLightData.RectLightInfos[DynamicShadowChannel].x;
             LightData.RectLightBarnLength = TFXRectLightData.RectLightInfos[DynamicShadowChannel].y;
-			bSampleRectSourceTex = TFXRectLightData.RectLightInfos[DynamicShadowChannel].w > 0;
         }
 #endif
-        FRectTexture RectTextureToUse = RectTexture;
         #if MATERIAL_SHADINGMODEL_TRESSFX
-			if(bSampleRectSourceTex)
-			{
-				RectTextureToUse = InitRectTexture(GetTFXRectTex(DynamicShadowChannel));
-			}
-			float3 NewLighting = GetTressFXDynamicLighting(WorldPosition, -CameraVector, GBufferData, LightData, LightAttenuation, Dither, RectTextureToUse, Root2Tip, HairId, TFXTangent, TFXAlpha, false, Coverage, bSampleRectSourceTex);
+			float3 NewLighting = GetTressFXDynamicLighting(WorldPosition, -CameraVector, GBufferData, LightData, LightAttenuation, Dither, RectTexture, Root2Tip, HairId, TFXTangent, TFXAlpha, false, Coverage, bSampleRectSourceTex);
 		#else
 			float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
 		#endif
@@ -1069,7 +1073,7 @@ void main(
     }
 
     int2 ScreenAddr = int2(In.Position.xy);
-	//not working out quite as i hoped but also im dislexic so maybe i just got it bakckwards
+	//not working out quite as i hoped but also im dyslexic so maybe i just got it backwards
 	#if TFX_PPLL && 0
 
 		const uint DepthAsUint = asuint(In.Position.w);

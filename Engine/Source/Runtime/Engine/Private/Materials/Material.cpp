@@ -903,6 +903,7 @@ UMaterial::UMaterial(const FObjectInitializer& ObjectInitializer)
 	bTressFXApproximateDeepShadow = false;
 	bTressFXAttenuateShadowByAlpha = false;
 	bTressFXEnableGlint = false;
+	bTressFXEnableRectLights = false;
 	/*@End Third party code TressFX*/
 }
 
@@ -4177,7 +4178,8 @@ bool UMaterial::CanEditChange(const UProperty* InProperty) const
 			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXRenderVelocity) ||
 			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXAttenuateShadowByAlpha) ||
 			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXApproximateDeepShadow) ||
-			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXEnableGlint)
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXEnableGlint) ||
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXEnableRectLights)
 		)
 		{
 			return bUsedWithTressFX;
