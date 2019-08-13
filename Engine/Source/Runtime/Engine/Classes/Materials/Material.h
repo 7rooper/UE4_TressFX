@@ -843,7 +843,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Enable Glint"))
 	uint32 bTressFXEnableGlint : 1;
 
-	/** Support Rect lights. The cvar tfx.SupportRectLights must also be set. */
+	/** Support Rect lights. */
 	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Enable Rect Lights on Hair"))
 	uint32 bTressFXEnableRectLights : 1;
 

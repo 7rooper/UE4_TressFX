@@ -56,7 +56,7 @@ FAutoConsoleVariableRef CVarTressFXMinAlphaForSceneDepth(
 //  FTressFXFillColorPS - Pixel shader for Third pass of shortcut, and PPLL build of kbuffer
 ////////////////////////////////////////////////////////////////////////////////
 
-#pragma optimize("",off)
+//#pragma optimize("",off)
 
 template <ETressFXPass::Type ColorPassType, int32 KBufferSize>
 class FTressFXFillColorPS : public FMeshMaterialShader
@@ -1639,4 +1639,4 @@ FRegisterPassProcessorCreateFunction RegisterTRessFXDepthsVelocityPass(&CreateTR
 FRegisterPassProcessorCreateFunction RegisterTRessFXDepthsAlphaPass(&CreateTRessFXDepthsAlphaPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_DepthsAlpha, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
 FRegisterPassProcessorCreateFunction RegisterTRessFXFillColorPass(&CreateTRessFXFillColorPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_FillColors, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
 
-#pragma optimize("", on)
+//#pragma optimize("", on)
