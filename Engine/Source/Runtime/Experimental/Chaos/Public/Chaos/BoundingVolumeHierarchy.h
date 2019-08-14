@@ -141,6 +141,11 @@ class CHAOS_API TBoundingVolumeHierarchy final : public ISpatialAcceleration<T,d
 	FCriticalSection CriticalSection;
 };
 
+#if PLATFORM_MAC
+extern template class CHAOS_API Chaos::TBoundingVolumeHierarchy<Chaos::TParticles<float, 3>, TArray<int32>, float, 3>;
+extern template class CHAOS_API Chaos::TBoundingVolumeHierarchy<Chaos::TGeometryParticles<float, 3>, TArray<int32>, float, 3>;
+#endif
+
 template<class OBJECT_ARRAY, class LEAF_TYPE, class T, int d>
 FArchive& operator<<(FArchive& Ar, TBoundingVolumeHierarchy<OBJECT_ARRAY, LEAF_TYPE, T, d>& BVH)
 {
