@@ -14,117 +14,10 @@
 
 static TAutoConsoleVariable<int32> CVarTFXSDFDisable(TEXT("tfx.SDFCollisionDisable"), 1, TEXT("Disable SDF Collision"), ECVF_RenderThreadSafe);
 
-struct FTressFXSimFeatures
-{
-	enum Type
-	{
-		None = 0,
-		Morphs = 1,
-		MorphsAndVelocity = 2,
-		Velocity = 3
-	};
-};
-
 struct BoneSkinningData
 {
 	FVector4 boneIndex;  // x, y, z and w component are four bone indices per strand
 	FVector4 boneWeight; // x, y, z and w component are four bone weights per strand
-};
-
-template <FTressFXSimFeatures::Type TSimFeatures>
-class FIntegrationAndGlobalShapeConstraintsCS : public FGlobalShader
-{
-	DECLARE_SHADER_TYPE(FIntegrationAndGlobalShapeConstraintsCS, Global);
-
-public:
-
-	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
-	{
-		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
-	}
-
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
-	{
-		const bool bHasMorphs = TSimFeatures == FTressFXSimFeatures::Morphs || TSimFeatures == FTressFXSimFeatures::MorphsAndVelocity;
-		const bool bHasVelocity = TSimFeatures == FTressFXSimFeatures::Velocity || TSimFeatures == FTressFXSimFeatures::MorphsAndVelocity;
-		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-		OutEnvironment.SetDefine(TEXT("AMD_TRESSFX_MAX_NUM_BONES"), AMD_TRESSFX_MAX_NUM_BONES);
-		OutEnvironment.SetDefine(TEXT("TRESSFX_MORPHS"), bHasMorphs ? TEXT("1") : TEXT("0"));
-		OutEnvironment.SetDefine(TEXT("UPDATE_PREV_FOLLOW_HAIRS"), bHasVelocity ? TEXT("1") : TEXT("0"));
-	}
-
-	static const TCHAR* GetSourceFilename()
-	{
-		return TEXT("TressFXSimulation");
-	};
-
-	static const TCHAR*GetFunctionName()
-	{
-		return TEXT("IntegrationAndGlobalShapeConstraints");
-	};
-
-	FIntegrationAndGlobalShapeConstraintsCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
-	{
-		HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("HairVertexPositions"));
-		HairVertexPositionsPrev.Bind(Initializer.ParameterMap, TEXT("HairVertexPositionsPrev"));
-		HairVertexPositionsPrevPrev.Bind(Initializer.ParameterMap, TEXT("HairVertexPositionsPrevPrev"));
-		HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("HairVertexTangents"));
-		BoneSkinningData.Bind(Initializer.ParameterMap, TEXT("BoneSkinningData"));
-		InitialHairPositions.Bind(Initializer.ParameterMap, TEXT("InitialHairPositions"));
-
-		const bool bHasMorphs = TSimFeatures == FTressFXSimFeatures::Morphs || TSimFeatures == FTressFXSimFeatures::MorphsAndVelocity;
-		if (bHasMorphs)
-		{
-			MorphDeltas.Bind(Initializer.ParameterMap, TEXT("MorphDeltas"));
-		}
-		const bool bHasVelocity = TSimFeatures == FTressFXSimFeatures::Velocity || TSimFeatures == FTressFXSimFeatures::MorphsAndVelocity;
-		if (bHasVelocity)
-		{
-			FollowHairRootOffset.Bind(Initializer.ParameterMap, TEXT("FollowHairRootOffset"));
-		}
-
-		TressfxSimParametersUniformBuffer.Bind(Initializer.ParameterMap, TEXT("TressfxSimParameters"));
-	};
-
-
-	FIntegrationAndGlobalShapeConstraintsCS() {};
-
-	virtual bool Serialize(FArchive& Ar) override
-	{
-		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-
-		Ar << HairVertexPositions << HairVertexPositionsPrev << HairVertexPositionsPrevPrev
-			<< HairVertexTangents << BoneSkinningData << InitialHairPositions;
-
-		const bool bHasMorphs = TSimFeatures == FTressFXSimFeatures::Morphs || TSimFeatures == FTressFXSimFeatures::MorphsAndVelocity;
-		if (bHasMorphs)
-		{
-			Ar << MorphDeltas;
-		}
-		const bool bHasVelocity = TSimFeatures == FTressFXSimFeatures::Velocity || TSimFeatures == FTressFXSimFeatures::MorphsAndVelocity;
-		if (bHasVelocity)
-		{
-			Ar << FollowHairRootOffset;
-		}
-
-		return bShaderHasOutdatedParameters;
-	};
-
-
-public:
-
-	FRWShaderParameter HairVertexPositions;
-	FRWShaderParameter HairVertexPositionsPrev;
-	FRWShaderParameter HairVertexPositionsPrevPrev;
-	FRWShaderParameter HairVertexTangents;
-
-	FShaderResourceParameter BoneSkinningData;
-	FShaderResourceParameter InitialHairPositions;
-	FShaderResourceParameter MorphDeltas;
-	FShaderResourceParameter FollowHairRootOffset;
-
-	FShaderUniformBufferParameter TressfxSimParametersUniformBuffer;
-
 };
 
 
@@ -244,6 +137,7 @@ public:
 	FRWShaderParameter HairVertexPositions;
 	FRWShaderParameter HairVertexTangents;
 	FRWShaderParameter HairVertexPositionsPrev;
+	FRWShaderParameter HairVertexPositionsPrevPrev;
 	FShaderResourceParameter HairRestLengthSRV;
 
 };

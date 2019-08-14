@@ -12,7 +12,10 @@
 #include "TressFXComponent.h"
 #include "TressFXBoneSkinningAsset.h"
 #include "TressFXVertexFactory.h"
-#include "TressFXPublicDef.h"
+#include "RHIResources.h"
+#ifndef TRESSFX_STANDALONE_PLUGIN
+	#include "TressFXPublicDef.h"
+#endif
 
 struct FBoneSkinningData
 {
@@ -118,7 +121,11 @@ public:
 
 };
 
+#ifndef TRESSFX_STANDALONE_PLUGIN
 class TRESSFX_API FTressFXSceneProxy : public ITressFXSceneProxy
+#else
+class TRESSFX_API FTressFXSceneProxy : public FPrimitiveSceneProxy
+#endif
 {
 
 public:
@@ -144,8 +151,8 @@ public:
 		FTressFXSimulationSettings TressFXSimulationSettings;
 		FTressFXShadeSettings TressFXShadeSettings;
 		TStaticArray<FMatrix, AMD_TRESSFX_MAX_NUM_BONES> BoneTransforms;
-		TArray<FTressFXBoneSkinningData> BoneSkinningData;
 		FTressFXHairObject* HairObject;
+		FTressFXInstanceRenderData* InstanceRenderData;
 		FTressFXMeshResources* SDFMeshResources;
 		class UMaterialInterface* HairMaterial;
 		int32 NumFollowStrandsPerGuide;
@@ -155,6 +162,7 @@ public:
 		FIntVector4 NumCollisionCapsules;
 		class FSkeletalMeshObjectGPUSkin* ParentSkin = nullptr;
 		bool bEnableMorphTargets = false;
+		float LodScreenSize;
 
 		FDynamicRenderData() {}
 
@@ -162,7 +170,6 @@ public:
 		{
 			TressFXSimulationSettings = Other.TressFXSimulationSettings;
 			TressFXShadeSettings = Other.TressFXShadeSettings;
-			BoneSkinningData = Other.BoneSkinningData;
 			BoneTransforms = Other.BoneTransforms;
 			CollisionCapsuleCenterAndRadius0 = Other.CollisionCapsuleCenterAndRadius0;
 			CollisionCapsuleCenterAndRadius1 = Other.CollisionCapsuleCenterAndRadius1;
@@ -173,8 +180,6 @@ public:
 			return *this;
 		}
 	};
-
-	FDynamicRenderData DynamicRenderData;
 
 	void UpdateDynamicData_RenderThread(const FDynamicRenderData& DynamicData);
 
@@ -189,6 +194,7 @@ public:
 	class UTressFXComponent* TFXComponent;
 
 	FTressFXHairObject* TressFXHairObject;
+	FTressFXInstanceRenderData* InstanceRenderData;
 
 	ETressFXCollisionType CollisionType;
 	FTressFXMeshResources* SDFMeshResources;
@@ -197,8 +203,10 @@ public:
 
 	UMaterialInterface* Material;
 
+	float LodScreenSize;
+
 	virtual void GetDynamicMeshElements(const TArray<const FSceneView *>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, class FMeshElementCollector& Collector) const override;
-	virtual FUniformBufferRHIParamRef GetHairObjectShaderUniformBufferParam() override;
+	virtual FUniformBufferRHIParamRef GetHairObjectShaderUniformBufferParam();
 private:
 
 	FMaterialRelevance MaterialRelevance;

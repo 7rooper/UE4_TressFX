@@ -13,7 +13,7 @@
 //no
 #pragma warning( disable : 5038)
 
-#define TRESSFX_MAX_INFLUENTIAL_BONE_COUNT 4
+#define TRESSFX_MAX_INFLUENTIAL_BONE_COUNT 16
 
 #define AMD_TRESSFX_VERSION_MAJOR                    4
 #define AMD_TRESSFX_VERSION_MINOR                    0
@@ -332,8 +332,6 @@ public:
 	int32 NumTotalStrands;
 	int32 NumVerticePerStrand;
 	int32 CPULocalShapeIterations;
-
-	//FTressFXPosTanCollection PosTanCollection;
 
 	FReadStructedBuffer HairThicknessCoeffs;
 	FReadStructedBuffer HairRootToTipTexcoords;
