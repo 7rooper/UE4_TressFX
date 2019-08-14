@@ -25,6 +25,15 @@ UTressFXComponent::UTressFXComponent(const FObjectInitializer& ObjectInitializer
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	bTickInEditor = true;
+    CastShadow = true;
+    bCastInsetShadow = true;
+    bCastShadowAsTwoSided = true;
+    LodScreenSize = 1;// larger for aggresive LOD
+}
+
+UTressFXComponent::~UTressFXComponent()
+{
+    ReleaseInstanceRenderData();
 }
 
 FPrimitiveSceneProxy* UTressFXComponent::CreateSceneProxy()
@@ -82,6 +91,11 @@ void UTressFXComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 		MorphIndices.Empty(true);
 		CachedSkeletalMeshForMorph = nullptr;
 	}
+
+    if (Name == TEXT("Asset") || Name == TEXT("SDFCollisionMeshAsset"))
+    {
+        MarkInstanceRenderDataDirty();
+    }
 }
 #endif
 
@@ -102,14 +116,27 @@ void UTressFXComponent::GetUsedMaterials(TArray<UMaterialInterface *>& OutMateri
 	}
 }
 
+void UTressFXComponent::MarkInstanceRenderDataDirty()
+{
+    bInstanceDataDirty = true;
+}
+
 void UTressFXComponent::CreateRenderState_Concurrent()
 {
 	Super::CreateRenderState_Concurrent();
 
 	if (Asset && Asset->ImportData.IsValid() && Asset->IsValid())
 	{
-		HairObject = ::new FTressFXHairObject(Asset->ImportData.Get());
-		BeginInitResource(HairObject);
+        Asset->GetOrCreateRenderData();//::new FTressFXHairObject(Asset->ImportData.Get());
+
+        if (bInstanceDataDirty || InstanceRenderData == nullptr)
+        {
+            ReleaseInstanceRenderData();
+            InstanceRenderData = ::new FTressFXInstanceRenderData(Asset->ImportData.Get());
+            BeginInitResource(InstanceRenderData);
+        }
+
+        
 
 
 		if (CVarTFXSDFDisable.GetValueOnAnyThread() == 0 && SDFCollisionMeshAsset && CollisionType == ETressFXCollisionType::TFXCollsion_SDF)
@@ -122,23 +149,30 @@ void UTressFXComponent::CreateRenderState_Concurrent()
 	}
 }
 
+void UTressFXComponent::ReleaseInstanceRenderData()
+{
+    if (InstanceRenderData)
+    {
+        auto LocalInstanceRenderData = InstanceRenderData;
+        InstanceRenderData = nullptr;
+
+        ENQUEUE_RENDER_COMMAND(CleanupHairObject)(
+            [LocalInstanceRenderData](FRHICommandListImmediate& RHICmdList)
+            {
+                LocalInstanceRenderData->ReleaseResource();
+                delete LocalInstanceRenderData;
+            }
+        );
+    }
+}
+
 void UTressFXComponent::DestroyRenderState_Concurrent()
 {
-	if (HairObject)
-	{
-		FTressFXHairObject* LocalHairObject = this->HairObject;
-		
-		ENQUEUE_RENDER_COMMAND(CleanupHairObject)(
-			[LocalHairObject](FRHICommandListImmediate& RHICmdList)
-			{
-				LocalHairObject->ReleaseResource();
-				delete LocalHairObject;
-			}
-		);
-
-		HairObject = nullptr;
-
-	}
+    if (bInstanceDataDirty)
+    {
+        ReleaseInstanceRenderData();
+    }
+    
 
 	if (SDFMeshResources)
 	{
@@ -280,12 +314,24 @@ void UTressFXComponent::SetUpMorphMapping()
 
 void UTressFXComponent::SendRenderDynamicData_Concurrent()
 {
-	if (!SceneProxy || !ParentSkeletalMeshComponent || !Asset->IsValid())
-	{
-		return;
-	}
+    if (!SceneProxy || !ParentSkeletalMeshComponent || Asset == nullptr || !Asset->IsValid())
+    {
+        return;
+    }
 
-	Super::SendRenderDynamicData_Concurrent();
+    Super::SendRenderDynamicData_Concurrent();
+
+    // this is always invoke before rendering, so simulation is done before every base pass
+    // bone skinning is done?
+    RunSimulation();
+}
+
+void UTressFXComponent::RunSimulation()
+{
+    if (!SceneProxy || !ParentSkeletalMeshComponent || Asset == nullptr || !Asset->IsValid())
+    {
+        return;
+    }
 
 	UWorld* World = GetWorld();
 	FVector OutWindDirection(0, 0, 0);
@@ -332,11 +378,13 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 	DynamicRenderData->TressFXSimulationSettings.WindMagnitude = OutWindSpeed;
 	DynamicRenderData->TressFXSimulationSettings.TipSeparation = Asset->TipSeparationFactor;
 	DynamicRenderData->TressFXShadeSettings = ShadeSettings;
-	DynamicRenderData->HairObject = HairObject;
+	DynamicRenderData->HairObject = Asset->GetOrCreateRenderData();
+    DynamicRenderData->InstanceRenderData = InstanceRenderData;
 	DynamicRenderData->SDFMeshResources = SDFMeshResources;
 	DynamicRenderData->NumFollowStrandsPerGuide = Asset->NumFollowStrandsPerGuide;
 	DynamicRenderData->HairMaterial = HairMaterial;
 	DynamicRenderData->CollisionType = CollisionType.GetValue();
+    DynamicRenderData->LodScreenSize = LodScreenSize;
 
 	if (!DynamicRenderData->HairMaterial)
 	{
@@ -384,6 +432,36 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 	TArray<int32> UsedBoneIndexes;
 #endif
 
+    //// this is slow, need to optimize
+    //int BoneCount = ParentSkeletalMeshComponent ? ParentSkeletalMeshComponent->GetNumBones() : 0;
+    //BoneCount = BoneCount > AMD_TRESSFX_MAX_NUM_BONES ? AMD_TRESSFX_MAX_NUM_BONES : BoneCount;
+    //for (int SkelBoneIndex = 0; SkelBoneIndex < BoneCount; SkelBoneIndex++)
+    //{
+    //    FMatrix RefBase = ParentSkeletalMeshComponent->SkeletalMesh->RefBasesInvMatrix[SkelBoneIndex];
+    //    FMatrix ParentSkel = ParentSkeletalMeshComponent->GetBoneMatrix(SkelBoneIndex);
+
+    //    if (RefBase.ContainsNaN())
+    //    {
+    //        UE_LOG(TressFXComponentLog, Warning, TEXT("Found NaN in RefBase Bone Matrix:  %s"), *this->GetFName().ToString());
+    //    }
+    //    if (ParentSkel.ContainsNaN())
+    //    {
+    //        UE_LOG(TressFXComponentLog, Warning, TEXT("Found NaN in ParentSkel Bone Matrix:  %s"), *this->GetFName().ToString());
+    //    }
+
+    //    FMatrix Result = (RefBase * ParentSkel);
+
+    //    if (Result.ContainsNaN())
+    //    {
+    //        UE_LOG(TressFXComponentLog, Warning, TEXT("Found NaN in Result Bone Matrix:  %s"), *this->GetFName().ToString());
+    //    }
+
+    //    if (SkelBoneIndex < AMD_TRESSFX_MAX_NUM_BONES)
+    //    {
+    //        DynamicRenderData->BoneTransforms[SkelBoneIndex] = Result;
+    //    }
+    //}
+
 	for (auto It = Asset->ImportData->BoneNameIndexMap.CreateIterator(); It; ++It)
 	{
 		FName TFXBoneName = It.Value();
@@ -394,7 +472,7 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 		{
 			// find the bone index to use, rather than relying on the one that was imported with the TFX file
 			// this way, we can use different skeletons with the same bones names and have it still work
-			int32 SkelBoneIndex = ParentSkeletalMeshComponent->GetBoneIndex(TFXBoneName);
+			int32 SkelBoneIndex = ParentSkeletalMeshComponent->GetBoneIndex(TFXBoneName);// TODO: cache index instead
 			FMatrix RefBase = ParentSkeletalMeshComponent->SkeletalMesh->RefBasesInvMatrix[SkelBoneIndex];
 			FMatrix ParentSkel = ParentSkeletalMeshComponent->GetBoneMatrix(SkelBoneIndex);
 
@@ -427,27 +505,40 @@ void UTressFXComponent::SendRenderDynamicData_Concurrent()
 			DynamicRenderData->BoneTransforms[TFXIndex] = FMatrix::Identity;
 		}
 	}
-
-#if WITH_EDITOR
-	//useful for debugging
-	for(int32 i = 0; i < AMD_TRESSFX_MAX_NUM_BONES; i++)
-	{
-		if (!UsedBoneIndexes.Contains(i))
-		{
-			DynamicRenderData->BoneTransforms[i] = FMatrix(FPlane(0, 0, 0, 0), FPlane(0, 0, 0, 0), FPlane(0, 0, 0, 0), FPlane(0, 0, 0, 0));
-		}
-	}
-#endif
-	DynamicRenderData->BoneSkinningData = Asset->ImportData->SkinningData;
+//
+//#if WITH_EDITOR
+//	//useful for debugging
+//	for(int32 i = 0; i < AMD_TRESSFX_MAX_NUM_BONES; i++)
+//	{
+//		if (!UsedBoneIndexes.Contains(i))
+//		{
+//			DynamicRenderData->BoneTransforms[i] = FMatrix(FPlane(0, 0, 0, 0), FPlane(0, 0, 0, 0), FPlane(0, 0, 0, 0), FPlane(0, 0, 0, 0));
+//		}
+//	}
+//#endif
+	//DynamicRenderData->BoneSkinningData = Asset->ImportData->SkinningData;
 
 	FTressFXSceneProxy* LocalTFXProxy = static_cast<FTressFXSceneProxy*>(SceneProxy);
+    if (LocalTFXProxy)
+    {
+        ENQUEUE_RENDER_COMMAND(TRessFXSimulateCommand)(
+            [LocalTFXProxy, DynamicRenderData](FRHICommandListImmediate& RHICmdList)
+            {
+                LocalTFXProxy->UpdateDynamicData_RenderThread(*DynamicRenderData);
+                LocalTFXProxy->CopyMorphs(RHICmdList);
+                SimulateTressFX(RHICmdList, LocalTFXProxy, DynamicRenderData->TressFXSimulationSettings.LengthConstraintsIterations);
+            }
+        );
+    }
 
-	ENQUEUE_RENDER_COMMAND(TRessFXSimulateCommand)(
-		[LocalTFXProxy, DynamicRenderData](FRHICommandListImmediate& RHICmdList)
-		{
-			LocalTFXProxy->UpdateDynamicData_RenderThread(*DynamicRenderData);
-			LocalTFXProxy->CopyMorphs(RHICmdList);
-			SimulateTressFX(RHICmdList, LocalTFXProxy, DynamicRenderData->TressFXSimulationSettings.LengthConstraintsIterations);
-		}
-	);
+
+}
+
+FTressFXShadeSettings::FTressFXShadeSettings()
+{
+    //sensible defaults
+    FiberRadius = 0.01;
+    FiberSpacing = 0.1;
+    HairThickness = 0.2f;
+    RootTangentBlending = 0.0f;
 }

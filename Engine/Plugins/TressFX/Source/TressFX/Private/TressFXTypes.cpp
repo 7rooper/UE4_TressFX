@@ -44,7 +44,9 @@ void FTressFXRuntimeData::Serialize(FArchive& Ar)
 	Ar << NumFollowStrandsPerGuide;
 	Ar << BoneNameIndexMap;
 	Ar << SkinningData;
+    Ar << BoneIndexDataArr;
 	Ar << Bounds;
+    Ar << RootToTipTexcoords;
 }
 
 FTressFXRuntimeData::FTressFXRuntimeData()
@@ -95,21 +97,23 @@ FTressFXHairObject::FTressFXHairObject(FTressFXRuntimeData* InAssetData /*= null
 void FTressFXHairObject::UpdateTressFXData(FTressFXRuntimeData* InAssetData)
 {
 	AssetData = InAssetData;
-	PosTanCollection = FTressFXPosTanCollection(InAssetData);
+	//PosTanCollection = FTressFXPosTanCollection(InAssetData);
 	NumTotalVertice = AssetData->NumTotalVertices;
 	NumTotalStrands = AssetData->NumTotalStrands;
 	NumVerticePerStrand = AssetData->NumVerticesPerStrand;
 
-	InitialHairPositionsBufferData = AssetData->Positions;
-	GlobalRotationsBufferData = AssetData->GlobalRotations;
-	HairRestLengthSRVBufferData = AssetData->RestLengths;
-	HairStrandTypeBufferData = AssetData->StrandTypes;
-	HairRefVecsInLocalFrameBufferData = AssetData->RefVectors;
-	FollowHairRootOffsetBufferData = AssetData->FollowRootOffsets;
-	BoneSkinningDataBufferData = AssetData->SkinningData;
+	//InitialHairPositionsBufferData = AssetData->Positions;
+	//GlobalRotationsBufferData = AssetData->GlobalRotations;
+	//HairRestLengthSRVBufferData = AssetData->RestLengths;
+	//HairStrandTypeBufferData = AssetData->StrandTypes;
+	//HairRefVecsInLocalFrameBufferData = AssetData->RefVectors;
+	//FollowHairRootOffsetBufferData = AssetData->FollowRootOffsets;
+	//BoneSkinningDataBufferData = AssetData->SkinningData;
+    //BoneIndexDataBufferData = AssetData->BoneIndexDataArr;
 
-	HairVertexRenderParamsData = AssetData->ThicknessCoeffs;
-	HairTexCoordsData = AssetData->StrandUV;
+	//HairVertexRenderParamsData = AssetData->ThicknessCoeffs;
+    //HairRootToTipTexcoordsData = AssetData->RootToTipTexcoords;
+	//HairTexCoordsData = AssetData->StrandUV;
 
 	mtotalIndices = AssetData->GetNumHairTriangleIndices();
 	IndexBufferData = AssetData->TriangleIndices;
@@ -117,42 +121,44 @@ void FTressFXHairObject::UpdateTressFXData(FTressFXRuntimeData* InAssetData)
 
 void FTressFXHairObject::InitDynamicRHI()
 {
-	PosTanCollection.InitResources(NumTotalVertice);
 
-	FStructuredBufferRHIParamRef Resources[] = {
-		PosTanCollection.Positions.Buffer,
-		PosTanCollection.PositionsPrev.Buffer,
-		PosTanCollection.PositionsPrevPrev.Buffer,
-		PosTanCollection.Tangents.Buffer
-	};
+	//PosTanCollection.InitResources(NumTotalVertice);
 
-	{
-		const uint32 SizeInBytes = NumTotalVertice * sizeof(FVector4);
-		void*LockedData = RHILockStructuredBuffer(PosTanCollection.Positions.Buffer, 0, SizeInBytes, RLM_WriteOnly);
-		FMemory::Memcpy(LockedData, (void *)PosTanCollection.PositionsData.GetData(), SizeInBytes);
-		RHIUnlockStructuredBuffer(PosTanCollection.Positions.Buffer);
-	}
+	//FStructuredBufferRHIParamRef Resources[] = {
+	//	PosTanCollection.Positions.Buffer,
+	//	PosTanCollection.PositionsPrev.Buffer,
+	//	PosTanCollection.PositionsPrevPrev.Buffer,
+	//	PosTanCollection.Tangents.Buffer
+	//};
 
-	{
-		const uint32 SizeInBytes = NumTotalVertice * sizeof(FVector4);
-		void*LockedData = RHILockStructuredBuffer(PosTanCollection.PositionsPrev.Buffer, 0, SizeInBytes, RLM_WriteOnly);
-		FMemory::Memcpy(LockedData, (void *)PosTanCollection.PositionsData.GetData(), SizeInBytes);
-		RHIUnlockStructuredBuffer(PosTanCollection.PositionsPrev.Buffer);
-	}
+ //   // TODO : we need skinning first to make sure the hair is at proper position
+	//{
+	//	const uint32 SizeInBytes = NumTotalVertice * sizeof(FVector4);
+	//	void*LockedData = RHILockStructuredBuffer(PosTanCollection.Positions.Buffer, 0, SizeInBytes, RLM_WriteOnly);
+	//	FMemory::Memcpy(LockedData, (void *)PosTanCollection.PositionsData.GetData(), SizeInBytes);
+	//	RHIUnlockStructuredBuffer(PosTanCollection.Positions.Buffer);
+	//}
 
-	{
-		const uint32 SizeInBytes = NumTotalVertice * sizeof(FVector4);
-		void*LockedData = RHILockStructuredBuffer(PosTanCollection.PositionsPrevPrev.Buffer, 0, SizeInBytes, RLM_WriteOnly);
-		FMemory::Memcpy(LockedData, (void *)PosTanCollection.PositionsData.GetData(), SizeInBytes);
-		RHIUnlockStructuredBuffer(PosTanCollection.PositionsPrevPrev.Buffer);
-	}
+	//{
+	//	const uint32 SizeInBytes = NumTotalVertice * sizeof(FVector4);
+	//	void*LockedData = RHILockStructuredBuffer(PosTanCollection.PositionsPrev.Buffer, 0, SizeInBytes, RLM_WriteOnly);
+	//	FMemory::Memcpy(LockedData, (void *)PosTanCollection.PositionsData.GetData(), SizeInBytes);
+	//	RHIUnlockStructuredBuffer(PosTanCollection.PositionsPrev.Buffer);
+	//}
 
-	{
-		const uint32 SizeInBytes = NumTotalVertice * sizeof(FVector4);
-		void*LockedData = RHILockStructuredBuffer(PosTanCollection.Tangents.Buffer, 0, SizeInBytes, RLM_WriteOnly);
-		FMemory::Memcpy(LockedData, (void *)PosTanCollection.TangentsData.GetData(), SizeInBytes);
-		RHIUnlockStructuredBuffer(PosTanCollection.Tangents.Buffer);
-	}
+	//{
+	//	const uint32 SizeInBytes = NumTotalVertice * sizeof(FVector4);
+	//	void*LockedData = RHILockStructuredBuffer(PosTanCollection.PositionsPrevPrev.Buffer, 0, SizeInBytes, RLM_WriteOnly);
+	//	FMemory::Memcpy(LockedData, (void *)PosTanCollection.PositionsData.GetData(), SizeInBytes);
+	//	RHIUnlockStructuredBuffer(PosTanCollection.PositionsPrevPrev.Buffer);
+	//}
+
+	//{
+	//	const uint32 SizeInBytes = NumTotalVertice * sizeof(FVector4);
+	//	void*LockedData = RHILockStructuredBuffer(PosTanCollection.Tangents.Buffer, 0, SizeInBytes, RLM_WriteOnly);
+	//	FMemory::Memcpy(LockedData, (void *)PosTanCollection.TangentsData.GetData(), SizeInBytes);
+	//	RHIUnlockStructuredBuffer(PosTanCollection.Tangents.Buffer);
+	//}
 
 	InitialHairPositionsBuffer.Initialize(sizeof(FVector4), NumTotalVertice, PF_Unknown);
 	GlobalRotationsBuffer.Initialize(sizeof(FVector4), NumTotalVertice, PF_Unknown);
@@ -161,16 +167,25 @@ void FTressFXHairObject::InitDynamicRHI()
 	HairRefVecsInLocalFrameBuffer.Initialize(sizeof(FVector4), NumTotalVertice, PF_Unknown);
 	FollowHairRootOffsetBuffer.Initialize(sizeof(FVector4), NumTotalStrands, PF_Unknown);
 	HairThicknessCoeffs.Initialize(sizeof(float), NumTotalVertice, PF_Unknown);
-	BoneSkinningDataBuffer.Initialize(sizeof(FTressFXBoneSkinningData), NumTotalStrands, PF_Unknown);
+    HairRootToTipTexcoords.Initialize(sizeof(float), NumTotalVertice, PF_Unknown);
+	BoneSkinningDataBuffer.Initialize(sizeof(FTressFXBoneSkinningData), AssetData->SkinningData.Num(), PF_Unknown);
+    BoneIndexDataBuffer.Initialize(sizeof(FTressFXBoneIndexData), NumTotalStrands, PF_Unknown);
 
-	UploadGPUData(InitialHairPositionsBuffer.Buffer, sizeof(FVector4), NumTotalVertice, PosTanCollection.PositionsData.GetData());
-	UploadGPUData(GlobalRotationsBuffer.Buffer, sizeof(FVector4), NumTotalVertice, GlobalRotationsBufferData.GetData());
-	UploadGPUData(HairRestLengthSRVBuffer.Buffer, sizeof(float), NumTotalVertice, HairRestLengthSRVBufferData.GetData());
-	UploadGPUData(HairStrandTypeBuffer.Buffer, sizeof(int), NumTotalStrands, HairStrandTypeBufferData.GetData());
-	UploadGPUData(HairRefVecsInLocalFrameBuffer.Buffer, sizeof(FVector4), NumTotalVertice, HairRefVecsInLocalFrameBufferData.GetData());
-	UploadGPUData(FollowHairRootOffsetBuffer.Buffer, sizeof(FVector4), NumTotalStrands, FollowHairRootOffsetBufferData.GetData());
-	UploadGPUData(HairThicknessCoeffs.Buffer, sizeof(float), NumTotalVertice, HairVertexRenderParamsData.GetData());
-	UploadGPUData(BoneSkinningDataBuffer.Buffer, sizeof(FTressFXBoneSkinningData), NumTotalStrands, BoneSkinningDataBufferData.GetData());
+    if (!AssetData)
+    {
+        return;
+    }
+
+	UploadGPUData(InitialHairPositionsBuffer.Buffer, sizeof(FVector4), NumTotalVertice, AssetData->Positions.GetData());
+	UploadGPUData(GlobalRotationsBuffer.Buffer, sizeof(FVector4), NumTotalVertice, AssetData->GlobalRotations.GetData());
+	UploadGPUData(HairRestLengthSRVBuffer.Buffer, sizeof(float), NumTotalVertice, AssetData->RestLengths.GetData());
+	UploadGPUData(HairStrandTypeBuffer.Buffer, sizeof(int), NumTotalStrands, AssetData->StrandTypes.GetData());
+	UploadGPUData(HairRefVecsInLocalFrameBuffer.Buffer, sizeof(FVector4), NumTotalVertice, AssetData->RefVectors.GetData());
+	UploadGPUData(FollowHairRootOffsetBuffer.Buffer, sizeof(FVector4), NumTotalStrands, AssetData->FollowRootOffsets.GetData());
+    UploadGPUData(HairRootToTipTexcoords.Buffer, sizeof(float), NumTotalVertice, AssetData->RootToTipTexcoords.GetData());
+	UploadGPUData(HairThicknessCoeffs.Buffer, sizeof(float), NumTotalVertice, AssetData->ThicknessCoeffs.GetData());
+	UploadGPUData(BoneSkinningDataBuffer.Buffer, sizeof(FTressFXBoneSkinningData), AssetData->SkinningData.Num(), AssetData->SkinningData.GetData());
+    UploadGPUData(BoneIndexDataBuffer.Buffer, sizeof(FTressFXBoneIndexData), NumTotalStrands, AssetData->BoneIndexDataArr.GetData());
 
 	IndexBuffer.Indices = IndexBufferData;
 	IndexBuffer.NumTotalIndices = mtotalIndices;
@@ -178,7 +193,7 @@ void FTressFXHairObject::InitDynamicRHI()
 
 	HairTexCoords.Initialize(sizeof(FVector2D), NumTotalStrands, PF_Unknown);
 
-	UploadGPUData(HairTexCoords.Buffer, sizeof(FVector2D), NumTotalStrands, HairTexCoordsData.GetData());
+	UploadGPUData(HairTexCoords.Buffer, sizeof(FVector2D), NumTotalStrands, AssetData->StrandUV.GetData());
 }
 
 void FTressFXHairObject::ReleaseDynamicRHI()
@@ -191,7 +206,8 @@ void FTressFXHairObject::ReleaseDynamicRHI()
 	FollowHairRootOffsetBuffer.Release();
 	HairThicknessCoeffs.Release();
 	BoneSkinningDataBuffer.Release();
-	PosTanCollection.ReleaseResources();
+    BoneIndexDataBuffer.Release();
+	//PosTanCollection.ReleaseResources();
 	IndexBuffer.ReleaseResource();
 	HairTexCoords.Release();
 }
@@ -394,4 +410,101 @@ void FTressFXMeshResources::UpdateSDFGrid(const FVector& TightBoxMin, const FVec
 {
 	FVector BoxMin = TightBoxMin - m_PaddingBoundary;
 	m_Origin = BoxMin;
+}
+
+
+FTressFXBoneSkinningData::FTressFXBoneSkinningData()
+{
+    BoneIndex = -1;
+    Weight = 0;
+}
+
+FTressFXBoneIndexData::FTressFXBoneIndexData()
+{
+    StartIdx = 0;
+    BoneCount = 0;
+}
+
+FTressFXInstanceRenderData::FTressFXInstanceRenderData(FTressFXRuntimeData* InAssetData /*= nullptr*/)
+{
+    if (InAssetData)
+    {
+        UpdateTressFXData(InAssetData);
+    }
+}
+
+void FTressFXInstanceRenderData::UpdateTressFXData(FTressFXRuntimeData* InAssetData)
+{
+    AssetData = InAssetData;
+    PosTanCollection = FTressFXPosTanCollection(InAssetData);
+    NumTotalVertice = AssetData->NumTotalVertices;
+    NumTotalStrands = AssetData->NumTotalStrands;
+    NumVerticePerStrand = AssetData->NumVerticesPerStrand;
+}
+
+void FTressFXInstanceRenderData::InitDynamicRHI()
+{
+    PosTanCollection.InitResources(NumTotalVertice);
+
+    FStructuredBufferRHIParamRef Resources[] = {
+        PosTanCollection.Positions.Buffer,
+        PosTanCollection.PositionsPrev.Buffer,
+        PosTanCollection.PositionsPrevPrev.Buffer,
+        PosTanCollection.Tangents.Buffer
+    };
+
+    // TODO : we need skinning first to make sure the hair is at proper position
+    {
+        const uint32 SizeInBytes = NumTotalVertice * sizeof(FVector4);
+        void*LockedData = RHILockStructuredBuffer(PosTanCollection.Positions.Buffer, 0, SizeInBytes, RLM_WriteOnly);
+        FMemory::Memcpy(LockedData, (void *)PosTanCollection.PositionsData.GetData(), SizeInBytes);
+        RHIUnlockStructuredBuffer(PosTanCollection.Positions.Buffer);
+    }
+
+    {
+        const uint32 SizeInBytes = NumTotalVertice * sizeof(FVector4);
+        void*LockedData = RHILockStructuredBuffer(PosTanCollection.PositionsPrev.Buffer, 0, SizeInBytes, RLM_WriteOnly);
+        FMemory::Memcpy(LockedData, (void *)PosTanCollection.PositionsData.GetData(), SizeInBytes);
+        RHIUnlockStructuredBuffer(PosTanCollection.PositionsPrev.Buffer);
+    }
+
+    {
+        const uint32 SizeInBytes = NumTotalVertice * sizeof(FVector4);
+        void*LockedData = RHILockStructuredBuffer(PosTanCollection.PositionsPrevPrev.Buffer, 0, SizeInBytes, RLM_WriteOnly);
+        FMemory::Memcpy(LockedData, (void *)PosTanCollection.PositionsData.GetData(), SizeInBytes);
+        RHIUnlockStructuredBuffer(PosTanCollection.PositionsPrevPrev.Buffer);
+    }
+
+    {
+        const uint32 SizeInBytes = NumTotalVertice * sizeof(FVector4);
+        void*LockedData = RHILockStructuredBuffer(PosTanCollection.Tangents.Buffer, 0, SizeInBytes, RLM_WriteOnly);
+        FMemory::Memcpy(LockedData, (void *)PosTanCollection.TangentsData.GetData(), SizeInBytes);
+        RHIUnlockStructuredBuffer(PosTanCollection.Tangents.Buffer);
+    }
+
+    PosTanCollection.PositionsData.Reset();
+    PosTanCollection.TangentsData.Reset();
+}
+
+void FTressFXInstanceRenderData::ReleaseDynamicRHI()
+{
+    PosTanCollection.ReleaseResources();
+
+    if (ShadeParametersUniformBuffer.IsValid())
+    {
+        ShadeParametersUniformBuffer->Release();
+    }
+
+    if (SimParametersUniformBuffer.IsValid())
+    {
+        SimParametersUniformBuffer->Release();
+    }
+    if (BoneSkinningUniformBuffer.IsValid())
+    {
+        BoneSkinningUniformBuffer->Release();
+    }
+    if (SDFUniformBuffer.IsValid())
+    {
+        SDFUniformBuffer->Release();
+    }
 }

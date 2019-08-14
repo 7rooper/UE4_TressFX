@@ -48,9 +48,11 @@
 
 #define TRESSFX_MAX_NUM_COLLISION_CAPSULES 10
 
-#ifndef AMD_TRESSFX_MAX_NUM_BONES
-	#define AMD_TRESSFX_MAX_NUM_BONES 256
-#endif
+// Same as ETressFXSimulationQuality in cpp
+#define TFXSim_Disable 0
+#define TFXSim_Full 1
+
+
 
 #ifndef TRESSFX_MORPHS
 	#define TRESSFX_MORPHS 0
@@ -165,12 +167,6 @@ struct HairToTriangleMapping
     uint reserved; // for future use
 };
 
-struct BoneSkinningData
-{
-    float4 boneIndex; // x, y, z and w component are four bone indices per strand
-    float4 boneWeight; // x, y, z and w component are four bone weights per strand
-};
-
 
 // UAVs
 RWStructuredBuffer<float4> g_HairVertexPositions : register(u0);
@@ -190,6 +186,7 @@ StructuredBuffer<float4> g_HairRefVecsInLocalFrame;
 StructuredBuffer<float4> g_FollowHairRootOffset;
 StructuredBuffer<float4> g_MeshVertices;
 StructuredBuffer<float4> g_TransformedVerts;
+StructuredBuffer<BoneIndexData> g_BoneIndexData;
 StructuredBuffer<BoneSkinningData> g_BoneSkinningData;
 
 #if TRESSFX_MORPHS
@@ -561,7 +558,7 @@ bool CapsuleCollision(float4 curPosition, float4 oldPosition, inout float3 newPo
     return false;
 }
 
-float3 ApplyVertexBoneSkinning(float3 vertexPos, BoneSkinningData skinningData, inout float4 bone_quat)
+float3 ApplyVertexBoneSkinning(float3 vertexPos, BoneIndexData boneIndexData, inout float4 bone_quat)
 {
     float3 newVertexPos;
 
@@ -589,15 +586,17 @@ float3 ApplyVertexBoneSkinning(float3 vertexPos, BoneSkinningData skinningData, 
 #else
     {
         // Interpolate world space bone matrices using weights. 
-        row_major float4x4 bone_matrix = g_BoneSkinningMatrix[skinningData.boneIndex[0]] * skinningData.boneWeight[0];
-        float weight_sum = skinningData.boneWeight[0];
+        BoneSkinningData skinningData = g_BoneSkinningData[boneIndexData.StartIdx];
+        row_major float4x4 bone_matrix = g_BoneSkinningMatrix[skinningData.boneIndex] * skinningData.boneWeight;
+        float weight_sum = skinningData.boneWeight;
 
-        for (int i = 1; i < 4; i++)
+        for (int i = 1; i < boneIndexData.BoneCount; i++)
         {
-            if (skinningData.boneWeight[i] > 0)
+            skinningData = g_BoneSkinningData[boneIndexData.StartIdx + i];
+            if (skinningData.boneWeight > 0)
             {
-                bone_matrix += g_BoneSkinningMatrix[skinningData.boneIndex[i]] * skinningData.boneWeight[i];
-                weight_sum += skinningData.boneWeight[i];
+                bone_matrix += g_BoneSkinningMatrix[skinningData.boneIndex] * skinningData.boneWeight;
+                weight_sum += skinningData.boneWeight;
             }
         }
 
@@ -628,6 +627,57 @@ void UpdateFinalVertexPositions(float4 oldPosition, float4 newPosition, int glob
     g_HairVertexPositionsPrev[globalVertexIndex] = oldPosition;
     g_HairVertexPositions[globalVertexIndex] = newPosition;
 }
+
+// update previous follow hairs for velocity calcs in pixel shader
+#ifndef UPDATE_PREV_FOLLOW_HAIRS
+    #define UPDATE_PREV_FOLLOW_HAIRS 0
+#endif
+
+#ifndef SIM_QUALITY
+    #define SIM_QUALITY TFXSim_Disable
+#endif
+
+void SimpleUpdateWithoutSimulation(uint GIndex,
+                  uint3 GId,
+                  uint3 DTid)
+{
+    uint globalStrandIndex, localStrandIndex, globalVertexIndex, localVertexIndex, numVerticesInTheStrand, indexForSharedMem, strandType;
+    CalcIndicesInVertexLevelMaster(GIndex, GId.x, globalStrandIndex, localStrandIndex, globalVertexIndex, localVertexIndex, numVerticesInTheStrand, indexForSharedMem, strandType);
+
+    // Copy data into shared memory
+    float4 initialPos = g_InitialHairPositions[globalVertexIndex]; // rest position
+
+#if TRESSFX_MORPHS
+        // this should always be a whole number, so this is fine
+        int guideIndex = globalStrandIndex / (g_NumFollowHairsPerGuideHair + 1);
+        float3 delta = g_MorphDeltas[guideIndex];
+        initialPos.xyz += delta;
+#endif
+
+    // Apply worldspace bone skinning to initial position
+    BoneIndexData boneIndexData = g_BoneIndexData[globalStrandIndex];
+    float4 bone_quat;
+    initialPos.xyz = ApplyVertexBoneSkinning(initialPos.xyz, boneIndexData, bone_quat);
+
+    
+
+    // position when this step starts. In other words, a position from the last step.
+    sharedPos[indexForSharedMem] = initialPos;
+    float4 prevPos = g_HairVertexPositions[globalVertexIndex];
+
+    // copy newpos to prev and prevprev
+    UpdateFinalVertexPositions(prevPos, initialPos, globalVertexIndex, localVertexIndex, numVerticesInTheStrand);
+
+    GroupMemoryBarrierWithGroupSync();
+
+    //-------------------
+    // Compute tangent in world space
+    //-------------------
+    uint numOfStrandsPerThreadGroup = g_NumOfStrandsPerThreadGroup;
+    float3 tangent = sharedPos[indexForSharedMem + numOfStrandsPerThreadGroup].xyz - sharedPos[indexForSharedMem].xyz;
+    g_HairVertexTangents[globalVertexIndex].xyz = normalize(tangent);
+    
+}
 			
 //--------------------------------------------------------------------------------------
 //
@@ -638,16 +688,17 @@ void UpdateFinalVertexPositions(float4 oldPosition, float4 newPosition, int glob
 //
 // One thread computes one vertex.
 //
-// update previous follow hairs for velocity calcs in pixel shader
-#ifndef UPDATE_PREV_FOLLOW_HAIRS
-	#define UPDATE_PREV_FOLLOW_HAIRS 0
-#endif
+
 //--------------------------------------------------------------------------------------
 [numthreads(THREAD_GROUP_SIZE, 1, 1)]
 void IntegrationAndGlobalShapeConstraints(uint GIndex : SV_GroupIndex,
                   uint3 GId : SV_GroupID,
                   uint3 DTid : SV_DispatchThreadID)
 {
+#if SIM_QUALITY == TFXSim_Disable
+    SimpleUpdateWithoutSimulation(GIndex, GId, DTid); 
+    return;
+#endif
     uint globalStrandIndex, localStrandIndex, globalVertexIndex, localVertexIndex, numVerticesInTheStrand, indexForSharedMem, strandType;
     CalcIndicesInVertexLevelMaster(GIndex, GId.x, globalStrandIndex, localStrandIndex, globalVertexIndex, localVertexIndex, numVerticesInTheStrand, indexForSharedMem, strandType);
 
@@ -662,15 +713,16 @@ void IntegrationAndGlobalShapeConstraints(uint GIndex : SV_GroupIndex,
 #endif
 
 	// Apply bone skinning to initial position
-    BoneSkinningData skinningData = g_BoneSkinningData[globalStrandIndex];
+    BoneIndexData boneIndexData = g_BoneIndexData[globalStrandIndex];
     float4 bone_quat;
-    initialPos.xyz = ApplyVertexBoneSkinning(initialPos.xyz, skinningData, bone_quat);
+    initialPos.xyz = ApplyVertexBoneSkinning(initialPos.xyz, boneIndexData, bone_quat);
 
     // we temporarily use g_HairVertexTangents to hold bone quaternion data compute in ApplyVertexBoneSkinning. 
     g_HairVertexTangents[globalStrandIndex] = bone_quat;
 
     // position when this step starts. In other words, a position from the last step.
     float4 currentPos = sharedPos[indexForSharedMem] = g_HairVertexPositions[globalVertexIndex];
+    sharedPos[indexForSharedMem] = initialPos;
 
 	#if UPDATE_PREV_FOLLOW_HAIRS
 	    for (uint i = 0; i < g_NumFollowHairsPerGuideHair; i++)

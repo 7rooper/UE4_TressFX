@@ -25,12 +25,34 @@
 #ifndef TRESS_FX_COMMON_USH
 #define TRESS_FX_COMMON_USH
 
+#ifndef AMD_TRESSFX_MAX_NUM_BONES
+	#define AMD_TRESSFX_MAX_NUM_BONES 256
+#endif
+
+// same as c++ and exporter
+#ifndef TRESSFX_MAX_INFLUENTIAL_BONE_COUNT
+	#define TRESSFX_MAX_INFLUENTIAL_BONE_COUNT 16
+#endif
+
+struct BoneIndexData
+{
+    int StartIdx;
+    int BoneCount;
+};
+
+struct BoneSkinningData
+{
+    float boneIndex;
+    float boneWeight;
+};
+
 cbuffer TressfxShadeParameters
 {
     float g_FiberRadius;
     float g_FiberSpacing;
     int g_NumVerticesPerStrand;
     float g_ratio;
+    float g_RootTangentBlending;
 };
 
 #endif

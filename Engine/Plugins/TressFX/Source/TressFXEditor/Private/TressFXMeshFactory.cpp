@@ -71,7 +71,8 @@ bool UTressFXMeshFactory::FactoryCanImport(const FString& Filename)
 
 UObject* UTressFXMeshFactory::FactoryCreateText(UClass* InClass, UObject* InParent, FName InName, EObjectFlags Flags, UObject* Context, const TCHAR* Type, const TCHAR*& Buffer, const TCHAR* BufferEnd, FFeedbackContext* Warn)
 {
-
+// not used
+#ifdef 0
 	Flags |= RF_Transactional;
 
 	const bool bCullEmptys = true;
@@ -304,6 +305,8 @@ UObject* UTressFXMeshFactory::FactoryCreateText(UClass* InClass, UObject* InPare
 	Result->LoadData(TempVerts, TempNormals, TempIndices, TressFXBoneSkinningData, NumTriangles, ImportRotation, ImportTranslation, true);
 
 	return Result;
+#endif
+    return nullptr;
 }
 
 bool UTressFXMeshFactory::ConfigureProperties()

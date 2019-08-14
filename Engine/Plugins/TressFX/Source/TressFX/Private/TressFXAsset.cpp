@@ -57,16 +57,32 @@ static void GetTangentVectors(const FVector& n, FVector& t0, FVector& t1)
 	}
 }
 
+UTressFXAsset::~UTressFXAsset()
+{
+    ReleaseRenderData();
+}
+
 void UTressFXAsset::Serialize(FArchive& Ar)
 {
 	Super::Serialize(Ar);
 
 	ImportData->Serialize(Ar);
 
-	Ar << SkinningData;
+	//Ar << SkinningData;
 
 }
 
+
+FTressFXHairObject* UTressFXAsset::GetOrCreateRenderData()
+{
+    if (SharedRenderData == nullptr)
+    {
+        SharedRenderData = ::new FTressFXHairObject(ImportData.Get());
+        BeginInitResource(SharedRenderData);
+    }
+
+    return SharedRenderData;
+}
 
 #if WITH_EDITORONLY_DATA
 
@@ -95,13 +111,19 @@ void UTressFXAsset::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 
 	if (bSomethingChanged)
 	{
+        RawGuideCount = ImportData->NumGuideStrands;
+        TotalStrandCount = ImportData->NumGuideStrands * (NumFollowStrandsPerGuide + 1);
+        VertexCountPerStrand = ImportData->NumGuideVertices / TotalStrandCount;
+        TotalVertexCount = ImportData->NumGuideVertices;
+        TotalTriangleCount = ImportData->GetNumHairTriangleIndices() / 3;
+
 		if (TressFXBoneSkinningAsset && BaseSkeleton)
 		{
 			bIsValid = ImportData->LoadBoneData(BaseSkeleton, TressFXBoneSkinningAsset);
 		}
 		else
 		{
-			SkinningData.Empty();
+			//SkinningData.Empty();
 			bIsValid = false;
 			return;
 		}
@@ -112,12 +134,36 @@ void UTressFXAsset::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 		{
 			if (It->Asset == this)
 			{
+                It->MarkInstanceRenderDataDirty();
 				It->MarkRenderStateDirty();
 			}
 		}
 	}
+
+    ReleaseRenderData();
 }
+
 #endif
+
+
+void UTressFXAsset::ReleaseRenderData()
+{
+    if (SharedRenderData)
+    {
+        FTressFXHairObject* LocalPtr = SharedRenderData;
+        SharedRenderData = nullptr;
+
+        ENQUEUE_RENDER_COMMAND(CleanupHairObject)(
+            [LocalPtr](FRHICommandListImmediate& RHICmdList)
+            {
+                LocalPtr->ReleaseResource();
+                delete LocalPtr;
+            }
+        );
+    }
+
+}
+
 
 static float GetRandom(float Min, float Max)
 {
@@ -140,10 +186,10 @@ bool FTressFXRuntimeData::GenerateFollowHairs(int32 numFollowHairsPerGuideHair /
 	Positions = ImportedPositions;
 
 	// Nothing to do, just exit. 
-	if (numFollowHairsPerGuideHair == 0)
-	{
-		return false;
-	}
+	//if (numFollowHairsPerGuideHair == 0)
+	//{
+	//	return false;
+	//}
 
 	
 
@@ -157,15 +203,19 @@ bool FTressFXRuntimeData::GenerateFollowHairs(int32 numFollowHairsPerGuideHair /
 	// re-allocate all buffers
 	Positions.Empty();
 	StrandUV.Empty();
-
+    RootToTipTexcoords.Empty();
 	Positions.AddZeroed(NumTotalVertices);
 	StrandUV.AddZeroed(NumTotalStrands);
+    RootToTipTexcoords.AddZeroed(NumTotalVertices);
 
 	FollowRootOffsets.Empty();
 	FollowRootOffsets.AddZeroed(NumTotalStrands);
 
 	FVector4* pos = Positions.GetData();
 	FVector4* followOffset = FollowRootOffsets.GetData();
+
+    TArray<float> HairLengthCache;
+    HairLengthCache.AddZeroed(NumVerticesPerStrand);
 
 	// Generate follow hairs
 	for (int32 i = 0; i < NumGuideStrands; i++)
@@ -174,6 +224,28 @@ bool FTressFXRuntimeData::GenerateFollowHairs(int32 numFollowHairsPerGuideHair /
 		int32 indexRootVertMaster = indexGuideStrand * NumVerticesPerStrand;
 
 		FMemory::Memcpy(&pos[indexRootVertMaster], &positionsGuide[i*NumVerticesPerStrand], sizeof(FVector4)*NumVerticesPerStrand);
+
+        // caculate hair strand length
+        float HairStrandLength = 0.0001f;
+        FVector LastPos = pos[indexRootVertMaster];
+        FVector NextPos;
+        for (int VertIdx = 1; VertIdx < NumVerticesPerStrand; VertIdx++)
+        {
+            NextPos = pos[indexRootVertMaster + VertIdx];
+            float Length = (NextPos - LastPos).Size();
+            HairLengthCache[VertIdx] = Length;
+            HairStrandLength += Length;
+        }
+
+        // save root to tips UV
+        float CurLen = 0;
+        for (int VertIdx = 0; VertIdx < NumVerticesPerStrand; VertIdx++)
+        {
+            CurLen += HairLengthCache[VertIdx];
+            RootToTipTexcoords[indexRootVertMaster + VertIdx] = CurLen / HairStrandLength;
+            //pos[indexRootVertMaster + VertIdx].W = CurLen / HairStrandLength;
+        }
+
 		StrandUV[indexGuideStrand] = strandUVGuide[i];
 
 		followOffset[indexGuideStrand] = FVector4(ForceInitToZero);
@@ -209,7 +281,9 @@ bool FTressFXRuntimeData::GenerateFollowHairs(int32 numFollowHairsPerGuideHair /
 				float factor = tipSeparationFactor * ((float)k / ((float)NumVerticesPerStrand)) + 1.0f;
 				*followVert = FVector4(ToFVector(*guideVert) + offset * factor, guideVert->W);
 
-				followVert->W = k * InvNumVerticesPerStrand; // for uv
+                RootToTipTexcoords[indexRootVertFollow + k] = RootToTipTexcoords[indexRootVertMaster + k];
+                //guideVert->W = k * InvNumVerticesPerStrand; // for main guide uv
+				//followVert->W = k * InvNumVerticesPerStrand; // for uv
 			}
 		}
 	}
@@ -316,7 +390,9 @@ FBoxSphereBounds FTressFXRuntimeData::CalcBounds()
 	{
 		Box += FVector(Positions[i]);
 	}
-	return FBoxSphereBounds(Box);
+	//return FBoxSphereBounds(Box);
+        //Double the bounds to account for simulation
+    return FBoxSphereBounds(Box.ExpandBy(Box.GetSize().X * 2));
 }
 
 
@@ -358,6 +434,7 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 {
 	switch(Asset->AssetType)
 	{
+#if 0
 		case FTressFXBoneSkinngAssetType::TFXBone_Binary:
 		{
 			FBufferReader Reader(Asset->RawData.GetData(), Asset->RawData.Num(), false);
@@ -456,6 +533,7 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 			return true;
 			break;
 		}
+#endif
 		case FTressFXBoneSkinngAssetType::TFXBone_Json:
 		{
 			int32 NumBones = Asset->JsonVersionImportData.NumBones;
@@ -475,39 +553,49 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 
 			int32 boneSkinningMemSize = NumTotalStrands;
 			SkinningData.Empty();
-			SkinningData.AddZeroed(boneSkinningMemSize);
+            BoneIndexDataArr.Empty();
 			for (int32 GuideStrandIndex = 0; GuideStrandIndex < NumGuideStrands; ++GuideStrandIndex)
 			{
-				FTressFXBoneSkinningData SkinData;
+				
+                FTressFXBoneIndexData BoneIdxData;
+                BoneIdxData.StartIdx = SkinningData.Num();
 
 				for (int32 j = 0; j < TRESSFX_MAX_INFLUENTIAL_BONE_COUNT; ++j)
 				{
-					const int32 DataIndex = (GuideStrandIndex * 4) + j;
+                    FTressFXBoneSkinningData SkinData;
+
+					const int32 DataIndex = (GuideStrandIndex * TRESSFX_MAX_INFLUENTIAL_BONE_COUNT) + j;
 
 					if (DataIndex < Asset->JsonVersionImportData.JsonSkinningData.Num())
 					{
 						FTressFXBoneSkinningJSONImportData ImportedSkinData = Asset->JsonVersionImportData.JsonSkinningData[DataIndex];
-						int32 EngineBoneIndex = SkeletalMesh->Skeleton->GetReferenceSkeleton().FindBoneIndex(ImportedSkinData.BoneName);
-						SkinData.BoneIndex[j] = (float)EngineBoneIndex; // Change the joint index to be what the engine wants
-						SkinData.Weight[j] = ImportedSkinData.Weight;
-						if (SkinData.BoneIndex[j] == -1.f && ImportedSkinData.BoneName != NAME_None)
+						int32 EngineBoneIndex = SkeletalMesh->RefSkeleton.FindBoneIndex(ImportedSkinData.BoneName);
+						SkinData.BoneIndex = (float)EngineBoneIndex; // Change the joint index to be what the engine wants
+						SkinData.Weight = ImportedSkinData.Weight;
+						if (SkinData.BoneIndex == -1.f && ImportedSkinData.BoneName != NAME_None)
 						{
 							UE_LOG(LogTemp, Warning, TEXT("Bone name not found in reference skeleton. bone name: %s"), *ImportedSkinData.BoneName.ToString());
 						}
-						if (SkinData.Weight[j] == 0.f)
+						if (SkinData.Weight > 0.0001f && SkinData.BoneIndex >= 0)
 						{
-							SkinData.BoneIndex[j] = -1.f;
+                            SkinningData.Add(SkinData);
+                            BoneIdxData.BoneCount++;
 						}
 					}
 				}
 
 				// If bone index is -1, then it means that there is no bone associated to this. In this case we simply replace it with zero.
 				// This is safe because the corresponding weight should be zero anyway.
-				SkinData.BoneIndex[0] = SkinData.BoneIndex[0] == -1.f ? 0 : SkinData.BoneIndex[0];
-				SkinData.BoneIndex[1] = SkinData.BoneIndex[1] == -1.f ? 0 : SkinData.BoneIndex[1];
-				SkinData.BoneIndex[2] = SkinData.BoneIndex[2] == -1.f ? 0 : SkinData.BoneIndex[2];
-				SkinData.BoneIndex[3] = SkinData.BoneIndex[3] == -1.f ? 0 : SkinData.BoneIndex[3];
-				SkinningData[GuideStrandIndex * (NumFollowStrandsPerGuide + 1)] = SkinData;
+                //for (int j = 0; j < TRESSFX_MAX_INFLUENTIAL_BONE_COUNT; j++)
+                //{
+                //    SkinData.BoneIndex[j] = SkinData.BoneIndex[j] == -1.f ? 0 : SkinData.BoneIndex[j];
+                //}
+				//SkinningData[GuideStrandIndex * (NumFollowStrandsPerGuide + 1)] = SkinData;
+                for (int i = 0; i < NumFollowStrandsPerGuide + 1; i++)
+                {
+                    BoneIndexDataArr.Add(BoneIdxData);
+                }
+                
 			}
 			return true;
 			break;

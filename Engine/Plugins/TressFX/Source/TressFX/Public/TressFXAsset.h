@@ -41,31 +41,50 @@ class TRESSFX_API UTressFXAsset : public UObject
 	GENERATED_UCLASS_BODY()
 
 public:
+    virtual ~UTressFXAsset();
 
 	UPROPERTY(EditAnywhere, Category = "Settings")
-		int32 NumFollowStrandsPerGuide;
+	int32 NumFollowStrandsPerGuide;
 
 	UPROPERTY(EditAnywhere, Category = "Settings")
-		float TipSeparationFactor;
+	float TipSeparationFactor;
 
 	UPROPERTY(EditAnywhere, Category = "Settings")
-		float MaxRadiusAroundGuideHair;
+	float MaxRadiusAroundGuideHair;
 
 	UPROPERTY(EditAnywhere, Category = "Settings")
-		class UTressFXBoneSkinningAsset* TressFXBoneSkinningAsset;
+	class UTressFXBoneSkinningAsset* TressFXBoneSkinningAsset;
 
 	UPROPERTY(EditAnywhere, Category = "Settings")
-		class USkeletalMesh* BaseSkeleton;
+	class USkeletalMesh* BaseSkeleton;
 
 	UPROPERTY()
-		bool bIsValid;
+	bool bIsValid;
+
+    UPROPERTY(VisibleAnywhere, Category = "PerformanceCounter")
+    int RawGuideCount;
+
+    UPROPERTY(VisibleAnywhere, Category = "PerformanceCounter")
+    int TotalStrandCount;
+
+    UPROPERTY(VisibleAnywhere, Category = "PerformanceCounter")
+    int VertexCountPerStrand;
+
+    UPROPERTY(VisibleAnywhere, Category = "PerformanceCounter")
+    int TotalVertexCount;
+
+    UPROPERTY(VisibleAnywhere, Category = "PerformanceCounter")
+    int TotalTriangleCount;
+
 
 
 	virtual void Serialize(FArchive& Ar) override;
 
 	TSharedPtr<FTressFXRuntimeData> ImportData;
 
-	TArray<FTressFXBoneSkinningData> SkinningData;
+    FTressFXHairObject* GetOrCreateRenderData();
+
+	//TArray<FTressFXBoneSkinningData> SkinningData;
 
 	bool IsValid() { return bIsValid; }
 
@@ -76,5 +95,7 @@ public:
 #endif
 
 private:
+    void ReleaseRenderData();
 
+    FTressFXHairObject* SharedRenderData;
 };

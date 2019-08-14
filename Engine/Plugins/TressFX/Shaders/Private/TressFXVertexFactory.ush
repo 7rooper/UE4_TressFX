@@ -18,7 +18,7 @@ struct FVertexFactoryInterpolantsVSToPS
     float2 strandUV : TEXCOORD3;
 #if NEEDS_VELOCITY
 	// .xy is clip position, pre divide by w; .w is clip W; .z is 0 or 1 to mask out the velocity output
-    float4 VelocityPrevScreenPosition : VELOCITY_PREV_POS;
+    //float4 VelocityPrevScreenPosition : VELOCITY_PREV_POS;
 #endif
 };
 

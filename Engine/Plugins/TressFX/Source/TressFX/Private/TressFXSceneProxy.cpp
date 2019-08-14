@@ -91,7 +91,7 @@ FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName 
 	FPrimitiveSceneProxy(InComponent, ResourceName),
 	VertexFactory(GetScene().GetFeatureLevel())
 {
-
+    LodScreenSize = 0;
 	TFXComponent = Cast<UTressFXComponent>(InComponent);
 	TressFXHairObject = InHairObject;
 
@@ -111,6 +111,9 @@ FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName 
 
 	MaterialRelevance = Material->GetRelevance(InComponent->GetScene()->GetFeatureLevel());
 	BeginInitResource(&VertexFactory);
+
+    InstanceRenderData = nullptr;
+    TressFXHairObject = nullptr;
 }
 
 FTressFXSceneProxy::~FTressFXSceneProxy()
@@ -201,9 +204,10 @@ void FTressFXSceneProxy::UpdateMorphIndices_RenderThread(const TArray<int32>& Mo
 void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData& DynamicData)
 {
 	this->TressFXHairObject = DynamicData.HairObject;
+    this->InstanceRenderData = DynamicData.InstanceRenderData;
 	this->SDFMeshResources = DynamicData.SDFMeshResources;
 	this->bEnableMorphTargets = DynamicData.bEnableMorphTargets;
-
+    LodScreenSize = DynamicData.LodScreenSize;
 //#ifdef TRESSFX_STANDALONE_PLUGIN
 #if 1
     this->MorphVertexBuffer = nullptr;
@@ -239,9 +243,10 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 	ShadeParametersUniformBuffer.g_FiberSpacing = DynamicData.TressFXShadeSettings.FiberSpacing;
 	ShadeParametersUniformBuffer.g_NumVerticesPerStrand = TressFXHairObject->NumVerticePerStrand;
 	ShadeParametersUniformBuffer.g_ratio = DynamicData.TressFXShadeSettings.HairThickness;
+    ShadeParametersUniformBuffer.g_RootTangentBlending = DynamicData.TressFXShadeSettings.RootTangentBlending;
 
-	TressFXHairObject->SimParametersUniformBuffer = TUniformBufferRef<FTressFXSimParametersUniformBuffer>::CreateUniformBufferImmediate(SimParamsUniformBuffer, UniformBuffer_SingleFrame);
-	TressFXHairObject->ShadeParametersUniformBuffer = TUniformBufferRef<FTressFXShadeParametersUniformBuffer>::CreateUniformBufferImmediate(ShadeParametersUniformBuffer, UniformBuffer_SingleFrame);
+    InstanceRenderData->SimParametersUniformBuffer = TUniformBufferRef<FTressFXSimParametersUniformBuffer>::CreateUniformBufferImmediate(SimParamsUniformBuffer, UniformBuffer_SingleFrame);
+    InstanceRenderData->ShadeParametersUniformBuffer = TUniformBufferRef<FTressFXShadeParametersUniformBuffer>::CreateUniformBufferImmediate(ShadeParametersUniformBuffer, UniformBuffer_SingleFrame);
 	CollisionType = DynamicData.CollisionType;
 
 	if (CVarTFXSDFDisable.GetValueOnAnyThread() == 0 && CollisionType == ETressFXCollisionType::TFXCollsion_SDF && this->SDFMeshResources)
@@ -249,11 +254,11 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 		FTressFXBoneSkinningUniformBuffer BoneSkinBuffer;
 		BoneSkinBuffer.g_BoneSkinningMatrix = DynamicData.BoneTransforms; //kind of redundant with above
 		BoneSkinBuffer.g_NumMeshVertices = DynamicData.SDFMeshResources->MeshData.Vertices.Num();
-		TressFXHairObject->BoneSkinningUniformBuffer = TUniformBufferRef<FTressFXBoneSkinningUniformBuffer>::CreateUniformBufferImmediate(BoneSkinBuffer, UniformBuffer_SingleFrame);
+        InstanceRenderData->BoneSkinningUniformBuffer = TUniformBufferRef<FTressFXBoneSkinningUniformBuffer>::CreateUniformBufferImmediate(BoneSkinBuffer, UniformBuffer_SingleFrame);
 
 		//SDF Uniform Buffer
 		FTressFXSDFUniformBuffer SDFUniformBuffer = this->SDFMeshResources->GetConstantBuffer(TressFXHairObject);
-		TressFXHairObject->SDFUniformBuffer = TUniformBufferRef<FTressFXSDFUniformBuffer>::CreateUniformBufferImmediate(SDFUniformBuffer, UniformBuffer_SingleFrame);
+        InstanceRenderData->SDFUniformBuffer = TUniformBufferRef<FTressFXSDFUniformBuffer>::CreateUniformBufferImmediate(SDFUniformBuffer, UniformBuffer_SingleFrame);
 	}
 
 	Material = DynamicData.HairMaterial;
@@ -335,6 +340,22 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 		{
 			if (VisibilityMap & (1 << ViewIndex))
 			{
+                float LodRate = 1.0f;
+                if (LodScreenSize > 0)
+                {
+                    const FBoxSphereBounds& ProxyBounds = GetBounds();
+
+                    float ScreenSize = ComputeBoundsScreenRadiusSquared(ProxyBounds.Origin, ProxyBounds.SphereRadius, *View);
+                    if (ScreenSize < LodScreenSize * 0.25f)
+                    {
+                        LodRate = 0.1f;
+                    }
+                    else if (ScreenSize < LodScreenSize)
+                    {
+                        LodRate = 0.5f;
+                    }
+                }
+
 				// Draw the mesh.
 				FMeshBatch& Mesh = Collector.AllocateMesh();
 #ifndef TRESSFX_STANDALONE_PLUGIN
@@ -349,6 +370,7 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 				//BatchElement.PrimitiveUniformBuffer = CreatePrimitiveUniformBufferImmediate(GetLocalToWorld(), GetBounds(), GetLocalBounds(), true, UseEditorDepthTest());
 				FTressFXVertexFactoryUserDataWrapper& UserDataWrapper = Collector.AllocateOneFrameResource<FTressFXVertexFactoryUserDataWrapper>();
 				UserDataWrapper.Data.TressFXHairObject = TressFXHairObject;
+                UserDataWrapper.Data.InstanceRenderData = InstanceRenderData;
 				BatchElement.VertexFactoryUserData = &UserDataWrapper.Data;
 				FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = Collector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
 				DynamicPrimitiveUniformBuffer.Set(GetLocalToWorld(), GetLocalToWorld(), GetBounds(), GetLocalBounds(), true, false, UseEditorDepthTest());
@@ -358,9 +380,9 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 #ifndef TRESSFX_STANDALONE_PLUGIN
 				BatchElement.NumIndices = TressFXHairObject->mtotalIndices;
 #endif
-				BatchElement.NumPrimitives = TressFXHairObject->mtotalIndices / 3;
+				BatchElement.NumPrimitives = int((TressFXHairObject->mtotalIndices / 3) * LodRate);
 				BatchElement.MinVertexIndex = 0;
-				BatchElement.MaxVertexIndex = TressFXHairObject->PosTanCollection.PositionsData.Num() - 1;
+				BatchElement.MaxVertexIndex = InstanceRenderData->PosTanCollection.PositionsData.Num() - 1;
 				Mesh.ReverseCulling = IsLocalToWorldDeterminantNegative();
 				Mesh.Type = PT_TriangleList;
 				Mesh.DepthPriorityGroup = SDPG_World;
@@ -374,7 +396,7 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 
 FUniformBufferRHIParamRef FTressFXSceneProxy::GetHairObjectShaderUniformBufferParam()
 {
-	return TressFXHairObject->ShadeParametersUniformBuffer;
+	return InstanceRenderData->ShadeParametersUniformBuffer;
 }
 
 void FTressFXSimParameters::UpdateSimulationParameters(const FTressFXSimulationSettings& InSettings, uint32 Frame, FTressFXHairObject* HairObject)

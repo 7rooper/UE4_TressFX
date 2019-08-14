@@ -13,10 +13,148 @@
 #define TOTEXT(a) TEXT(#a)
 #define BIND_PARAM(p) p.Bind(Initializer.ParameterMap, TOTEXT(p))
 
+
+struct FTressFXSimFeatures
+{
+    enum Type
+    {
+        None = 0,
+        Morphs = 1,
+        Velocity = 2,
+        MorphsAndVelocity = Morphs | Velocity,
+        FullSimulation = 4,
+        AllFeatures = MorphsAndVelocity | FullSimulation
+    };
+};
+
+
+template <FTressFXSimFeatures::Type TSimFeatures>
+class FIntegrationAndGlobalShapeConstraintsCS : public FGlobalShader
+{
+    DECLARE_SHADER_TYPE(FIntegrationAndGlobalShapeConstraintsCS, Global);
+
+public:
+
+    static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters);
+
+    static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
+
+    static const TCHAR* GetSourceFilename();;
+
+    static const TCHAR*GetFunctionName();;
+
+    FIntegrationAndGlobalShapeConstraintsCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer);;
+
+
+    FIntegrationAndGlobalShapeConstraintsCS();;
+
+    virtual bool Serialize(FArchive& Ar) override;;
+
+
+public:
+
+    FRWShaderParameter g_HairVertexPositions;
+    FRWShaderParameter g_HairVertexPositionsPrev;
+    FRWShaderParameter g_HairVertexPositionsPrevPrev;
+    FRWShaderParameter g_HairVertexTangents;
+
+    FShaderResourceParameter g_BoneSkinningData;
+    FShaderResourceParameter g_BoneIndexData;
+    FShaderResourceParameter g_InitialHairPositions;
+    FShaderResourceParameter g_MorphDeltas;
+    FShaderResourceParameter g_FollowHairRootOffset;
+
+    FShaderUniformBufferParameter TressfxSimParametersUniformBuffer;
+
+};
+
+
+
+template <FTressFXSimFeatures::Type TSimFeatures>
+bool FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+{
+    return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+}
+
+template <FTressFXSimFeatures::Type TSimFeatures>
+void FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+{
+    FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+    OutEnvironment.SetDefine(TEXT("AMD_TRESSFX_MAX_NUM_BONES"), AMD_TRESSFX_MAX_NUM_BONES);
+    OutEnvironment.SetDefine(TEXT("TRESSFX_MORPHS"), TSimFeatures & FTressFXSimFeatures::Morphs ? TEXT("1") : TEXT("0"));
+    OutEnvironment.SetDefine(TEXT("UPDATE_PREV_FOLLOW_HAIRS"), TSimFeatures & FTressFXSimFeatures::Velocity ? TEXT("1") : TEXT("0"));
+    OutEnvironment.SetDefine(TEXT("SIM_QUALITY"), TSimFeatures & FTressFXSimFeatures::FullSimulation ? TEXT("1") : TEXT("0"));
+}
+
+template <FTressFXSimFeatures::Type TSimFeatures>
+const TCHAR* FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::GetSourceFilename()
+{
+    return TEXT("TressFXSimulation");
+}
+
+template <FTressFXSimFeatures::Type TSimFeatures>
+const TCHAR* FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::GetFunctionName()
+{
+    return TEXT("IntegrationAndGlobalShapeConstraints");
+}
+
+template <FTressFXSimFeatures::Type TSimFeatures>
+FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::FIntegrationAndGlobalShapeConstraintsCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
+{
+    g_HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositions"));
+    g_HairVertexPositionsPrev.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositionsPrev"));
+    g_HairVertexPositionsPrevPrev.Bind(Initializer.ParameterMap, TEXT("g_HairVertexPositionsPrevPrev"));
+    g_HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("g_HairVertexTangents"));
+    g_BoneSkinningData.Bind(Initializer.ParameterMap, TEXT("g_BoneSkinningData"));
+    g_BoneIndexData.Bind(Initializer.ParameterMap, TEXT("g_BoneIndexData"));
+    g_InitialHairPositions.Bind(Initializer.ParameterMap, TEXT("g_InitialHairPositions"));
+
+    if (TSimFeatures & FTressFXSimFeatures::Morphs)
+    {
+        g_MorphDeltas.Bind(Initializer.ParameterMap, TEXT("g_MorphDeltas"));
+    }
+
+    if (TSimFeatures & FTressFXSimFeatures::Velocity)
+    {
+        g_FollowHairRootOffset.Bind(Initializer.ParameterMap, TEXT("g_FollowHairRootOffset"));
+    }
+
+    TressfxSimParametersUniformBuffer.Bind(Initializer.ParameterMap, TEXT("tressfxSimParameters"));
+}
+
+
+
+template <FTressFXSimFeatures::Type TSimFeatures>
+FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::FIntegrationAndGlobalShapeConstraintsCS()
+{
+
+}
+
+template <FTressFXSimFeatures::Type TSimFeatures>
+bool FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::Serialize(FArchive& Ar)
+{
+    bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
+
+    Ar << g_HairVertexPositions << g_HairVertexPositionsPrev << g_HairVertexPositionsPrevPrev
+        << g_HairVertexTangents << g_BoneSkinningData << g_BoneIndexData << g_InitialHairPositions;
+
+    if (TSimFeatures & FTressFXSimFeatures::Morphs)
+    {
+        Ar << g_MorphDeltas;
+    }
+    if (TSimFeatures & FTressFXSimFeatures::Velocity)
+    {
+        Ar << g_FollowHairRootOffset;
+    }
+
+    return bShaderHasOutdatedParameters;
+}
+
 IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::None>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
 IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::Morphs>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
 IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::MorphsAndVelocity>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
 IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::Velocity>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::AllFeatures>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
 
 bool FVelocityShockPropagationCS::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
@@ -140,13 +278,14 @@ FLengthConstriantsWindAndCollisionCS::FLengthConstriantsWindAndCollisionCS(const
 	BIND_PARAM(g_HairVertexTangents);
 	BIND_PARAM(g_HairRestLengthSRV);
 	BIND_PARAM(g_HairVertexPositionsPrev);
+    BIND_PARAM(g_HairVertexPositionsPrevPrev);
 }
 
 bool FLengthConstriantsWindAndCollisionCS::Serialize(FArchive& Ar)
 {
 	bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
 
-	Ar << g_HairVertexPositions << g_HairVertexTangents << g_HairRestLengthSRV << g_HairVertexPositionsPrev;
+	Ar << g_HairVertexPositions << g_HairVertexTangents << g_HairRestLengthSRV << g_HairVertexPositionsPrev << g_HairVertexPositionsPrevPrev;
 
 	return bShaderHasOutdatedParameters;
 }
@@ -251,6 +390,9 @@ static TAutoConsoleVariable<int32> CVarTFXSimPass4(TEXT("tfx.SimPass4"), 1, TEXT
 static TAutoConsoleVariable<int32> CVarTFXSimPass5(TEXT("tfx.SimPass5"), 1, TEXT("Enable/Disable UpdateFollowHairVertices Pass"), ECVF_RenderThreadSafe);
 static TAutoConsoleVariable<int32> CVarTFXSimEnable(TEXT("tfx.EnableSimulation"), 1, TEXT("Globally Enable or disable TressFX Simulation"), ECVF_RenderThreadSafe);
 
+template <FTressFXSimFeatures::Type TSimFeatures>
+void SimulateTressFX_impl(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, int32 CPULocalShapeIterations);
+
 void SimulateTressFX(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy, int32 CPULocalShapeIterations)
 {
 	if (!Proxy->bInitialized || CVarTFXSimEnable.GetValueOnRenderThread() < 1)
@@ -267,28 +409,35 @@ void SimulateTressFX(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy, int
 		);
 	const bool bNeedsVelocity = Proxy->WantsVelocityDraw();
 
-	if (bUseMorphTargets)
-	{
-		if (bNeedsVelocity)
-		{
-			SimulateTressFX_impl<FTressFXSimFeatures::MorphsAndVelocity>(RHICmdList, Proxy, CPULocalShapeIterations);
-		}
-		else
-		{
-			SimulateTressFX_impl<FTressFXSimFeatures::Morphs>(RHICmdList, Proxy, CPULocalShapeIterations);
-		}
-	}
-	else
-	{
-		if (bNeedsVelocity)
-		{
-			SimulateTressFX_impl<FTressFXSimFeatures::Velocity>(RHICmdList, Proxy, CPULocalShapeIterations);
-		}
-		else
-		{
-			SimulateTressFX_impl<FTressFXSimFeatures::None>(RHICmdList, Proxy, CPULocalShapeIterations);
-		}
-	}
+    if (Proxy->TFXComponent->TressFXSimulationSettings.SimulationQuality != ETressFXSimulationQuality::TFXSim_Disable)
+    {
+        SimulateTressFX_impl<FTressFXSimFeatures::AllFeatures >(RHICmdList, Proxy, CPULocalShapeIterations);
+    }
+    else
+    {
+        if (bUseMorphTargets)
+        {
+            if (bNeedsVelocity)
+            {
+                SimulateTressFX_impl<FTressFXSimFeatures::MorphsAndVelocity>(RHICmdList, Proxy, CPULocalShapeIterations);
+            }
+            else
+            {
+                SimulateTressFX_impl<FTressFXSimFeatures::Morphs>(RHICmdList, Proxy, CPULocalShapeIterations);
+            }
+        }
+        else
+        {
+            if (bNeedsVelocity)
+            {
+                SimulateTressFX_impl<FTressFXSimFeatures::Velocity>(RHICmdList, Proxy, CPULocalShapeIterations);
+            }
+            else
+            {
+                SimulateTressFX_impl<FTressFXSimFeatures::None>(RHICmdList, Proxy, CPULocalShapeIterations);
+            }
+        }
+    }
 }
 
 template <FTressFXSimFeatures::Type TSimFeatures>
@@ -296,9 +445,11 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 {
 
 	const bool bUseSDFCollision = CVarTFXSDFDisable.GetValueOnRenderThread() == 0 && Proxy->CollisionType == ETressFXCollisionType::TFXCollsion_SDF && Proxy->SDFMeshResources;
+
+    ETressFXSimulationQuality SimQuality = Proxy->TFXComponent->TressFXSimulationSettings.SimulationQuality;
 	
 	// For dispatching one thread per one vertex
-	int32 NumGroupsForCS_VertexLevel = (int32)((float)Proxy->TressFXHairObject->PosTanCollection.NumOfVerts / (float)TRESSFX_SIM_THREAD_GROUP_SIZE);
+	int32 NumGroupsForCS_VertexLevel = (int32)((float)Proxy->InstanceRenderData->PosTanCollection.NumOfVerts / (float)TRESSFX_SIM_THREAD_GROUP_SIZE);
 	// For dispatching one thread per one strand
 	int32 NumGroupsForCS_StrandLevel = (int32)(((float)(Proxy->TressFXHairObject->NumTotalStrands) / (float)TRESSFX_SIM_THREAD_GROUP_SIZE));
 
@@ -313,16 +464,16 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 
 		FUnorderedAccessViewRHIParamRef SimResources[] =
 		{
-			Proxy->TressFXHairObject->PosTanCollection.Positions.UAV,
-			Proxy->TressFXHairObject->PosTanCollection.PositionsPrev.UAV,
-			Proxy->TressFXHairObject->PosTanCollection.PositionsPrevPrev.UAV,
-			Proxy->TressFXHairObject->PosTanCollection.Tangents.UAV
+			Proxy->InstanceRenderData->PosTanCollection.Positions.UAV,
+			Proxy->InstanceRenderData->PosTanCollection.PositionsPrev.UAV,
+			Proxy->InstanceRenderData->PosTanCollection.PositionsPrevPrev.UAV,
+			Proxy->InstanceRenderData->PosTanCollection.Tangents.UAV
 		};
 
 		RHICmdList.TransitionResources(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, SimResources, ARRAY_COUNT(SimResources));
 
-		const bool bUseMorphs = TSimFeatures == FTressFXSimFeatures::MorphsAndVelocity || TSimFeatures == FTressFXSimFeatures::Morphs;
-		const bool bNeedsVelocity = TSimFeatures == FTressFXSimFeatures::Velocity || TSimFeatures == FTressFXSimFeatures::MorphsAndVelocity;
+		const bool bUseMorphs = (bool)(TSimFeatures & FTressFXSimFeatures::Morphs);
+		const bool bNeedsVelocity = (bool)(TSimFeatures & FTressFXSimFeatures::Velocity);
 
 		if (bUseMorphs)
 		{
@@ -340,11 +491,12 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 
 			TShaderMapRef<FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 			RHICmdList.SetComputeShader(Shader->GetComputeShader());
-			Proxy->TressFXHairObject->PosTanCollection.SetUAVs(RHICmdList, Shader->GetComputeShader());
-			SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSimParametersUniformBuffer>(), Proxy->TressFXHairObject->SimParametersUniformBuffer);
+			Proxy->InstanceRenderData->PosTanCollection.SetUAVs(RHICmdList, Shader->GetComputeShader());
+			SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSimParametersUniformBuffer>(), Proxy->InstanceRenderData->SimParametersUniformBuffer);
 
 			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->g_InitialHairPositions, Proxy->TressFXHairObject->InitialHairPositionsBuffer.SRV);
 			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->g_BoneSkinningData, Proxy->TressFXHairObject->BoneSkinningDataBuffer.SRV);
+            SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->g_BoneIndexData, Proxy->TressFXHairObject->BoneIndexDataBuffer.SRV);
 
 			if (bUseMorphs)
 			{
@@ -356,11 +508,11 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 			}
 			
 			DispatchComputeShader(RHICmdList, *Shader, NumGroupsForCS_VertexLevel, 1, 1);
-			Proxy->TressFXHairObject->PosTanCollection.UAVBarrier(RHICmdList, Fence);
+			Proxy->InstanceRenderData->PosTanCollection.UAVBarrier(RHICmdList, Fence);
 
 		}
 
-		if (CVarTFXSimPass2.GetValueOnRenderThread() > 0)
+		if (SimQuality == ETressFXSimulationQuality::TFXSim_Full && CVarTFXSimPass2.GetValueOnRenderThread() > 0)
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, VelocityShockPropagation);
 			auto Fence = RHICreateComputeFence(TEXT("VelocityShockPropagationCSFence"));
@@ -370,11 +522,11 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 			RHICmdList.SetComputeShader(Shader->GetComputeShader());
 
 			DispatchComputeShader(RHICmdList, *Shader, NumGroupsForCS_StrandLevel, 1, 1);
-			Proxy->TressFXHairObject->PosTanCollection.UAVBarrier(RHICmdList, Fence);
+			Proxy->InstanceRenderData->PosTanCollection.UAVBarrier(RHICmdList, Fence);
 
 		}
 
-		if (CVarTFXSimPass3.GetValueOnRenderThread() > 0)
+		if (SimQuality == ETressFXSimulationQuality::TFXSim_Full && CVarTFXSimPass3.GetValueOnRenderThread() > 0)
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, LocalShapeConstraints);
 			TShaderMapRef<FLocalShapeConstraintsCS> LocalShapeConstraintsCS(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
@@ -387,10 +539,10 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 			{
 				auto Fence = RHICreateComputeFence(TEXT("LocalShapeConstraintsCSFence"));
 				DispatchComputeShader(RHICmdList, *LocalShapeConstraintsCS, NumGroupsForCS_StrandLevel, 1, 1);
-				Proxy->TressFXHairObject->PosTanCollection.UAVBarrier(RHICmdList, Fence);
+				Proxy->InstanceRenderData->PosTanCollection.UAVBarrier(RHICmdList, Fence);
 			}
 		}
-		if (CVarTFXSimPass4.GetValueOnRenderThread() > 0)
+		if (SimQuality == ETressFXSimulationQuality::TFXSim_Full && CVarTFXSimPass4.GetValueOnRenderThread() > 0)
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, LengthConstriantsWindAndCollision);
 			auto Fence = RHICreateComputeFence(TEXT("LengthConstriantsWindAndCollisionCSFence"));
@@ -400,23 +552,24 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 			SetSRVParameter(RHICmdList, LengthConstriantsWindAndCollisionCS->GetComputeShader(), LengthConstriantsWindAndCollisionCS->g_HairRestLengthSRV, Proxy->TressFXHairObject->HairRestLengthSRVBuffer.SRV);
 
 			DispatchComputeShader(RHICmdList, *LengthConstriantsWindAndCollisionCS, NumGroupsForCS_VertexLevel, 1, 1);
-			Proxy->TressFXHairObject->PosTanCollection.UAVBarrier(RHICmdList, Fence);
+			Proxy->InstanceRenderData->PosTanCollection.UAVBarrier(RHICmdList, Fence);
 		}
 
 		FComputeFenceRHIRef UpdateFollowHairsFence = nullptr;
 
-		if (CVarTFXSimPass5.GetValueOnRenderThread() > 0)
+		//if (Proxy->TFXComponent->HairObject->AssetData->NumFollowStrandsPerGuide > 0 && CVarTFXSimPass5.GetValueOnRenderThread() > 0)
+        if (CVarTFXSimPass5.GetValueOnRenderThread() > 0)
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, UpdateFollowHairVertices);
 			UpdateFollowHairsFence = RHICreateComputeFence(TEXT("UpdateFollowHairVerticesCSFence"));
 			TShaderMapRef<FUpdateFollowHairVerticesCS> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 			RHICmdList.SetComputeShader(Shader->GetComputeShader());
-			Proxy->TressFXHairObject->PosTanCollection.SetUAVs(RHICmdList, Shader->GetComputeShader());
+			Proxy->InstanceRenderData->PosTanCollection.SetUAVs(RHICmdList, Shader->GetComputeShader());
 			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->g_FollowHairRootOffset, Proxy->TressFXHairObject->FollowHairRootOffsetBuffer.SRV);
-			SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSimParametersUniformBuffer>(), Proxy->TressFXHairObject->SimParametersUniformBuffer);
+			SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSimParametersUniformBuffer>(), Proxy->InstanceRenderData->SimParametersUniformBuffer);
 			DispatchComputeShader(RHICmdList, *Shader, NumGroupsForCS_VertexLevel, 1, 1);
 			Shader->g_HairVertexTangents.UnsetUAV(RHICmdList, Shader->GetComputeShader());
-			Proxy->TressFXHairObject->PosTanCollection.UnsetUAVs(RHICmdList, Shader->GetComputeShader());
+			Proxy->InstanceRenderData->PosTanCollection.UnsetUAVs(RHICmdList, Shader->GetComputeShader());
 		}
 
 		if (bUseSDFCollision && CVarTFXSDFApply.GetValueOnRenderThread() == 1)

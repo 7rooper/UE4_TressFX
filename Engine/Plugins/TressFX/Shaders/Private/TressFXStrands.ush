@@ -88,6 +88,7 @@ StructuredBuffer<float4> g_GuideHairVertexTangents;
 StructuredBuffer<float> g_HairThicknessCoeffs;
 StructuredBuffer<float2> g_HairStrandTexCd;
 StructuredBuffer<float4> g_GuideHairVertexPositions;
+StructuredBuffer<float> g_HairRootToTipTexcoords;
 
 inline float4 GetPosition(int index)
 {
@@ -189,58 +190,58 @@ TressFXVertex GetExpandedTressFXVert(
     Output.TangentZ = float4(proj_right.x, proj_right.y, 0, 1);
     Output.p0p1 = float4(hairEdgePositions[0].xy / max(hairEdgePositions[0].w, TRESSFX_FLOAT_EPSILON), hairEdgePositions[1].xy / max(hairEdgePositions[1].w, TRESSFX_FLOAT_EPSILON));
     Output.strandUV = GetStrandUV(index);
-    Output.Root2Tip = g_GuideHairVertexPositions[index].w;
+    Output.Root2Tip = g_HairRootToTipTexcoords[index];
     //Output.PosCheck = MatrixMult(g_mView, float4(v,1));
     return Output;
 
 }
 
 
-// **** not used ****
-TressFXVertex GetExpandedTressFXVertStrandCopies(uint vertexId, float3 eye, float2 winSize, float4x4 viewProj, uint instanceId)
-{
-    // Access the current line segment
-    uint index = vertexId / 2; // vertexId is actually the indexed vertex id when indexed triangles are used
+// // **** not used ****
+// TressFXVertex GetExpandedTressFXVertStrandCopies(uint vertexId, float3 eye, float2 winSize, float4x4 viewProj, uint instanceId)
+// {
+//     // Access the current line segment
+//     uint index = vertexId / 2; // vertexId is actually the indexed vertex id when indexed triangles are used
 
-    // Identifies which copy of the strand this is (0 is the original, 1 is the first copy, etc.)
-    uint randOffsetIndex = instanceId;
+//     // Identifies which copy of the strand this is (0 is the original, 1 is the first copy, etc.)
+//     uint randOffsetIndex = instanceId;
 
-    // Getting a random offset value
-    uint seedRand = ((index / 64 + 1) * (randOffsetIndex + 1)) % 512;
-    float2 seedTexcorrd = float2(float(seedRand % 512), float(seedRand / 512)) * (1.f / 512.f);
-    float3 randOffset = float(randOffsetIndex) * g_txNoise.SampleLevel(g_samLinearWrap, seedTexcorrd, 0).xyz;
-    randOffset = 2.0f * randOffset - 1.0f; // so we have random offsets between -1 and 1
+//     // Getting a random offset value
+//     uint seedRand = ((index / 64 + 1) * (randOffsetIndex + 1)) % 512;
+//     float2 seedTexcorrd = float2(float(seedRand % 512), float(seedRand / 512)) * (1.f / 512.f);
+//     float3 randOffset = float(randOffsetIndex) * g_txNoise.SampleLevel(g_samLinearWrap, seedTexcorrd, 0).xyz;
+//     randOffset = 2.0f * randOffset - 1.0f; // so we have random offsets between -1 and 1
 
-    // Get updated positions and tangents from simulation result
-    float3 t = GetTangent(index).xyz;
-    float3 v = randOffset + GetPosition(index).xyz; // We apply a random offset to each vertex when multiple strands are requested
+//     // Get updated positions and tangents from simulation result
+//     float3 t = GetTangent(index).xyz;
+//     float3 v = randOffset + GetPosition(index).xyz; // We apply a random offset to each vertex when multiple strands are requested
 
-    // Get hair strand thickness
-    float ratio = (g_bThinTip > 0) ? g_HairThicknessCoeffs[index] : 1.0;
+//     // Get hair strand thickness
+//     float ratio = (g_bThinTip > 0) ? g_HairThicknessCoeffs[index] : 1.0;
 
-    // Calculate right and projected right vectors
-    float3 right = Safe_normalize(cross(t, Safe_normalize(v - eye)));
-    float2 proj_right = Safe_normalize(mul(float4(right, 0), viewProj).xy);
+//     // Calculate right and projected right vectors
+//     float3 right = Safe_normalize(cross(t, Safe_normalize(v - eye)));
+//     float2 proj_right = Safe_normalize(mul(float4(right, 0), viewProj).xy);
 
-    // g_bExpandPixels should be set to 0 at minimum from the CPU side; this would avoid the below test
-    float expandPixels = (g_bExpandPixels < 0) ? 0.0 : 0.71;
+//     // g_bExpandPixels should be set to 0 at minimum from the CPU side; this would avoid the below test
+//     float expandPixels = (g_bExpandPixels < 0) ? 0.0 : 0.71;
 
-    // Calculate the negative and positive offset screenspace positions
-    float4 hairEdgePositions[2]; // 0 is negative, 1 is positive
-    hairEdgePositions[0] = float4(v + -1.0 * right * ratio * g_FiberRadius, 1.0);
-    hairEdgePositions[1] = float4(v + 1.0 * right * ratio * g_FiberRadius, 1.0);
-    hairEdgePositions[0] = mul(hairEdgePositions[0], viewProj);
-    hairEdgePositions[1] = mul(hairEdgePositions[1], viewProj);
+//     // Calculate the negative and positive offset screenspace positions
+//     float4 hairEdgePositions[2]; // 0 is negative, 1 is positive
+//     hairEdgePositions[0] = float4(v + -1.0 * right * ratio * g_FiberRadius, 1.0);
+//     hairEdgePositions[1] = float4(v + 1.0 * right * ratio * g_FiberRadius, 1.0);
+//     hairEdgePositions[0] = mul(hairEdgePositions[0], viewProj);
+//     hairEdgePositions[1] = mul(hairEdgePositions[1], viewProj);
 
-	// Write output data
-    TressFXVertex Output = (TressFXVertex) 0;
+// 	// Write output data
+//     TressFXVertex Output = (TressFXVertex) 0;
 
-    float fDirIndex = (vertexId & 0x01) ? -1.0 : 1.0;
-    Output.Position = ((vertexId & 0x01) ? hairEdgePositions[0] : hairEdgePositions[1]) + fDirIndex * float4(proj_right * expandPixels / winSize.y, 0.0f, 0.0f) * ((vertexId & 0x01) ? hairEdgePositions[0].w : hairEdgePositions[1].w);
-    Output.Tangent = float4(t, ratio);
-    Output.p0p1 = float4(hairEdgePositions[0].xy / max(hairEdgePositions[0].w, TRESSFX_FLOAT_EPSILON), hairEdgePositions[1].xy / max(hairEdgePositions[1].w, TRESSFX_FLOAT_EPSILON));
-    Output.strandUV = GetStrandUV(index);
+//     float fDirIndex = (vertexId & 0x01) ? -1.0 : 1.0;
+//     Output.Position = ((vertexId & 0x01) ? hairEdgePositions[0] : hairEdgePositions[1]) + fDirIndex * float4(proj_right * expandPixels / winSize.y, 0.0f, 0.0f) * ((vertexId & 0x01) ? hairEdgePositions[0].w : hairEdgePositions[1].w);
+//     Output.Tangent = float4(t, ratio);
+//     Output.p0p1 = float4(hairEdgePositions[0].xy / max(hairEdgePositions[0].w, TRESSFX_FLOAT_EPSILON), hairEdgePositions[1].xy / max(hairEdgePositions[1].w, TRESSFX_FLOAT_EPSILON));
+//     Output.strandUV = GetStrandUV(index);
 
-    return Output;
+//     return Output;
 
-}
+// }

@@ -28,6 +28,7 @@ public:
 public:
 
 	FRWShaderParameter ColMeshVertexPositions;
+    FShaderResourceParameter g_BoneIndexData;
 	FShaderResourceParameter BoneSkinningData;
 	FShaderResourceParameter InitialVertexPositions;
 

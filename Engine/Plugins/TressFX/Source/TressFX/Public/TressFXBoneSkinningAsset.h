@@ -41,9 +41,9 @@ class TRESSFX_API UTressFXBoneSkinningAsset : public UObject
 
 public:
 
-	bool GenerateSkinningData(class UTressFXAsset* BaseAsset, class USkeleton* BaseSkeleton, TArray<FTressFXBoneSkinningData> &OutSkinningData);
+	//bool GenerateSkinningData(class UTressFXAsset* BaseAsset, class USkeleton* BaseSkeleton, TArray<FTressFXBoneSkinningData> &OutSkinningData);
 
-	TArray<FTressFXBoneSkinningData> BoneSkinningData;
+	//TArray<FTressFXBoneSkinningData> BoneSkinningData;
 
 	//FTressFXBoneSkinngAssetType
 	int32 AssetType;

@@ -10,10 +10,14 @@
 #include "MeshMaterialShader.h"
 #include "RendererInterface.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(TressFXVertexFactoryLog, Log, All);
+DEFINE_LOG_CATEGORY(TressFXVertexFactoryLog);
+
 void FTressFXVertexFactoryShaderParameters::Bind(const FShaderParameterMap& ParameterMap)
 {
 	TressfxShadeParameters.Bind(ParameterMap, TEXT("TressfxShadeParameters"));
 	HairThicknessCoeffs.Bind(ParameterMap, TEXT("g_HairThicknessCoeffs"));
+    HairRootToTipTexcoords.Bind(ParameterMap, TEXT("g_HairRootToTipTexcoords"));
 	HairStrandTexCd.Bind(ParameterMap, TEXT("g_HairStrandTexCd"));
 	NumVerticesPerStrand.Bind(ParameterMap, TEXT("g_NumVerticesPerStrand"));
 	g_bThinTip.Bind(ParameterMap, TEXT("g_bThinTip"));
@@ -26,6 +30,7 @@ void FTressFXVertexFactoryShaderParameters::Serialize(FArchive& Ar)
 {
 	Ar << TressfxShadeParameters
 		<< HairThicknessCoeffs
+        << HairRootToTipTexcoords
 		<< HairStrandTexCd
 		<< NumVerticesPerStrand
 		<< g_bThinTip
@@ -52,11 +57,12 @@ void FTressFXVertexFactoryShaderParameters::GetElementShaderBindings(
 	if (BatchData->TressFXHairObject)
 	{
 		// UAVS should already be transitioned to readable by the end of the simulation since we dont have rhicmdlist here
-		ShaderBindings.Add(TressfxShadeParameters, BatchData->TressFXHairObject->ShadeParametersUniformBuffer);
+		ShaderBindings.Add(TressfxShadeParameters, BatchData->InstanceRenderData->ShadeParametersUniformBuffer);
 		ShaderBindings.Add(g_bThinTip, 1); // new system does not accept bools
-		ShaderBindings.Add(g_GuideHairVertexPositions, BatchData->TressFXHairObject->PosTanCollection.Positions.SRV);
-		ShaderBindings.Add(g_HairVertexPositionsPrev, BatchData->TressFXHairObject->PosTanCollection.PositionsPrev.SRV);
-		ShaderBindings.Add(g_GuideHairVertexTangents, BatchData->TressFXHairObject->PosTanCollection.Tangents.SRV);
+		ShaderBindings.Add(g_GuideHairVertexPositions, BatchData->InstanceRenderData->PosTanCollection.Positions.SRV);
+		ShaderBindings.Add(g_HairVertexPositionsPrev, BatchData->InstanceRenderData->PosTanCollection.PositionsPrev.SRV);
+		ShaderBindings.Add(g_GuideHairVertexTangents, BatchData->InstanceRenderData->PosTanCollection.Tangents.SRV);
+        ShaderBindings.Add(HairRootToTipTexcoords, BatchData->TressFXHairObject->HairRootToTipTexcoords.SRV);
 		ShaderBindings.Add(HairStrandTexCd, BatchData->TressFXHairObject->HairTexCoords.SRV);
 		ShaderBindings.Add(HairThicknessCoeffs, BatchData->TressFXHairObject->HairThicknessCoeffs.SRV);
 	}

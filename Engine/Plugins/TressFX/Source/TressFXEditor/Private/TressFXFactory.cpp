@@ -514,34 +514,38 @@ UObject* UTressFXJSONFactory::FactoryCreateText(UClass* InClass, UObject* InPare
 
 		int32 NumStrandsToMakeUp = Result->ImportData->NumGuideStrands - NumStrandsInFile;
 
-		// evenly distribute the strands we need to make up, instead of just using the last one like the sample does.
-		int32 DistributionInterval = FMath::FloorToInt( (NumStrandsInFile / NumStrandsToMakeUp) );
+        if (NumStrandsToMakeUp > 0)
+        {
+            // evenly distribute the strands we need to make up, instead of just using the last one like the sample does.
+            int32 DistributionInterval = FMath::FloorToInt((NumStrandsInFile / NumStrandsToMakeUp));
 
-		for (int32 MakeUpStrandIndex = 0; MakeUpStrandIndex < NumStrandsToMakeUp; ++MakeUpStrandIndex)
-		{
-			int32 SourceStrandIndex = MakeUpStrandIndex * DistributionInterval;
+            for (int32 MakeUpStrandIndex = 0; MakeUpStrandIndex < NumStrandsToMakeUp; ++MakeUpStrandIndex)
+            {
+                int32 SourceStrandIndex = MakeUpStrandIndex * DistributionInterval;
 
-			int32 TargetStrandUV = (NumStrandsInFile + MakeUpStrandIndex);
-			Result->ImportData->StrandUV[TargetStrandUV] = Result->ImportData->StrandUV[SourceStrandIndex];
+                int32 TargetStrandUV = (NumStrandsInFile + MakeUpStrandIndex);
+                Result->ImportData->StrandUV[TargetStrandUV] = Result->ImportData->StrandUV[SourceStrandIndex];
 
-			for (int32 j = 0; j < Result->ImportData->NumVerticesPerStrand; ++j)
-			{
-				int32 SourceVertex = (SourceStrandIndex * Result->ImportData->NumVerticesPerStrand) + j;
-				int32 TargetVertex = ((NumStrandsInFile + MakeUpStrandIndex) * Result->ImportData->NumVerticesPerStrand) + j;
-				Result->ImportData->ImportedPositions[TargetVertex] = Result->ImportData->ImportedPositions[SourceVertex];
-			}
+                for (int32 j = 0; j < Result->ImportData->NumVerticesPerStrand; ++j)
+                {
+                    int32 SourceVertex = (SourceStrandIndex * Result->ImportData->NumVerticesPerStrand) + j;
+                    int32 TargetVertex = ((NumStrandsInFile + MakeUpStrandIndex) * Result->ImportData->NumVerticesPerStrand) + j;
+                    Result->ImportData->ImportedPositions[TargetVertex] = Result->ImportData->ImportedPositions[SourceVertex];
+                }
 
-			if (bHasBoneData && BoneAsset)
-			{
-				//each strand needs TRESSFX_MAX_INFLUENTIAL_BONE_COUNT weight datas, even if they are empty
-				for (int32 BoneInfluenceIndex = 0; BoneInfluenceIndex < TRESSFX_MAX_INFLUENTIAL_BONE_COUNT; BoneInfluenceIndex++)
-				{
-					int32 BoneDataIndex = (SourceStrandIndex * TRESSFX_MAX_INFLUENTIAL_BONE_COUNT) + BoneInfluenceIndex;
-					FTressFXBoneSkinningJSONImportData Duplicated = BoneAsset->JsonVersionImportData.JsonSkinningData[BoneDataIndex];
-					BoneAsset->JsonVersionImportData.JsonSkinningData.Add(Duplicated);
-				}
-			}
-		}
+                if (bHasBoneData && BoneAsset)
+                {
+                    //each strand needs TRESSFX_MAX_INFLUENTIAL_BONE_COUNT weight datas, even if they are empty
+                    for (int32 BoneInfluenceIndex = 0; BoneInfluenceIndex < TRESSFX_MAX_INFLUENTIAL_BONE_COUNT; BoneInfluenceIndex++)
+                    {
+                        int32 BoneDataIndex = (SourceStrandIndex * TRESSFX_MAX_INFLUENTIAL_BONE_COUNT) + BoneInfluenceIndex;
+                        FTressFXBoneSkinningJSONImportData Duplicated = BoneAsset->JsonVersionImportData.JsonSkinningData[BoneDataIndex];
+                        BoneAsset->JsonVersionImportData.JsonSkinningData.Add(Duplicated);
+                    }
+                }
+            }
+        }
+
 
 		// make copy of the strandUVS for using when regenerating follow hairs.
 		// This is the ONLY time that StrandUV_Original should ever be edited.
