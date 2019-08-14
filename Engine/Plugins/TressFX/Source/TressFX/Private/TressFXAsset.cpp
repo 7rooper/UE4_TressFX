@@ -535,38 +535,47 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 			
 			for (int32 GuideStrandIndex = 0; GuideStrandIndex < NumGuideStrands; ++GuideStrandIndex)
 			{
-				FTressFXBoneSkinningData SkinData;
+				FTressFXBoneIndexData BoneIdxData;
+				BoneIdxData.StartIdx = SkinningData.Num();
 
 				for (int32 j = 0; j < TRESSFX_MAX_INFLUENTIAL_BONE_COUNT; ++j)
 				{
-					const int32 DataIndex = (GuideStrandIndex * 4) + j;
+
+					FTressFXBoneSkinningData SkinData;
+					const int32 DataIndex = (GuideStrandIndex * TRESSFX_MAX_INFLUENTIAL_BONE_COUNT) + j;
 
 					if (DataIndex < Asset->JsonVersionImportData.JsonSkinningData.Num())
 					{
 						FTressFXBoneSkinningJSONImportData ImportedSkinData = Asset->JsonVersionImportData.JsonSkinningData[DataIndex];
 						int32 EngineBoneIndex = FTressFXUtils::FindEngineBoneIndex(SkeletalMesh, ImportedSkinData.BoneName, true);
 
-						// Change the joint index to be what the engine wants
-						SkinData.BoneIndex[j] = (float)EngineBoneIndex; 
-						SkinData.Weight[j] = ImportedSkinData.Weight;
-						if (SkinData.BoneIndex[j] == -1.f && ImportedSkinData.BoneName != NAME_None)
+						int32 EngineBoneIndex = FTressFXUtils::FindEngineBoneIndex(SkeletalMesh, ImportedSkinData.BoneName, true);
+						SkinData.BoneIndex = (float)EngineBoneIndex; // Change the joint index to be what the engine wants
+						SkinData.Weight = ImportedSkinData.Weight;
+
+						if (SkinData.BoneIndex == -1.f && ImportedSkinData.BoneName != NAME_None)
 						{
 							UE_LOG(LogTemp, Warning, TEXT("Bone name not found in reference skeleton. bone name: %s"), *ImportedSkinData.BoneName.ToString());
 						}
-						if (SkinData.Weight[j] == 0.f)
+						if (SkinData.Weight > 0.0001f && SkinData.BoneIndex >= 0)
 						{
-							SkinData.BoneIndex[j] = -1.f;
+							SkinningData.Add(SkinData);
+							BoneIdxData.BoneCount++;
 						}
 					}
 				}
 
 				// If bone index is -1, then it means that there is no bone associated to this. In this case we simply replace it with zero.
 				// This is safe because the corresponding weight should be zero anyway.
-				SkinData.BoneIndex[0] = SkinData.BoneIndex[0] == -1.f ? 0 : SkinData.BoneIndex[0];
-				SkinData.BoneIndex[1] = SkinData.BoneIndex[1] == -1.f ? 0 : SkinData.BoneIndex[1];
-				SkinData.BoneIndex[2] = SkinData.BoneIndex[2] == -1.f ? 0 : SkinData.BoneIndex[2];
-				SkinData.BoneIndex[3] = SkinData.BoneIndex[3] == -1.f ? 0 : SkinData.BoneIndex[3];
-				SkinningData[GuideStrandIndex * (NumFollowStrandsPerGuide + 1)] = SkinData;
+				//SkinData.BoneIndex[0] = SkinData.BoneIndex[0] == -1.f ? 0 : SkinData.BoneIndex[0];
+				//SkinData.BoneIndex[1] = SkinData.BoneIndex[1] == -1.f ? 0 : SkinData.BoneIndex[1];
+				//SkinData.BoneIndex[2] = SkinData.BoneIndex[2] == -1.f ? 0 : SkinData.BoneIndex[2];
+				//SkinData.BoneIndex[3] = SkinData.BoneIndex[3] == -1.f ? 0 : SkinData.BoneIndex[3];
+				//SkinningData[GuideStrandIndex * (NumFollowStrandsPerGuide + 1)] = SkinData;
+				for (int i = 0; i < NumFollowStrandsPerGuide + 1; i++)
+				{
+					BoneIndexDataArr.Add(BoneIdxData);
+				}
 			}
 			return true;
 			break;

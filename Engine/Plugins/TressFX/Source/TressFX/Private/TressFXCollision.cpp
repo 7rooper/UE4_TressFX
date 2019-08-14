@@ -34,10 +34,10 @@ void UpdateSDF(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy)
 		RHICmdList.SetComputeShader(Shader->GetComputeShader());
 		RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 0, Proxy->SDFMeshResources->MeshVertBuffer.UAV);
 
-		SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXBoneSkinningUniformBuffer>(), Proxy->TressFXHairObject->BoneSkinningUniformBuffer);
+		SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXBoneSkinningUniformBuffer>(), Proxy->InstanceRenderData->BoneSkinningUniformBuffer);
 		SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->BoneSkinningData, Proxy->SDFMeshResources->SkinningDataBuffer.SRV);
 		SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->InitialVertexPositions, Proxy->SDFMeshResources->InitialVertexPositionBuffer.SRV);
-
+		// TODO : add support for SDF skinning index data
 		// Run BoneSkinning
 		int32 DispatchSize = FMath::CeilToInt((float)Proxy->SDFMeshResources->MeshData.Vertices.Num() / (float)TRESSFX_SIM_THREAD_GROUP_SIZE);
 		DispatchComputeShader(RHICmdList, *Shader, DispatchSize, 1, 1);
@@ -55,7 +55,7 @@ void UpdateSDF(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy)
 		TShaderMapRef<FInitializeSignedDistanceFieldCS> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 		RHICmdList.SetComputeShader(Shader->GetComputeShader());
 		RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 0, Proxy->SDFMeshResources->SignedDistanceFieldBuffer.UAV);
-		SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSDFUniformBuffer>(), Proxy->TressFXHairObject->SDFUniformBuffer);
+		SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSDFUniformBuffer>(), Proxy->InstanceRenderData->SDFUniformBuffer);
 		int32 DispatchSize = FMath::CeilToInt((float)(Proxy->SDFMeshResources->GetGridNumTotalCells()) / (float)TRESSFX_SIM_THREAD_GROUP_SIZE);
 		DispatchComputeShader(RHICmdList, *Shader, DispatchSize, 1, 1);
 		Shader->g_SignedDistanceField.UnsetUAV(RHICmdList, Shader->GetComputeShader());
@@ -70,7 +70,7 @@ void UpdateSDF(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy)
 		RHICmdList.SetComputeShader(Shader->GetComputeShader());
 		RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 0, Proxy->SDFMeshResources->SignedDistanceFieldBuffer.UAV);
 		RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 1, Proxy->SDFMeshResources->MeshVertBuffer.UAV);
-		SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSDFUniformBuffer>(), Proxy->TressFXHairObject->SDFUniformBuffer);
+		SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSDFUniformBuffer>(), Proxy->InstanceRenderData->SDFUniformBuffer);
 		SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->g_TrimeshVertexIndices, Proxy->SDFMeshResources->IndexBuffer.SRV);
 		int32 DispatchSize = FMath::CeilToInt((float)Proxy->SDFMeshResources->MeshData.NumTriangles / (float)TRESSFX_SIM_THREAD_GROUP_SIZE);
 		DispatchComputeShader(RHICmdList, *Shader, DispatchSize, 1, 1);
@@ -91,7 +91,7 @@ void UpdateSDF(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy)
 		TShaderMapRef<FFinalizeSignedDistanceFieldCS> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 		RHICmdList.SetComputeShader(Shader->GetComputeShader());
 		RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 0, Proxy->SDFMeshResources->SignedDistanceFieldBuffer.UAV);
-		SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSDFUniformBuffer>(), Proxy->TressFXHairObject->SDFUniformBuffer);
+		SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSDFUniformBuffer>(), Proxy->InstanceRenderData->SDFUniformBuffer);
 		int32 DispatchSize = FMath::CeilToInt((float)(Proxy->SDFMeshResources->GetGridNumTotalCells()) / (float)TRESSFX_SIM_THREAD_GROUP_SIZE);
 		DispatchComputeShader(RHICmdList, *Shader, DispatchSize, 1, 1);
 		Shader->g_SignedDistanceField.UnsetUAV(RHICmdList, Shader->GetComputeShader());
@@ -101,7 +101,7 @@ void UpdateSDF(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy)
 
 FComputeFenceRHIRef ApplySDF(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, FComputeFenceRHIRef InFence, FUnorderedAccessViewRHIParamRef SimResources[])
 {
-	Proxy->TressFXHairObject->PosTanCollection.UAVBarrier(RHICmdList, InFence);
+	Proxy->InstanceRenderData->PosTanCollection.UAVBarrier(RHICmdList, InFence);
 
 	SCOPED_DRAW_EVENT(RHICmdList, FCollideHairVerticesWithSdf_forward);
 
@@ -109,12 +109,12 @@ FComputeFenceRHIRef ApplySDF(FRHICommandList& RHICmdList, class FTressFXScenePro
 	TShaderMapRef<FCollideHairVerticesWithSdf_forwardCS> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 	RHICmdList.SetComputeShader(Shader->GetComputeShader());
 	RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 0, Proxy->SDFMeshResources->SignedDistanceFieldBuffer.UAV);
-	RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 1, Proxy->TressFXHairObject->PosTanCollection.Positions.UAV);
-	RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 2, Proxy->TressFXHairObject->PosTanCollection.PositionsPrev.UAV);
-	SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSDFUniformBuffer>(), Proxy->TressFXHairObject->SDFUniformBuffer);
+	RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 1, Proxy->InstanceRenderData->PosTanCollection.Positions.UAV);
+	RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 2, Proxy->InstanceRenderData->PosTanCollection.PositionsPrev.UAV);
+	SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSDFUniformBuffer>(), Proxy->InstanceRenderData->SDFUniformBuffer);
 	int32 DispatchSize = FMath::CeilToInt((float)Proxy->TressFXHairObject->NumTotalVertice / (float)TRESSFX_SIM_THREAD_GROUP_SIZE);
 	DispatchComputeShader(RHICmdList, *Shader, DispatchSize, 1, 1);
-	Proxy->TressFXHairObject->PosTanCollection.UnsetUAVs(RHICmdList, Shader->GetComputeShader());
+	Proxy->InstanceRenderData->PosTanCollection.UnsetUAVs(RHICmdList, Shader->GetComputeShader());
 	Shader->g_HairVertices.UnsetUAV(RHICmdList, Shader->GetComputeShader());
 	return Fence;
 }
