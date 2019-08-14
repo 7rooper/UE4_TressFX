@@ -60,12 +60,28 @@ public:
 	UPROPERTY()
 		bool bIsValid;
 
+	UPROPERTY(VisibleAnywhere, Category = "PerformanceCounter")
+		int RawGuideCount;
+
+	UPROPERTY(VisibleAnywhere, Category = "PerformanceCounter")
+		int TotalStrandCount;
+
+	UPROPERTY(VisibleAnywhere, Category = "PerformanceCounter")
+		int VertexCountPerStrand;
+
+	UPROPERTY(VisibleAnywhere, Category = "PerformanceCounter")
+		int TotalVertexCount;
+
+	UPROPERTY(VisibleAnywhere, Category = "PerformanceCounter")
+		int TotalTriangleCount;
+
+
 
 	virtual void Serialize(FArchive& Ar) override;
 
 	TSharedPtr<FTressFXRuntimeData> ImportData;
 
-	TArray<FTressFXBoneSkinningData> SkinningData;
+	FTressFXHairObject* GetOrCreateRenderData();
 
 	bool IsValid() { return bIsValid; }
 
@@ -76,5 +92,8 @@ public:
 #endif
 
 private:
+
+	void ReleaseRenderData();
+	FTressFXHairObject* SharedRenderData;
 
 };

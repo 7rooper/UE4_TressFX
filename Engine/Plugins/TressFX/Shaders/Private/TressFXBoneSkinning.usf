@@ -1,10 +1,14 @@
 
-#ifndef THREAD_GROUP_SIZE
-	#define THREAD_GROUP_SIZE 64
+
+#ifdef __INTELLISENSE__
+	#include "../../../../Shaders/Private/TressFXCommon.ush"
+#else
+	#include "TressFXCommon.ush"
 #endif
 
-#ifndef AMD_TRESSFX_MAX_NUM_BONES
-	#define AMD_TRESSFX_MAX_NUM_BONES 256
+
+#ifndef THREAD_GROUP_SIZE
+	#define THREAD_GROUP_SIZE 64
 #endif
 
 float4 UnpackUintIntoFloat4(uint uValue)
@@ -24,12 +28,6 @@ struct StandardVertex
     float3 normal;
 };
 
-struct FBoneSkinningData
-{
-    float4 boneIndex; // x, y, z and w component are four bone indices per strand
-    float4 boneWeight; // x, y, z and w component are four bone weights per strand
-};
-
 row_major float4x4 UnPackBoneMatrix(uint4 PackedMatrix)
 {
     float4 X = UnpackUintIntoFloat4(PackedMatrix.x);
@@ -43,8 +41,10 @@ row_major float4x4 UnPackBoneMatrix(uint4 PackedMatrix)
 RWStructuredBuffer<StandardVertex> CollMeshVertexPositions;
 
 // SRVs
-StructuredBuffer<FBoneSkinningData> BoneSkinningData;
+StructuredBuffer<FBoneIndexData> g_BoneIndexData;
+StructuredBuffer<FBoneSkinningData> g_BoneSkinningData;
 StructuredBuffer<StandardVertex> InitialVertexPositions;
+
 [numthreads(THREAD_GROUP_SIZE, 1, 1)]
 void BoneSkinning(uint GIndex : SV_GroupIndex, uint3 GId : SV_GroupID, uint3 DTid : SV_DispatchThreadID)
 {
@@ -59,20 +59,22 @@ void BoneSkinning(uint GIndex : SV_GroupIndex, uint3 GId : SV_GroupID, uint3 DTi
     float3 n = InitialVertexPositions[global_id].normal;
 
 	// compute a bone skinning transform
-    FBoneSkinningData skinning = BoneSkinningData[global_id];
+    FBoneIndexData BoneIndexData = g_BoneIndexData[global_id];
+    FBoneSkinningData Skinning = g_BoneSkinningData[BoneIndexData.StartIdx];
 
 	// Interpolate world space bone matrices using weights. 
-    row_major float4x4 bone_matrix = BoneSkinningMatrix[skinning.boneIndex[0]] * skinning.boneWeight[0];
-    float weight_sum = skinning.boneWeight[0];
+    //row_major float4x4 bone_matrix = BoneSkinningMatrix[skinning.boneIndex[0]] * skinning.boneWeight[0];
+    //float weight_sum = skinning.boneWeight[0];
+	row_major float4x4 bone_matrix = BoneSkinningMatrix[Skinning.BoneIndex] * Skinning.BoneWeight;
+    float weight_sum = Skinning.BoneWeight;
 
-	// Each vertex gets influence from four bones. In case there are less than four bones, boneIndex and boneWeight would be zero. 
-	// This number four was set in Maya exporter and also used in loader. So it should not be changed unless you have a very strong reason and are willing to go through all spots.
-    for (int i = 1; i < 4; i++)
+    for (int i = 1; i < BoneIndexData.BoneCount; i++)
     {
-        if (skinning.boneWeight[i] > 0)
+        Skinning = g_BoneSkinningData[BoneIndexData.StartIdx + i];
+        if (Skinning.BoneWeight > 0)
         {
-            bone_matrix += BoneSkinningMatrix[skinning.boneIndex[i]] * skinning.boneWeight[i];
-            weight_sum += skinning.boneWeight[i];
+            bone_matrix += BoneSkinningMatrix[Skinning.BoneIndex] * Skinning.BoneWeight;
+            weight_sum += Skinning.BoneWeight;
         }
     }
 

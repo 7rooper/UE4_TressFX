@@ -44,6 +44,7 @@ BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT_WITH_CONSTRUCTOR(FTressFXShadeParametersUni
 	SHADER_PARAMETER(FVector4, TressFXSettings2)
 	SHADER_PARAMETER(FVector4, TressFXSettings3)
 	SHADER_PARAMETER(FVector4, TressFXSpecularColor)
+	SHADER_PARAMETER(float, g_RootTangentBlending)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 
@@ -124,27 +125,37 @@ struct FTressFXBoneSkinngAssetType
 	};
 };
 
+struct TRESSFX_API FTressFXBoneIndexData
+{
+public:
+	FTressFXBoneIndexData();
+
+	int StartIdx;
+	int BoneCount;
+
+	friend FArchive& operator << (FArchive& Ar, FTressFXBoneIndexData& Data)
+	{
+		Ar << Data.StartIdx << Data.BoneCount;
+		return Ar;
+	}
+};
+
 
 //Literally just a map of bone index, to bone Weights in the parent skel
 struct TRESSFX_API FTressFXBoneSkinningData
 {
 public:
 
-	FTressFXBoneSkinningData() :BoneIndex(-1, -1, -1, -1), Weight(0, 0, 0, 0){}
+	FTressFXBoneSkinningData();
 
-	FVector4 BoneIndex;
-	FVector4 Weight;
+	float BoneIndex;
+	float Weight;
 
 	friend FArchive& operator << (FArchive& Ar, FTressFXBoneSkinningData & Data)
 	{
-		return Ar << Data.BoneIndex << Data.Weight;
-	}
+		Ar << Data.BoneIndex << Data.Weight;
 
-	FTressFXBoneSkinningData& operator = (const FTressFXBoneSkinningData& Other)
-	{
-		this->BoneIndex = Other.BoneIndex;
-		this->Weight = Other.Weight;
-		return *this;
+		return Ar;
 	}
 
 };
@@ -203,6 +214,7 @@ public:
 	TArray<FVector4>	FollowRootOffsets;
 	TArray<int32>		StrandTypes;
 	TArray<float>		ThicknessCoeffs;
+	TArray<float>       RootToTipTexcoords;
 	TArray<float>		RestLengths;
 	TArray<int32>		TriangleIndices;
 	TArray<float>		VertexStrandLocation;
@@ -212,6 +224,7 @@ public:
 	TMap<int32, FName> BoneNameIndexMap;
 
 	TArray<FTressFXBoneSkinningData> SkinningData;
+	TArray<FTressFXBoneIndexData> BoneIndexDataArr;
 
 	int32 NumTotalVertices = 0;
 	int32 NumFollowStrandsPerGuide = 0;
@@ -299,8 +312,8 @@ public:
 
 	TArray<FVector4> PositionsData;
 	TArray<FVector4> TangentsData;
-	TArray<FVector4> PositionsPrevData;
-	TArray<FVector4> PositionsPrevPrevData;
+	//TArray<FVector4> PositionsPrevData;
+	//TArray<FVector4> PositionsPrevPrevData;
 
 };
 
@@ -320,9 +333,10 @@ public:
 	int32 NumVerticePerStrand;
 	int32 CPULocalShapeIterations;
 
-	FTressFXPosTanCollection PosTanCollection;
+	//FTressFXPosTanCollection PosTanCollection;
 
 	FReadStructedBuffer HairThicknessCoeffs;
+	FReadStructedBuffer HairRootToTipTexcoords;
 	FReadStructedBuffer InitialHairPositionsBuffer;
 	FReadStructedBuffer GlobalRotationsBuffer;
 	FReadStructedBuffer HairRestLengthSRVBuffer;
@@ -330,15 +344,16 @@ public:
 	FReadStructedBuffer HairRefVecsInLocalFrameBuffer;
 	FReadStructedBuffer FollowHairRootOffsetBuffer;
 	FReadStructedBuffer BoneSkinningDataBuffer;
+	FReadStructedBuffer BoneIndexDataBuffer;
 
 
-	TArray<FVector4>					InitialHairPositionsBufferData;
-	TArray<FQuat>						GlobalRotationsBufferData;
-	TArray<float>						HairRestLengthSRVBufferData;
-	TArray<int32>						HairStrandTypeBufferData;
-	TArray<FVector4>					HairRefVecsInLocalFrameBufferData;
-	TArray<FVector4>					FollowHairRootOffsetBufferData;
-	TArray<FTressFXBoneSkinningData>	BoneSkinningDataBufferData;
+	//TArray<FVector4>					InitialHairPositionsBufferData;
+	//TArray<FQuat>						GlobalRotationsBufferData;
+	//TArray<float>						HairRestLengthSRVBufferData;
+	//TArray<int32>						HairStrandTypeBufferData;
+	//TArray<FVector4>					HairRefVecsInLocalFrameBufferData;
+	//TArray<FVector4>					FollowHairRootOffsetBufferData;
+	//TArray<FTressFXBoneSkinningData>	BoneSkinningDataBufferData;
 
 	FTressFXIndexBuffer					IndexBuffer;
 	uint32								mtotalIndices;
@@ -350,16 +365,41 @@ public:
 	FReadStructedBuffer					HairVertexRenderParams;
 	FReadStructedBuffer					HairTexCoords;
 
-	TArray<float>						HairVertexRenderParamsData;
-	TArray<FVector2D>					HairTexCoordsData;
+	//TArray<float>						HairVertexRenderParamsData;
+	//TArray<FVector2D>					HairTexCoordsData;
 
-	TUniformBufferRef<FTressFXShadeParametersUniformBuffer> ShadeParametersUniformBuffer;
-	TUniformBufferRef<FTressFXSimParametersUniformBuffer>  SimParametersUniformBuffer;
-	TUniformBufferRef<FTressFXBoneSkinningUniformBuffer>  BoneSkinningUniformBuffer;
-	TUniformBufferRef<FTressFXSDFUniformBuffer>  SDFUniformBuffer;
+	//TUniformBufferRef<FTressFXShadeParametersUniformBuffer> ShadeParametersUniformBuffer;
+	//TUniformBufferRef<FTressFXSimParametersUniformBuffer>  SimParametersUniformBuffer;
+	//TUniformBufferRef<FTressFXBoneSkinningUniformBuffer>  BoneSkinningUniformBuffer;
+	//TUniformBufferRef<FTressFXSDFUniformBuffer>  SDFUniformBuffer;
 
 	virtual void InitDynamicRHI() override;
 	virtual void ReleaseDynamicRHI() override;
+};
+
+class TRESSFX_API FTressFXInstanceRenderData : public FRenderResource
+{
+
+public:
+    FTressFXInstanceRenderData(FTressFXRuntimeData* InAssetData = nullptr);
+
+    void UpdateTressFXData(FTressFXRuntimeData* InAssetData);
+    FTressFXRuntimeData* AssetData;
+
+    int32 NumTotalVertice;
+    int32 NumTotalStrands;
+    int32 NumVerticePerStrand;
+    int32 CPULocalShapeIterations;
+
+    FTressFXPosTanCollection PosTanCollection;
+
+    TUniformBufferRef<FTressFXShadeParametersUniformBuffer> ShadeParametersUniformBuffer;
+    TUniformBufferRef<FTressFXSimParametersUniformBuffer>  SimParametersUniformBuffer;
+    TUniformBufferRef<FTressFXBoneSkinningUniformBuffer>  BoneSkinningUniformBuffer;
+    TUniformBufferRef<FTressFXSDFUniformBuffer>  SDFUniformBuffer;
+
+    virtual void InitDynamicRHI() override;
+    virtual void ReleaseDynamicRHI() override;
 };
 
 
