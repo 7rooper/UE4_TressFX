@@ -57,7 +57,7 @@
 #ifdef __INTELLISENSE__
 	#include "../../../../Shaders/Private/TressFXCommon.ush"
 #else
-	#include "TressFXCommon.ush"
+	#include "/Engine/Private/TressFXCommon.ush"
 #endif
 
 

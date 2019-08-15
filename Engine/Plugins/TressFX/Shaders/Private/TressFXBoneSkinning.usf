@@ -3,7 +3,7 @@
 #ifdef __INTELLISENSE__
 	#include "../../../../Shaders/Private/TressFXCommon.ush"
 #else
-	#include "TressFXCommon.ush"
+#include "/Engine/Private/TressFXCommon.ush"
 #endif
 
 
@@ -42,7 +42,7 @@ RWStructuredBuffer<StandardVertex> CollMeshVertexPositions;
 
 // SRVs
 StructuredBuffer<FBoneIndexData> g_BoneIndexData;
-StructuredBuffer<FBoneSkinningData> g_BoneSkinningData;
+StructuredBuffer<FBoneSkinningData> BoneSkinningData;
 StructuredBuffer<StandardVertex> InitialVertexPositions;
 
 [numthreads(THREAD_GROUP_SIZE, 1, 1)]
