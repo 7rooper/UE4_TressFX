@@ -1,6 +1,4 @@
 #pragma once
-
-
 #include "CoreMinimal.h"
 #include "ShaderParameters.h"
 #include "Components.h"
@@ -10,6 +8,7 @@
 struct FTressFXVertexFactoryUserData
 {
 	FTressFXHairObject* TressFXHairObject;
+	FTressFXInstanceRenderData* InstanceRenderData;
 };
 
 class FTressFXVertexFactoryUserDataWrapper : public FOneFrameResource
@@ -80,6 +79,7 @@ public:
 	FShaderUniformBufferParameter TressfxShadeParameters;
 
 	FShaderResourceParameter HairThicknessCoeffs;
+	FShaderResourceParameter HairRootToTipTexcoords;
 	FShaderResourceParameter HairStrandTexCd;
 	FShaderResourceParameter g_GuideHairVertexPositions;
 	FShaderResourceParameter g_GuideHairVertexTangents;

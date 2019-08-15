@@ -125,48 +125,21 @@ bool FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::Serialize(FArchive& 
 {
 	bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
 
-	Ar << g_HairVertexPositions << g_HairVertexPositionsPrev << g_HairVertexPositionsPrevPrev
-		<< g_HairVertexTangents << g_BoneSkinningData << g_BoneIndexData << g_InitialHairPositions;
-
-	if (TSimFeatures & FTressFXSimFeatures::Morphs)
-	{
-		Ar << g_MorphDeltas;
-	}
-	if (TSimFeatures & FTressFXSimFeatures::Velocity)
-	{
-		Ar << g_FollowHairRootOffset;
-	}
-
-	return bShaderHasOutdatedParameters;
-}
-
-template <FTressFXSimFeatures::Type TSimFeatures>
-FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::FIntegrationAndGlobalShapeConstraintsCS()
-{
-
-}
-
-template <FTressFXSimFeatures::Type TSimFeatures>
-bool FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::Serialize(FArchive& Ar)
-{
-	bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-
 	Ar << HairVertexPositions << HairVertexPositionsPrev << HairVertexPositionsPrevPrev
 		<< HairVertexTangents << BoneSkinningData << g_BoneIndexData << InitialHairPositions;
 
-	const bool bHasMorphs = TSimFeatures == FTressFXSimFeatures::Morphs || TSimFeatures == FTressFXSimFeatures::MorphsAndVelocity;
-	if (bHasMorphs)
+	if (TSimFeatures & FTressFXSimFeatures::Morphs)
 	{
 		Ar << MorphDeltas;
 	}
-	const bool bHasVelocity = TSimFeatures == FTressFXSimFeatures::Velocity || TSimFeatures == FTressFXSimFeatures::MorphsAndVelocity;
-	if (bHasVelocity)
+	if (TSimFeatures & FTressFXSimFeatures::Velocity)
 	{
 		Ar << FollowHairRootOffset;
 	}
 
 	return bShaderHasOutdatedParameters;
 }
+
 
 IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::None>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
 IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::Morphs>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
@@ -524,7 +497,7 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 			}
 			
 			DispatchComputeShader(RHICmdList, *Shader, NumGroupsForCS_VertexLevel, 1, 1);
-			Proxy->TressFXHairObject->InstanceRenderData.UAVBarrier(RHICmdList, Fence);
+			Proxy->InstanceRenderData->PosTanCollection.UAVBarrier(RHICmdList, Fence);
 
 		}
 

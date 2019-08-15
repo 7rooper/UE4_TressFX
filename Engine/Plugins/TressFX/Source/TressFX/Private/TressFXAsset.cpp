@@ -549,7 +549,6 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 						FTressFXBoneSkinningJSONImportData ImportedSkinData = Asset->JsonVersionImportData.JsonSkinningData[DataIndex];
 						int32 EngineBoneIndex = FTressFXUtils::FindEngineBoneIndex(SkeletalMesh, ImportedSkinData.BoneName, true);
 
-						int32 EngineBoneIndex = FTressFXUtils::FindEngineBoneIndex(SkeletalMesh, ImportedSkinData.BoneName, true);
 						SkinData.BoneIndex = (float)EngineBoneIndex; // Change the joint index to be what the engine wants
 						SkinData.Weight = ImportedSkinData.Weight;
 

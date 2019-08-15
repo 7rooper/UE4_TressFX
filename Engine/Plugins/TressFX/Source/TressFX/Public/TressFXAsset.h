@@ -42,6 +42,8 @@ class TRESSFX_API UTressFXAsset : public UObject
 
 public:
 
+	virtual ~UTressFXAsset();
+
 	UPROPERTY(EditAnywhere, Category = "Settings")
 		int32 NumFollowStrandsPerGuide;
 
