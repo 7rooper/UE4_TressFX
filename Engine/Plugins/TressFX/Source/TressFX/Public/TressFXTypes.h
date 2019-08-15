@@ -312,9 +312,6 @@ public:
 
 	TArray<FVector4> PositionsData;
 	TArray<FVector4> TangentsData;
-	//TArray<FVector4> PositionsPrevData;
-	//TArray<FVector4> PositionsPrevPrevData;
-
 };
 
 extern void UploadGPUData(FStructuredBufferRHIParamRef Buffer, int32 ElementSize, int32 ElementCount, void* InData);
@@ -344,15 +341,6 @@ public:
 	FReadStructedBuffer BoneSkinningDataBuffer;
 	FReadStructedBuffer BoneIndexDataBuffer;
 
-
-	//TArray<FVector4>					InitialHairPositionsBufferData;
-	//TArray<FQuat>						GlobalRotationsBufferData;
-	//TArray<float>						HairRestLengthSRVBufferData;
-	//TArray<int32>						HairStrandTypeBufferData;
-	//TArray<FVector4>					HairRefVecsInLocalFrameBufferData;
-	//TArray<FVector4>					FollowHairRootOffsetBufferData;
-	//TArray<FTressFXBoneSkinningData>	BoneSkinningDataBufferData;
-
 	FTressFXIndexBuffer					IndexBuffer;
 	uint32								mtotalIndices;
 	ETressFXCollisionType				CollisionType;
@@ -362,14 +350,6 @@ public:
 	// SRVs for rendering
 	FReadStructedBuffer					HairVertexRenderParams;
 	FReadStructedBuffer					HairTexCoords;
-
-	//TArray<float>						HairVertexRenderParamsData;
-	//TArray<FVector2D>					HairTexCoordsData;
-
-	//TUniformBufferRef<FTressFXShadeParametersUniformBuffer> ShadeParametersUniformBuffer;
-	//TUniformBufferRef<FTressFXSimParametersUniformBuffer>  SimParametersUniformBuffer;
-	//TUniformBufferRef<FTressFXBoneSkinningUniformBuffer>  BoneSkinningUniformBuffer;
-	//TUniformBufferRef<FTressFXSDFUniformBuffer>  SDFUniformBuffer;
 
 	virtual void InitDynamicRHI() override;
 	virtual void ReleaseDynamicRHI() override;

@@ -393,7 +393,6 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 				Mesh.VertexFactory = &VertexFactory;
 				Mesh.MaterialRenderProxy = MaterialProxy;
 
-				//BatchElement.PrimitiveUniformBuffer = CreatePrimitiveUniformBufferImmediate(GetLocalToWorld(), GetBounds(), GetLocalBounds(), true, UseEditorDepthTest());
 				FTressFXVertexFactoryUserDataWrapper& UserDataWrapper = Collector.AllocateOneFrameResource<FTressFXVertexFactoryUserDataWrapper>();
 				UserDataWrapper.Data.TressFXHairObject = TressFXHairObject;
 				UserDataWrapper.Data.InstanceRenderData = InstanceRenderData;

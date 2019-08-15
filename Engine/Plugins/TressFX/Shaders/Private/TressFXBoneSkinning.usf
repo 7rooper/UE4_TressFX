@@ -41,7 +41,7 @@ row_major float4x4 UnPackBoneMatrix(uint4 PackedMatrix)
 RWStructuredBuffer<StandardVertex> CollMeshVertexPositions;
 
 // SRVs
-StructuredBuffer<FBoneIndexData> g_BoneIndexData;
+StructuredBuffer<FBoneIndexData> BoneIndexData;
 StructuredBuffer<FBoneSkinningData> BoneSkinningData;
 StructuredBuffer<StandardVertex> InitialVertexPositions;
 
@@ -59,8 +59,8 @@ void BoneSkinning(uint GIndex : SV_GroupIndex, uint3 GId : SV_GroupID, uint3 DTi
     float3 n = InitialVertexPositions[global_id].normal;
 
 	// compute a bone skinning transform
-    FBoneIndexData BoneIndexData = g_BoneIndexData[global_id];
-    FBoneSkinningData Skinning = BoneSkinningData[BoneIndexData.StartIdx];
+    FBoneIndexData IndexData = BoneIndexData[global_id];
+    FBoneSkinningData Skinning = BoneSkinningData[IndexData.StartIdx];
 
 	// Interpolate world space bone matrices using weights. 
     //row_major float4x4 bone_matrix = BoneSkinningMatrix[skinning.boneIndex[0]] * skinning.boneWeight[0];
@@ -68,9 +68,9 @@ void BoneSkinning(uint GIndex : SV_GroupIndex, uint3 GId : SV_GroupID, uint3 DTi
 	row_major float4x4 bone_matrix = BoneSkinningMatrix[Skinning.BoneIndex] * Skinning.BoneWeight;
     float weight_sum = Skinning.BoneWeight;
 
-    for (int i = 1; i < BoneIndexData.BoneCount; i++)
+    for (int i = 1; i < IndexData.BoneCount; i++)
     {
-        Skinning = BoneSkinningData[BoneIndexData.StartIdx + i];
+        Skinning = BoneSkinningData[IndexData.StartIdx + i];
         if (Skinning.BoneWeight > 0)
         {
             bone_matrix += BoneSkinningMatrix[Skinning.BoneIndex] * Skinning.BoneWeight;

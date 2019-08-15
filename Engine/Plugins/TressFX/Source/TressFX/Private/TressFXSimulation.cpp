@@ -53,7 +53,7 @@ public:
 	FRWShaderParameter HairVertexTangents;
 
 	FShaderResourceParameter BoneSkinningData;
-	FShaderResourceParameter g_BoneIndexData;
+	FShaderResourceParameter BoneIndexData;
 	FShaderResourceParameter InitialHairPositions;
 	FShaderResourceParameter MorphDeltas;
 	FShaderResourceParameter FollowHairRootOffset;
@@ -98,7 +98,7 @@ FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::FIntegrationAndGlobalShap
 	HairVertexPositionsPrevPrev.Bind(Initializer.ParameterMap, TEXT("HairVertexPositionsPrevPrev"));
 	HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("HairVertexTangents"));
 	BoneSkinningData.Bind(Initializer.ParameterMap, TEXT("BoneSkinningData"));
-	g_BoneIndexData.Bind(Initializer.ParameterMap, TEXT("g_BoneIndexData"));
+	BoneIndexData.Bind(Initializer.ParameterMap, TEXT("BoneIndexData"));
 	InitialHairPositions.Bind(Initializer.ParameterMap, TEXT("InitialHairPositions"));
 
 	if (TSimFeatures & FTressFXSimFeatures::Morphs)
@@ -126,7 +126,7 @@ bool FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::Serialize(FArchive& 
 	bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
 
 	Ar << HairVertexPositions << HairVertexPositionsPrev << HairVertexPositionsPrevPrev
-		<< HairVertexTangents << BoneSkinningData << g_BoneIndexData << InitialHairPositions;
+		<< HairVertexTangents << BoneSkinningData << BoneIndexData << InitialHairPositions;
 
 	if (TSimFeatures & FTressFXSimFeatures::Morphs)
 	{
@@ -486,7 +486,7 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 
 			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->InitialHairPositions, Proxy->TressFXHairObject->InitialHairPositionsBuffer.SRV);
 			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->BoneSkinningData, Proxy->TressFXHairObject->BoneSkinningDataBuffer.SRV);
-			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->g_BoneIndexData, Proxy->TressFXHairObject->BoneIndexDataBuffer.SRV);
+			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->BoneIndexData, Proxy->TressFXHairObject->BoneIndexDataBuffer.SRV);
 			if (bUseMorphs)
 			{
 				SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->MorphDeltas, Proxy->MorphPositionDeltaBuffer.SRV);

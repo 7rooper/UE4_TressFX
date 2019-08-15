@@ -30,7 +30,7 @@ public:
 	FRWShaderParameter ColMeshVertexPositions;
 	FShaderResourceParameter BoneSkinningData;
 	FShaderResourceParameter InitialVertexPositions;
-	FShaderResourceParameter g_BoneIndexData;
+	FShaderResourceParameter BoneIndexData;
 
 	FShaderUniformBufferParameter TressFXBoneSkinningParametersUniformBuffer;
 
