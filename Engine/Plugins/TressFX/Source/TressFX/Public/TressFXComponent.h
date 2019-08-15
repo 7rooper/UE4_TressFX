@@ -13,6 +13,14 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(TressFXComponentLog, Log, All);
 
+UENUM(BlueprintType)
+enum class ETressFXSimulationQuality : uint8
+{
+	TFXSim_Disable = 0 UMETA(DisplayName = "Disable"),
+	TFXSim_Full = 1 UMETA(DisplayName = "Full"),
+};
+
+
 USTRUCT(BlueprintType)
 struct FTressFXSimulationSettings
 {
@@ -43,7 +51,7 @@ public:
 	In this case, hair would act as if it is rigid and the rest of simulation would not affect the result.
 	So in case you want to animate the hair or fur but do not want to simulate it, then VPS is a perfect solution.
 	*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFXSimulation", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
 	float VSPCoefficient;
 
 	/*
@@ -52,7 +60,7 @@ public:
 	value becomes to the highest amount when the pseudo - acceleration reaches the user input value.
 	The acceleration is pseudo because it is not divided by time.
 	*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFXSimulation")
 	float VSPAccelerationThreshold;
 
 	/*
@@ -62,7 +70,7 @@ public:
 	– so if there is something pushing a straight hair in the middle, the tip will try to go back around the ball to where it started, giving it a curved shape.
 	The local stiffness only looks at the shape locally, so if that same straight hair is pushed in the middle, the hair will get out of the way of the ball, but try to stay straight, instead of curving around it.
 	*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFXSimulation")
 	float LocalConstraintStiffness;
 
 	/*
@@ -72,14 +80,14 @@ public:
 	– so if there is something pushing a straight hair in the middle, the tip will try to go back around the ball to where it started, giving it a curved shape.
 	The local stiffness only looks at the shape locally, so if that same straight hair is pushed in the middle, the hair will get out of the way of the ball, but try to stay straight, instead of curving around it.
 	*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFXSimulation")
 	float GlobalConstraintStiffness;
 
 	/*
 	Local Shape Constraint Iterations allocates more simulation time to keeping the hair shape.
 	It can make the hair seem stiffer, but also greatly increases simulation time.
 	*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFXSimulation")
 	int32   LocalContraintsIterations;
 
 	/*
@@ -89,31 +97,34 @@ public:
 	If the value is 0.5, then only the first half of the hair strand (from the root) tries to get back to its original position,
 	so the tip will not try to get back to its original position in the previous example.
 	*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFXSimulation", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
 	float GlobalShapeRange;
 
 	//Length Constraint Iterations allocates more simulation time to keeping the hair the right length.Try to keep this number as low as possible.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (UIMin = 1, ClampMin = 1, UIMax = 10, ClampMax = 10))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFXSimulation", meta = (UIMin = 1, ClampMin = 1, UIMax = 10, ClampMax = 10))
 	int32 LengthConstraintsIterations;
 
 	//Damping smooths out motion of the hair.It also slows down the hair movement, making it more like hair under water, for example.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFXSimulation")
 	float Damping;
 
 	// Gravity
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFXSimulation")
 	float GravityMagnitude;
 
 	// tip separation for follow hair from its guide
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFXSimulation")
 	float TipSeparation;
 
 	// Scale up or down the wind strength on a per component basis
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFXSimulation")
 	float WindMagnitude;
 
 	UPROPERTY()
 	FVector WindDirection;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFXSimulation")
+	ETressFXSimulationQuality SimulationQuality;
 
 };
 
@@ -193,16 +204,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 	FTressFXSpecularSettings Specular;
 
-	FTressFXShadeSettings()
-	{
-		//sensible defaults
-		FiberRadius = 0.1f;
-		FiberSpacing = 0.1;
-		HairThickness = 0.1f;
-		DiffuseBlend = 0.40f;
-		SelfShadowStrength = 0.05f;
-	}
+	//Render using Root tangent instead of Hair tangent. Larger value will prefer root tangent more. This is useful for animated short fur.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
+		float RootTangentBlending;
 
+
+	FTressFXShadeSettings();
 
 };
 
@@ -218,6 +225,8 @@ public:
 
 	UTressFXComponent(const class FObjectInitializer& ObjectInitializer);
 
+	virtual ~UTressFXComponent();
+
 	/** Morph remapping */
 	UPROPERTY()
 	TArray<int32> MorphIndices;
@@ -225,6 +234,12 @@ public:
 	/** do remapping for morph target only when parent skeletal mesh is changed. */
 	UPROPERTY()
 	USkeletalMesh* CachedSkeletalMeshForMorph;
+
+	/**
+		EXPERIMENTAL: To use, add a virtual bone to the parent mesh skeleton and resave the skeleton asset, then the tressfx asset. Then enable this.
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+		bool bSupportVirtualBones = false;
 
 	UPROPERTY(EditDefaultsOnly, Category = "TressFX")
 		bool bEnableMorphTargets = false;
@@ -255,6 +270,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 		FTressFXShadeSettings ShadeSettings;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+		float LodScreenSize;
+
 public:
 
 	virtual FPrimitiveSceneProxy* CreateSceneProxy() override;
@@ -279,6 +297,7 @@ public:
 public:
 
 	virtual void GetUsedMaterials(TArray<UMaterialInterface*>& OutMaterials, bool bGetDebugMaterials /* = false */) const override;
+	void MarkInstanceRenderDataDirty();
 
 protected:
 
@@ -288,12 +307,20 @@ protected:
 	virtual void DestroyRenderState_Concurrent() override;
 
 	virtual void SendRenderDynamicData_Concurrent() override;
+	
+	void ReleaseInstanceRenderData();
 
 private:
 
 	class USkeletalMeshComponent* ParentSkeletalMeshComponent;
 
 	void SetUpMorphMapping();
+
+	void RunSimulation();
+
+	UPROPERTY(Transient)
+		bool bInstanceDataDirty;
+
 
 	//caching to prevent needless re-calculations
 	FMatrix CachedRelativeTransformMatrix = FMatrix::Identity;
@@ -303,7 +330,7 @@ private:
 
 public:
 
-	class FTressFXHairObject* HairObject;
+	FTressFXInstanceRenderData* InstanceRenderData;
 
 	class FTressFXMeshResources* SDFMeshResources;
 

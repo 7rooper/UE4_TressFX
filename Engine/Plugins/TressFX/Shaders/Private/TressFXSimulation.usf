@@ -54,6 +54,13 @@
 // Physics simulation of hair using compute shaders
 //--------------------------------------------------------------------------------------
 
+#ifdef __INTELLISENSE__
+	#include "../../../../Shaders/Private/TressFXCommon.ush"
+#else
+	#include "/Engine/Private/TressFXCommon.ush"
+#endif
+
+
 #define USE_MESH_BASED_HAIR_TRANSFORM 0
 
 // Whether bones are specified by dual quaternion.
@@ -68,9 +75,9 @@
 
 #define TRESSFX_MAX_NUM_COLLISION_CAPSULES 10
 
-#ifndef AMD_TRESSFX_MAX_NUM_BONES
-	#define AMD_TRESSFX_MAX_NUM_BONES 256
-#endif
+// Same as ETressFXSimulationQuality in cpp
+#define TFXSim_Disable 0
+#define TFXSim_Full 1
 
 #ifndef TRESSFX_MORPHS
 	#define TRESSFX_MORPHS 0
@@ -202,12 +209,6 @@ struct HairToTriangleMapping
     uint reserved; // for future use
 };
 
-struct FBoneSkinningData
-{
-    float4 boneIndex; // x, y, z and w component are four bone indices per strand
-    float4 boneWeight; // x, y, z and w component are four bone weights per strand
-};
-
 
 // UAVs
 RWStructuredBuffer<float4> HairVertexPositions : register(u0);
@@ -227,6 +228,7 @@ StructuredBuffer<float4> HairRefVecsInLocalFrame;
 StructuredBuffer<float4> FollowHairRootOffset;
 StructuredBuffer<float4> MeshVertices;
 StructuredBuffer<float4> TransformedVerts;
+StructuredBuffer<FBoneIndexData> BoneIndexData;
 StructuredBuffer<FBoneSkinningData> BoneSkinningData;
 
 #if TRESSFX_MORPHS
@@ -607,7 +609,7 @@ bool CapsuleCollision(float4 CurPosition, float4 OldPosition, inout float3 NewPo
     return false;
 }
 
-float3 ApplyVertexBoneSkinning(float3 VertexPos, FBoneSkinningData SkinningData, inout float4 BoneQuat)
+float3 ApplyVertexBoneSkinning(float3 VertexPos, FBoneIndexData InBoneIndexData, inout float4 BoneQuat)
 {
     float3 NewVertexPos;
 
@@ -635,15 +637,18 @@ float3 ApplyVertexBoneSkinning(float3 VertexPos, FBoneSkinningData SkinningData,
 #else
     {
         // Interpolate world space bone matrices using weights. 
-        row_major float4x4 BoneMatrix = BoneSkinningMatrix[SkinningData.boneIndex[0]] * SkinningData.boneWeight[0];
-        float WeightSum = SkinningData.boneWeight[0];
+        FBoneSkinningData SkinningData = BoneSkinningData[InBoneIndexData.StartIdx];
+        row_major float4x4 BoneMatrix = BoneSkinningMatrix[SkinningData.BoneIndex] * SkinningData.BoneWeight;
+        float WeightSum = SkinningData.BoneWeight;
 
-        for (int i = 1; i < 4; i++)
+        for (int i = 1; i < InBoneIndexData.BoneCount; i++)
         {
-            if (SkinningData.boneWeight[i] > 0)
+            SkinningData = BoneSkinningData[InBoneIndexData.StartIdx + i];
+
+            if (SkinningData.BoneWeight > 0)
             {
-                BoneMatrix += BoneSkinningMatrix[SkinningData.boneIndex[i]] * SkinningData.boneWeight[i];
-                WeightSum += SkinningData.boneWeight[i];
+                BoneMatrix += BoneSkinningMatrix[SkinningData.BoneIndex] * SkinningData.BoneWeight;
+                WeightSum += SkinningData.BoneWeight;
             }
         }
 
@@ -671,6 +676,60 @@ void UpdateFinalVertexPositions(float4 OldPosition, float4 NewPosition, int Glob
     HairVertexPositionsPrev[GlobalVertexIndex] = OldPosition;
     HairVertexPositions[GlobalVertexIndex] = NewPosition;
 }
+
+
+// update previous follow hairs for velocity calcs in pixel shader
+#ifndef UPDATE_PREV_FOLLOW_HAIRS
+    #define UPDATE_PREV_FOLLOW_HAIRS 0
+#endif
+
+#ifndef SIM_QUALITY
+    #define SIM_QUALITY TFXSim_Disable
+#endif
+
+void SimpleUpdateWithoutSimulation(
+	uint GroupIndex,
+    uint3 GroupId,
+    uint3 DTid
+)
+{
+
+	FVertexIndices Indices = CalcIndicesInVertexLevelMaster(GroupIndex, GroupId.x);
+
+    // Copy data into shared memory
+    float4 InitialPos = InitialHairPositions[Indices.GlobalVertexIndex]; // rest position
+
+#if TRESSFX_MORPHS
+		// this should always be a whole number, so this is fine
+		int GuideIndex = Indices.GlobalStrandIndex / (NumFollowersPerGuideHair + 1);
+		float3 Delta = MorphDeltas[GuideIndex];
+		InitialPos.xyz += Delta;
+#endif
+
+    // Apply worldspace bone skinning to initial position
+    FBoneIndexData IndexData = BoneIndexData[Indices.GlobalStrandIndex];
+    float4 BoneQuat;
+    InitialPos.xyz = ApplyVertexBoneSkinning(InitialPos.xyz, IndexData, BoneQuat);
+
+
+
+    // position when this step starts. In other words, a position from the last step.
+    SharedPos[Indices.IndexForSharedMem] = InitialPos;
+    float4 prevPos = HairVertexPositions[Indices.GlobalVertexIndex];
+
+    // copy newpos to prev and prevprev
+    UpdateFinalVertexPositions(prevPos, InitialPos, Indices.GlobalVertexIndex, Indices.LocalVertexIndex, Indices.NumVerticesInTheStrand);
+
+    GroupMemoryBarrierWithGroupSync();
+
+    //-------------------
+    // Compute tangent in world space
+    //-------------------
+    uint numOfStrandsPerThreadGroup = NumStrandsPerThreadGroup;
+    float3 tangent = SharedPos[Indices.IndexForSharedMem + numOfStrandsPerThreadGroup].xyz - SharedPos[Indices.IndexForSharedMem].xyz;
+    HairVertexTangents[Indices.GlobalVertexIndex].xyz = normalize(tangent);
+
+}
 			
 //--------------------------------------------------------------------------------------
 //
@@ -681,10 +740,6 @@ void UpdateFinalVertexPositions(float4 OldPosition, float4 NewPosition, int Glob
 //
 // One thread computes one vertex.
 //
-// update previous follow hairs for velocity calcs in pixel shader
-#ifndef UPDATE_PREV_FOLLOW_HAIRS
-	#define UPDATE_PREV_FOLLOW_HAIRS 0
-#endif
 //--------------------------------------------------------------------------------------
 [numthreads(THREAD_GROUP_SIZE, 1, 1)]
 void IntegrationAndGlobalShapeConstraints(
@@ -693,6 +748,10 @@ void IntegrationAndGlobalShapeConstraints(
     uint3 DTid : SV_DispatchThreadID
 )
 {
+#if SIM_QUALITY == TFXSim_Disable
+    SimpleUpdateWithoutSimulation(GroupIndex, GroupId, DTid); 
+    return;
+#endif
 
     FVertexIndices Indices = CalcIndicesInVertexLevelMaster(GroupIndex, GroupId.x);
 
@@ -707,15 +766,18 @@ void IntegrationAndGlobalShapeConstraints(
 #endif
 
 	// Apply bone skinning to initial position
-    FBoneSkinningData SkinningData = BoneSkinningData[Indices.GlobalStrandIndex];
+	FBoneIndexData IndexData = BoneIndexData[Indices.GlobalStrandIndex];
     float4 BoneQuat;
-    InitialPos.xyz = ApplyVertexBoneSkinning(InitialPos.xyz, SkinningData, BoneQuat);
+    InitialPos.xyz = ApplyVertexBoneSkinning(InitialPos.xyz, IndexData, BoneQuat);
 
     // we temporarily use HairVertexTangents to hold bone quaternion data compute in ApplyVertexBoneSkinning. 
     HairVertexTangents[Indices.GlobalStrandIndex] = BoneQuat;
 
     // position when this step starts. In other words, a position from the last step.
     float4 CurrentPos = SharedPos[Indices.IndexForSharedMem] = HairVertexPositions[Indices.GlobalVertexIndex];
+	
+	//not sure this is needed
+	SharedPos[Indices.IndexForSharedMem] = InitialPos;
 
 	#if UPDATE_PREV_FOLLOW_HAIRS
 	    for (uint i = 0; i < NumFollowersPerGuideHair; i++)
@@ -829,7 +891,7 @@ void VelocityShockPropagation(
     // Increate the VSP coefficient by checking pseudo-acceleration to handle over-stretching when the character moves very fast 
     float Accel = length(PosNew[1] - 2.0 * PosPrev[1] + PosPrevPrev[1]);
 
-    if (Accel > VspAccelThreshold) // TODO: expose this value?
+    if (Accel > VspAccelThreshold)
     {
         VspCoeff = 1.0f;
     }

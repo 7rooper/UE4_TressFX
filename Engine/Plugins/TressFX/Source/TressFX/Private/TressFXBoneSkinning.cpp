@@ -30,12 +30,13 @@ FTressBoneSkinningCS::FTressBoneSkinningCS(const ShaderMetaType::CompiledShaderI
 	InitialVertexPositions.Bind(Initializer.ParameterMap, TEXT("InitialVertexPositions"));
 	ColMeshVertexPositions.Bind(Initializer.ParameterMap, TEXT("CollMeshVertexPositions"));
 	TressFXBoneSkinningParametersUniformBuffer.Bind(Initializer.ParameterMap, TEXT("TressFXBoneSkinningParameters"));
+	BoneIndexData.Bind(Initializer.ParameterMap, TEXT("BoneIndexData"));
 }
 
 bool FTressBoneSkinningCS::Serialize(FArchive& Ar)
 {
 	bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
-	Ar << BoneSkinningData << InitialVertexPositions << ColMeshVertexPositions;
+	Ar << BoneSkinningData << InitialVertexPositions << ColMeshVertexPositions << BoneIndexData;
 	return bShaderHasOutdatedParameters;
 }
 

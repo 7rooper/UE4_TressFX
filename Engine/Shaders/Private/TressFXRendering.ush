@@ -190,9 +190,6 @@ float ComputeCoverage(float2 p0, float2 p1, float2 pixelLoc, float2 winSize, flo
 	// 1, if completely inside hair edge
 
 	return (relDist + 1.f) * 0.5f;
-
-
-
 }
 
 float PoissonSampleFloat(float2 UVs, float Radius, float2 TexelSize, Texture2D Tex, SamplerState Sampler)
