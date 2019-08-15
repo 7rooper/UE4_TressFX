@@ -101,6 +101,7 @@ void UTressFXComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 
 	const FName Name = (PropertyChangedEvent.Property != nullptr) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
 	const FName MemberName = (PropertyChangedEvent.MemberProperty != nullptr) ? PropertyChangedEvent.MemberProperty->GetFName() : NAME_None;
+
 	if(Name == GET_MEMBER_NAME_CHECKED(UTressFXComponent, bEnableMorphTargets) && this->bEnableMorphTargets == true)
 	{
 		UpdateCachedTransformsIfNeeded(true);
@@ -112,8 +113,13 @@ void UTressFXComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 		MorphIndices.Empty(true);
 		CachedSkeletalMeshForMorph = nullptr;
 	}
+	else if (Name == GET_MEMBER_NAME_CHECKED(UTressFXComponent, bSupportVirtualBones))
+	{
+		UpdateCachedTransformsIfNeeded(true);
+		this->MarkRenderDynamicDataDirty();
+	}
 
-	if (Name == TEXT("Asset") || Name == TEXT("SDFCollisionMeshAsset"))
+	if (Name == GET_MEMBER_NAME_CHECKED(UTressFXComponent, Asset) || Name == GET_MEMBER_NAME_CHECKED(UTressFXComponent, SDFCollisionMeshAsset))
 	{
 		MarkInstanceRenderDataDirty();
 	}
@@ -458,8 +464,9 @@ void UTressFXComponent::RunSimulation()
 		// find the bone index to use, rather than relying on the one that was imported with the TFX file
 		// this way, we can use different skeletons with the same bones names and have it still work
 		const USkeletalMesh* ParentSkelMesh = ParentSkeletalMeshComponent ? ParentSkeletalMeshComponent->SkeletalMesh : nullptr;
+		
 		//TODO: maybe cache this instead for faster lookups?
-		const int32 SkelBoneIndex = ParentSkelMesh ? FTressFXUtils::FindEngineBoneIndex(ParentSkelMesh, TFXBoneName, true) : INDEX_NONE;
+		const int32 SkelBoneIndex = ParentSkelMesh ? FTressFXUtils::FindEngineBoneIndex(ParentSkelMesh, TFXBoneName, bSupportVirtualBones) : INDEX_NONE;
 
 		if (SkelBoneIndex != INDEX_NONE)
 		{

@@ -891,7 +891,7 @@ void VelocityShockPropagation(
     // Increate the VSP coefficient by checking pseudo-acceleration to handle over-stretching when the character moves very fast 
     float Accel = length(PosNew[1] - 2.0 * PosPrev[1] + PosPrevPrev[1]);
 
-    if (Accel > VspAccelThreshold) // TODO: expose this value?
+    if (Accel > VspAccelThreshold)
     {
         VspCoeff = 1.0f;
     }

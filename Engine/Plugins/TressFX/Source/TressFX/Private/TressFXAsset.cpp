@@ -563,14 +563,6 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 						}
 					}
 				}
-
-				// If bone index is -1, then it means that there is no bone associated to this. In this case we simply replace it with zero.
-				// This is safe because the corresponding weight should be zero anyway.
-				//SkinData.BoneIndex[0] = SkinData.BoneIndex[0] == -1.f ? 0 : SkinData.BoneIndex[0];
-				//SkinData.BoneIndex[1] = SkinData.BoneIndex[1] == -1.f ? 0 : SkinData.BoneIndex[1];
-				//SkinData.BoneIndex[2] = SkinData.BoneIndex[2] == -1.f ? 0 : SkinData.BoneIndex[2];
-				//SkinData.BoneIndex[3] = SkinData.BoneIndex[3] == -1.f ? 0 : SkinData.BoneIndex[3];
-				//SkinningData[GuideStrandIndex * (NumFollowStrandsPerGuide + 1)] = SkinData;
 				for (int i = 0; i < NumFollowStrandsPerGuide + 1; i++)
 				{
 					BoneIndexDataArr.Add(BoneIdxData);

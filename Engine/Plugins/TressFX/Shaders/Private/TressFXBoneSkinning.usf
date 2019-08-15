@@ -63,8 +63,6 @@ void BoneSkinning(uint GIndex : SV_GroupIndex, uint3 GId : SV_GroupID, uint3 DTi
     FBoneSkinningData Skinning = BoneSkinningData[IndexData.StartIdx];
 
 	// Interpolate world space bone matrices using weights. 
-    //row_major float4x4 bone_matrix = BoneSkinningMatrix[skinning.boneIndex[0]] * skinning.boneWeight[0];
-    //float weight_sum = skinning.boneWeight[0];
 	row_major float4x4 bone_matrix = BoneSkinningMatrix[Skinning.BoneIndex] * Skinning.BoneWeight;
     float weight_sum = Skinning.BoneWeight;
 

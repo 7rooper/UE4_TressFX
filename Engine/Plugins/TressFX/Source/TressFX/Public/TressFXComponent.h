@@ -208,6 +208,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
 		float RootTangentBlending;
 
+
 	FTressFXShadeSettings();
 
 };
@@ -233,6 +234,12 @@ public:
 	/** do remapping for morph target only when parent skeletal mesh is changed. */
 	UPROPERTY()
 	USkeletalMesh* CachedSkeletalMeshForMorph;
+
+	/**
+		EXPERIMENTAL: To use, add a virtual bone to the parent mesh skeleton and resave the skeleton asset, then the tressfx asset. Then enable this.
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+		bool bSupportVirtualBones = false;
 
 	UPROPERTY(EditDefaultsOnly, Category = "TressFX")
 		bool bEnableMorphTargets = false;
