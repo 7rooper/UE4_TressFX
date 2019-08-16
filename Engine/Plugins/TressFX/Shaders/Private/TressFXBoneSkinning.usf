@@ -1,11 +1,6 @@
 
 
-#ifdef __INTELLISENSE__
-	#include "../../../../Shaders/Private/TressFXCommon.ush"
-#else
-#include "/Engine/Private/TressFXCommon.ush"
-#endif
-
+#include "TressFXPluginCommon.ush"
 
 #ifndef THREAD_GROUP_SIZE
 	#define THREAD_GROUP_SIZE 64
