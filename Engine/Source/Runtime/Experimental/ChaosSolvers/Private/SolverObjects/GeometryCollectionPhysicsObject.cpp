@@ -2454,7 +2454,8 @@ void FGeometryCollectionPhysicsObject::InitializeSharedCollisionStructures(Chaos
 						);
 
 					CollectionSimplicials[ClusterTransformIdx] = TUniquePtr< FSimplicial >(
-						FCollisionStructureManager::NewSimplicial(MassSpaceParticles, *UnionMesh, CollectionImplicits[ClusterTransformIdx].Get()));
+						FCollisionStructureManager::NewSimplicial(MassSpaceParticles, *UnionMesh, CollectionImplicits[ClusterTransformIdx].Get(),
+						SharedParams.MaximumCollisionParticleCount));
 				}
 				else if (SizeSpecificData.ImplicitType == EImplicitTypeEnum::Chaos_Implicit_Box)
 				{
@@ -2467,7 +2468,8 @@ void FGeometryCollectionPhysicsObject::InitializeSharedCollisionStructures(Chaos
 						);
 
 					CollectionSimplicials[ClusterTransformIdx] = TUniquePtr< FSimplicial >(
-						FCollisionStructureManager::NewSimplicial(MassSpaceParticles, *UnionMesh, CollectionImplicits[ClusterTransformIdx].Get()));
+						FCollisionStructureManager::NewSimplicial(MassSpaceParticles, *UnionMesh, CollectionImplicits[ClusterTransformIdx].Get(),
+						SharedParams.MaximumCollisionParticleCount));
 
 				}
 				else if (SizeSpecificData.ImplicitType == EImplicitTypeEnum::Chaos_Implicit_Sphere)
@@ -2481,7 +2483,8 @@ void FGeometryCollectionPhysicsObject::InitializeSharedCollisionStructures(Chaos
 						);
 
 					CollectionSimplicials[ClusterTransformIdx] = TUniquePtr< FSimplicial >(
-						FCollisionStructureManager::NewSimplicial(MassSpaceParticles, *UnionMesh, CollectionImplicits[ClusterTransformIdx].Get()));
+						FCollisionStructureManager::NewSimplicial(MassSpaceParticles, *UnionMesh, CollectionImplicits[ClusterTransformIdx].Get(),
+						SharedParams.MaximumCollisionParticleCount));
 				}
 				else
 				{
