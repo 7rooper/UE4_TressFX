@@ -95,7 +95,7 @@ float3 ModulatedShadowBlendOp(float3 Source)
 float4 CalcTressFXShadows(in float4 SVPos)
 {
     float4 FinalColor = 0;
-    bool bIsTressFXNonOpaquePixel = false;
+    const bool bIsTressFXNonOpaquePixel = true;
     const FPQMPContext PQMPContext = PQMPInit(SVPos.xy);
 
     float2 ScreenUV = float2(SVPos.xy * View.BufferSizeAndInvSize.zw);
@@ -206,8 +206,6 @@ float4 CalcTressFXShadows(in float4 SVPos)
 
 		FGBufferData GBufferData = GetGBufferData(ScreenUV);
 
-		bIsTressFXNonOpaquePixel = (GBufferData.SelectiveOutputMask & IS_TRESSFX_NON_OPAQUE_PIXEL);
-
 		BRANCH
 		if (IsSubsurfaceModel(GBufferData.ShadingModelID)  || bIsTressFXNonOpaquePixel )
 		{
@@ -276,7 +274,6 @@ float4 CalcTressFXShadows(in float4 SVPos)
 	FadedShadow = lerp(1, FadedShadow, LightInfluenceMask);
 	// Write into all channels, the write mask will constrain to the correct one
 	FinalColor = EncodeLightAttenuation(FadedShadow);
-	bIsTressFXNonOpaquePixel = false;
 #else
 	float FadedSSSShadow = lerp(1.0f, Square(SSSTransmission), ShadowFadeFraction);
 
@@ -556,10 +553,14 @@ void Main(
 
 	/*@BEGIN Third party code TressFX*/
 #if TRESSFX_SHADOWS
-	OutTFXColor = CalcTressFXShadows(SVPos);
+
 	if(bIsTressFXNonOpaquePixel)
 	{
-		OutColor = 1;
+		OutTFXColor = CalcTressFXShadows(SVPos);
+	}
+	else
+	{
+		OutTFXColor = 1;
 	}
 #endif
 	/*@END Third party code TressFX*/
