@@ -54,11 +54,7 @@
 // Physics simulation of hair using compute shaders
 //--------------------------------------------------------------------------------------
 
-#ifdef __INTELLISENSE__
-	#include "../../../../Shaders/Private/TressFXCommon.ush"
-#else
-	#include "/Engine/Private/TressFXCommon.ush"
-#endif
+#include "TressFXPluginCommon.ush"
 
 
 #define USE_MESH_BASED_HAIR_TRANSFORM 0
