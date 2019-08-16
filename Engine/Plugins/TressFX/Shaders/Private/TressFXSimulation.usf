@@ -1,0 +1,1449 @@
+
+//---------------------------------------------------------------------------------------
+// Shader code related to simulating hair strands in compute.
+//-------------------------------------------------------------------------------------
+//
+// Copyright (c) 2017 Advanced Micro Devices, Inc. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+
+/*
+ * Copyright (c) 2018-2019 Confetti Interactive Inc.
+ * 
+ * This file is part of The-Forge
+ * (see https://github.com/ConfettiFX/The-Forge).
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+*/
+
+//--------------------------------------------------------------------------------------
+// File: TresFXSimulation.hlsl
+//
+// Physics simulation of hair using compute shaders
+//--------------------------------------------------------------------------------------
+
+#include "TressFXPluginCommon.ush"
+
+
+#define USE_MESH_BASED_HAIR_TRANSFORM 0
+
+// Whether bones are specified by dual quaternion.
+// This option is not currently functional.
+#define TRESSFX_DQ 0
+
+// Toggle capsule collisions
+#ifndef TRESSFX_COLLISION_CAPSULES
+	#define TRESSFX_COLLISION_CAPSULES 1
+#endif
+
+
+#define TRESSFX_MAX_NUM_COLLISION_CAPSULES 10
+
+// Same as ETressFXSimulationQuality in cpp
+#define TFXSim_Disable 0
+#define TFXSim_Full 1
+
+#ifndef TRESSFX_MORPHS
+	#define TRESSFX_MORPHS 0
+#endif
+
+struct FVertexIndices
+{
+    uint GlobalStrandIndex;
+    uint LocalStrandIndex;
+    uint GlobalVertexIndex;
+    uint LocalVertexIndex;
+    uint IndexForSharedMem;
+    uint NumVerticesInTheStrand;
+    uint StrandType;
+};
+
+struct FStrandIndices
+{
+    uint GlobalStrandIndex;
+    uint GlobalRootVertexIndex;
+    uint NumVerticesInTheStrand;
+    uint StrandType;
+};
+
+//constants that change frame to frame
+cbuffer TressfxSimParameters
+{
+    float4 Wind;
+    float4 g_Shape; // damping, local stiffness, global stiffness, global range.
+    float4 g_GravTimeTip; // gravity maginitude (assumed to be in negative y direction.)
+    int4 g_SimInts; // Length iterations, local iterations, collision flag.
+    int4 g_Counts; // num strands per thread group, num follow hairs per guid hair, num verts per strand.
+    float4 g_VSP; // VSP parmeters
+
+
+#if TRESSFX_DQ
+    float4 g_BoneSkinningDQ[AMD_TRESSFX_MAX_NUM_BONES * 2];
+#else
+    row_major float4x4 BoneSkinningMatrix[AMD_TRESSFX_MAX_NUM_BONES];
+#endif
+
+#if TRESSFX_COLLISION_CAPSULES
+    float4 g_centerAndRadius0[TRESSFX_MAX_NUM_COLLISION_CAPSULES];
+    float4 g_centerAndRadius1[TRESSFX_MAX_NUM_COLLISION_CAPSULES];
+    int4 g_numCollisionCapsules;
+#endif
+
+}
+
+#define NumStrandsPerThreadGroup		g_Counts.x
+#define NumFollowersPerGuideHair		g_Counts.y
+#define NumVertsPerStrand				g_Counts.z
+#define NumTotalHairs				    g_Counts.w
+
+#define NumLocalShapeMatchingIterations g_SimInts.y
+
+#define GravityMagnitude                g_GravTimeTip.x
+#define TimeStep                        g_GravTimeTip.y
+#define TipSeparationFactor             g_GravTimeTip.z
+
+
+// We no longer support groups (indirection).
+int GetStrandType(int GlobalThreadIndex)
+{
+    return 0;
+}
+
+float GetDamping(int StrandType)
+{
+    // strand type unused.
+    // In the future, we may create an array and use indirection.
+    return g_Shape.x;
+}
+
+float GetLocalStiffness(int StrandType)
+{
+    // strand type unused.
+    // In the future, we may create an array and use indirection.
+    return g_Shape.y;
+}
+
+float GetGlobalStiffness(int StrandType)
+{
+    // strand type unused.
+    // In the future, we may create an array and use indirection.
+    return g_Shape.z;
+}
+
+float GetGlobalRange(int StrandType)
+{
+    // strand type unused.
+    // In the future, we may create an array and use indirection.
+    return g_Shape.w;
+}
+
+float GetVelocityShockPropogation()
+{
+    return g_VSP.x;
+}
+
+float GetVSPAccelThreshold()
+{
+    return g_VSP.y;
+}
+
+int GetLocalConstraintIterations()
+{
+    return (int) g_SimInts.y;
+}
+
+int GetLengthConstraintIterations()
+{
+    return (int) g_SimInts.x;
+}
+
+// not used
+struct Transforms
+{
+    row_major float4x4 tfm;
+    float4 quat;
+};
+
+// not used
+struct HairToTriangleMapping
+{
+    uint meshIndex; // index to the mesh
+    uint triangleIndex; // index to triangle in the skinned mesh that contains this hair
+    float3 barycentricCoord; // barycentric coordinate of the hair within the triangle
+    uint reserved; // for future use
+};
+
+
+// UAVs
+RWStructuredBuffer<float4> HairVertexPositions : register(u0);
+RWStructuredBuffer<float4> HairVertexPositionsPrev : register(u1);
+RWStructuredBuffer<float4> HairVertexPositionsPrevPrev : register(u2);
+RWStructuredBuffer<float4> HairVertexTangents : register(u3);
+
+#if USE_MESH_BASED_HAIR_TRANSFORM == 1
+    RWStructuredBuffer<Transforms>  g_Transforms;
+#endif
+
+// SRVs
+StructuredBuffer<float4> InitialHairPositions;
+StructuredBuffer<float4> GlobalRotations;
+StructuredBuffer<float> HairRestLengthSRV;
+StructuredBuffer<float4> HairRefVecsInLocalFrame;
+StructuredBuffer<float4> FollowHairRootOffset;
+StructuredBuffer<float4> MeshVertices;
+StructuredBuffer<float4> TransformedVerts;
+StructuredBuffer<FBoneIndexData> BoneIndexData;
+StructuredBuffer<FBoneSkinningData> BoneSkinningData;
+
+#if TRESSFX_MORPHS
+	StructuredBuffer<float3> MorphDeltas;
+#endif
+
+// If you change the value below, you must change it in TressFXAsset.h as well.
+#ifndef THREAD_GROUP_SIZE
+	#define THREAD_GROUP_SIZE 64
+#endif
+
+groupshared float4 SharedPos[THREAD_GROUP_SIZE];
+groupshared float4 SharedTangent[THREAD_GROUP_SIZE];
+groupshared float SharedLength[THREAD_GROUP_SIZE];
+
+//--------------------------------------------------------------------------------------
+//
+//  Helper Functions for the main simulation shaders
+//
+//--------------------------------------------------------------------------------------
+bool IsMovable(float4 Particle)
+{
+    if (Particle.w > 0)
+    {
+        return true;
+    }
+    return false;
+}
+
+float2 ConstraintMultiplier(float4 Particle0, float4 Particle1)
+{
+    if (IsMovable(Particle0))
+    {
+        if (IsMovable(Particle1))
+        {
+            return float2(0.5, 0.5);
+        }
+        else
+        {
+            return float2(1, 0);
+        }
+    }
+    else
+    {
+        if (IsMovable(Particle1))
+        {
+            return float2(0, 1);
+        }
+        else
+        {
+            return float2(0, 0);
+        }
+    }
+}
+
+float4 MakeQuaternion(float AngleRadian, float3 axis)
+{
+    // create quaternion using angle and rotation axis
+    float4 quaternion;
+    float halfAngle = 0.5f * AngleRadian;
+    float sinHalf = sin(halfAngle);
+
+    quaternion.w = cos(halfAngle);
+    quaternion.xyz = sinHalf * axis.xyz;
+
+    return quaternion;
+}
+
+// Makes a quaternion from a 4x4 column major rigid transform matrix. Rigid transform means that rotational 3x3 sub matrix is orthonormal. 
+// Note that this function does not check the orthonormality. 
+float4 MakeQuaternion(column_major float4x4 m)
+{
+    float4 q;
+    float trace = m[0][0] + m[1][1] + m[2][2];
+
+    if (trace > 0.0f)
+    {
+        float r = sqrt(trace + 1.0f);
+        q.w = 0.5 * r;
+        r = 0.5 / r;
+        q.x = (m[1][2] - m[2][1]) * r;
+        q.y = (m[2][0] - m[0][2]) * r;
+        q.z = (m[0][1] - m[1][0]) * r;
+    }
+    else
+    {
+        int i = 0, j = 1, k = 2;
+
+        if (m[1][1] > m[0][0])
+        {
+            i = 1;
+            j = 2;
+            k = 0;
+        }
+        if (m[2][2] > m[i][i])
+        {
+            i = 2;
+            j = 0;
+            k = 1;
+        }
+
+        float r = sqrt(m[i][i] - m[j][j] - m[k][k] + 1.0f);
+
+        float qq[4];
+
+        qq[i] = 0.5f * r;
+        r = 0.5f / r;
+        q.w = (m[j][k] - m[k][j]) * r;
+        qq[j] = (m[j][i] + m[i][j]) * r;
+        qq[k] = (m[k][i] + m[i][k]) * r;
+
+        q.x = qq[0];
+        q.y = qq[1];
+        q.z = qq[2];
+    }
+
+    return q;
+}
+
+float4 InverseQuaternion(float4 q)
+{
+    float lengthSqr = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
+
+    if (lengthSqr < 0.001)
+    {
+        return float4(0, 0, 0, 1.0f);
+    }
+
+    q.x = -q.x / lengthSqr;
+    q.y = -q.y / lengthSqr;
+    q.z = -q.z / lengthSqr;
+    q.w = q.w / lengthSqr;
+
+    return q;
+}
+
+float3 MultQuaternionAndVector(float4 q, float3 v)
+{
+    float3 uv, uuv;
+    float3 qvec = float3(q.x, q.y, q.z);
+    uv = cross(qvec, v);
+    uuv = cross(qvec, uv);
+    uv *= (2.0f * q.w);
+    uuv *= 2.0f;
+
+    return v + uv + uuv;
+}
+
+float4 MultQuaternionAndQuaternion(float4 qA, float4 qB)
+{
+    float4 q;
+
+    q.w = qA.w * qB.w - qA.x * qB.x - qA.y * qB.y - qA.z * qB.z;
+    q.x = qA.w * qB.x + qA.x * qB.w + qA.y * qB.z - qA.z * qB.y;
+    q.y = qA.w * qB.y + qA.y * qB.w + qA.z * qB.x - qA.x * qB.z;
+    q.z = qA.w * qB.z + qA.z * qB.w + qA.x * qB.y - qA.y * qB.x;
+
+    return q;
+}
+
+float4 NormalizeQuaternion(float4 q)
+{
+    float4 qq = q;
+    float n = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
+
+    if (n < 1e-10f)
+    {
+        qq.w = 1;
+        return qq;
+    }
+
+    qq *= 1.0f / sqrt(n);
+    return qq;
+}
+
+// Compute a quaternion which rotates u to v. u and v must be unit vector. 
+float4 QuatFromTwoUnitVectors(float3 u, float3 v)
+{
+    float r = 1.f + dot(u, v);
+    float3 n;
+
+	// if u and v are parallel
+    if (r < 1e-7)
+    {
+        r = 0.0f;
+        n = abs(u.x) > abs(u.z) ? float3(-u.y, u.x, 0.f) : float3(0.f, -u.z, u.y);
+    }
+    else
+    {
+        n = cross(u, v);
+    }
+
+    float4 q = float4(n.x, n.y, n.z, r);
+    return NormalizeQuaternion(q);
+}
+
+// Make the inpute 4x4 matrix be identity
+float4x4 MakeIdentity()
+{
+    float4x4 m;
+    m._m00 = 1;
+    m._m01 = 0;
+    m._m02 = 0;
+    m._m03 = 0;
+    m._m10 = 0;
+    m._m11 = 1;
+    m._m12 = 0;
+    m._m13 = 0;
+    m._m20 = 0;
+    m._m21 = 0;
+    m._m22 = 1;
+    m._m23 = 0;
+    m._m30 = 0;
+    m._m31 = 0;
+    m._m32 = 0;
+    m._m33 = 1;
+
+    return m;
+}
+
+void ApplyDistanceConstraint(inout float4 Pos0, inout float4 Pos1, float TargetDistance, float Stiffness = 1.0)
+{
+    float3 Delta = Pos1.xyz - Pos0.xyz;
+    float Distance = max(length(Delta), 1e-7);
+    float Stretching = 1 - TargetDistance / Distance;
+    Delta = Stretching * Delta;
+    float2 Multiplier = ConstraintMultiplier(Pos0, Pos1);
+
+    Pos0.xyz += Multiplier[0] * Delta * Stiffness;
+    Pos1.xyz -= Multiplier[1] * Delta * Stiffness;
+}
+
+FVertexIndices CalcIndicesInVertexLevelTotal(uint LocalId, uint GroupId)
+{
+    FVertexIndices Result;
+    Result.IndexForSharedMem = LocalId;
+    Result.NumVerticesInTheStrand = (THREAD_GROUP_SIZE / NumStrandsPerThreadGroup);
+   
+    Result.LocalStrandIndex = LocalId % NumStrandsPerThreadGroup;
+    Result.GlobalStrandIndex = GroupId * NumStrandsPerThreadGroup + Result.LocalStrandIndex;
+    Result.LocalVertexIndex = (LocalId - Result.LocalStrandIndex) / NumStrandsPerThreadGroup;
+
+    Result.StrandType = GetStrandType(Result.GlobalStrandIndex);
+    Result.GlobalVertexIndex = Result.GlobalStrandIndex * Result.NumVerticesInTheStrand + Result.LocalVertexIndex;
+    return Result;
+}
+
+FVertexIndices CalcIndicesInVertexLevelMaster(uint LocalId, uint GroupId)
+{
+    FVertexIndices Result;
+    Result.IndexForSharedMem = LocalId;
+    Result.NumVerticesInTheStrand = (THREAD_GROUP_SIZE / NumStrandsPerThreadGroup);
+
+    Result.LocalStrandIndex = LocalId % NumStrandsPerThreadGroup;
+    Result.GlobalStrandIndex = GroupId * NumStrandsPerThreadGroup + Result.LocalStrandIndex;
+    Result.GlobalStrandIndex *= (NumFollowersPerGuideHair + 1);
+    Result.LocalVertexIndex = (LocalId - Result.LocalStrandIndex) / NumStrandsPerThreadGroup;
+
+    Result.StrandType = GetStrandType(Result.GlobalStrandIndex);
+    Result.GlobalVertexIndex = Result.GlobalStrandIndex * Result.NumVerticesInTheStrand + Result.LocalVertexIndex;
+
+    return Result;
+}
+
+FStrandIndices CalcIndicesInStrandLevelTotal(uint LocalId, uint GroupId)
+{
+    FStrandIndices Result;
+    Result.GlobalStrandIndex = THREAD_GROUP_SIZE * GroupId + LocalId;
+    Result.NumVerticesInTheStrand = (THREAD_GROUP_SIZE / NumStrandsPerThreadGroup);
+    Result.StrandType = GetStrandType(Result.GlobalStrandIndex);
+    Result.GlobalRootVertexIndex = Result.GlobalStrandIndex * Result.NumVerticesInTheStrand;
+    return Result;
+}
+
+FStrandIndices CalcIndicesInStrandLevelMaster(uint LocalId, uint GroupId)
+{
+    FStrandIndices Result;
+    Result.GlobalStrandIndex = THREAD_GROUP_SIZE * GroupId + LocalId;
+    Result.GlobalStrandIndex *= (NumFollowersPerGuideHair + 1);
+    Result.NumVerticesInTheStrand = (THREAD_GROUP_SIZE / NumStrandsPerThreadGroup);
+    Result.StrandType = GetStrandType(Result.GlobalStrandIndex);
+    Result.GlobalRootVertexIndex = Result.GlobalStrandIndex * Result.NumVerticesInTheStrand;
+    return Result;
+}
+
+//--------------------------------------------------------------------------------------
+//
+//  Integrate
+//
+//  Uses Verlet integration to calculate the new position for the current time step
+//
+//--------------------------------------------------------------------------------------
+float4 Integrate(float4 CurPosition, float4 OldPosition, float4 InitialPos, float4 Force, int GlobalVertexIndex, int LocalVertexIndex, int NumVerticesInTheStrand, float DampingCoeff = 1.0f)
+{
+    float4 OutputPos = CurPosition;
+
+    Force.xyz += GravityMagnitude * float3(0, 0, -1);
+    OutputPos.xyz = CurPosition.xyz + (1.0 - DampingCoeff) * (CurPosition.xyz - OldPosition.xyz) + Force.xyz * TimeStep * TimeStep;
+
+    return OutputPos;
+}
+
+
+struct FCollisionCapsule
+{
+    float4 P0; // xyz = position of capsule 0, w = radius 0
+    float4 P1; // xyz = position of capsule 1, w = radius 1
+};
+
+//--------------------------------------------------------------------------------------
+//
+//  CapsuleCollision
+//
+//  Moves the position based on collision with capsule
+//
+//--------------------------------------------------------------------------------------
+bool CapsuleCollision(float4 CurPosition, float4 OldPosition, inout float3 NewPosition, FCollisionCapsule Capsule, float Friction = 0.4f)
+{
+    const float Radius0 = Capsule.P0.w;
+    const float Radius1 = Capsule.P1.w;
+    NewPosition = CurPosition.xyz;
+
+    if (!IsMovable(CurPosition))
+    {
+        return false;
+    }
+
+    float3 Segment = Capsule.P1.xyz - Capsule.P0.xyz;
+    float3 Delta0 = CurPosition.xyz - Capsule.P0.xyz;
+    float3 Delta1 = Capsule.P1.xyz - CurPosition.xyz;
+
+    float Dist0 = dot(Delta0, Segment);
+    float Dist1 = dot(Delta1, Segment);
+
+    // colliding with sphere 1
+    if (Dist0 < 0.f)
+    {
+        if (dot(Delta0, Delta0) < Radius0 * Radius0)
+        {
+            float3 n = normalize(Delta0);
+            NewPosition = Radius0 * n + Capsule.P0.xyz;
+            return true;
+        }
+
+        return false;
+    }
+
+    // colliding with sphere 2
+    if (Dist1 < 0.f)
+    {
+        if (dot(Delta1, Delta1) < Radius1 * Radius1)
+        {
+            float3 n = normalize(-Delta1);
+            NewPosition = Radius1 * n + Capsule.P1.xyz;
+            return true;
+        }
+
+        return false;
+    }
+
+    // colliding with middle cylinder
+    float3 x = (Dist0 * Capsule.P1.xyz + Dist1 * Capsule.P0.xyz) / (Dist0 + Dist1);
+    float3 Delta = CurPosition.xyz - x;
+
+    float RadiusAtX = (Dist0 * Radius1 + Dist1 * Radius0) / (Dist0 + Dist1);
+
+    if (dot(Delta, Delta) < RadiusAtX * RadiusAtX)
+    {
+        float3 n = normalize(Delta);
+        float3 Vec = CurPosition.xyz - OldPosition.xyz;
+        float3 SegN = normalize(Segment);
+        float3 VecTangent = dot(Vec, SegN) * SegN;
+        float3 VecNormal = Vec - VecTangent;
+        NewPosition = OldPosition.xyz + Friction * VecTangent + (VecNormal + RadiusAtX * n - Delta);
+        return true;
+    }
+
+    return false;
+}
+
+float3 ApplyVertexBoneSkinning(float3 VertexPos, FBoneIndexData InBoneIndexData, inout float4 BoneQuat)
+{
+    float3 NewVertexPos;
+
+#if TRESSFX_DQ
+    {
+        // weighted rotation part of dual quaternion
+        float4 nq = g_BoneSkinningDQ[SkinningData.boneIndex.x * 2] * SkinningData.boneWeight.x + g_BoneSkinningDQ[SkinningData.boneIndex.y * 2] * SkinningData.boneWeight.y +
+            g_BoneSkinningDQ[SkinningData.boneIndex.z * 2] * SkinningData.boneWeight.z + g_BoneSkinningDQ[SkinningData.boneIndex.w * 2] * SkinningData.boneWeight.w;
+
+        // weighted tranlation part of dual quaternion
+        float4 dq = g_BoneSkinningDQ[SkinningData.boneIndex.x * 2 + 1] * SkinningData.boneWeight.x + g_BoneSkinningDQ[SkinningData.boneIndex.y * 2 + 1] * SkinningData.boneWeight.y +
+            g_BoneSkinningDQ[SkinningData.boneIndex.z * 2 + 1] * SkinningData.boneWeight.z + g_BoneSkinningDQ[SkinningData.boneIndex.w * 2 + 1] * SkinningData.boneWeight.w;
+
+        float len = rsqrt(dot(nq, nq));
+        nq *= len;
+        dq *= len;
+
+        BoneQuat = nq;
+
+        //convert translation part of dual quaternion to translation vector:
+        float3 translation = (nq.w*dq.xyz - dq.w*nq.xyz + cross(nq.xyz, dq.xyz)) * 2;
+
+        newVertexPos = MultQuaternionAndVector(nq, VertexPos) + translation.xyz;
+    }
+#else
+    {
+        // Interpolate world space bone matrices using weights. 
+        FBoneSkinningData SkinningData = BoneSkinningData[InBoneIndexData.StartIdx];
+        row_major float4x4 BoneMatrix = BoneSkinningMatrix[SkinningData.BoneIndex] * SkinningData.BoneWeight;
+        float WeightSum = SkinningData.BoneWeight;
+
+        for (int i = 1; i < InBoneIndexData.BoneCount; i++)
+        {
+            SkinningData = BoneSkinningData[InBoneIndexData.StartIdx + i];
+
+            if (SkinningData.BoneWeight > 0)
+            {
+                BoneMatrix += BoneSkinningMatrix[SkinningData.BoneIndex] * SkinningData.BoneWeight;
+                WeightSum += SkinningData.BoneWeight;
+            }
+        }
+
+        BoneMatrix /= WeightSum;
+        BoneQuat = MakeQuaternion(BoneMatrix);
+
+        NewVertexPos = mul(float4(VertexPos, 1), BoneMatrix).xyz;
+    }
+#endif
+
+
+    return NewVertexPos;
+}
+
+//--------------------------------------------------------------------------------------
+//
+//  UpdateFinalVertexPositions
+//
+//  Updates the  hair vertex positions based on the physics simulation
+//
+//--------------------------------------------------------------------------------------
+void UpdateFinalVertexPositions(float4 OldPosition, float4 NewPosition, int GlobalVertexIndex, int LocalVertexIndex, int NumVerticesInTheStrand)
+{
+    HairVertexPositionsPrevPrev[GlobalVertexIndex] = HairVertexPositionsPrev[GlobalVertexIndex];
+    HairVertexPositionsPrev[GlobalVertexIndex] = OldPosition;
+    HairVertexPositions[GlobalVertexIndex] = NewPosition;
+}
+
+
+// update previous follow hairs for velocity calcs in pixel shader
+#ifndef UPDATE_PREV_FOLLOW_HAIRS
+    #define UPDATE_PREV_FOLLOW_HAIRS 0
+#endif
+
+#ifndef SIM_QUALITY
+    #define SIM_QUALITY TFXSim_Disable
+#endif
+
+void SimpleUpdateWithoutSimulation(
+	uint GroupIndex,
+    uint3 GroupId,
+    uint3 DTid
+)
+{
+
+	FVertexIndices Indices = CalcIndicesInVertexLevelMaster(GroupIndex, GroupId.x);
+
+    // Copy data into shared memory
+    float4 InitialPos = InitialHairPositions[Indices.GlobalVertexIndex]; // rest position
+
+#if TRESSFX_MORPHS
+		// this should always be a whole number, so this is fine
+		int GuideIndex = Indices.GlobalStrandIndex / (NumFollowersPerGuideHair + 1);
+		float3 Delta = MorphDeltas[GuideIndex];
+		InitialPos.xyz += Delta;
+#endif
+
+    // Apply worldspace bone skinning to initial position
+    FBoneIndexData IndexData = BoneIndexData[Indices.GlobalStrandIndex];
+    float4 BoneQuat;
+    InitialPos.xyz = ApplyVertexBoneSkinning(InitialPos.xyz, IndexData, BoneQuat);
+
+
+
+    // position when this step starts. In other words, a position from the last step.
+    SharedPos[Indices.IndexForSharedMem] = InitialPos;
+    float4 prevPos = HairVertexPositions[Indices.GlobalVertexIndex];
+
+    // copy newpos to prev and prevprev
+    UpdateFinalVertexPositions(prevPos, InitialPos, Indices.GlobalVertexIndex, Indices.LocalVertexIndex, Indices.NumVerticesInTheStrand);
+
+    GroupMemoryBarrierWithGroupSync();
+
+    //-------------------
+    // Compute tangent in world space
+    //-------------------
+    uint numOfStrandsPerThreadGroup = NumStrandsPerThreadGroup;
+    float3 tangent = SharedPos[Indices.IndexForSharedMem + numOfStrandsPerThreadGroup].xyz - SharedPos[Indices.IndexForSharedMem].xyz;
+    HairVertexTangents[Indices.GlobalVertexIndex].xyz = normalize(tangent);
+
+}
+			
+//--------------------------------------------------------------------------------------
+//
+//  IntegrationAndGlobalShapeConstraints
+//
+//  Compute shader to simulate the gravitational force with integration and to maintain the
+//  global shape constraints.
+//
+// One thread computes one vertex.
+//
+//--------------------------------------------------------------------------------------
+[numthreads(THREAD_GROUP_SIZE, 1, 1)]
+void IntegrationAndGlobalShapeConstraints(
+	uint GroupIndex : SV_GroupIndex,
+    uint3 GroupId : SV_GroupID,
+    uint3 DTid : SV_DispatchThreadID
+)
+{
+#if SIM_QUALITY == TFXSim_Disable
+    SimpleUpdateWithoutSimulation(GroupIndex, GroupId, DTid); 
+    return;
+#endif
+
+    FVertexIndices Indices = CalcIndicesInVertexLevelMaster(GroupIndex, GroupId.x);
+
+    // Copy data into shared memory
+    float4 InitialPos = InitialHairPositions[Indices.GlobalVertexIndex]; // rest position
+
+#if TRESSFX_MORPHS
+		// this should always be a whole number, so this is fine
+		int GuideIndex = Indices.GlobalStrandIndex / (NumFollowersPerGuideHair + 1);
+		float3 Delta = MorphDeltas[GuideIndex];
+		InitialPos.xyz += Delta;
+#endif
+
+	// Apply bone skinning to initial position
+	FBoneIndexData IndexData = BoneIndexData[Indices.GlobalStrandIndex];
+    float4 BoneQuat;
+    InitialPos.xyz = ApplyVertexBoneSkinning(InitialPos.xyz, IndexData, BoneQuat);
+
+    // we temporarily use HairVertexTangents to hold bone quaternion data compute in ApplyVertexBoneSkinning. 
+    HairVertexTangents[Indices.GlobalStrandIndex] = BoneQuat;
+
+    // position when this step starts. In other words, a position from the last step.
+    float4 CurrentPos = SharedPos[Indices.IndexForSharedMem] = HairVertexPositions[Indices.GlobalVertexIndex];
+	
+	//not sure this is needed
+	SharedPos[Indices.IndexForSharedMem] = InitialPos;
+
+	#if UPDATE_PREV_FOLLOW_HAIRS
+	    for (uint i = 0; i < NumFollowersPerGuideHair; i++)
+		{
+			int GlobalFollowVertexIndex = Indices.GlobalVertexIndex + Indices.NumVerticesInTheStrand * (i + 1);
+			int GlobalFollowStrandIndex = Indices.GlobalStrandIndex + i + 1;
+			float factor = TipSeparationFactor * ((float) Indices.LocalVertexIndex / (float) Indices.NumVerticesInTheStrand) + 1.0f;
+			float3 followPos = CurrentPos.xyz + factor * FollowHairRootOffset[GlobalFollowStrandIndex].xyz;
+
+			HairVertexPositionsPrev[GlobalFollowVertexIndex].xyz = followPos;
+		}
+	#endif
+
+    GroupMemoryBarrierWithGroupSync();
+
+    // Integrate
+    float DampingCoeff = GetDamping(Indices.StrandType);
+    float4 OldPos = HairVertexPositionsPrev[Indices.GlobalVertexIndex];
+
+    float4 Force = float4(0, 0, 0, 0);
+
+    if (IsMovable(CurrentPos))
+    {
+        SharedPos[Indices.IndexForSharedMem] = Integrate(
+			CurrentPos,
+			OldPos, 
+			InitialPos, 
+			Force,
+			Indices.GlobalVertexIndex, 
+			Indices.LocalVertexIndex, 
+			Indices.NumVerticesInTheStrand, 
+			DampingCoeff
+		);
+    }       
+    else
+    {
+        SharedPos[Indices.IndexForSharedMem] = InitialPos;
+    }
+		
+    // Global Shape Constraints
+    float StiffnessForGlobalShapeMatching = GetGlobalStiffness(Indices.StrandType);
+    float GlobalShapeMatchingEffectiveRange = GetGlobalRange(Indices.StrandType);
+
+    if (StiffnessForGlobalShapeMatching > 0.0f && GlobalShapeMatchingEffectiveRange > 0.0f)
+    {
+        if (IsMovable(SharedPos[Indices.IndexForSharedMem]))
+        {
+            if ((float) Indices.LocalVertexIndex < GlobalShapeMatchingEffectiveRange * (float) Indices.NumVerticesInTheStrand)
+            {
+                float Factor = StiffnessForGlobalShapeMatching;
+                float3 Del = Factor * (InitialPos - SharedPos[Indices.IndexForSharedMem]).xyz;
+                SharedPos[Indices.IndexForSharedMem].xyz += Del;
+            }
+        }
+    }
+
+	// update global position buffers
+    UpdateFinalVertexPositions(
+		CurrentPos, 
+		SharedPos[Indices.IndexForSharedMem], 
+		Indices.GlobalVertexIndex, 
+		Indices.LocalVertexIndex, 
+		Indices.NumVerticesInTheStrand
+	);
+}
+
+//--------------------------------------------------------------------------------------
+//
+//  VelocityShockPropagation
+//
+//  Propagate velocity shock resulted by attached based mesh
+//
+// One thread computes one strand.
+//
+//--------------------------------------------------------------------------------------
+[numthreads(THREAD_GROUP_SIZE, 1, 1)]
+void VelocityShockPropagation(
+	uint GroupIndex : SV_GroupIndex,
+	uint3 GroupId : SV_GroupID,
+	uint3 DTid : SV_DispatchThreadID
+)
+{
+
+    FStrandIndices Indices = CalcIndicesInStrandLevelMaster(GroupIndex, GroupId.x);
+
+    float4 PosPrevPrev[2]; // previous previous positions for vertex 0 (root) and vertex 1.
+    float4 PosPrev[2]; // previous positions for vertex 0 (root) and vertex 1.
+    float4 PosNew[2]; // current positions for vertex 0 (root) and vertex 1.
+
+    PosPrevPrev[0] = HairVertexPositionsPrevPrev[Indices.GlobalRootVertexIndex];
+    PosPrevPrev[1] = HairVertexPositionsPrevPrev[Indices.GlobalRootVertexIndex + 1];
+
+    PosPrev[0] = HairVertexPositionsPrev[Indices.GlobalRootVertexIndex];
+    PosPrev[1] = HairVertexPositionsPrev[Indices.GlobalRootVertexIndex + 1];
+	
+    PosNew[0] = HairVertexPositions[Indices.GlobalRootVertexIndex];
+    PosNew[1] = HairVertexPositions[Indices.GlobalRootVertexIndex + 1];
+
+    float3 U = normalize(PosPrev[1].xyz - PosPrev[0].xyz);
+    float3 V = normalize(PosNew[1].xyz - PosNew[0].xyz);
+
+    // Compute rotation and translation which transform PosOld to PosNew. 
+    // Since the first two vertices are immovable, we can assume that there is no scaling during tranform. 
+    float4 Rot = QuatFromTwoUnitVectors(U, V);
+    float3 Trans = PosNew[0].xyz - MultQuaternionAndVector(Rot, PosPrev[0].xyz);
+
+    float VspCoeff = GetVelocityShockPropogation();
+    float RestLength0 = HairRestLengthSRV[Indices.GlobalRootVertexIndex];
+    float VspAccelThreshold = GetVSPAccelThreshold();
+
+    // Increate the VSP coefficient by checking pseudo-acceleration to handle over-stretching when the character moves very fast 
+    float Accel = length(PosNew[1] - 2.0 * PosPrev[1] + PosPrevPrev[1]);
+
+    if (Accel > VspAccelThreshold)
+    {
+        VspCoeff = 1.0f;
+    }
+
+    for (uint LocalVertexIndex = 2; LocalVertexIndex < Indices.NumVerticesInTheStrand; LocalVertexIndex++)
+    {
+        uint GlobalVertexIndex = Indices.GlobalRootVertexIndex + LocalVertexIndex;
+
+        float4 PosNew_N = HairVertexPositions[GlobalVertexIndex];
+        float4 PosOld_N = HairVertexPositionsPrev[GlobalVertexIndex];
+		
+        PosNew_N.xyz = (1.f - VspCoeff) * PosNew_N.xyz + VspCoeff * (MultQuaternionAndVector(Rot, PosNew_N.xyz) + Trans);
+        PosOld_N.xyz = (1.f - VspCoeff) * PosOld_N.xyz + VspCoeff * (MultQuaternionAndVector(Rot, PosOld_N.xyz) + Trans);
+
+        HairVertexPositions[GlobalVertexIndex].xyz = PosNew_N.xyz;
+        HairVertexPositionsPrev[GlobalVertexIndex].xyz = PosOld_N.xyz;
+    }
+}
+
+//--------------------------------------------------------------------------------------
+//
+//  LocalShapeConstraints
+//
+//  Compute shader to maintain the local shape constraints.
+//
+// One thread computes one strand.
+//
+//--------------------------------------------------------------------------------------
+[numthreads(THREAD_GROUP_SIZE, 1, 1)]
+void LocalShapeConstraints(
+	uint GroupIndex : SV_GroupIndex,
+    uint3 GroupId : SV_GroupID,
+    uint3 DTid : SV_DispatchThreadID
+)
+{
+
+    FStrandIndices Indices = CalcIndicesInStrandLevelMaster(GroupIndex, GroupId.x);
+
+    // stiffness for local shape constraints
+    float StiffnessForLocalShapeMatching = GetLocalStiffness(Indices.StrandType);
+	
+    //1.0 for stiffness makes things unstable sometimes.
+    StiffnessForLocalShapeMatching = 0.5f * min(StiffnessForLocalShapeMatching, 0.95f);
+	
+    //--------------------------------------------
+    // Local shape constraint for bending/twisting
+    //--------------------------------------------
+    {
+        float4 Pos = HairVertexPositions[Indices.GlobalRootVertexIndex + 1];
+        float4 PosPlusOne;
+        uint GlobalVertexIndex = 0;
+        float4 RotGlobal = GlobalRotations[Indices.GlobalRootVertexIndex];
+        float4 RotGlobalWorld;
+
+        // we temporarily use HairVertexTangents to hold bone quaternion data compute in ApplyVertexBoneSkinning. 
+        float4 BoneQuat = HairVertexTangents[Indices.GlobalStrandIndex];
+
+        for (uint LocalVertexIndex = 1; LocalVertexIndex < Indices.NumVerticesInTheStrand - 1; LocalVertexIndex++)
+        {
+            GlobalVertexIndex = Indices.GlobalRootVertexIndex + LocalVertexIndex;
+            PosPlusOne = HairVertexPositions[GlobalVertexIndex + 1];
+
+            //--------------------------------
+            // Update position i and i_plus_1
+            //--------------------------------
+            RotGlobalWorld = MultQuaternionAndQuaternion(BoneQuat, RotGlobal);
+
+            float3 OrgPos_I_plus_1_InLocalFrame_I = HairRefVecsInLocalFrame[GlobalVertexIndex + 1].xyz;
+            float3 OrgPos_I_plus_1_InGlobalFrame = MultQuaternionAndVector(RotGlobalWorld, OrgPos_I_plus_1_InLocalFrame_I) + Pos.xyz;
+            float3 Del = StiffnessForLocalShapeMatching * (OrgPos_I_plus_1_InGlobalFrame - PosPlusOne.xyz).xyz;
+
+            if (IsMovable(Pos))
+            {
+                Pos.xyz -= Del.xyz;
+            }
+
+            if (IsMovable(PosPlusOne))
+            {
+                PosPlusOne.xyz += Del.xyz;
+            }
+
+            //---------------------------
+            // Update local/global frames
+            //---------------------------
+            float4 InvRotGlobalWorld = InverseQuaternion(RotGlobalWorld);
+            float3 Vec = normalize(PosPlusOne.xyz - Pos.xyz);
+
+            float3 X_I_Plus_1_Frame_I = normalize(MultQuaternionAndVector(InvRotGlobalWorld, Vec));
+            float3 E = float3(1.0f, 0, 0);
+            float3 RotAxis = cross(E, X_I_Plus_1_Frame_I);
+
+            if (length(RotAxis) > 0.001)
+            {
+                float AngleRadian = acos(dot(E, X_I_Plus_1_Frame_I));
+                RotAxis = normalize(RotAxis);
+
+                float4 LocalRot = MakeQuaternion(AngleRadian, RotAxis);
+                RotGlobal = MultQuaternionAndQuaternion(RotGlobal, LocalRot);
+            }
+
+            HairVertexPositions[GlobalVertexIndex].xyz = Pos.xyz;
+            HairVertexPositions[GlobalVertexIndex + 1].xyz = PosPlusOne.xyz;
+
+            Pos = PosPlusOne;
+        }
+    }
+
+    return;
+}
+
+//--------------------------------------------------------------------------------------
+//
+//  LocalShapeConstraintsWithIteration
+//
+//  Compute shader to maintain the local shape constraints. This is the same as
+//  the LocalShapeConstraints shader, except the iterations are done on the GPU
+//  instead of multiple dispatch calls on the CPU, for better performance
+//
+//  This kernel should be called only when the number vertices per strand is 8 or 16.
+//--------------------------------------------------------------------------------------
+[numthreads(THREAD_GROUP_SIZE, 1, 1)]
+void LocalShapeConstraintsWithIteration(
+	uint GroupIndex : SV_GroupIndex,
+    uint3 GroupId : SV_GroupID,
+    uint3 DTid : SV_DispatchThreadID
+)
+{
+
+    FStrandIndices Indices = CalcIndicesInStrandLevelMaster(GroupIndex, GroupId.x);
+
+    // stiffness for local shape constraints
+    float StiffnessForLocalShapeMatching = GetLocalStiffness(Indices.StrandType);
+
+    //1.0 for stiffness makes things unstable sometimes.
+    StiffnessForLocalShapeMatching = 0.5f * min(StiffnessForLocalShapeMatching, 0.95f);
+
+    //------------------------------
+    // Copy strand data into registers, for faster iteration
+    //------------------------------
+    uint GlobalVertexIndex = 0;
+
+	#define MAX_VERTS_PER_STRAND 64
+    float4 SharedStrandPos[MAX_VERTS_PER_STRAND];
+    for (uint LocalVertexIndex = 0; LocalVertexIndex < Indices.NumVerticesInTheStrand; LocalVertexIndex++)
+    {
+        GlobalVertexIndex = Indices.GlobalRootVertexIndex + LocalVertexIndex;
+        SharedStrandPos[LocalVertexIndex] = HairVertexPositions[GlobalVertexIndex];
+    }
+
+    //--------------------------------------------
+    // Local shape constraint for bending/twisting
+    //--------------------------------------------
+    int NLocalShapeMatchingIterations = GetLocalConstraintIterations();
+    for (uint iterations = 0; iterations < (uint) NLocalShapeMatchingIterations; iterations++)
+    {
+        float4 Pos = SharedStrandPos[1];
+        float4 RotGlobal = GlobalRotations[Indices.GlobalRootVertexIndex];
+
+        // we temporarily use HairVertexTangents to hold bone quaternion data compute in ApplyVertexBoneSkinning. 
+        float4 BoneQuat = HairVertexTangents[Indices.GlobalStrandIndex];
+
+        for (uint LocalVertexIndex = 1; LocalVertexIndex < Indices.NumVerticesInTheStrand - 1; LocalVertexIndex++)
+        {
+            GlobalVertexIndex = Indices.GlobalRootVertexIndex + LocalVertexIndex;
+            float4 PosPlusOne = SharedStrandPos[LocalVertexIndex + 1];
+
+            //--------------------------------
+            // Update position i and i_plus_1
+            //--------------------------------
+            float4 RotGlobalWorld;
+
+            RotGlobalWorld = MultQuaternionAndQuaternion(BoneQuat, RotGlobal);
+
+            float3 OrgPos_I_plus_1_InLocalFrame_I = HairRefVecsInLocalFrame[GlobalVertexIndex + 1].xyz;
+            float3 OrgPos_I_plus_1_InGlobalFrame = MultQuaternionAndVector(RotGlobalWorld, OrgPos_I_plus_1_InLocalFrame_I) + Pos.xyz;
+
+            float3 Del = StiffnessForLocalShapeMatching * (OrgPos_I_plus_1_InGlobalFrame - PosPlusOne.xyz).xyz;
+
+            if (IsMovable(Pos))
+            {
+                Pos.xyz -= Del.xyz;
+            }
+
+            if (IsMovable(PosPlusOne))
+            {
+                PosPlusOne.xyz += Del.xyz;
+            }
+
+            //---------------------------
+            // Update local/global frames
+            //---------------------------
+            float4 InvRotGlobalWorld = InverseQuaternion(RotGlobalWorld);
+            float3 vec = normalize(PosPlusOne.xyz - Pos.xyz);
+
+            float3 X_I_Plus_1_Frame_I = normalize(MultQuaternionAndVector(InvRotGlobalWorld, vec));
+            float3 e = float3(1.0f, 0, 0);
+            float3 RotAxis = cross(e, X_I_Plus_1_Frame_I);
+
+            if (length(RotAxis) > 0.001)
+            {
+                float AngleRadian = acos(dot(e, X_I_Plus_1_Frame_I));
+                RotAxis = normalize(RotAxis);
+
+                float4 LocalRot = MakeQuaternion(AngleRadian, RotAxis);
+                RotGlobal = MultQuaternionAndQuaternion(RotGlobal, LocalRot);
+            }
+
+            SharedStrandPos[LocalVertexIndex].xyz = Pos.xyz;
+            SharedStrandPos[LocalVertexIndex + 1].xyz = PosPlusOne.xyz;
+
+            Pos = PosPlusOne;
+        }
+    }
+
+    for (uint LocVertIndex = 0; LocVertIndex < Indices.NumVerticesInTheStrand; LocVertIndex++)
+    {
+        GlobalVertexIndex = Indices.GlobalRootVertexIndex + LocVertIndex;
+        HairVertexPositions[GlobalVertexIndex] = SharedStrandPos[LocVertIndex];
+    }
+
+    return;
+}
+
+// Resolve hair vs capsule collisions. To use this, set TRESSFX_COLLISION_CAPSULES to 1 in both hlsl and cpp sides. 
+bool ResolveCapsuleCollisions(inout float4 CurPosition, float4 OldPos, float Friction = 0.4f)
+{
+    bool bAnyColDetected = false;
+
+#if TRESSFX_COLLISION_CAPSULES
+    if (g_numCollisionCapsules.x > 0)
+    {
+        float3 NewPos;
+
+        for (int i = 0; i < g_numCollisionCapsules.x; i++)
+        {
+            float3 Center0 = g_centerAndRadius0[i].xyz;
+            float3 Center1 = g_centerAndRadius1[i].xyz;
+
+            FCollisionCapsule Capsule;
+            Capsule.P0.xyz = Center0;
+            Capsule.P0.w = g_centerAndRadius0[i].w;
+            Capsule.P1.xyz = Center1;
+            Capsule.P1.w = g_centerAndRadius1[i].w;
+
+            bool bColDetected = CapsuleCollision(CurPosition, OldPos, NewPos, Capsule, Friction);
+
+            if (bColDetected)
+            {
+                CurPosition.xyz = NewPos;
+            }
+
+            bAnyColDetected = bColDetected ? true : bAnyColDetected;
+        }
+    }
+#endif
+
+    return bAnyColDetected;
+}
+
+//--------------------------------------------------------------------------------------
+//
+//  LengthConstriantsWindAndCollision
+//
+//  Compute shader to move the vertex position based on wind, maintain the lenght constraints
+//  and handles collisions.
+//
+// One thread computes one vertex.
+//
+//--------------------------------------------------------------------------------------
+[numthreads(THREAD_GROUP_SIZE, 1, 1)]
+void LengthConstriantsWindAndCollision(
+	uint GroupIndex : SV_GroupIndex,
+    uint3 GroupId : SV_GroupID,
+    uint3 DTid : SV_DispatchThreadID
+)
+{
+
+    FVertexIndices Indices = CalcIndicesInVertexLevelMaster(GroupIndex, GroupId.x);
+
+    uint NumOfStrandsPerThreadGroup = NumStrandsPerThreadGroup;
+
+    //------------------------------
+    // Copy data into shared memory
+    //------------------------------
+    SharedPos[Indices.IndexForSharedMem] = HairVertexPositions[Indices.GlobalVertexIndex];
+    SharedLength[Indices.IndexForSharedMem] = HairRestLengthSRV[Indices.GlobalVertexIndex];
+    GroupMemoryBarrierWithGroupSync();
+
+    //------------
+    // Wind
+    //------------
+    if (Wind.x != 0 || Wind.y != 0 || Wind.z != 0)
+    {
+
+        if (Indices.LocalVertexIndex >= 2 && Indices.LocalVertexIndex < Indices.NumVerticesInTheStrand - 1)
+        {
+			// in ue4, winds are precombined the way we are retrieving, so the following is not needed
+            // combining four winds.
+            //float a = ((float) (globalStrandIndex % 20)) / 20.0f;
+            //float3 w = a * Wind.xyz + (1.0f - a) * Wind1.xyz + a * Wind2.xyz + (1.0f - a) * Wind3.xyz;
+
+            uint SharedIndex = Indices.LocalVertexIndex * NumOfStrandsPerThreadGroup + Indices.LocalStrandIndex;
+
+            float3 v = SharedPos[SharedIndex].xyz - SharedPos[SharedIndex + NumOfStrandsPerThreadGroup].xyz;
+            float3 Force = -cross(cross(v, Wind.xyz), v);
+            SharedPos[SharedIndex].xyz += Force * TimeStep * TimeStep;
+        }
+    }
+
+    GroupMemoryBarrierWithGroupSync();
+
+    //----------------------------
+    // Enforce length constraints
+    //----------------------------
+    uint A = floor(Indices.NumVerticesInTheStrand / 2.0f);
+    uint B = floor((Indices.NumVerticesInTheStrand - 1) / 2.0f);
+
+    int NLengthContraintIterations = GetLengthConstraintIterations();
+
+    for (int iterationE = 0; iterationE < NLengthContraintIterations; iterationE++)
+    {
+        uint SharedIndex = 2 * Indices.LocalVertexIndex * NumOfStrandsPerThreadGroup + Indices.LocalStrandIndex;
+
+        if (Indices.LocalVertexIndex < A)
+        {
+            ApplyDistanceConstraint(SharedPos[SharedIndex], SharedPos[SharedIndex + NumOfStrandsPerThreadGroup], SharedLength[SharedIndex].x);
+        }            
+
+        GroupMemoryBarrierWithGroupSync();
+
+        if (Indices.LocalVertexIndex < B)
+        {
+            ApplyDistanceConstraint(SharedPos[SharedIndex + NumOfStrandsPerThreadGroup], SharedPos[SharedIndex + NumOfStrandsPerThreadGroup * 2], SharedLength[SharedIndex + NumOfStrandsPerThreadGroup].x);
+        }
+            
+
+        GroupMemoryBarrierWithGroupSync();
+    }
+
+    //------------------------------------------
+    // Collision handling with capsule objects
+    //------------------------------------------
+    float4 OldPos = HairVertexPositionsPrev[Indices.GlobalVertexIndex];
+
+    bool bAnyColDetected = ResolveCapsuleCollisions(SharedPos[Indices.IndexForSharedMem], OldPos);
+    GroupMemoryBarrierWithGroupSync();
+
+    //-------------------
+    // Compute Tangent
+    //-------------------
+    float3 Tangent = SharedPos[Indices.IndexForSharedMem + NumOfStrandsPerThreadGroup].xyz - SharedPos[Indices.IndexForSharedMem].xyz;
+    HairVertexTangents[Indices.GlobalVertexIndex].xyz = normalize(Tangent);
+
+    //---------------------------------------
+    // update global position buffers
+    //---------------------------------------
+    HairVertexPositions[Indices.GlobalVertexIndex] = SharedPos[Indices.IndexForSharedMem];
+
+    if (bAnyColDetected)
+    {
+        HairVertexPositionsPrev[Indices.GlobalVertexIndex] = SharedPos[Indices.IndexForSharedMem];
+    }
+
+    return;
+}
+
+// One thread computes one vertex.
+[numthreads(THREAD_GROUP_SIZE, 1, 1)]
+void UpdateFollowHairVertices(
+	uint GroupIndex : SV_GroupIndex,
+    uint3 GroupId : SV_GroupID,
+    uint3 DTid : SV_DispatchThreadID
+)
+{
+    FVertexIndices Indices = CalcIndicesInVertexLevelMaster(GroupIndex, GroupId.x);
+
+    SharedPos[Indices.IndexForSharedMem] = HairVertexPositions[Indices.GlobalVertexIndex];
+    SharedTangent[Indices.IndexForSharedMem] = HairVertexTangents[Indices.GlobalVertexIndex];
+    GroupMemoryBarrierWithGroupSync();
+
+    for (uint i = 0; i < NumFollowersPerGuideHair; i++)
+    {
+        int GlobalFollowVertexIndex = Indices.GlobalVertexIndex + Indices.NumVerticesInTheStrand * (i + 1);
+        int GlobalFollowStrandIndex = Indices.GlobalStrandIndex + i + 1;
+        float Factor = TipSeparationFactor * ((float) Indices.LocalVertexIndex / (float) Indices.NumVerticesInTheStrand) + 1.0f;
+        float3 FollowPos = SharedPos[Indices.IndexForSharedMem].xyz + Factor * FollowHairRootOffset[GlobalFollowStrandIndex].xyz;
+
+        HairVertexPositions[GlobalFollowVertexIndex].xyz = FollowPos;
+        HairVertexTangents[GlobalFollowVertexIndex] = SharedTangent[Indices.IndexForSharedMem];
+    }
+
+    return;
+}
+
+// One thread computes one vertex.
+[numthreads(THREAD_GROUP_SIZE, 1, 1)]
+void PrepareFollowHairBeforeTurningIntoGuide(
+	uint GroupIndex : SV_GroupIndex,
+    uint3 GroupId : SV_GroupID,
+    uint3 DTid : SV_DispatchThreadID
+)
+{
+    FVertexIndices Indices = CalcIndicesInVertexLevelMaster(GroupIndex, GroupId.x);
+
+    SharedPos[Indices.IndexForSharedMem] = HairVertexPositions[Indices.GlobalVertexIndex];
+    GroupMemoryBarrierWithGroupSync();
+
+    for (uint i = 0; i < NumFollowersPerGuideHair; i++)
+    {
+        int GlobalFollowVertexIndex = Indices.GlobalVertexIndex + Indices.NumVerticesInTheStrand * (i + 1);
+        HairVertexPositionsPrev[GlobalFollowVertexIndex].xyz = HairVertexPositions[GlobalFollowVertexIndex].xyz;
+    }
+
+    return;
+}
+
+//--------------------------------------------------------------------------------------
+//
+//  GenerateTransforms
+//
+//  This was the method of fur in TressFX 3.x.  It may no longer work, and is not
+//  currently supported.  We're including it, because it should be possible to 
+//  get it working again without a whole lot of trouble, assuming the need arises.
+//
+//  In this TressFX 3.x method, each strand has a triangle index assigned on export from
+//  Maya.  It derives its transform from the post-skinned triangle.  The advantage of this 
+//  approach is that it can work independently of skinning method, blendshapes, etc. 
+//
+//  It relies on the triangle index being correct at runtime, though, which can be tricky.
+//  The engine would need to either maintain the original Maya triangles, or a mapping from
+//  the original Maya triangles to the runtime set.
+//
+//  It's also a bit more expensive, given that it must calculate a transform from the triangle.
+//
+//--------------------------------------------------------------------------------------
+#if USE_MESH_BASED_HAIR_TRANSFORM == 1
+	[numthreads(THREAD_GROUP_SIZE, 1, 1)]
+	void GenerateTransforms(uint GIndex : SV_GroupIndex,
+					  uint3 GId : SV_GroupID,
+					  uint3 DTid : SV_DispatchThreadID)
+	{
+		uint local_id, group_id, globalStrandIndex, numVerticesInTheStrand, globalRootVertexIndex, strandType;
+		CalcIndicesInStrandLevelMaster(GIndex, GId.x, globalStrandIndex, numVerticesInTheStrand, globalRootVertexIndex, strandType);
+
+		// get the index for the mesh triangle
+		uint triangleIndex = g_HairToMeshMapping[globalStrandIndex].triangleIndex * 3;
+
+		// get the barycentric coordinate for this hair strand
+		float a = g_HairToMeshMapping[globalStrandIndex].barycentricCoord[0];
+		float b = g_HairToMeshMapping[globalStrandIndex].barycentricCoord[1];
+		float c = g_HairToMeshMapping[globalStrandIndex].barycentricCoord[2];
+
+		// get the un-transformed triangle
+		float3 vert1 = MeshVertices[triangleIndex].xyz;
+		float3 vert2 = MeshVertices[triangleIndex+1].xyz;
+		float3 vert3 = MeshVertices[triangleIndex+2].xyz;
+
+		// get the transfomed (skinned) triangle
+		float3 skinnedVert1 = TransformedVerts[triangleIndex].xyz;
+		float3 skinnedVert2 = TransformedVerts[triangleIndex+1].xyz;
+		float3 skinnedVert3 = TransformedVerts[triangleIndex+2].xyz;
+
+		// calculate original hair position for the strand using the barycentric coordinate
+		//float3 Pos = mul(a, vert1) + mul (b, vert2) + mul(c, vert3);
+
+		// calculate the new hair position for the strand using the barycentric coordinate
+		float3 tfmPos = mul(a, skinnedVert1) + mul (b, skinnedVert2) + mul(c, skinnedVert3);
+		float3 InitialPos = InitialHairPositions[globalRootVertexIndex].xyz;
+
+		//-------------------------------------------------
+		// Calculate transformation matrix for the hair
+		//-------------------------------------------------
+
+		// create a coordinate system from the untransformed triangle
+		// Note: this part only needs to be done once. We could pre-calculate it
+		// for every hair and save it in a buffer.
+		float3 normal;
+		float3 Tangent = normalize(vert1 - vert3);
+		float3 tangent2 = vert2 - vert3;
+		normal = normalize(cross(Tangent, tangent2));
+		float3 binormal = normalize(cross(normal, Tangent));
+
+		row_major float4x4  triangleMtx;
+		triangleMtx._m00 = Tangent.x;   triangleMtx._m01 = Tangent.y;   triangleMtx._m02 = Tangent.z;   triangleMtx._m03 = 0;
+		triangleMtx._m10 = normal.x;    triangleMtx._m11 = normal.y;    triangleMtx._m12 = normal.z;    triangleMtx._m13 = 0;
+		triangleMtx._m20 = binormal.x;  triangleMtx._m21 = binormal.y;  triangleMtx._m22 = binormal.z;  triangleMtx._m23 = 0;
+		triangleMtx._m30 = 0;           triangleMtx._m31 = 0;           triangleMtx._m32 = 0;           triangleMtx._m33 = 1;
+
+		// create a coordinate system from the transformed triangle
+		Tangent = normalize(skinnedVert1 - skinnedVert3);
+		tangent2 = skinnedVert2 - skinnedVert3;
+		normal = normalize(cross(Tangent, tangent2));
+		binormal = normalize(cross(normal, Tangent));
+
+		row_major float4x4  tfmTriangleMtx;
+		tfmTriangleMtx._m00 = Tangent.x;   tfmTriangleMtx._m01 = Tangent.y;   tfmTriangleMtx._m02 = Tangent.z;   tfmTriangleMtx._m03 = 0;
+		tfmTriangleMtx._m10 = normal.x;    tfmTriangleMtx._m11 = normal.y;    tfmTriangleMtx._m12 = normal.z;    tfmTriangleMtx._m13 = 0;
+		tfmTriangleMtx._m20 = binormal.x;  tfmTriangleMtx._m21 = binormal.y;  tfmTriangleMtx._m22 = binormal.z;  tfmTriangleMtx._m23 = 0;
+		tfmTriangleMtx._m30 = 0;           tfmTriangleMtx._m31 = 0;           tfmTriangleMtx._m32 = 0;           tfmTriangleMtx._m33 = 1;
+
+		// Find the rotation transformation from the untransformed triangle to the transformed triangle
+		// rotation = inverse(triangleMtx) x tfmTriangleMtx = transpose(triangleMtx) x tfmTriangleMtx, since triangelMtx is orthonormal
+		row_major float4x4  rotationMtx =  mul(transpose(triangleMtx), tfmTriangleMtx);
+
+		// translation matrix from hair to origin since we want to rotate the hair at it's root
+		row_major float4x4  translationMtx;
+		translationMtx._m00 = 1;                translationMtx._m01 = 0;                translationMtx._m02 = 0;                translationMtx._m03 = 0;
+		translationMtx._m10 = 0;                translationMtx._m11 = 1;                translationMtx._m12 = 0;                translationMtx._m13 = 0;
+		translationMtx._m20 = 0;                translationMtx._m21 = 0;                translationMtx._m22 = 1;                translationMtx._m23 = 0;
+		translationMtx._m30 = -InitialPos.x;    translationMtx._m31 = -InitialPos.y;    translationMtx._m32 = -InitialPos.z;    translationMtx._m33 = 1;
+
+		// final rotation matrix
+		rotationMtx = mul(translationMtx, rotationMtx);
+
+		// translate back to the final position (as determined by the skinned mesh position)
+		translationMtx._m30 = tfmPos.x;    translationMtx._m31 = tfmPos.y;    translationMtx._m32 = tfmPos.z;    translationMtx._m33 = 1;
+
+		// combine the rotation and translation
+		row_major float4x4  tfmMtx = mul(rotationMtx, translationMtx);
+
+		// apply the global transformation for the model
+		//tfmMtx = mul(tfmMtx, g_ModelTransformForHead);
+
+	   // calculate the quaternion from the matrix
+		float4 quaternion;
+		quaternion.w = sqrt(1 + tfmMtx._m00 + tfmMtx._m11 + tfmMtx._m22) / 2;
+		quaternion.x = (tfmMtx._m21 - tfmMtx._m12)/( 4 * quaternion.w);
+		quaternion.y = (tfmMtx._m02 - tfmMtx._m20)/( 4 * quaternion.w);
+		quaternion.z = (tfmMtx._m10 - tfmMtx._m01)/( 4 * quaternion.w);
+
+		g_Transforms[globalStrandIndex].tfm = tfmMtx;
+		g_Transforms[globalStrandIndex].quat = quaternion;
+		return;
+	}
+#endif
+
+int MorphVertexCount;
+
+Buffer<int> MorphIndexBuffer;
+Buffer<float> MorphVertexBuffer;
+RWStructuredBuffer<float3> MorphPositionDeltaBuffer;
+
+[numthreads(256, 1, 1)]
+void CopyMorphDeltas(uint DispatchId : SV_DispatchThreadID)
+{
+    if (DispatchId >= MorphVertexCount)
+    {
+        return;
+    }
+
+    const uint SrcIndex = MorphIndexBuffer[DispatchId] * 6;
+
+    MorphPositionDeltaBuffer[DispatchId] = float3(
+		MorphVertexBuffer[SrcIndex],
+		MorphVertexBuffer[SrcIndex + 1],
+		MorphVertexBuffer[SrcIndex + 2]
+	);
+
+}

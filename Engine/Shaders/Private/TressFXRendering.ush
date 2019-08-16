@@ -1,0 +1,252 @@
+//---------------------------------------------------------------------------------------
+// Shader code related to lighting and shadowing for TressFX
+//-------------------------------------------------------------------------------------
+//
+// Copyright (c) 2017 Advanced Micro Devices, Inc. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+
+//Unreal Engine 4 integration written by Leon Rosengarten and Jacob Kostenick 2019
+#ifndef TRESS_FX_RENDERING_USH
+#define TRESS_FX_RENDERING_USH
+#include "TressFXCommon.ush"
+#include "Common.ush"
+
+#define AMD_PI 3.1415926
+#define AMD_e 2.71828183
+
+#define AMD_TRESSFX_KERNEL_SIZE 5
+
+#define TAME_FACTOR .07f
+
+
+struct HairShadeParams
+{
+    float3 cColor;
+    float fRadius;
+    float fSpacing;
+    float fAlpha;
+};
+
+
+// fDepthDistanceWS is the world space distance between the point on the surface and the point in the shadow map.
+// fFiberSpacing is the assumed, average, world space distance between hair fibers.
+// fFiberRadius in the assumed average hair radius.
+// fHairAlpha is the alpha value for the hair (in terms of translucency, not coverage.)
+// Output is a number between 0 (totally shadowed) and 1 (lets everything through)
+float ComputeShadowAttenuation(float fDepthDistanceWS, float fFiberSpacing, float fFiberRadius, float fHairAlpha)
+{
+    float numFibers = fDepthDistanceWS / (fFiberSpacing * fFiberRadius);
+
+    // if occluded by hair, there is at least one fiber
+    FLATTEN
+    if (fDepthDistanceWS > 1e-5)
+    {
+        numFibers = max(numFibers, 1);
+    }
+    return pow(abs(1 - fHairAlpha), numFibers);
+}
+
+float ComputeShadowAttenuation(float fDepthDistanceWS, HairShadeParams params)
+{
+    return ComputeShadowAttenuation(fDepthDistanceWS, params.fSpacing, params.fRadius, params.fAlpha);
+}
+
+
+float ComputeHairShadowAttenuation(float fDepthDistanceWS, float fFiberSpacing, float fFiberRadius, float fHairAlpha)
+{
+    float numFibers = fDepthDistanceWS / (fFiberSpacing * fFiberRadius);
+
+    fHairAlpha *= 0.5;
+
+    // if occluded by hair, there is at least one fiber
+    FLATTEN
+    if (fDepthDistanceWS > 1e-5)
+    {
+        numFibers = max(numFibers, 1);
+    }
+
+    return pow(abs(1 - fHairAlpha), numFibers);
+}
+
+
+float ComputeHairShadowAttenuation(float fDepthDistanceWS)
+{
+    return ComputeHairShadowAttenuation(fDepthDistanceWS, g_FiberRadius, g_FiberSpacing, .004);
+}
+
+
+// Returns a float3 which is the scale for diffuse, spec term, and colored spec term.
+//
+// The diffuse term is from Kajiya.
+// 
+// The spec term is what Marschner calls "R", reflecting directly off the surface of the hair, 
+// taking the color of the light like a dielectric specular term.  This highlight is shifted 
+// towards the root of the hair.
+//
+// The colored spec term is caused by light passing through the hair, bouncing off the back, and 
+// coming back out.  It therefore picks up the color of the light.  
+// Marschner refers to this term as the "TRT" term.  This highlight is shifted towards the 
+// tip of the hair.
+//
+// vEyeDir, vLightDir and vTangentDir are all pointing out.
+// coneAngleRadians explained below.
+//
+// 
+// hair has a tiled-conical shape along its lenght.  Sort of like the following.
+// 
+// \    /
+//  \  /
+// \    /
+//  \  /  
+//
+// The angle of the cone is the last argument, in radians.  
+// It's typically in the range of 5 to 10 degrees
+float3 TressFX_ComputeDiffuseSpecFactors(float3 eyeDir, float3 lightDir, float3 tangentDir, float Kd)
+{
+
+    float Ks1 = GetPrimarySpecularScale(); // specular intensity 1
+    float Ex1 = GetPrimarySpecularExponent(); // specular exponent 1
+    float Ks2 = GetSecondarySpecularScale(); //specular intensity 2
+    float Ex2 = GetSecondarySpecularExponent(); // specular exponent 2
+
+    float coneAngleRadians = 10.0f * PI / 180.0f;
+
+	// Kajiya's model
+    float cosTL = dot(tangentDir, lightDir);
+    float sinTL = sqrt(1.0f - cosTL * cosTL);
+    float diffuse = sinTL;
+
+    float cosTRL = -cosTL;
+    float sinTRL = sinTL;
+    float cosTE = dot(tangentDir, eyeDir);
+    float sinTE = sqrt(1.0f - cosTE * cosTE);
+
+	// Primary highlight
+    float primaryCosTRL = cosTRL * cos(2.0f * coneAngleRadians) - sinTRL * sin(2.0f * coneAngleRadians);
+    float primarySinTRL = sqrt(1.0f - primaryCosTRL * primaryCosTRL);
+    float primarySpecular = max(0.0f, primaryCosTRL * cosTE + primarySinTRL * sinTE);
+
+	// Secundary highlight
+    float secundaryCosTRL = cosTRL * cos(-3.0f * coneAngleRadians) - sinTRL * sin(-3.0f * coneAngleRadians);
+    float secundarySinTRL = sqrt(1.0f - secundaryCosTRL * secundaryCosTRL);
+    float secundarySpecular = max(0.0f, secundaryCosTRL * cosTE + secundarySinTRL * sinTE);
+
+
+    float3 diffuseSpecular = float3(Kd * diffuse, Ks1 * pow(primarySpecular, Ex1), Ks2 * pow(secundarySpecular, Ex2));
+	// from confetti sample: Reduce light intensity to account for extremely bright lights used in PBR
+	// https://github.com/ConfettiFX/The-Forge#6-material-playground
+    diffuseSpecular *= TAME_FACTOR;
+    return diffuseSpecular;
+}
+
+//--------------------------------------------------------------------------------------
+// ComputeCoverage
+//
+// Calculate the pixel coverage of a hair strand by computing the hair width
+//--------------------------------------------------------------------------------------
+float ComputeCoverage(float2 p0, float2 p1, float2 pixelLoc, float2 winSize, float sceneDepthZ)
+{
+    // p0, p1, pixelLoc are in d3d clip space (-1 to 1)x(-1 to 1)
+
+    // Scale positions so 1.f = half pixel width
+    p0 *= winSize;
+    p1 *= winSize;
+    pixelLoc *= winSize;
+
+    float p0dist = length(p0 - pixelLoc);
+    float p1dist = length(p1 - pixelLoc);
+    float hairWidth = length(p0 - p1);
+
+    // will be 1.f if pixel outside hair, 0.f if pixel inside hair
+	// step will return 1 if the hairwidth is greater than the dist
+    float outside = any(float2(step(hairWidth, p0dist), step(hairWidth, p1dist)));
+
+    // if outside, set sign to -1, else set sign to 1
+    float sign = outside > 0.f ? -1.f : 1.f;
+
+    // signed distance (positive if inside hair, negative if outside hair)
+    float relDist = sign * saturate(min(p0dist, p1dist));
+
+	// returns coverage based on the relative distance
+	// 0, if completely outside hair edge
+	// 1, if completely inside hair edge
+
+	return (relDist + 1.f) * 0.5f;
+}
+
+float PoissonSampleFloat(float2 UVs, float Radius, float2 TexelSize, Texture2D Tex, SamplerState Sampler)
+{
+    const float2 vPoisson[11] =
+    {
+        float2(0, 0),
+		float2((0.079928 - 0.5) * 2, (0.995178 - 0.5) * 2),
+		float2((0.120334 - 0.5) * 2, (0.710807 - 0.5) * 2),
+		float2((0.186102 - 0.5) * 2, (0.400647 - 0.5) * 2),
+		float2((0.386639 - 0.5) * 2, (0.992065 - 0.5) * 2),
+		float2((0.448134 - 0.5) * 2, (0.469771 - 0.5) * 2),
+		float2((0.620014 - 0.5) * 2, (0.666311 - 0.5) * 2),
+		float2((0.719260 - 0.5) * 2, (0.385296 - 0.5) * 2),
+		float2((0.720695 - 0.5) * 2, (0.990722 - 0.5) * 2),
+		float2((0.888516 - 0.5) * 2, (0.187658 - 0.5) * 2),
+		float2((0.890286 - 0.5) * 2, (0.591052 - 0.5) * 2)
+    };
+    const int NumSamples = 11;
+    float TotalWeight = 0;
+    float4 Value = 0;
+    for (int iSample = 0; iSample < NumSamples; ++iSample)
+    {
+        TotalWeight += 1.0f;
+        Value += Texture2DSampleLevel(Tex, Sampler, UVs + (TexelSize * vPoisson[iSample] * Radius.xx), 0).r;
+    }
+    Value = Value / TotalWeight;
+    return Value;
+}
+
+
+float4 PoissonSampleFloat4(float2 UVs, float Radius, float2 TexelSize, Texture2D Tex, SamplerState Sampler)
+{
+    const float2 vPoisson[11] =
+    {
+        float2(0, 0),
+		float2((0.079928 - 0.5) * 2, (0.995178 - 0.5) * 2),
+		float2((0.120334 - 0.5) * 2, (0.710807 - 0.5) * 2),
+		float2((0.186102 - 0.5) * 2, (0.400647 - 0.5) * 2),
+		float2((0.386639 - 0.5) * 2, (0.992065 - 0.5) * 2),
+		float2((0.448134 - 0.5) * 2, (0.469771 - 0.5) * 2),
+		float2((0.620014 - 0.5) * 2, (0.666311 - 0.5) * 2),
+		float2((0.719260 - 0.5) * 2, (0.385296 - 0.5) * 2),
+		float2((0.720695 - 0.5) * 2, (0.990722 - 0.5) * 2),
+		float2((0.888516 - 0.5) * 2, (0.187658 - 0.5) * 2),
+		float2((0.890286 - 0.5) * 2, (0.591052 - 0.5) * 2)
+    };
+    const int NumSamples = 11;
+    float TotalWeight = 0;
+    float4 Value = 0;
+    for (int iSample = 0; iSample < NumSamples; ++iSample)
+    {
+        TotalWeight += 1.0f;
+        Value += Texture2DSampleLevel(Tex, Sampler, UVs + (TexelSize * vPoisson[iSample] * Radius.xx), 0).rgba;
+    }
+    Value = Value / TotalWeight;
+    return Value;
+}
+
+#endif
