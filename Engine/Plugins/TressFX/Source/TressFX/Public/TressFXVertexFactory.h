@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "ShaderParameters.h"
 #include "Components.h"
+#include "SceneManagement.h"
 #include "VertexFactory.h"
 #include "TressFXTypes.h"
 
@@ -64,7 +65,7 @@ public:
 		const FSceneInterface* Scene,
 		const FSceneView* View,
 		const FMeshMaterialShader* Shader,
-		bool bShaderRequiresPositionOnlyStream,
+		const EVertexInputStreamType InputStreamType,
 		ERHIFeatureLevel::Type FeatureLevel,
 		const FVertexFactory* VertexFactory,
 		const FMeshBatchElement& BatchElement,
