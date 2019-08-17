@@ -79,6 +79,10 @@ struct FMeshBatchElement
 	uint32 BaseVertexIndex;
 	uint32 MinVertexIndex;
 	uint32 MaxVertexIndex;
+	/*@third party code - BEGIN TressFX*/
+	uint32 NumIndices;
+	/*@third party code - END TressFX*/
+
 	// Meaning depends on the vertex factory, e.g. FGPUSkinPassthroughVertexFactory: element index in FGPUSkinCache::CachedElements
 	void* VertexFactoryUserData;
 	int32 UserIndex;
@@ -212,6 +216,10 @@ struct FMeshBatch
 	/** Whether the mesh batch should apply dithered LOD. */
 	uint32 bDitheredLODTransition : 1;
 
+	/*@third party code - BEGIN TressFX*/
+	uint32 bTressFX : 1;
+	/*@third party code - END TressFX*/
+
 	/** Whether the mesh batch can be rendered to virtual textures. */
 	uint32 bRenderToVirtualTexture : 1;
 	/** What virtual texture material type this mesh batch should be rendered with. */
@@ -317,6 +325,9 @@ struct FMeshBatch
 	,	bSelectable(true)
 	,	bRequiresPerElementVisibility(false)
 	,	bDitheredLODTransition(false)
+		/*@third party code - BEGIN TressFX*/
+	, bTressFX(false)
+		/*@third party code - END TressFX*/
 	,	bRenderToVirtualTexture(false)
 	,	RuntimeVirtualTextureMaterialType(0)
 	,	LCI(NULL)

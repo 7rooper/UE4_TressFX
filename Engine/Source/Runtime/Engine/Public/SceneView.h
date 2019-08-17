@@ -559,6 +559,10 @@ enum ETranslucencyVolumeCascade
 	TVC_MAX,
 };
 
+/*@third party code - BEGIN TressFX*/
+	//Added PrevClipToTranslatedWorld
+/*@third party code - END TressFX*/
+
 // View uniform buffer member declarations
 #define VIEW_UNIFORM_BUFFER_MEMBER_TABLE \
 	VIEW_UNIFORM_BUFFER_MEMBER(FMatrix, TranslatedWorldToClip) \
@@ -572,6 +576,7 @@ enum ETranslucencyVolumeCascade
 	VIEW_UNIFORM_BUFFER_MEMBER(FMatrix, ViewToClipNoAA) \
 	VIEW_UNIFORM_BUFFER_MEMBER(FMatrix, ClipToView) \
 	VIEW_UNIFORM_BUFFER_MEMBER(FMatrix, ClipToTranslatedWorld) \
+	VIEW_UNIFORM_BUFFER_MEMBER(FMatrix, PrevClipToTranslatedWorld) \
 	VIEW_UNIFORM_BUFFER_MEMBER(FMatrix, SVPositionToTranslatedWorld) \
 	VIEW_UNIFORM_BUFFER_MEMBER(FMatrix, ScreenToWorld) \
 	VIEW_UNIFORM_BUFFER_MEMBER(FMatrix, ScreenToTranslatedWorld) \

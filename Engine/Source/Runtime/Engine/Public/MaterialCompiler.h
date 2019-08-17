@@ -321,6 +321,11 @@ public:
 	virtual int32 CustomPrimitiveData(int32 OutputIndex, EMaterialValueType Type) = 0;
 	virtual int32 ShadingModel(EMaterialShadingModel InSelectedShadingModel) = 0;
 
+	/*@third party code - BEGIN TressFX*/
+	virtual int32 GetHairTangent() = 0;
+	virtual int32 GetStrandUV() = 0;
+	/*@third party code - END TressFX*/
+
 
 	virtual int32 MapARPassthroughCameraUV(int32 UV) = 0;
 	// The compiler can run in a different state and this affects caching of sub expression, Expressions are different (e.g. View.PrevWorldViewOrigin) when using previous frame's values
@@ -613,6 +618,18 @@ public:
 	{
 		return Compiler->EyeAdaptation();
 	}
+
+	/*@third party code - BEGIN TressFX*/
+	virtual int32 GetHairTangent() override
+	{
+		return Compiler->GetHairTangent();
+	}
+
+	virtual int32 GetStrandUV() override
+	{
+		return Compiler->GetStrandUV();
+	}
+	/*@third party code - END TressFX*/
 
 	virtual bool IsDevelopmentFeatureEnabled(const FName& FeatureName) const override
 	{

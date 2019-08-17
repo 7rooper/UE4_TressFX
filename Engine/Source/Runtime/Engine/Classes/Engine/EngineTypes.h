@@ -472,6 +472,9 @@ enum EMaterialShadingModel
 	MSM_Hair					UMETA(DisplayName="Hair"),
 	MSM_Cloth					UMETA(DisplayName="Cloth"),
 	MSM_Eye						UMETA(DisplayName="Eye"),
+	/*@third party code - BEGIN TressFX*/
+	MSM_TressFX					UMETA(DisplayName = "TressFX"),
+	/*@third party code - END TressFX*/
 	/** Number of unique shading models. */
 	MSM_NUM						UMETA(Hidden),
 	/** Shading model will be determined by the Material Expression Graph,

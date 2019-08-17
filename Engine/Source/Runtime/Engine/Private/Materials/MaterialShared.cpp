@@ -1174,6 +1174,13 @@ bool FMaterialResource::IsUsedWithAPEXCloth() const
 	return Material->bUsedWithClothing;
 }
 
+/*@third party code - BEGIN TressFX*/
+bool FMaterialResource::IsUsedWithTressFX() const
+{
+	return Material->bUsedWithTressFX;
+}
+/*@third party code - END TressFX*/
+
 EMaterialTessellationMode FMaterialResource::GetTessellationMode() const 
 { 
 	return (EMaterialTessellationMode)Material->D3D11TessellationMode; 
@@ -1335,6 +1342,13 @@ float FMaterialResource::GetTranslucentShadowStartOffset() const { return Materi
 float FMaterialResource::GetRefractionDepthBiasValue() const { return Material->RefractionDepthBias; }
 float FMaterialResource::GetMaxDisplacement() const { return Material->MaxDisplacement; }
 bool FMaterialResource::ShouldApplyFogging() const {return Material->bUseTranslucencyVertexFog;}
+/*@third party code - BEGIN TressFX*/
+bool FMaterialResource::TressFXShouldRenderVelocity() const { return Material->bTressFXRenderVelocity; }
+bool FMaterialResource::TressFXApproximateDeepShadow() const { return Material->bTressFXApproximateDeepShadow; }
+bool FMaterialResource::TressFXAttenuateShadowByAlpha() const { return Material->bTressFXAttenuateShadowByAlpha; }
+bool FMaterialResource::TressFXEnableGlint() const { return Material->bTressFXEnableGlint; }
+bool FMaterialResource::TressFXEnableRectLights() const { return Material->bTressFXEnableRectLights; }
+/*@third party code - END TressFX*/
 bool FMaterialResource::ComputeFogPerPixel() const {return Material->bComputeFogPerPixel;}
 FString FMaterialResource::GetFriendlyName() const { return *GetNameSafe(Material); } //avoid using the material instance name here, we want materials that share a shadermap to also share a friendly name.
 

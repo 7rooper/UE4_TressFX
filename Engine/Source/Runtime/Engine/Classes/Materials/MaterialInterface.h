@@ -52,6 +52,9 @@ enum EMaterialUsage
 	MATUSAGE_NiagaraRibbons,
 	MATUSAGE_NiagaraMeshParticles,
 	MATUSAGE_GeometryCache,
+	/*@third party code - BEGIN TressFX*/
+	MATUSAGE_TressFX,
+	/*@third party code - END TressFX*/
 
 	MATUSAGE_MAX,
 };
@@ -78,6 +81,9 @@ struct ENGINE_API FMaterialRelevance
 	uint8 bUsesSceneDepth : 1;
 	uint8 bHasVolumeMaterialDomain : 1;
 	uint8 bUsesDistanceCullFade : 1;
+	/*@third party code - BEGIN TressFX*/
+	uint8 bTressFX : 1;
+	/*@third party code - END TressFX*/
 
 	/** Default constructor */
 	FMaterialRelevance()

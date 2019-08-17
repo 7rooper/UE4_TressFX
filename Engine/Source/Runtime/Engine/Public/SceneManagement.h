@@ -1314,6 +1314,9 @@ public:
 	inline bool HasStaticLighting() const { return bStaticLighting; }
 	inline bool HasStaticShadowing() const { return bStaticShadowing; }
 	inline bool CastsDynamicShadow() const { return bCastDynamicShadow; }
+	/*@third party code - BEGIN TressFX*/
+	inline bool CastsTressFXDynamicShadow() const { return bCastDynamicShadow && bCastTressFXDynamicShadows; }
+	/*@third party code - END TressFX*/
 	inline bool CastsStaticShadow() const { return bCastStaticShadow; }
 	inline bool CastsTranslucentShadows() const { return bCastTranslucentShadows; }
 	inline bool CastsVolumetricShadow() const { return bCastVolumetricShadow; }
@@ -1468,6 +1471,10 @@ protected:
 
 	/** True if the light casts dynamic shadows. */
 	const uint8 bCastDynamicShadow : 1;
+
+	/*@third party code - BEGIN TressFX*/
+	const uint8 bCastTressFXDynamicShadows : 1;
+	/*@third party code - END TressFX*/
 
 	/** True if the light casts static shadows. */
 	const uint8 bCastStaticShadow : 1;

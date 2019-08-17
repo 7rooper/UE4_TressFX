@@ -144,6 +144,9 @@ FPrimitiveSceneProxy::FPrimitiveSceneProxy(const UPrimitiveComponent* InComponen
 ,	CustomDepthStencilValue(InComponent->CustomDepthStencilValue)
 ,	CustomDepthStencilWriteMask(FRendererStencilMaskEvaluation::ToStencilMask(InComponent->CustomDepthStencilWriteMask))
 ,	LightingChannelMask(GetLightingChannelMaskForStruct(InComponent->LightingChannels))
+	/*@third party code - BEGIN TressFX*/
+,	bIsTressFX(false)
+	/*@third party code - END TressFX*/
 ,	IndirectLightingCacheQuality(InComponent->IndirectLightingCacheQuality)
 ,	LpvBiasMultiplier(InComponent->LpvBiasMultiplier)
 ,	DynamicIndirectShadowMinVisibility(0)

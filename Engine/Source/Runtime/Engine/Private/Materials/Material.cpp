@@ -154,7 +154,11 @@ int32 FMaterialResource::CompilePropertyAndSetMaterialProperty(EMaterialProperty
 		case MP_OpacityMask:
 			// Force basic opaque surfaces to skip masked/translucent-only attributes.
 			// Some features can force the material to create a masked variant which unintentionally runs this dormant code
-			if (GetMaterialDomain() != MD_Surface || GetBlendMode() != BLEND_Opaque || (GetShadingModels().IsLit() && !GetShadingModels().HasShadingModel(MSM_DefaultLit)))
+			if (GetMaterialDomain() != MD_Surface || GetBlendMode() != BLEND_Opaque || (GetShadingModels().IsLit() && !GetShadingModels().HasShadingModel(MSM_DefaultLit))
+				/*@third party code - BEGIN TressFX*/
+				|| IsUsedWithTressFX()
+				/*@third party code - END TressFX*/
+				)
 			{
 				Ret = MaterialInterface->CompileProperty(Compiler, Property);
 			}
@@ -893,6 +897,14 @@ UMaterial::UMaterial(const FObjectInitializer& ObjectInitializer)
 
 	bIsPreviewMaterial = false;
 	bIsFunctionPreviewMaterial = false;
+
+	/*@third party code - BEGIN TressFX*/
+	bTressFXRenderVelocity = true;
+	bTressFXApproximateDeepShadow = false;
+	bTressFXAttenuateShadowByAlpha = false;
+	bTressFXEnableGlint = false;
+	bTressFXEnableRectLights = false;
+	/*@third party code - END TressFX*/
 }
 
 void UMaterial::PreSave(const class ITargetPlatform* TargetPlatform)
@@ -1261,6 +1273,9 @@ bool UMaterial::GetUsageByFlag(EMaterialUsage Usage) const
 		case MATUSAGE_GeometryCollections: UsageValue = bUsedWithGeometryCollections; break;
 		case MATUSAGE_Clothing: UsageValue = bUsedWithClothing; break;
 		case MATUSAGE_GeometryCache: UsageValue = bUsedWithGeometryCache; break;
+			/*@third party code - BEGIN TressFX*/
+		case MATUSAGE_TressFX: UsageValue = bUsedWithTressFX; break;
+			/*@third party code - END TressFX*/
 		default: UE_LOG(LogMaterial, Fatal,TEXT("Unknown material usage: %u"), (int32)Usage);
 	};
 	return UsageValue;
@@ -1391,6 +1406,12 @@ void UMaterial::SetUsageByFlag(EMaterialUsage Usage, bool NewValue)
 		{
 			bUsedWithGeometryCache = NewValue; break;
 		}
+		/*@third party code - BEGIN TressFX*/
+		case MATUSAGE_TressFX:
+		{
+			bUsedWithTressFX = NewValue; break;
+		}
+		/*@third party code - END TressFX*/
 		default: UE_LOG(LogMaterial, Fatal,TEXT("Unknown material usage: %u"), (int32)Usage);
 	};
 #if WITH_EDITOR
@@ -1418,6 +1439,9 @@ FString UMaterial::GetUsageName(EMaterialUsage Usage) const
 		case MATUSAGE_GeometryCollections: UsageName = TEXT("bUsedWithGeometryCollections"); break;
 		case MATUSAGE_Clothing: UsageName = TEXT("bUsedWithClothing"); break;
 		case MATUSAGE_GeometryCache: UsageName = TEXT("bUsedWithGeometryCache"); break;
+			/*@third party code - BEGIN TressFX*/
+		case MATUSAGE_TressFX: UsageName = TEXT("bUsedWithTressFX"); break;
+			/*@third party code - END TressFX*/
 		default: UE_LOG(LogMaterial, Fatal,TEXT("Unknown material usage: %u"), (int32)Usage);
 	};
 	return UsageName;
@@ -3944,6 +3968,24 @@ bool UMaterial::CanEditChange(const UProperty* InProperty) const
 	{
 		FString PropertyName = InProperty->GetName();
 
+		/*@third party code - BEGIN TressFX*/
+		if (
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXRenderVelocity) ||
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXAttenuateShadowByAlpha) ||
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXApproximateDeepShadow) ||
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXEnableGlint) ||
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXEnableRectLights)
+			)
+		{
+			return bUsedWithTressFX;
+		}
+
+		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, MaterialDomain))
+		{
+			return !bUsedWithTressFX;
+		}
+		/*@third party code - END TressFX*/
+
 		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, PhysMaterial))
 		{
 			return MaterialDomain == MD_Surface;
@@ -4143,6 +4185,29 @@ void UMaterial::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 	{
 		bRequiresCompilation = false;
 	}
+
+	/*@third party code - BEGIN TressFX*/
+	// i dont remember writing this but im sure i had a reason...
+	const FName Name = PropertyThatChanged ? PropertyThatChanged->GetFName() : NAME_None;
+	if (Name == GET_MEMBER_NAME_CHECKED(UMaterial, ShadingModel))
+	{
+		UByteProperty* EnumProp = Cast<UByteProperty>(PropertyThatChanged);
+		if (EnumProp)
+		{
+			void* Value = PropertyThatChanged->ContainerPtrToValuePtr<uint8>(this);
+			EnumProp->GetSignedIntPropertyValue(Value);
+			if (Value)
+			{
+				int32* IntValue = (int32*)Value;
+				if (IntValue && *IntValue == EMaterialShadingModel::MSM_TressFX)
+				{
+					this->bUsedWithTressFX = true;
+					bRequiresCompilation = true;
+				}
+			}
+		}
+	}
+	/*@third party code - END TressFX*/
 	
 	if (bRequiresCompilation)
 	{
@@ -5702,7 +5767,11 @@ static bool IsPropertyActive_Internal(EMaterialProperty InProperty,
 	bool bBlendableOutputAlpha,
 	bool bHasTessellation,
 	bool bHasRefraction,
-	bool bUsesShadingModelFromMaterialExpression)
+	bool bUsesShadingModelFromMaterialExpression
+	/*@third party code - BEGIN TressFX*/
+	, bool bTressFX = false
+	/*@third party code - END TressFX*/
+)
 {
 	if (Domain == MD_PostProcess)
 	{
@@ -5895,6 +5964,12 @@ static bool IsPropertyActive_Internal(EMaterialProperty InProperty,
 		{
 			Active = true;
 		}
+		/*@third party code - BEGIN TressFX*/
+		if (bTressFX)
+		{
+			Active = true;
+		}
+		/*@third party code - END TressFX*/
 		break;
 	case MP_OpacityMask:
 		Active = BlendMode == BLEND_Masked;
@@ -5968,7 +6043,11 @@ bool UMaterial::IsPropertyActiveInEditor(EMaterialProperty InProperty) const
 		BlendableOutputAlpha,
 		D3D11TessellationMode != MTM_NoTessellation,
 		Refraction.IsConnected(),
-		IsShadingModelFromMaterialExpression());
+		IsShadingModelFromMaterialExpression()
+		/*@third party code - BEGIN TressFX*/
+		, bUsedWithTressFX
+		/*@third party code - END TressFX*/
+	);
 }
 #endif // WITH_EDITOR
 
@@ -5983,7 +6062,11 @@ bool UMaterial::IsPropertyActiveInDerived(EMaterialProperty InProperty, const UM
 		BlendableOutputAlpha,
 		D3D11TessellationMode != MTM_NoTessellation,
 		Refraction.IsConnected(),
-		DerivedMaterial->IsShadingModelFromMaterialExpression());
+		DerivedMaterial->IsShadingModelFromMaterialExpression()
+		/*@third party code - BEGIN TressFX*/
+		, DerivedMaterial->GetMaterial()->bUsedWithTressFX
+		/*@third party code - END TressFX*/
+	);
 }
 
 #if WITH_EDITORONLY_DATA

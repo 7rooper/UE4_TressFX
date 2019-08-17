@@ -725,6 +725,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Usage)
 	uint32 bUsedWithClothing:1;
 
+	/*@third party code - BEGIN TressFX*/
+
+	/**
+	* Indicates that the material and its instances can be use with TressFX Hair
+	* This will result in the shaders required to support TressFX being compiled which will increase shader compile time and memory usage.
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Usage)
+		uint32 bUsedWithTressFX : 1;
+
+	/*@third party code - END TressFX*/
+
 	/** 
 	 * Indicates that the material and its instances can be used with Slate UI and UMG
 	 * This will result in the shaders required to support UI materials being compiled which will increase shader compile time and memory usage.
@@ -848,6 +859,30 @@ public:
 	/** when true, the material attributes pin is used instead of the regular pins. */
 	UPROPERTY(EditAnywhere, Category=Material)
 	uint32 bUseMaterialAttributes:1;
+
+	/*@third party code - BEGIN TressFX*/
+
+	/** Render Hair velocity into UE4's Velocity buffer. This is requried for temporal AA, motion blur etc. But could save on performance in some situations. */
+	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Render Hair Velocity"))
+	uint32 bTressFXRenderVelocity : 1;
+
+	/** Helps smooth out shadows when using shadow mapping, but loses some detail */
+	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Attenuate Shadow by alpha"))
+	uint32 bTressFXAttenuateShadowByAlpha : 1;
+
+	/** Enable glint calculations. Params can be set in the TressFXComponent */
+	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Enable Glint"))
+	uint32 bTressFXEnableGlint : 1;
+
+	/** Support Rect lights. */
+	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Enable Rect Lights on Hair"))
+	uint32 bTressFXEnableRectLights : 1;
+
+	/** use the "aproximate deep shadow" method for shadowing instead of shadow maps, this doesnt allow for shadow receiving from objects. Use "Self Shadow Strength" on the tressfx component to determine how strong this is. */
+	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Approximate Deep Shadow"))
+	uint32 bTressFXApproximateDeepShadow : 1;
+
+	/*@third party code - END TressFX*/
 
 	/** when true, the material casts ray tracing shadows. */
 	UPROPERTY(EditAnywhere, Category = Material)

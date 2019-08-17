@@ -361,6 +361,15 @@ enum EStencilMask
 	SM_Count
 };
 
+/*@third party code - BEGIN TressFX*/
+enum EDepthWriteMask
+{
+	DWM_Default,
+	DWM_All,
+	DWM_Zero
+};
+/*@third party code - END TressFX*/
+
 enum EStencilOp
 {
 	SO_Keep,

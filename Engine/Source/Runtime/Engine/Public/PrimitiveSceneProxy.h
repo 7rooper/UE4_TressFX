@@ -482,6 +482,9 @@ public:
 	inline bool WantsSelectionOutline() const { return bWantsSelectionOutline; }
 	inline bool ShouldRenderCustomDepth() const { return bRenderCustomDepth; }
 	inline uint8 GetCustomDepthStencilValue() const { return CustomDepthStencilValue; }
+	/*@third party code - BEGIN TressFX*/
+	inline bool IsTressFX() const { return bIsTressFX; }
+	/*@third party code - END TressFX*/
 	inline EStencilMask GetStencilWriteMask() const { return CustomDepthStencilWriteMask; }
 	inline uint8 GetLightingChannelMask() const { return LightingChannelMask; }
 	inline uint8 GetLightingChannelStencilValue() const 
@@ -974,6 +977,10 @@ private:
 	uint8 LightingChannelMask;
 
 protected:
+
+	/*@third party code - BEGIN TressFX*/
+	uint8 bIsTressFX : 1;
+	/*@third party code - END TressFX*/
 
 	/** Quality of interpolated indirect lighting for Movable components. */
 	TEnumAsByte<EIndirectLightingCacheQuality> IndirectLightingCacheQuality;

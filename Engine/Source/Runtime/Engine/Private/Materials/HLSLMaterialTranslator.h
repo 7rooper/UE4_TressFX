@@ -1388,6 +1388,10 @@ ResourcesString = TEXT("");
 		OutEnvironment.SetDefine(TEXT("MATERIAL_COMPUTE_FOG_PER_PIXEL"), Material->ComputeFogPerPixel());
 		OutEnvironment.SetDefine(TEXT("MATERIAL_FULLY_ROUGH"), bIsFullyRough || Material->IsFullyRough());
 
+		/*@third party code - BEGIN TressFX*/
+		OutEnvironment.SetDefine(TEXT("USED_WITH_TRESSFX"), Material->IsUsedWithTressFX());
+		/*@third party code - END TressFX*/
+
 		// Count the number of VTStacks (each stack will allocate a feedback slot)
 		OutEnvironment.SetDefine(TEXT("NUM_VIRTUALTEXTURE_SAMPLES"), VTStacks.Num());
 
@@ -1475,6 +1479,13 @@ ResourcesString = TEXT("");
 				OutEnvironment.SetDefine(TEXT("MATERIAL_SHADINGMODEL_EYE"), TEXT("1"));
 				NumSetMaterials++;
 			}
+			/*@third party code - BEGIN TressFX*/
+			if (ShadingModels.HasShadingModel(MSM_TressFX))
+			{
+				OutEnvironment.SetDefine(TEXT("MATERIAL_SHADINGMODEL_TRESSFX"), TEXT("1"));
+				NumSetMaterials++;
+			}
+			/*@third party code - END TressFX*/
 
 			if (NumSetMaterials == 1)
 			{
@@ -6764,6 +6775,18 @@ protected:
 			return AddInlinedCodeChunk(MCT_Float, TEXT("GetPerInstanceFadeAmount(Parameters)"));
 		}
 	}
+
+	/*@third party code - BEGIN TressFX*/
+	virtual int32 GetHairTangent() override
+	{
+		return AddInlinedCodeChunk(MCT_Float4, TEXT("GetTressFXHairTangent(Parameters)"));
+	}
+
+	virtual int32 GetStrandUV() override
+	{
+		return AddInlinedCodeChunk(MCT_Float2, TEXT("GetTressFXStrandUV(Parameters)"));
+	}
+	/*@third party code - END TressFX*/
 
 	/**
 	 * Returns a float2 texture coordinate after 2x2 transform and offset applied

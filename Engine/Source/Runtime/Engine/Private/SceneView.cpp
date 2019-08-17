@@ -2278,6 +2278,9 @@ void FSceneView::SetupCommonViewUniformBufferParameters(
 	// therefore is same as previous camera world origin.
 	ViewUniformShaderParameters.PrevWorldViewOrigin = ViewUniformShaderParameters.PrevWorldCameraOrigin;
 	ViewUniformShaderParameters.PrevPreViewTranslation = InPrevViewMatrices.GetPreViewTranslation();
+	/*@third party code - BEGIN TressFX*/
+	ViewUniformShaderParameters.PrevClipToTranslatedWorld = InPrevViewMatrices.GetInvTranslatedViewProjectionMatrix();
+	/*@third party code - END TressFX*/
 	// can be optimized
 	ViewUniformShaderParameters.PrevInvViewProj = InPrevViewMatrices.GetInvViewProjectionMatrix();
 	ViewUniformShaderParameters.GlobalClippingPlane = FVector4(GlobalClippingPlane.X, GlobalClippingPlane.Y, GlobalClippingPlane.Z, -GlobalClippingPlane.W);

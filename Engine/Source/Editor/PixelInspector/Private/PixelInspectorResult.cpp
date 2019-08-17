@@ -233,6 +233,10 @@ namespace PixelInspector
 			return EMaterialShadingModel::MSM_Cloth;
 		case PIXEL_INSPECTOR_SHADINGMODELID_EYE:
 			return EMaterialShadingModel::MSM_Eye;
+			/*@third party code - BEGIN TressFX*/
+		case PIXEL_INSPECTOR_SHADINGMODELID_TRESSFX:
+			return EMaterialShadingModel::MSM_TressFX;
+			/*@third party code - END TressFX*/
 		};
 		return EMaterialShadingModel::MSM_DefaultLit;
 	}
