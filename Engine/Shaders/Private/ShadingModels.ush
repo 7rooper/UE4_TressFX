@@ -947,6 +947,10 @@ FDirectLighting IntegrateBxDF( FGBufferData GBuffer, half3 N, half3 V, half3 L, 
 			return ClothBxDF( GBuffer, N, V, L, Falloff, NoL, AreaLight, Shadow );
 		case SHADINGMODELID_EYE:
 			return EyeBxDF( GBuffer, N, V, L, Falloff, NoL, AreaLight, Shadow );
+		/*@third party code - BEGIN TressFX*/
+        case SHADINGMODELID_TRESSFX:
+            return HairBxDF(GBuffer, N, V, L, Falloff, NoL, AreaLight, Shadow);
+		/*@third party code - END TressFX*/
 		default:
 			return (FDirectLighting)0;
 	}

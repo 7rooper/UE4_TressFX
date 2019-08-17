@@ -433,7 +433,7 @@ void MainPS(in noperspective float4 UVAndScreenPos : TEXCOORD0, float4 SvPositio
 	{
 		NonSpecularContribution = 0;
 
-		BRANCH if( GBuffer.ShadingModelID == SHADINGMODELID_HAIR )
+		BRANCH if( GBuffer.ShadingModelID == SHADINGMODELID_HAIR /*@third party code - BEGIN TressFX*/ || GBuffer.ShadingModelID == SHADINGMODELID_TRESSFX /*@third party code - END TressFX*/)
 		{
 			SpecularContribution = ImageBasedLightingHair( GBuffer, -ScreenVector, GBuffer.WorldNormal, Random );
 		}

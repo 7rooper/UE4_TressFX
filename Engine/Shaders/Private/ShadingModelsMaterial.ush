@@ -142,6 +142,16 @@ void SetGBufferForShadingModel(
 		GBuffer.CustomData.z = saturate( GetMaterialCustomData0(MaterialParameters) );	// Backlit
 	}
 #endif
+/*@third party code - BEGIN TressFX*/
+#if MATERIAL_SHADINGMODEL_TRESSFX
+	else if (ShadingModel == SHADINGMODELID_TRESSFX)
+	{
+		//logic here currently the same as MATERIAL_SHADINGMODEL_HAIR
+		GBuffer.CustomData.xy = UnitVectorToOctahedron( MaterialParameters.WorldNormal ) * 0.5 + 0.5;
+		GBuffer.CustomData.z = saturate( GetMaterialCustomData0(MaterialParameters) );	// Backlit
+	}
+#endif
+/*@third party code - END TressFX*/
 #if MATERIAL_SHADINGMODEL_CLOTH
 	else if (ShadingModel == SHADINGMODELID_CLOTH)
 	{

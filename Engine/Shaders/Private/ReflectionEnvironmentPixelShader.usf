@@ -137,7 +137,7 @@ float3 SkyLightDiffuse(FGBufferData GBuffer, float AmbientOcclusion, float2 Buff
 	}
 
 	BRANCH
-	if (GBuffer.ShadingModelID == SHADINGMODELID_HAIR)
+	if (GBuffer.ShadingModelID == SHADINGMODELID_HAIR /*@third party code - BEGIN TressFX*/ && GBuffer.ShadingModelID == SHADINGMODELID_TRESSFX /*@third party code - END TressFX*/)
 	{
 		float3 N = GBuffer.WorldNormal;
 		float3 V = -normalize(mul(float4(ScreenPosition, 1, 0), View.ScreenToWorld).xyz);
@@ -337,7 +337,7 @@ void ReflectionEnvironmentSkyLighting(
 	#endif
 
 	BRANCH
-	if (ShadingModelID != SHADINGMODELID_UNLIT && ShadingModelID != SHADINGMODELID_HAIR)
+	if (ShadingModelID != SHADINGMODELID_UNLIT && ShadingModelID != SHADINGMODELID_HAIR /*@third party code - BEGIN TressFX*/ && GBuffer.ShadingModelID != SHADINGMODELID_TRESSFX /*@third party code - END TressFX*/)
 	{
 		OutColor.xyz += ReflectionEnvironment(GBuffer, AmbientOcclusion, BufferUV, ScreenPosition, SvPosition, BentNormal);
 	}

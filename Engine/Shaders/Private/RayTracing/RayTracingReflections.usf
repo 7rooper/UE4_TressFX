@@ -201,7 +201,7 @@ void RayTracingReflectionsRGS()
 	// Cutoff
 	// * Roughness value
 	// * Hair material is not for RT reflection at the moment. Their indirect contributuion is based on diffuse SH evaluation in ReflectionEnvironemenPixelShader.usf
-    const bool bIsValidPixel = (RoughnessFade > 0 || ClearCoatRoughnessFade > 0) && GBufferData.ShadingModelID != SHADINGMODELID_HAIR;
+    const bool bIsValidPixel = (RoughnessFade > 0 || ClearCoatRoughnessFade > 0) && GBufferData.ShadingModelID != SHADINGMODELID_HAIR /*@third party code - BEGIN TressFX*/ && ScreenSpaceData.GBuffer.ShadingModelID != SHADINGMODELID_TRESSFX; /*@third party code - END TressFX*/;
 	   
 	if (bIsValidPixel)
 	{

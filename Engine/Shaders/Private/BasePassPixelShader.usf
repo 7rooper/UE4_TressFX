@@ -28,6 +28,16 @@
 #include "SphericalGaussian.ush"
 #include "DBufferDecalShared.ush"
 
+/*@third party code - BEGIN TressFX*/
+#ifndef USE_TRESSFX
+	#ifdef TRESSFX_VERTEX_FACTORY
+		#define USE_TRESSFX 1
+	#else
+		#define USE_TRESSFX 0
+	#endif
+#endif
+/*@third party code - END TressFX*/
+
 #define PREV_FRAME_COLOR	1
 #include "SSRT/SSRTRayCast.ush"
 
@@ -710,9 +720,12 @@ void ApplyBentNormal( in FMaterialPixelParameters MaterialParameters, in float R
 uint GetSelectiveOutputMask()
 {
 	uint Mask = 0;
-#if !WRITES_CUSTOMDATA_TO_GBUFFER
-	Mask |= SKIP_CUSTOMDATA_MASK;
-#endif
+/*@third party code - BEGIN TressFX*/
+//commenting this out because tressfx needs this mask for itself, and the logic for SKIP_CUSTOMDATA_MASK can be determined by shading model instead
+//#if !WRITES_CUSTOMDATA_TO_GBUFFER
+//	Mask |= SKIP_CUSTOMDATA_MASK;
+//#endif
+/*@third party code - END TressFX*/
 #if !GBUFFER_HAS_PRECSHADOWFACTOR
 	Mask |= SKIP_PRECSHADOW_MASK;
 #endif
@@ -1023,8 +1036,8 @@ ShadingModel);
 		}
 		#endif
 
-		#if MATERIAL_SHADINGMODEL_HAIR
-		if (GBuffer.ShadingModelID == SHADINGMODELID_HAIR)
+		#if MATERIAL_SHADINGMODEL_HAIR /*@third party code - BEGIN TressFX*/ || MATERIAL_SHADINGMODEL_TRESSFX /*@third party code - END TressFX*/
+		if (GBuffer.ShadingModelID == SHADINGMODELID_HAIR /*@third party code - BEGIN TressFX*/ || GBuffer.ShadingModelID == SHADINGMODELID_TRESSFX /*@third party code - END TressFX*/)
 		{
 			float3 N = MaterialParameters.WorldNormal;
 			float3 V = MaterialParameters.CameraVector;
@@ -1076,8 +1089,8 @@ ShadingModel);
 					Color += GetForwardDirectLighting(GridIndex, MaterialParameters.AbsoluteWorldPosition, MaterialParameters.CameraVector, GBuffer, NearestResolvedDepthScreenUV, MaterialParameters.PrimitiveId, EyeIndex, Dither);
 				#endif
 			#endif
-			#if !(MATERIAL_SINGLE_SHADINGMODEL && MATERIAL_SHADINGMODEL_HAIR)
-				if (GBuffer.ShadingModelID != SHADINGMODELID_HAIR)
+			#if !(MATERIAL_SINGLE_SHADINGMODEL && MATERIAL_SHADINGMODEL_HAIR) /*@third party code - BEGIN TressFX*/ || !(MATERIAL_SINGLE_SHADINGMODEL && MATERIAL_SHADINGMODEL_TRESSFX) /*@third party code - END TressFX*/
+				if (GBuffer.ShadingModelID != SHADINGMODELID_HAIR /*@third party code - BEGIN TressFX*/ && GBuffer.ShadingModelID != SHADINGMODELID_TRESSFX /*@third party code - END TressFX*/)
 				{
 					int SingleCaptureIndex = GetPrimitiveData(MaterialParameters.PrimitiveId).SingleCaptureIndex;
 					Color += GetImageBasedReflectionLighting(MaterialParameters, GBuffer.Roughness, GBuffer.SpecularColor, IndirectIrradiance, GridIndex, SingleCaptureIndex, EyeIndex)
