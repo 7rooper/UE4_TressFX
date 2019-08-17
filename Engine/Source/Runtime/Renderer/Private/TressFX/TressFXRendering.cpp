@@ -74,7 +74,6 @@ public:
 			RWFragmentListHead.Bind(Initializer.ParameterMap, TEXT("RWFragmentListHead"));
 			RWLinkedListUAV.Bind(Initializer.ParameterMap, TEXT("RWLinkedListUAV"));
 			RWCounterBuffer.Bind(Initializer.ParameterMap, TEXT("RWCounterBuffer"));
-			RWOpacityThresholdingUAV.Bind(Initializer.ParameterMap, TEXT("RWOpacityThresholdingUAV"));
 		}
 	}
 
@@ -124,7 +123,6 @@ public:
 			Ar << RWFragmentListHead;
 			Ar << RWLinkedListUAV;
 			Ar << RWCounterBuffer;
-			Ar << RWOpacityThresholdingUAV;
 		}
 		return result;
 	}
@@ -156,7 +154,6 @@ public:
 	FRWShaderParameter RWFragmentListHead;
 	FRWShaderParameter RWLinkedListUAV;
 	FRWShaderParameter RWCounterBuffer;
-	FRWShaderParameter RWOpacityThresholdingUAV;
 };
 
 typedef FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut,0> FTressFXFillColorPS_Shortcut;
