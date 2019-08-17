@@ -359,6 +359,27 @@ static TAutoConsoleVariable<int32> CVarTestSecondaryUpscaleOverride(
 
 #endif
 
+/*@third party code - BEGIN TressFX*/
+int32 GTressFXRenderType = 0;
+FAutoConsoleVariableRef CVarTressFXType(
+	TEXT("tfx.Type"),
+	GTressFXRenderType,
+	TEXT("0: Opaque\n")
+	TEXT("1: ShortCut\n")
+	TEXT("2: KBuffer"),
+	ECVF_RenderThreadSafe
+);
+
+int32 GTressFXKBufferSize = 8;
+FAutoConsoleVariableRef CVarTressFXKBufferSize(
+	TEXT("tfx.KBuffer.Size"),
+	GTressFXKBufferSize,
+	TEXT("Size of OIT K-Buffer if using the k-buffer path"),
+	ECVF_RenderThreadSafe
+);
+
+/*@third party code - END TressFX*/
+
 static FParallelCommandListSet* GOutstandingParallelCommandListSet = nullptr;
 FGraphEventRef FSceneRenderer::OcclusionSubmittedFence[FOcclusionQueryHelpers::MaxBufferedOcclusionFrames];
 

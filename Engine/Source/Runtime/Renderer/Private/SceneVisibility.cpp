@@ -1840,6 +1840,11 @@ struct FRelevancePacket
 	FRelevancePrimSet<FPrimitiveSceneInfo*> DirtyIndirectLightingCacheBufferPrimitives;
 	FRelevancePrimSet<FPrimitiveSceneInfo*> RecachedReflectionCapturePrimitives;
 
+	/*@third party code - BEGIN TressFX*/
+	bool bHasTressFX;
+	TArray<FTressFXMeshBatch> TressFXMeshBatches;
+	/*@third party code - END TressFX*/
+
 	TArray<FMeshDecalBatch> MeshDecalBatches;
 	TArray<FVolumetricMeshBatch> VolumetricMeshBatches;
 	FDrawCommandRelevancePacket DrawCommandPacket;
@@ -1924,6 +1929,9 @@ struct FRelevancePacket
 		, bTranslucentSurfaceLighting(false)
 		, bUsesSceneDepth(false)
 	{
+		/*@third party code - BEGIN TressFX*/
+		bHasTressFX = false;
+		/*@third party code - END TressFX*/
 	}
 
 	void AnyThreadTask()
@@ -2043,6 +2051,13 @@ struct FRelevancePacket
 			{
 				TranslucentSelfShadowPrimitives.AddPrim(BitIndex);
 			}
+
+			/*@third party code - BEGIN TressFX*/
+			if (ViewRelevance.bTressFX)
+			{
+				bHasTressFX = true;
+			}
+			/*@third party code - END TressFX*/
 
 			// INITVIEWS_TODO: Do this in a separate pass? There are no dependencies
 			// here except maybe ParentPrimitives. This could be done in a 
@@ -2371,6 +2386,11 @@ struct FRelevancePacket
 
 		WriteView.MeshDecalBatches.Append(MeshDecalBatches);
 		WriteView.VolumetricMeshBatches.Append(VolumetricMeshBatches);
+
+		/*@third party code - BEGIN TressFX*/
+		WriteView.TressFXMeshBatches.Append(TressFXMeshBatches);
+		WriteView.bHasTressFX |= bHasTressFX;
+		/*@third party code - END TressFX*/
 
 		for (int32 Index = 0; Index < RecachedReflectionCapturePrimitives.NumPrims; ++Index)
 		{
@@ -2721,6 +2741,42 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 		View.NumVisibleDynamicMeshElements[EMeshPass::EditorSelection] += NumElements;
 	}
 #endif
+
+	/*@third party code - BEGIN TressFX*/
+	if (ViewRelevance.bTressFX)
+	{
+		extern int32 GTressFXRenderType;
+		int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
+		TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
+		if (TFXRenderType == ETressFXRenderType::Opaque)
+		{
+			//opaque will get rendered by ue4s base pass shaders
+			PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
+			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
+		}
+		else if (TFXRenderType == ETressFXRenderType::ShortCut)
+		{
+			PassMask.Set(EMeshPass::TressFX_DepthsAlpha);
+			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsAlpha] += NumElements;
+
+			PassMask.Set(EMeshPass::TressFX_FillColors);
+			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
+		}
+		else if (TFXRenderType == ETressFXRenderType::KBuffer)
+		{
+			PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
+			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
+
+			PassMask.Set(EMeshPass::TressFX_FillColors);
+			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
+		}
+
+		View.TressFXMeshBatches.AddUninitialized(1);
+		FTressFXMeshBatch& BatchAndProxy = View.TressFXMeshBatches.Last();
+		BatchAndProxy.Mesh = MeshBatch.Mesh;
+		BatchAndProxy.Proxy = (const ITressFXSceneProxy*)MeshBatch.PrimitiveSceneProxy;
+	}
+	/*@third party code - END TressFX*/
 
 	if (ViewRelevance.bHasVolumeMaterialDomain)
 	{

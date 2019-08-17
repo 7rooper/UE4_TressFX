@@ -37,6 +37,11 @@ namespace EMeshPass
 		HitProxyOpaqueOnly,
 		EditorSelection,
 #endif
+		/*@third party code - BEGIN TressFX*/
+		TressFX_DepthsVelocity,
+		TressFX_DepthsAlpha,
+		TressFX_FillColors,
+		/*@third party code - END TressFX*/
 
 		Num,
 		NumBits = 5,
@@ -66,6 +71,11 @@ inline const TCHAR* GetMeshPassName(EMeshPass::Type MeshPass)
 	case EMeshPass::HitProxyOpaqueOnly: return TEXT("HitProxyOpaqueOnly");
 	case EMeshPass::EditorSelection: return TEXT("EditorSelection");
 #endif
+		/*@third party code - BEGIN TressFX*/
+	case EMeshPass::TressFX_DepthsVelocity: return TEXT("TressFX_DepthsVelocity");
+	case EMeshPass::TressFX_DepthsAlpha: return TEXT("TressFX_DepthsAlpha");
+	case EMeshPass::TressFX_FillColors: return TEXT("TressFX_FillColors");
+		/*@third party code - END TressFX*/
 	}
 
 	checkf(0, TEXT("Missing case for EMeshPass %u"), (uint32)MeshPass);

@@ -132,6 +132,9 @@ void FLightPrimitiveInteraction::Create(FLightSceneInfo* LightSceneInfo,FPrimiti
 	{
 		const bool bTranslucentObjectShadow = LightSceneInfo->Proxy->CastsTranslucentShadows() && PrimitiveSceneInfo->Proxy->CastsVolumetricTranslucentShadow();
 		const bool bInsetObjectShadow = 
+			/*@third party code - BEGIN TressFX*/
+			(PrimitiveSceneInfo->Proxy->IsTressFX() && PrimitiveSceneInfo->Proxy->CastsInsetShadow()) ||
+			/*@third party code - END TressFX*/
 			// Currently only supporting inset shadows on directional lights, but could be made to work with any whole scene shadows
 			LightSceneInfo->Proxy->GetLightType() == LightType_Directional
 			&& PrimitiveSceneInfo->Proxy->CastsInsetShadow();

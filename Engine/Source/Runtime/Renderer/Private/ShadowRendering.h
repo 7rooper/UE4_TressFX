@@ -319,6 +319,10 @@ public:
 	/** Whether the shadow is a per object shadow or not. */
 	uint32 bPerObjectOpaqueShadow : 1;
 
+	/*@third party code - BEGIN TressFX*/
+	uint32 bIsPerObjectTressFX : 1;
+	/*@third party code - END TressFX*/
+
 	/** Whether turn on back-lighting transmission. */
 	uint32 bTransmission : 1;
 
@@ -394,14 +398,18 @@ public:
 		bool bIsWholeSceneDirectionalShadow,
 		bool bUseFadePlane,
 		bool bProjectingForForwardShading,
-		bool bMobileModulatedProjections);
+		bool bMobileModulatedProjections
+		/*@third party code - BEGIN TressFX*/
+		, bool bSceneHasTressFX
+		/*@third party code - END TressFX*/
+	);
 
-	void SetBlendStateForProjection(FGraphicsPipelineStateInitializer& GraphicsPSOInit, bool bProjectingForForwardShading, bool bMobileModulatedProjections) const;
+	void SetBlendStateForProjection(FGraphicsPipelineStateInitializer& GraphicsPSOInit, bool bProjectingForForwardShading, bool bMobileModulatedProjections /*@third party code - BEGIN TressFX*/, bool bSceneHasTressFX /*@third party code - END TressFX*/) const;
 
 	/**
 	 * Projects the shadow onto the scene for a particular view.
 	 */
-	void RenderProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const class FViewInfo* View, const class FSceneRenderer* SceneRender, bool bProjectingForForwardShading, bool bMobile) const;
+	void RenderProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const class FViewInfo* View, const class FSceneRenderer* SceneRender, bool bProjectingForForwardShading, bool bMobile /*@third party code - BEGIN TressFX*/ ,bool InbTressFXInScene = false /*@third party code - END TressFX*/) const;
 
 	void BeginRenderRayTracedDistanceFieldProjection(FRHICommandListImmediate& RHICmdList, const FViewInfo& View);
 
@@ -409,7 +417,7 @@ public:
 	void RenderRayTracedDistanceFieldProjection(FRHICommandListImmediate& RHICmdList, const class FViewInfo& View, const FIntRect& ScissorRect, IPooledRenderTarget* ScreenShadowMaskTexture, bool bProjectingForForwardShading);
 
 	/** Render one pass point light shadow projections. */
-	void RenderOnePassPointLightProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const FViewInfo& View, bool bProjectingForForwardShading) const;
+	void RenderOnePassPointLightProjection(FRHICommandListImmediate& RHICmdList, int32 ViewIndex, const FViewInfo& View, bool bProjectingForForwardShading /*@third party code - BEGIN TressFX*/ ,bool bSceneHasTressFX = false /*@third party code - END TressFX*/) const;
 
 	/**
 	 * Renders the projected shadow's frustum wireframe with the given FPrimitiveDrawInterface.
@@ -756,7 +764,7 @@ public:
 };
 
 /** Shadow projection parameters used by multiple shaders. */
-template<bool bModulatedShadows>
+template<bool bModulatedShadows /*@third party code - BEGIN TressFX*/, bool bTressFXShadows = false /*@third party code - END TressFX*/>
 class TShadowProjectionShaderParameters
 {
 public:
@@ -780,7 +788,7 @@ public:
 	{
 		FRHIPixelShader* ShaderRHI = Shader->GetPixelShader();
 
-		SceneTextureParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, ESceneTextureSetupMode::All);
+		SceneTextureParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel,  /*@third party code - BEGIN TressFX*/ bTressFXShadows ? ESceneTextureSetupMode::AllWithTFXSceneDepthSeparate : /*@third party code - END TressFX*/ ESceneTextureSetupMode::All);
 
 		const FIntPoint ShadowBufferResolution = ShadowInfo->GetShadowBufferResolution();
 
@@ -903,7 +911,7 @@ private:
  * TShadowProjectionPS
  * A pixel shader for projecting a shadow depth buffer onto the scene.  Used with any light type casting normal shadows.
  */
-template<uint32 Quality, bool bUseFadePlane = false, bool bModulatedShadows = false, bool bUseTransmission = false>
+template<uint32 Quality, bool bUseFadePlane = false, bool bModulatedShadows = false, bool bUseTransmission = false /*@third party code - BEGIN TressFX*/ ,bool bTressFXShadows = false /*@third party code - END TressFX*/>
 class TShadowProjectionPS : public FShadowProjectionPixelShaderInterface
 {
 	DECLARE_SHADER_TYPE(TShadowProjectionPS,Global);
@@ -941,6 +949,9 @@ public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		FShadowProjectionPixelShaderInterface::ModifyCompilationEnvironment(Parameters,OutEnvironment);
+		/*@third party code - BEGIN TressFX*/
+		OutEnvironment.SetDefine(TEXT("TRESSFX_SHADOWS"), (uint32)(bTressFXShadows ? 1 : 0));
+		/*@third party code - END TressFX*/
 		OutEnvironment.SetDefine(TEXT("SHADOW_QUALITY"), Quality);
 		OutEnvironment.SetDefine(TEXT("USE_FADE_PLANE"), (uint32)(bUseFadePlane ? 1 : 0));
 		OutEnvironment.SetDefine(TEXT("USE_TRANSMISSION"), (uint32)(bUseTransmission ? 1 : 0));
@@ -1017,7 +1028,7 @@ public:
 	}
 
 protected:
-	TShadowProjectionShaderParameters<bModulatedShadows> ProjectionParameters;
+	TShadowProjectionShaderParameters<bModulatedShadows /*@third party code - BEGIN TressFX*/, bTressFXShadows /*@third party code - END TressFX*/> ProjectionParameters;
 	FShaderParameter ShadowFadeFraction;
 	FShaderParameter ShadowSharpen;
 	FShaderParameter LightPosition;
@@ -1263,7 +1274,7 @@ private:
  * Pixel shader used to project one pass point light shadows.
  */
 // Quality = 0 / 1
-template <uint32 Quality, bool bUseTransmission = false>
+template <uint32 Quality, bool bUseTransmission = false /*@third party code - BEGIN TressFX*/, bool bTressFXShadows = false /*@third party code - END TressFX*/>
 class TOnePassPointShadowProjectionPS : public FGlobalShader
 {
 	DECLARE_SHADER_TYPE(TOnePassPointShadowProjectionPS,Global);
@@ -1288,6 +1299,9 @@ public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		FGlobalShader::ModifyCompilationEnvironment(Parameters,OutEnvironment);
+		/*@third party code - BEGIN TressFX*/
+		OutEnvironment.SetDefine(TEXT("TRESSFX_SHADOWS"), (uint32)(bTressFXShadows ? 1 : 0));
+		/*@third party code - END TressFX*/
 		OutEnvironment.SetDefine(TEXT("SHADOW_QUALITY"), Quality);
 		OutEnvironment.SetDefine(TEXT("USE_TRANSMISSION"), (uint32)(bUseTransmission ? 1 : 0));
 	}
@@ -1308,7 +1322,7 @@ public:
 
 		FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI,View.ViewUniformBuffer);
 
-		SceneTextureParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel, ESceneTextureSetupMode::All);
+		SceneTextureParameters.Set(RHICmdList, ShaderRHI, View.FeatureLevel,  /*@third party code - BEGIN TressFX*/ bTressFXShadows ? ESceneTextureSetupMode::AllWithTFXSceneDepthSeparate : /*@third party code - END TressFX*/ ESceneTextureSetupMode::All);
 		OnePassShadowParameters.Set(RHICmdList, ShaderRHI, ShadowInfo);
 
 		const FLightSceneProxy& LightProxy = *(ShadowInfo->GetLightSceneInfo().Proxy);
@@ -1401,28 +1415,28 @@ struct FShadowProjectionMatrix: FMatrix
 
 
 /** Pixel shader to project directional PCSS onto the scene. */
-template<uint32 Quality, bool bUseFadePlane>
-class TDirectionalPercentageCloserShadowProjectionPS : public TShadowProjectionPS<Quality, bUseFadePlane>
+template<uint32 Quality, bool bUseFadePlane /*@third party code - BEGIN TressFX*/, bool bTressFXShadows = false /*@third party code - END TressFX*/>
+class TDirectionalPercentageCloserShadowProjectionPS : public TShadowProjectionPS<Quality, bUseFadePlane /*@third party code - BEGIN TressFX*/, bTressFXShadows /*@third party code - END TressFX*/>
 {
 	DECLARE_SHADER_TYPE(TDirectionalPercentageCloserShadowProjectionPS, Global);
 public:
 
 	TDirectionalPercentageCloserShadowProjectionPS() {}
 	TDirectionalPercentageCloserShadowProjectionPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) :
-		TShadowProjectionPS<Quality, bUseFadePlane>(Initializer)
+		TShadowProjectionPS<Quality, bUseFadePlane /*@third party code - BEGIN TressFX*/, bTressFXShadows /*@third party code - END TressFX*/>(Initializer)
 	{
 		PCSSParameters.Bind(Initializer.ParameterMap, TEXT("PCSSParameters"));
 	}
 
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
-		TShadowProjectionPS<Quality, bUseFadePlane>::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		TShadowProjectionPS<Quality, bUseFadePlane /*@third party code - BEGIN TressFX*/, bTressFXShadows /*@third party code - END TressFX*/>::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 		OutEnvironment.SetDefine(TEXT("USE_PCSS"), 1);
 	}
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 	{
-		return TShadowProjectionPS<Quality, bUseFadePlane>::ShouldCompilePermutation(Parameters)
+		return TShadowProjectionPS<Quality, bUseFadePlane /*@third party code - BEGIN TressFX*/, bTressFXShadows /*@third party code - END TressFX*/>::ShouldCompilePermutation(Parameters)
 			&& (Parameters.Platform == SP_PCD3D_SM5 || IsVulkanSM5Platform(Parameters.Platform) || Parameters.Platform == SP_METAL_SM5 || Parameters.Platform == SP_METAL_SM5_NOTESS);
 	}
 
@@ -1432,7 +1446,7 @@ public:
 		const FSceneView& View,
 		const FProjectedShadowInfo* ShadowInfo) override
 	{
-		TShadowProjectionPS<Quality, bUseFadePlane>::SetParameters(RHICmdList, ViewIndex, View, ShadowInfo);
+		TShadowProjectionPS<Quality, bUseFadePlane /*@third party code - BEGIN TressFX*/, bTressFXShadows /*@third party code - END TressFX*/>::SetParameters(RHICmdList, ViewIndex, View, ShadowInfo);
 
 		FRHIPixelShader* ShaderRHI = this->GetPixelShader();
 
@@ -1456,7 +1470,7 @@ public:
 	*/
 	virtual bool Serialize(FArchive& Ar) override
 	{
-		bool bShaderHasOutdatedParameters = TShadowProjectionPS<Quality, bUseFadePlane>::Serialize(Ar);
+		bool bShaderHasOutdatedParameters = TShadowProjectionPS<Quality, bUseFadePlane /*@third party code - BEGIN TressFX*/, bTressFXShadows /*@third party code - END TressFX*/>::Serialize(Ar);
 		Ar << PCSSParameters;
 		return bShaderHasOutdatedParameters;
 	}
@@ -1467,15 +1481,15 @@ protected:
 
 
 /** Pixel shader to project PCSS spot light onto the scene. */
-template<uint32 Quality, bool bUseFadePlane>
-class TSpotPercentageCloserShadowProjectionPS : public TShadowProjectionPS<Quality, bUseFadePlane>
+template<uint32 Quality, bool bUseFadePlane /*@third party code - BEGIN TressFX*/, bool bTressFXShadows = false /*@third party code - END TressFX*/>
+class TSpotPercentageCloserShadowProjectionPS : public TShadowProjectionPS<Quality, bUseFadePlane /*@third party code - BEGIN TressFX*/, bTressFXShadows /*@third party code - END TressFX*/>
 {
 	DECLARE_SHADER_TYPE(TSpotPercentageCloserShadowProjectionPS, Global);
 public:
 
 	TSpotPercentageCloserShadowProjectionPS() {}
 	TSpotPercentageCloserShadowProjectionPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) :
-		TShadowProjectionPS<Quality, bUseFadePlane>(Initializer)
+		TShadowProjectionPS<Quality, bUseFadePlane /*@third party code - BEGIN TressFX*/, bTressFXShadows /*@third party code - END TressFX*/>(Initializer)
 	{
 		PCSSParameters.Bind(Initializer.ParameterMap, TEXT("PCSSParameters"));
 	}
@@ -1488,7 +1502,7 @@ public:
 
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
-		TShadowProjectionPS<Quality, bUseFadePlane>::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		TShadowProjectionPS<Quality, bUseFadePlane /*@third party code - BEGIN TressFX*/, bTressFXShadows /*@third party code - END TressFX*/>::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 		OutEnvironment.SetDefine(TEXT("USE_PCSS"), 1);
 		OutEnvironment.SetDefine(TEXT("SPOT_LIGHT_PCSS"), 1);
 	}
@@ -1501,7 +1515,7 @@ public:
 	{
 		check(ShadowInfo->GetLightSceneInfo().Proxy->GetLightType() == LightType_Spot);
 
-		TShadowProjectionPS<Quality, bUseFadePlane>::SetParameters(RHICmdList, ViewIndex, View, ShadowInfo);
+		TShadowProjectionPS<Quality, bUseFadePlane /*@third party code - BEGIN TressFX*/, bTressFXShadows /*@third party code - END TressFX*/>::SetParameters(RHICmdList, ViewIndex, View, ShadowInfo);
 
 		FRHIPixelShader* ShaderRHI = this->GetPixelShader();
 
@@ -1519,7 +1533,7 @@ public:
 	*/
 	virtual bool Serialize(FArchive& Ar) override
 	{
-		bool bShaderHasOutdatedParameters = TShadowProjectionPS<Quality, bUseFadePlane>::Serialize(Ar);
+		bool bShaderHasOutdatedParameters = TShadowProjectionPS<Quality, bUseFadePlane /*@third party code - BEGIN TressFX*/, bTressFXShadows /*@third party code - END TressFX*/>::Serialize(Ar);
 		Ar << PCSSParameters;
 		return bShaderHasOutdatedParameters;
 	}

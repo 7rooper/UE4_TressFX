@@ -216,8 +216,13 @@ FDepthStencilStateRHIRef FD3D11DynamicRHI::RHICreateDepthStencilState(const FDep
 	FMemory::Memzero(&DepthStencilDesc,sizeof(D3D11_DEPTH_STENCIL_DESC));
 
 	// depth part
-	DepthStencilDesc.DepthEnable = Initializer.DepthTest != CF_Always || Initializer.bEnableDepthWrite;
-	DepthStencilDesc.DepthWriteMask = Initializer.bEnableDepthWrite ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
+	/*@third party code - BEGIN TressFX*/
+	//DepthStencilDesc.DepthEnable = Initializer.DepthTest != CF_Always || Initializer.bEnableDepthWrite;
+	//DepthStencilDesc.DepthWriteMask = Initializer.bEnableDepthWrite ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
+	DepthStencilDesc.DepthEnable = Initializer.bForceDisableDepth ? false : (Initializer.DepthTest != CF_Always || Initializer.bEnableDepthWrite);
+	DepthStencilDesc.DepthWriteMask = (Initializer.DepthWriteMask == DWM_Default) ? (Initializer.bEnableDepthWrite ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO) : Initializer.DepthWriteMask == DWM_All ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
+	/*@third party code - END TressFX*/
+
 	DepthStencilDesc.DepthFunc = TranslateCompareFunction(Initializer.DepthTest);
 
 	// stencil part

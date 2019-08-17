@@ -855,6 +855,11 @@ struct FDepthStencilStateInitializerRHI
 	uint8 StencilReadMask;
 	uint8 StencilWriteMask;
 
+	/*@third party code - BEGIN TressFX*/
+	TEnumAsByte<EDepthWriteMask> DepthWriteMask;
+	bool bForceDisableDepth;
+	/*@third party code - END TressFX*/
+
 	FDepthStencilStateInitializerRHI(
 		bool bInEnableDepthWrite = true,
 		ECompareFunction InDepthTest = CF_LessEqual,
@@ -870,6 +875,10 @@ struct FDepthStencilStateInitializerRHI
 		EStencilOp InBackFacePassStencilOp = SO_Keep,
 		uint8 InStencilReadMask = 0xFF,
 		uint8 InStencilWriteMask = 0xFF
+		/*@third party code - BEGIN TressFX*/
+		,EDepthWriteMask InDepthWriteMask = DWM_Default,
+		bool InForceDisable = false
+		/*@third party code - END TressFX*/
 		)
 	: bEnableDepthWrite(bInEnableDepthWrite)
 	, DepthTest(InDepthTest)
@@ -885,6 +894,10 @@ struct FDepthStencilStateInitializerRHI
 	, BackFacePassStencilOp(InBackFacePassStencilOp)
 	, StencilReadMask(InStencilReadMask)
 	, StencilWriteMask(InStencilWriteMask)
+	/*@third party code - BEGIN TressFX*/
+	, DepthWriteMask(InDepthWriteMask)
+	, bForceDisableDepth(InForceDisable)
+	/*@third party code - END TressFX*/
 	{}
 	
 	friend FArchive& operator<<(FArchive& Ar,FDepthStencilStateInitializerRHI& DepthStencilStateInitializer)
@@ -903,6 +916,10 @@ struct FDepthStencilStateInitializerRHI
 		Ar << DepthStencilStateInitializer.BackFacePassStencilOp;
 		Ar << DepthStencilStateInitializer.StencilReadMask;
 		Ar << DepthStencilStateInitializer.StencilWriteMask;
+		/*@third party code - BEGIN TressFX*/
+		Ar << DepthStencilStateInitializer.DepthWriteMask;
+		Ar << DepthStencilStateInitializer.bForceDisableDepth;
+		/*@third party code - END TressFX*/
 		return Ar;
 	}
 	RHI_API FString ToString() const;

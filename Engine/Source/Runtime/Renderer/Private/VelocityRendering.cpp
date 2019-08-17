@@ -453,6 +453,10 @@ void FDeferredShadingSceneRenderer::RenderVelocities(FRHICommandListImmediate& R
 			RHICmdList.EndRenderPass();
 		}
 
+		/*@third party code - BEGIN TressFX*/
+		RenderTressFXResolveVelocity(RHICmdList, VelocityRT);
+		/*@third party code - END TressFX*/
+
 		RHICmdList.CopyToResolveTarget(VelocityRT->GetRenderTargetItem().TargetableTexture, VelocityRT->GetRenderTargetItem().ShaderResourceTexture, FResolveParams());
 	}
 

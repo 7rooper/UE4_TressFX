@@ -2336,6 +2336,10 @@ public:
 	TUniformBufferRef<FSceneTexturesUniformParameters> EditorSelectionPassUniformBuffer;
 #endif
 
+	/*@third party code - BEGIN TressFX*/
+	TUniformBufferRef <FTressFXColorPassUniformParameters> TressFXColorPassUniformBuffer;
+	/*@third party code - END TressFX*/
+
 	// View from which ViewUniformBuffer was last updated.
 	const FViewInfo* CachedView;
 };

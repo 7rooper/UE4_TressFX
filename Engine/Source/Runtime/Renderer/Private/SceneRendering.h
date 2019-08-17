@@ -31,6 +31,10 @@
 #include "RenderGraph.h"
 #include "MeshDrawCommands.h"
 
+/*@third party code - BEGIN TressFX*/
+#include "TressFX/TressFXRendering.h"
+/*@third party code - END TressFX*/
+
 // Forward declarations.
 class FScene;
 class FSceneViewState;
@@ -892,6 +896,11 @@ public:
 	/** Mesh batches with a volumetric material. */
 	TArray<FVolumetricMeshBatch, SceneRenderingAllocator> VolumetricMeshBatches;
 
+	/*@third party code - BEGIN TressFX*/
+	TArray<FTressFXMeshBatch, SceneRenderingAllocator> TressFXMeshBatches;
+	bool bHasTressFX;
+	/*@third party code - END TressFX*/
+
 	/** A map from light ID to a boolean visibility value. */
 	TArray<FVisibleLightViewInfo,SceneRenderingAllocator> VisibleLightInfos;
 
@@ -1529,7 +1538,7 @@ protected:
 
 	void SetupMeshPass(FViewInfo& View, FExclusiveDepthStencil::Type BasePassDepthStencilAccess, FViewCommands& ViewCommands);
 
-	bool RenderShadowProjections(FRHICommandListImmediate& RHICmdList, const FLightSceneInfo* LightSceneInfo, IPooledRenderTarget* ScreenShadowMaskTexture, bool bProjectingForForwardShading, bool bMobileModulatedProjections);
+	bool RenderShadowProjections(FRHICommandListImmediate& RHICmdList, const FLightSceneInfo* LightSceneInfo, IPooledRenderTarget* ScreenShadowMaskTexture, bool bProjectingForForwardShading, bool bMobileModulatedProjections /*@third party code - BEGIN TressFX*/, IPooledRenderTarget* TressFXScreenShadowMaskTexture = nullptr /*@third party code - END TressFX*/);
 
 	/** Finds a matching cached preshadow, if one exists. */
 	TRefCountPtr<FProjectedShadowInfo> GetCachedPreshadow(
@@ -1670,6 +1679,16 @@ protected:
 	void RenderPlanarReflection(class FPlanarReflectionSceneProxy* ReflectionSceneProxy);
 
 	void ResolveSceneColor(FRHICommandList& RHICmdList);
+
+	/*@third party code - BEGIN TressFX*/
+	bool ShouldRenderTressFX(int32 TressFXPass);
+	bool TressFXCanUseComputeResolves(const FSceneRenderTargets& SceneContext);
+	void RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList, int32 TFXRenderType);
+	void RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, int32 TFXRenderType);
+	void RenderTressFXResolveVelocity(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& VelocityRT);
+	void RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture, int32 TFXRenderType);
+	bool GetAnyViewHasTressFX();
+	/*@third party code - END TressFX*/
 
 private:
 	void ComputeFamilySize();

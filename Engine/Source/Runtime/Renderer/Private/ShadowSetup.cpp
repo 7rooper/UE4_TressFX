@@ -513,6 +513,9 @@ FProjectedShadowInfo::FProjectedShadowInfo()
 	, bPreShadow(false)
 	, bSelfShadowOnly(false)
 	, bPerObjectOpaqueShadow(false)
+	/*@third party code - BEGIN TressFX*/
+	, bIsPerObjectTressFX(false)
+	/*@third party code - END TressFX*/
 	, bTransmission(false)
 	, LightSceneInfo(0)
 	, ParentSceneInfo(0)
@@ -1712,6 +1715,9 @@ void FSceneRenderer::CreatePerObjectProjectedShadow(
 	bool bOpaqueRelevance = false;
 	bool bTranslucentRelevance = false;
 	bool bTranslucentShadowIsVisibleThisFrame = false;
+	/*@third party code - BEGIN TressFX*/
+	bool bTressFXInScene = false;
+	/*@third party code - END TressFX*/
 	int32 NumBufferedFrames = FOcclusionQueryHelpers::GetNumBufferedFrames(FeatureLevel);
 
 	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
@@ -1763,6 +1769,9 @@ void FSceneRenderer::CreatePerObjectProjectedShadow(
 		bShadowIsPotentiallyVisibleNextFrame |= bPrimitiveIsShadowRelevant;
 		bOpaqueRelevance |= ViewRelevance.bOpaqueRelevance;
 		bTranslucentRelevance |= ViewRelevance.HasTranslucency();
+		/*@third party code - BEGIN TressFX*/
+		bTressFXInScene |= ViewRelevance.bTressFX;
+		/*@third party code - END TressFX*/
 	}
 
 	if (!bOpaqueShadowIsVisibleThisFrame && !bTranslucentShadowIsVisibleThisFrame && !bShadowIsPotentiallyVisibleNextFrame)
@@ -1945,6 +1954,9 @@ void FSceneRenderer::CreatePerObjectProjectedShadow(
 					false))					// no translucent shadow
 				{
 					ProjectedShadowInfo->bPerObjectOpaqueShadow = true;
+					/*@third party code - BEGIN TressFX*/
+					ProjectedShadowInfo->bIsPerObjectTressFX = bTressFXInScene && PrimitiveSceneInfo->Proxy->IsTressFX();
+					/*@third party code - END TressFX*/
 					ProjectedShadowInfo->FadeAlphas = ResolutionFadeAlphas;
 					VisibleLightInfo.MemStackProjectedShadows.Add(ProjectedShadowInfo);
 

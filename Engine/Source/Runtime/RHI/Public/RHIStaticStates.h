@@ -239,6 +239,10 @@ template<
 	EStencilOp BackFacePassStencilOp = SO_Keep,
 	uint8 StencilReadMask = 0xFF,
 	uint8 StencilWriteMask = 0xFF
+	/*@third party code - BEGIN TressFX*/
+	, EDepthWriteMask DepthWriteMask = DWM_Default,
+	bool bForceDisableDepth = false
+	/*@third party code - END TressFX*/
 	>
 class TStaticDepthStencilState : public TStaticStateRHI<
 	TStaticDepthStencilState<
@@ -256,6 +260,10 @@ class TStaticDepthStencilState : public TStaticStateRHI<
 		BackFacePassStencilOp,
 		StencilReadMask,
 		StencilWriteMask
+	/*@third party code - BEGIN TressFX*/
+		,DepthWriteMask
+		,bForceDisableDepth
+	/*@third party code - END TressFX*/
 		>,
 	FDepthStencilStateRHIRef,
 	FRHIDepthStencilState*
@@ -278,7 +286,12 @@ public:
 			BackFaceDepthFailStencilOp,
 			BackFacePassStencilOp,
 			StencilReadMask,
-			StencilWriteMask);
+			StencilWriteMask
+			/*@third party code - BEGIN TressFX*/
+			, DepthWriteMask
+			, bForceDisableDepth
+			/*@third party code - END TressFX*/
+		);
 
 		return RHICreateDepthStencilState(Initializer);
 	}
