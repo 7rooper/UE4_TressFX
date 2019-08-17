@@ -348,6 +348,15 @@ void FDeferredShadingSceneRenderer::ComputeLightGrid(FRHICommandListImmediate& R
 		{
 			const FViewInfo& View = Views[ViewIndex];
 			bAnyViewUsesForwardLighting |= View.bTranslucentSurfaceLighting || ShouldRenderVolumetricFog();
+			/*@third party code - BEGIN TressFX*/
+			if (View.bHasTressFX || View.TressFXMeshBatches.Num() > 0)
+			{
+				extern int32 GTressFXRenderType;
+				int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
+				TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
+				bAnyViewUsesForwardLighting |= (TFXRenderType == ETressFXRenderType::ShortCut || TFXRenderType == ETressFXRenderType::KBuffer);
+			}
+			/*@third party code - END TressFX*/
 		}
 
 		const bool bCullLightsToGrid = GLightCullingQuality 
@@ -834,7 +843,7 @@ void FDeferredShadingSceneRenderer::RenderForwardShadingShadowProjections(FRHICo
 
 				if (VisibleLightInfo.ShadowsToProject.Num() > 0)
 				{
-					FSceneRenderer::RenderShadowProjections(RHICmdList, LightSceneInfo, ForwardScreenSpaceShadowMask, true, false);
+					FSceneRenderer::RenderShadowProjections(RHICmdList, LightSceneInfo, ForwardScreenSpaceShadowMask, true, false, /*@third party code - BEGIN TressFX not supporting forward rendering */, nullptr /*@third party code - END TressFX*/);
 				}
 
 				RenderCapsuleDirectShadows(RHICmdList, *LightSceneInfo, ForwardScreenSpaceShadowMask, VisibleLightInfo.CapsuleShadowsToProject, true);

@@ -1045,7 +1045,12 @@ void FProjectedShadowInfo::RenderRayTracedDistanceFieldProjection(FRHICommandLis
 				GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
 				GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
 
-				SetBlendStateForProjection(GraphicsPSOInit, bProjectingForForwardShading, false);
+				SetBlendStateForProjection(GraphicsPSOInit, bProjectingForForwardShading, false
+					/*@third party code - BEGIN TressFX*/
+					//not yet supported
+					, false 
+					/*@third party code - END TressFX*/
+				);
 
 				TShaderMapRef<FPostProcessVS> VertexShader(View.ShaderMap);
 				GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;

@@ -980,7 +980,12 @@ bool FDeferredShadingSceneRenderer::RenderCapsuleDirectShadows(
 						false,
 						false,
 						bProjectingForForwardShading,
-						false);
+						false
+						/*@third party code - BEGIN TressFX*/
+						//not yet supported
+						, false
+						/*@third party code - END TressFX*/
+					);
 
 					TShaderMapRef<FCapsuleShadowingUpsampleVS> VertexShader(View.ShaderMap);
 					GraphicsPSOInit.PrimitiveType = PT_TriangleList;

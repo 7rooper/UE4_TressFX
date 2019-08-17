@@ -76,6 +76,11 @@ IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FSharedBasePassUniformParameters, "Base
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FOpaqueBasePassUniformParameters, "OpaqueBasePass");
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTranslucentBasePassUniformParameters, "TranslucentBasePass");
 
+/*@third party code - BEGIN TressFX*/
+IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXRectLightData, "TressFXRectLightInfo");
+IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, "TressFXColorFillPass");
+/*@third party code - END TressFX*/
+
 // Typedef is necessary because the C preprocessor thinks the comma in the template parameter list is a comma in the macro parameter list.
 // BasePass Vertex Shader needs to include hull and domain shaders for tessellation, these only compile for D3D11
 #define IMPLEMENT_BASEPASS_VERTEXSHADER_TYPE(LightMapPolicyType,LightMapPolicyName) \
@@ -517,6 +522,84 @@ void SetupSharedBasePassParameters(
 	const FSceneRenderTargetItem& Item = PooledRT->GetRenderTargetItem();
 	SharedParameters.SSProfilesTexture = Item.ShaderResourceTexture;
 }
+
+/*@third party code - BEGIN TressFX*/
+void CreateTressFXColorPassUniformBuffer(
+	FRHICommandListImmediate& RHICmdList,
+	const FViewInfo& View,
+	IPooledRenderTarget* ForwardScreenSpaceShadowMask,
+	TUniformBufferRef<FTressFXColorPassUniformParameters>& TFXColorPassUniformBuffer,
+	const FSortedShadowMaps& SortedShadowsForShadowDepthPass,
+	const TArray<FProjectedShadowInfo*>& TressFXPerObjectShadowInfos,
+	const FTressFXRectLightData& RectLightInfos,
+	uint32 KbufferNodePoolSize /*= 0*/
+)
+{
+	FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
+
+	FTressFXColorPassUniformParameters ColorPassParams;
+	ColorPassParams.RectLightData = RectLightInfos;
+	SetupSharedBasePassParameters(RHICmdList, View, SceneRenderTargets, ColorPassParams.Shared);
+	//first atlas is for whole scene shadows, second one holds per-object shadows, if any (i think)
+	if (SortedShadowsForShadowDepthPass.ShadowMapAtlases.Num() > 1)
+	{
+		const FSortedShadowMapAtlas& ShadowMapAtlas = SortedShadowsForShadowDepthPass.ShadowMapAtlases.Last();
+		ColorPassParams.ShadowDepthTex = ShadowMapAtlas.RenderTargets.DepthTarget->GetRenderTargetItem().ShaderResourceTexture;
+		if (TressFXPerObjectShadowInfos.Num() > 0)
+		{
+			FVector4 MinMax;
+			ColorPassParams.DirectionalLightWorldToShadowMatrix = TressFXPerObjectShadowInfos[0]->GetWorldToShadowMatrix(MinMax);
+			const FIntPoint ShadowBufferResolution = ShadowMapAtlas.RenderTargets.GetSize();
+			FVector2D ShadowBufferSizeValue(ShadowBufferResolution.X, ShadowBufferResolution.Y);
+			ColorPassParams.ShadowBufferSize = FVector4(ShadowBufferSizeValue.X, ShadowBufferSizeValue.Y, 1.0f / ShadowBufferSizeValue.X, 1.0f / ShadowBufferSizeValue.Y);
+		}
+		else
+		{
+			ColorPassParams.DirectionalLightWorldToShadowMatrix = FMatrix::Identity;
+		}
+	}
+	else
+	{
+		ColorPassParams.ShadowDepthTex = GWhiteTexture->TextureRHI;
+	}
+
+	ColorPassParams.UseForwardScreenSpaceShadowMask = 1;
+
+	if (ForwardScreenSpaceShadowMask && ForwardScreenSpaceShadowMask->GetRenderTargetItem().IsValid())
+	{
+		ColorPassParams.ForwardScreenSpaceShadowMaskTexture = ForwardScreenSpaceShadowMask->GetRenderTargetItem().ShaderResourceTexture;
+	}
+	else
+	{
+		ColorPassParams.ForwardScreenSpaceShadowMaskTexture = GSystemTextures.WhiteDummy.GetReference()->GetRenderTargetItem().ShaderResourceTexture;
+	}
+
+	IPooledRenderTarget* IndirectOcclusion = SceneRenderTargets.ScreenSpaceAO;
+
+	if (!SceneRenderTargets.bScreenSpaceAOIsValid)
+	{
+		IndirectOcclusion = GSystemTextures.WhiteDummy;
+	}
+
+	ColorPassParams.IndirectOcclusionTexture = IndirectOcclusion->GetRenderTargetItem().ShaderResourceTexture;
+	ColorPassParams.ResolvedSceneDepthTexture = SceneRenderTargets.SceneDepthZ->GetRenderTargetItem().ShaderResourceTexture;
+	ColorPassParams.NodePoolSize = KbufferNodePoolSize;
+	// Misc
+	ColorPassParams.EyeAdaptation = GetEyeAdaptation(View);
+
+	FScene* Scene = View.Family->Scene ? View.Family->Scene->GetRenderScene() : nullptr;
+	if (Scene)
+	{
+		Scene->UniformBuffers.TressFXColorPassUniformBuffer.UpdateUniformBufferImmediate(ColorPassParams);
+		TFXColorPassUniformBuffer = Scene->UniformBuffers.TressFXColorPassUniformBuffer;
+	}
+	else
+	{
+		TFXColorPassUniformBuffer = TUniformBufferRef<FTressFXColorPassUniformParameters>::CreateUniformBufferImmediate(ColorPassParams, UniformBuffer_SingleFrame);
+	}
+}
+
+/*@third party code - END TressFX*/
 
 void CreateOpaqueBasePassUniformBuffer(
 	FRHICommandListImmediate& RHICmdList, 
@@ -1184,6 +1267,15 @@ void FBasePassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, 
 		else
 		{
 			bShouldDraw = !bIsTranslucent;
+			/*@third party code - BEGIN TressFX*/
+			extern int32 GTressFXRenderType;
+			int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
+			TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
+			if (MeshBatch.bTressFX)
+			{
+				bShouldDraw = bShouldDraw && TFXRenderType == ETressFXRenderType::Opaque;
+			}
+			/*@third party code - END TressFX*/
 		}
 
 

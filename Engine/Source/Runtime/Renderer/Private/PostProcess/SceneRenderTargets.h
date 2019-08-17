@@ -226,7 +226,7 @@ public:
 	/**
 	 * Sets the scene color target and restores its contents if necessary
 	 */
-	void BeginRenderingSceneColor(FRHICommandList& FRHICommandListImmediate, ESimpleRenderTargetMode RenderTargetMode = ESimpleRenderTargetMode::EUninitializedColorExistingDepth, FExclusiveDepthStencil DepthStencilAccess = FExclusiveDepthStencil::DepthWrite_StencilWrite, bool bTransitionWritable = true);
+	void BeginRenderingSceneColor(FRHICommandList& FRHICommandListImmediate, ESimpleRenderTargetMode RenderTargetMode = ESimpleRenderTargetMode::EUninitializedColorExistingDepth, FExclusiveDepthStencil DepthStencilAccess = FExclusiveDepthStencil::DepthWrite_StencilWrite, bool bTransitionWritable = true /*@third party code - BEGIN TressFX*/, bool bUseTressFXSceneDepth = false /*@third party code - END TressFX*/);
 	void FinishRenderingSceneColor(FRHICommandList& RHICmdList);
 
 	// @return true: call FinishRenderingCustomDepth after rendering, false: don't render it, feature is disabled
@@ -482,6 +482,12 @@ public:
 	void AllocateDebugViewModeTargets(FRHICommandList& RHICmdList);
 
 	void AllocateScreenShadowMask(FRHICommandList& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture);
+	
+	/*@third party code - BEGIN TressFX*/
+	void AllocateTressFXScreenShadowMask(FRHICommandList& RHICmdList, TRefCountPtr<IPooledRenderTarget>& TressFXScreenShadowMaskTexture);
+	void AllocatTressFXTargets(FRHICommandList& RHICmdList, const FSceneViewFamily& ViewFamily);
+	void ReleaseTressFXResources(int32 TypeToRelease);
+	/*@third party code - END TressFX*/
 
 	TRefCountPtr<IPooledRenderTarget>& GetReflectionBrightnessTarget();
 
@@ -582,6 +588,38 @@ public:
 
 	/**	Virtual texture feedback buffer bound as UAV during basepass*/
 	FVirtualTextureFeedback VirtualTextureFeedback;
+
+	/*@third party code - BEGIN TressFX*/
+
+	/** common tressfx targets */
+	TRefCountPtr<IPooledRenderTarget> TressFXSceneDepth;
+	TRefCountPtr<IPooledRenderTarget> TressFXVelocity;
+
+	/** shortcut specific */
+	TRefCountPtr<IPooledRenderTarget> TressFXAccumInvAlpha;
+	TRefCountPtr<IPooledRenderTarget> TressFXFragmentDepthsTexture;
+	TRefCountPtr<IPooledRenderTarget> TressFXFragmentColorsTexture;
+
+	template <typename TRHICmdList>
+	void GetTressFXKBufferResources(
+		TRHICmdList& RHICmdList,
+		TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,
+		FRWBufferStructured*& OutTressFXKBufferNodes,
+		FRWBuffer*& OutTressFXKBufferCounter,
+		int32& OutTressFXKBufferNodePoolSize
+	);
+
+private:
+	template <typename TRHICmdList>
+	void InitializeTressFXKBufferResources(TRHICmdList& RHICmdList, bool bForceReinit = false);
+
+	/** k-buffer specific */
+	TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
+	FRWBufferStructured TressFXKBufferNodes;
+	FRWBuffer TressFXKBufferCounter;
+	int32 TressFXKBufferNodePoolSize;
+
+	/*@third party code - END TressFX*/
 
 private:
 	/** used by AdjustGBufferRefCount */

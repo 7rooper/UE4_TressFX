@@ -298,6 +298,18 @@ FSceneRenderTargets::FSceneRenderTargets(const FViewInfo& View, const FSceneRend
 	SnapshotArray(TranslucencyLightingVolumeDirectional, SnapshotSource.TranslucencyLightingVolumeDirectional);
 	SnapshotArray(OptionalShadowDepthColor, SnapshotSource.OptionalShadowDepthColor);
 	VirtualTextureFeedback.MakeSnapshot(SnapshotSource.VirtualTextureFeedback);
+
+	/*@third party code - BEGIN TressFX*/
+	TressFXSceneDepth = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXSceneDepth);
+	TressFXVelocity = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXVelocity);
+	TressFXAccumInvAlpha = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXAccumInvAlpha);
+	TressFXFragmentDepthsTexture = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXFragmentDepthsTexture);
+	TressFXFragmentColorsTexture = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXFragmentColorsTexture);
+	TressFXKBufferListHeads = GRenderTargetPool.MakeSnapshot(SnapshotSource.TressFXKBufferListHeads);
+	TressFXKBufferNodePoolSize = SnapshotSource.TressFXKBufferNodePoolSize;
+	TressFXKBufferNodes = SnapshotSource.TressFXKBufferNodes;
+	TressFXKBufferCounter = SnapshotSource.TressFXKBufferCounter;
+	/*@third party code - END TressFX*/
 }
 
 inline const TCHAR* GetSceneColorTargetName(EShadingPath ShadingPath)
@@ -650,9 +662,13 @@ void FSceneRenderTargets::Allocate(FRHICommandListImmediate& RHICmdList, const F
 	// Do allocation of render targets if they aren't available for the current shading path
 	CurrentFeatureLevel = NewFeatureLevel;
 	AllocateRenderTargets(RHICmdList, ViewFamily.Views.Num());
+
+	/*@third party code - BEGIN TressFX*/
+	AllocatTressFXTargets(RHICmdList, ViewFamily);
+	/*@third party code - END TressFX*/
 }
 
-void FSceneRenderTargets::BeginRenderingSceneColor(FRHICommandList& RHICmdList, ESimpleRenderTargetMode RenderTargetMode/*=EUninitializedColorExistingDepth*/, FExclusiveDepthStencil DepthStencilAccess, bool bTransitionWritable)
+void FSceneRenderTargets::BeginRenderingSceneColor(FRHICommandList& RHICmdList, ESimpleRenderTargetMode RenderTargetMode/*=EUninitializedColorExistingDepth*/, FExclusiveDepthStencil DepthStencilAccess, bool bTransitionWritable /*@third party code - BEGIN TressFX*/, bool bUseTressFXSceneDepth /*= false*/ /*@third party code - END TressFX*/)
 {
 	check(RHICmdList.IsOutsideRenderPass());
 
@@ -665,7 +681,19 @@ void FSceneRenderTargets::BeginRenderingSceneColor(FRHICommandList& RHICmdList, 
 
 	FRHIRenderPassInfo RPInfo(GetSceneColorSurface(), MakeRenderTargetActions(ColorLoadAction, ColorStoreAction));
 	RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(MakeRenderTargetActions(DepthLoadAction, DepthStoreAction), MakeRenderTargetActions(StencilLoadAction, StencilStoreAction));
-	RPInfo.DepthStencilRenderTarget.DepthStencilTarget = GetSceneDepthSurface();
+	/*@BEGIN Third party code TressFX*/
+	if (bUseTressFXSceneDepth)
+	{
+		check(TressFXSceneDepth.IsValid());
+		RPInfo.DepthStencilRenderTarget.DepthStencilTarget = (const FTexture2DRHIRef&)TressFXSceneDepth->GetRenderTargetItem().TargetableTexture;
+	}
+	else
+	{
+		/*@END Third party code TressFX*/
+		RPInfo.DepthStencilRenderTarget.DepthStencilTarget = GetSceneDepthSurface();
+		/*@BEGIN Third party code TressFX*/
+	} //
+	/*@END Third party code TressFX*/
 	RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = DepthStencilAccess;
 
 	if (bTransitionWritable)
@@ -1193,7 +1221,7 @@ void FSceneRenderTargets::AllocGBufferTargets(FRHICommandList& RHICmdList)
 		{
 			const EPixelFormat SpecularGBufferFormat = bHighPrecisionGBuffers ? PF_FloatRGBA : PF_B8G8R8A8;
 
-			FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(BufferSize, SpecularGBufferFormat, FClearValueBinding::Transparent, TexCreate_None, TexCreate_RenderTargetable, false));
+			FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(BufferSize, SpecularGBufferFormat, FClearValueBinding::Transparent, TexCreate_None, TexCreate_RenderTargetable /*@third party code - BEGIN TressFX*/ | TexCreate_UAV | TexCreate_ShaderResource /*@third party code - END TressFX*/, false));
 			Desc.Flags |= GFastVRamConfig.GBufferB;
 			GRenderTargetPool.FindFreeElement(RHICmdList, Desc, GBufferB, TEXT("GBufferB"));
 		}
@@ -1346,6 +1374,222 @@ void FSceneRenderTargets::AdjustGBufferRefCount(FRHICommandList& RHICmdList, int
 		}
 	}	
 }
+
+/*@third party code - BEGIN TressFX*/
+extern int32 GTressFXRenderType;
+extern int32 GTressFXKBufferSize;
+template <typename TRHICmdList>
+void FSceneRenderTargets::InitializeTressFXKBufferResources(TRHICmdList& RHICmdList, bool bForceReinit /*= false*/)
+{
+	const int32 KBufferSize = FMath::Clamp(static_cast<int32>(GTressFXKBufferSize), MIN_TFX_KBUFFER_SIZE, MAX_TFX_KBUFFER_SIZE);
+	const FIntPoint BuffSize = GetBufferSizeXY();
+
+	if (bForceReinit || !TressFXKBufferListHeads || !TressFXKBufferListHeads.IsValid() || TressFXKBufferListHeads->GetDesc().Extent != BuffSize)
+	{
+		FPooledRenderTargetDesc Desc(
+			FPooledRenderTargetDesc::Create2DDesc(
+				BuffSize,
+				PF_R32_UINT,
+				FClearValueBinding::Transparent,
+				TexCreate_None,
+				TexCreate_RenderTargetable | TexCreate_UAV,
+				false)
+		);
+		Desc.NumSamples = 1;
+		GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXKBufferListHeads, TEXT("PPLLHeads"));
+	}
+
+	const int32 RequiredPoolSize = BuffSize.X * BuffSize.Y * KBufferSize;
+
+	if (bForceReinit || TressFXKBufferNodePoolSize != RequiredPoolSize)
+	{
+		TressFXKBufferNodePoolSize = RequiredPoolSize;
+	}
+
+	if (bForceReinit || TressFXKBufferNodes.NumBytes != sizeof(FPPLL_Struct) * TressFXKBufferNodePoolSize)
+	{
+		TressFXKBufferNodes.Release();
+		TressFXKBufferNodes.Initialize(sizeof(FPPLL_Struct), RequiredPoolSize, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("TressFXKBuffer"));
+	}
+
+	if (bForceReinit || TressFXKBufferCounter.NumBytes != sizeof(uint32))
+	{
+		TressFXKBufferCounter.Release();
+		TressFXKBufferCounter.Initialize(sizeof(uint32), 1, EPixelFormat::PF_R32_UINT, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("TressFXKBufferCounter"));
+	}
+};
+
+#define IMPLEMENT_InitializeTressFXKBufferResources( TRHICmdList )							\
+	template void FSceneRenderTargets::InitializeTressFXKBufferResources< TRHICmdList >(	\
+		TRHICmdList& RHICmdList,															\
+		bool bForceReinit																	\
+	);
+
+IMPLEMENT_InitializeTressFXKBufferResources(FRHICommandList)
+IMPLEMENT_InitializeTressFXKBufferResources(FRHICommandListImmediate)
+
+#undef IMPLEMENT_InitializeTressFXKBufferResources
+
+template <typename TRHICmdList>
+void FSceneRenderTargets::GetTressFXKBufferResources(
+	TRHICmdList& RHICmdList,
+	TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,
+	FRWBufferStructured*& OutTressFXKBufferNodes,
+	FRWBuffer*& OutTressFXKBufferCounter,
+	int32& OutTressFXKBufferNodePoolSize
+)
+{
+	InitializeTressFXKBufferResources(RHICmdList, false);
+	OutTressFXKBufferListHeads = TressFXKBufferListHeads;
+	OutTressFXKBufferNodes = &TressFXKBufferNodes;
+	OutTressFXKBufferCounter = &TressFXKBufferCounter;
+	OutTressFXKBufferNodePoolSize = TressFXKBufferNodePoolSize;
+}
+
+#define IMPLEMENT_GetTressFXKBufferResources( TRHICmdList )									\
+	template void FSceneRenderTargets::GetTressFXKBufferResources< TRHICmdList >(			\
+		TRHICmdList& RHICmdList,															\
+		TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,						\
+		FRWBufferStructured*& OutTressFXKBufferNodes,										\
+		FRWBuffer*& OutTressFXKBufferCounter,												\
+		int32& OutTressFXKBufferNodePoolSize												\
+	);
+
+IMPLEMENT_GetTressFXKBufferResources(FRHICommandList);
+IMPLEMENT_GetTressFXKBufferResources(FRHICommandListImmediate);
+
+#undef IMPLEMENT_GetTressFXKBufferResources
+
+void FSceneRenderTargets::ReleaseTressFXResources(int32 TypeToRelease)
+{
+	const bool bReleaseAll = TypeToRelease == ETressFXRenderType::Num;
+
+	if (bReleaseAll || TypeToRelease == ETressFXRenderType::KBuffer)
+	{
+		TressFXKBufferListHeads.SafeRelease();
+		TressFXKBufferNodes.Release();
+		TressFXKBufferCounter.Release();
+		TressFXKBufferNodePoolSize = 0;
+	}
+
+	if (bReleaseAll || TypeToRelease == ETressFXRenderType::ShortCut)
+	{
+		TressFXAccumInvAlpha.SafeRelease();
+		TressFXFragmentDepthsTexture.SafeRelease();
+		TressFXFragmentColorsTexture.SafeRelease();
+	}
+	if (bReleaseAll || TypeToRelease == ETressFXRenderType::Opaque)
+	{
+		TressFXVelocity.SafeRelease();
+	}
+
+	if (bReleaseAll)
+	{
+		TressFXSceneDepth.SafeRelease();
+	}
+}
+
+void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, const FSceneViewFamily& ViewFamily)
+{
+	const int SampleCount = 1;
+
+	if (CurrentFeatureLevel >= ERHIFeatureLevel::SM5)
+	{
+		//all passes need velocity
+		{
+			FPooledRenderTargetDesc VelocityDesc(FPooledRenderTargetDesc::Create2DDesc(
+				BufferSize,
+				PF_G16R16,
+				FClearValueBinding::Transparent,
+				TexCreate_None,
+				TexCreate_RenderTargetable, false));
+			VelocityDesc.NumSamples = SampleCount;
+			GRenderTargetPool.FindFreeElement(RHICmdList, VelocityDesc, TressFXVelocity, TEXT("TressFXVelocity"));
+		}
+
+		const int32 TFXRenderType = FMath::Clamp(static_cast<int32>(GTressFXRenderType), 0, (int32)ETressFXRenderType::Max);
+
+		// everything but opaque needs its own depth buffer
+		if (TFXRenderType > ETressFXRenderType::Opaque)
+		{
+			FPooledRenderTargetDesc TressFXSceneDepthDesc(
+				FPooledRenderTargetDesc::Create2DDesc(
+					BufferSize,
+					PF_DepthStencil,
+					FClearValueBinding::DepthFar,
+					TexCreate_None,
+					TexCreate_ShaderResource | TexCreate_DepthStencilTargetable, false));
+			TressFXSceneDepthDesc.NumSamples = SampleCount;
+			GRenderTargetPool.FindFreeElement(RHICmdList, TressFXSceneDepthDesc, TressFXSceneDepth, TEXT("TressFXSceneDepth"));
+		}
+		else
+		{
+			//release the depth buffer then
+			TressFXSceneDepth.SafeRelease();
+		}
+
+
+		if (TFXRenderType == ETressFXRenderType::ShortCut)
+		{
+			//make sure k-buffer resources are not allocated, they use a lot of memory
+			ReleaseTressFXResources(ETressFXRenderType::KBuffer);
+
+			{
+				FPooledRenderTargetDesc Desc(
+					FPooledRenderTargetDesc::Create2DDesc(
+						BufferSize,
+						PF_R16F,
+						FClearValueBinding(FLinearColor(1, 1, 1, 1)),
+						TexCreate_None,
+						TexCreate_ShaderResource | TexCreate_RenderTargetable, false));
+				Desc.NumSamples = SampleCount;
+				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXAccumInvAlpha, TEXT("TressFX_AccumInvAlpha"), false);
+			}
+
+			{
+				FPooledRenderTargetDesc Desc(
+					FPooledRenderTargetDesc::Create2DDesc(
+						BufferSize,
+						PF_R32_UINT,
+						FClearValueBinding::Transparent,
+						TexCreate_None,
+						TexCreate_ShaderResource | TexCreate_RenderTargetable | TexCreate_UAV, false)
+				);
+				Desc.bIsArray = true;
+				Desc.ArraySize = 3;
+				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXFragmentDepthsTexture, TEXT("TressFX_FragmentDepthsTexture"));
+			}
+
+			{
+				FPooledRenderTargetDesc Desc(
+					FPooledRenderTargetDesc::Create2DDesc(
+						BufferSize,
+						PF_FloatRGBA,
+						FClearValueBinding::Transparent,
+						TexCreate_None,
+						TexCreate_ShaderResource | TexCreate_RenderTargetable, false));
+				Desc.NumSamples = SampleCount;
+				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXFragmentColorsTexture, TEXT("TressFX_FragmentColorsTexture"), false);
+			}
+		}
+		else if (TFXRenderType == ETressFXRenderType::KBuffer)
+		{
+			//release shortcut textures
+			ReleaseTressFXResources(ETressFXRenderType::ShortCut);
+			InitializeTressFXKBufferResources(RHICmdList);
+		}
+		else if (TFXRenderType == ETressFXRenderType::Opaque)
+		{
+			ReleaseTressFXResources(ETressFXRenderType::KBuffer);
+			ReleaseTressFXResources(ETressFXRenderType::ShortCut);
+		}
+	}
+	else
+	{
+		ReleaseTressFXResources(ETressFXRenderType::Num);
+	}
+}
+/*@third party code - END TressFX*/
 
 bool FSceneRenderTargets::BeginRenderingCustomDepth(FRHICommandListImmediate& RHICmdList, bool bPrimitives)
 {
@@ -2264,6 +2508,17 @@ void FSceneRenderTargets::AllocateScreenShadowMask(FRHICommandList& RHICmdList, 
 	GRenderTargetPool.FindFreeElement(RHICmdList, Desc, ScreenShadowMaskTexture, TEXT("ScreenShadowMaskTexture"));
 }
 
+/*@third party code - BEGIN TressFX*/
+void FSceneRenderTargets::AllocateTressFXScreenShadowMask(FRHICommandList& RHICmdList, TRefCountPtr<IPooledRenderTarget>& TressFXScreenShadowMaskTexture)
+{
+	//identical to AllocateScreenShadowMask
+	FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(GetBufferSizeXY(), PF_B8G8R8A8, FClearValueBinding::White, TexCreate_None, TexCreate_RenderTargetable, false));
+	//Desc.Flags |= GFastVRamConfig.ScreenSpaceShadowMask; //Can i can use the same config here?
+	Desc.NumSamples = GetNumSceneColorMSAASamples(GetCurrentFeatureLevel());
+	GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXScreenShadowMaskTexture, TEXT("TressFXScreenShadowMaskTexture"));
+}
+/*@third party code - END TressFX*/
+
 const FTexture2DRHIRef& FSceneRenderTargets::GetOptionalShadowDepthColorSurface(FRHICommandList& RHICmdList, int32 Width, int32 Height) const
 {
 	// Look for matching resolution
@@ -2696,6 +2951,10 @@ void FSceneRenderTargets::ReleaseAllTargets()
 	EditorPrimitivesDepth.SafeRelease();
 
 	VirtualTextureFeedback.ReleaseResources();
+
+	/*@third party code - BEGIN TressFX*/
+	ReleaseTressFXResources(ETressFXRenderType::Num);
+	/*@third party code - END TressFX*/
 }
 
 void FSceneRenderTargets::ReleaseDynamicRHI()
@@ -2979,10 +3238,35 @@ void SetupSceneTextureUniformParameters(
 	// Scene Color / Depth
 	{
 		const bool bSetupDepth = (SetupMode & ESceneTextureSetupMode::SceneDepth) != ESceneTextureSetupMode::None;
-		SceneTextureParameters.SceneColorTexture = bSetupDepth ? SceneContext.GetSceneColorTexture().GetReference() : BlackDefault2D;
+		/*@third party code - BEGIN TressFX*/
+		const bool bSetupTFXDepthReplace = (SetupMode & ESceneTextureSetupMode::TressFXSceneDepth_ReplaceRegularSceneDepth) != ESceneTextureSetupMode::None;
+		const bool bSetupTFXDepthSeparate = (SetupMode & ESceneTextureSetupMode::TressFXSceneDepth_SeparateRegularSceneDepth) != ESceneTextureSetupMode::None;
+		check(!(bSetupTFXDepthReplace && bSetupTFXDepthSeparate));
+		check(!((bSetupTFXDepthReplace || bSetupTFXDepthSeparate) && bSetupDepth));
+		/*@third party code - END TressFX*/
+		SceneTextureParameters.SceneColorTexture = bSetupDepth /*@third party code - BEGIN TressFX*/ || bSetupTFXDepthReplace || bSetupTFXDepthSeparate /*@third party code - END TressFX*/ ? SceneContext.GetSceneColorTexture().GetReference() : BlackDefault2D;
 		SceneTextureParameters.SceneColorTextureSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 		const FTexture2DRHIRef* ActualDepthTexture = SceneContext.GetActualDepthTexture();
 		SceneTextureParameters.SceneDepthTexture = bSetupDepth && ActualDepthTexture ? (*ActualDepthTexture).GetReference() : DepthDefault;
+
+		/*@third party code - BEGIN TressFX*/
+		if (bSetupTFXDepthReplace)
+		{
+			SceneTextureParameters.SceneDepthTexture = SceneContext.TressFXSceneDepth->GetRenderTargetItem().ShaderResourceTexture;
+			SceneTextureParameters.TressFXSceneDepthTexture = DepthDefault;
+			SceneTextureParameters.TressFXSceneDepthTextureNonMS = DepthDefault;
+		}
+		else if (bSetupTFXDepthSeparate)
+		{
+			SceneTextureParameters.TressFXSceneDepthTexture = SceneContext.TressFXSceneDepth->GetRenderTargetItem().ShaderResourceTexture;
+			SceneTextureParameters.SceneDepthTexture = ActualDepthTexture ? (*ActualDepthTexture).GetReference() : DepthDefault;
+		}
+		else
+		{
+			SceneTextureParameters.TressFXSceneDepthTexture = DepthDefault;
+			SceneTextureParameters.TressFXSceneDepthTextureNonMS = DepthDefault;
+		}
+		/*@third party code - END TressFX*/
 
 		if (bSetupDepth && SceneContext.IsSeparateTranslucencyPass() && SceneContext.IsDownsampledTranslucencyDepthValid())
 		{
@@ -3000,6 +3284,17 @@ void SetupSceneTextureUniformParameters(
 		{
 			SceneTextureParameters.SceneDepthTextureNonMS = GSupportsDepthFetchDuringDepthTest ? SceneContext.GetSceneDepthTexture() : SceneContext.GetAuxiliarySceneDepthSurface();
 		}
+		/*@third party code - BEGIN TressFX*/
+		else if (bSetupTFXDepthReplace)
+		{
+			SceneTextureParameters.SceneDepthTextureNonMS = SceneContext.TressFXSceneDepth->GetRenderTargetItem().ShaderResourceTexture;
+		}
+		else if (bSetupTFXDepthSeparate)
+		{
+			SceneTextureParameters.TressFXSceneDepthTextureNonMS = SceneContext.TressFXSceneDepth->GetRenderTargetItem().ShaderResourceTexture;
+			SceneTextureParameters.SceneDepthTextureNonMS = GSupportsDepthFetchDuringDepthTest ? SceneContext.GetSceneDepthTexture() : SceneContext.GetAuxiliarySceneDepthSurface();
+		}
+		/*@third party code - END TressFX*/
 		else
 		{
 			SceneTextureParameters.SceneDepthTextureNonMS = DepthDefault;
