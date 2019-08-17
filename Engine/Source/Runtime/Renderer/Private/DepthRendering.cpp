@@ -744,6 +744,19 @@ void FDepthPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch,
 {
 	bool bDraw = MeshBatch.bUseForDepthPass;
 
+	/*@third party code - BEGIN TressFX*/
+	// tressfx depth rendered in a special path. UNLESS it is masked material and using opaque rendering mode
+	const bool bIsTressFX = MeshBatch.MaterialRenderProxy->GetMaterial(FeatureLevel)->IsUsedWithTressFX();
+	if (bIsTressFX)
+	{
+		extern int32 GTressFXRenderType;
+		int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
+		TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
+		const bool bIsOpqueMode = TFXRenderType == ETressFXRenderType::Opaque;
+		bDraw = bIsOpqueMode && MeshBatch.MaterialRenderProxy->GetMaterial(FeatureLevel)->GetBlendMode() == EBlendMode::BLEND_Masked;
+	}
+	/*@third party code - END TressFX*/
+
 	// Filter by occluder flags and settings if required.
 	if (bDraw && bRespectUseAsOccluderFlag && !MeshBatch.bUseAsOccluder && EarlyZPassMode < DDM_AllOpaque)
 	{
