@@ -145,7 +145,7 @@ half3x3 CalcTangentToLocal(half3 TangentX, half4 TangentZ, out float TangentSign
 
 half3x3 CalcTangentToWorld(FVertexFactoryIntermediates Intermediates, half3x3 TangentToLocal)
 {
-    half3x3 LocalToWorld = Primitive.LocalToWorld;
+    half3x3 LocalToWorld = GetLocalToWorld3x3();
     half3 InvScale = Primitive.InvNonUniformScaleAndDeterminantSign.xyz;
     LocalToWorld[0] *= InvScale.x;
     LocalToWorld[1] *= InvScale.y;
@@ -155,7 +155,7 @@ half3x3 CalcTangentToWorld(FVertexFactoryIntermediates Intermediates, half3x3 Ta
 
 half3x3 GetLocalToWorld()
 {
-    half3x3 LocalToWorld = Primitive.LocalToWorld;
+    half3x3 LocalToWorld = GetLocalToWorld3x3();
     half3 InvScale = Primitive.InvNonUniformScaleAndDeterminantSign.xyz;
     LocalToWorld[0] *= InvScale.x;
     LocalToWorld[1] *= InvScale.y;
@@ -196,7 +196,7 @@ FVertexFactoryIntermediates GetVertexFactoryIntermediates(FVertexFactoryInput In
 FMaterialVertexParameters GetMaterialVertexParameters(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates, float3 WorldPosition, float3x3 TangentToLocal)
 {
     FMaterialVertexParameters Result = (FMaterialVertexParameters) 0;
-    Result.WorldPosition = Intermediates.tfxVer.Position;
+    Result.WorldPosition = Intermediates.tfxVer.Position.xyz;
     Result.VertexColor = Intermediates.Color;
     Result.TangentToWorld = mul(TangentToLocal, GetLocalToWorld3x3());
 

@@ -70,7 +70,7 @@ float NormalCurvatureToRoughness(float3 WorldNormal)
 #endif
 
 #include "ShadingModelsMaterial.ush"
-#if MATERIAL_SHADINGMODEL_HAIR || SIMPLE_FORWARD_DIRECTIONAL_LIGHT
+#if MATERIAL_SHADINGMODEL_HAIR || SIMPLE_FORWARD_DIRECTIONAL_LIGHT /*@third party code - BEGIN TressFX*/ || MATERIAL_SHADINGMODEL_TRESSFX /*@third party code - END TressFX*/
 #include "ShadingModels.ush"
 #endif
 
