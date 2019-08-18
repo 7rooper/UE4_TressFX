@@ -554,9 +554,9 @@ public:
 	void SetParameters(
 		FRHICommandList& RHICmdList, 
 		const FViewInfo& View, 
-		const FTextureRHIParamRef InAccumInvAlphaSRV,
-		const FTextureRHIParamRef InFragmentColorsTextureSRV,
-		const FUnorderedAccessViewRHIRef SceneColorUAV,
+		FRHITexture* InAccumInvAlphaSRV,
+		FRHITexture* InFragmentColorsTextureSRV,
+		TRefCountPtr<FRHIUnorderedAccessView> SceneColorUAV,
 		FIntPoint TargetSize
 	);
 
@@ -618,7 +618,7 @@ public:
 	}
 
 
-	void SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FShaderResourceViewRHIParamRef InLinkedListSRV, FTextureRHIParamRef InHeadListSRV);
+	void SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FRHIShaderResourceView* InLinkedListSRV, FRHITexture* InHeadListSRV);
 
 
 public:
@@ -676,9 +676,9 @@ public:
 	void SetParameters(
 		FRHICommandList& RHICmdList,
 		const FViewInfo& View,
-		const FShaderResourceViewRHIParamRef InLinkedListSRV,
-		const FTextureRHIParamRef InHeadListSRV,
-		const FUnorderedAccessViewRHIRef SceneColorUAV,
+		FRHIShaderResourceView* InLinkedListSRV,
+		FRHITexture* InHeadListSRV,
+		TRefCountPtr<FRHIUnorderedAccessView> SceneColorUAV,
 		FIntPoint TargetSize
 	);
 

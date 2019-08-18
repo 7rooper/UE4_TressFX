@@ -18,5 +18,5 @@ public:
 	{
 	
 	}
-	virtual FUniformBufferRHIParamRef GetHairObjectShaderUniformBufferParam() = 0;
+	virtual FRHIUniformBuffer* GetHairObjectShaderUniformBufferParam() = 0;
 };

@@ -21,7 +21,7 @@ END_GLOBAL_SHADER_PARAMETER_STRUCT()
 #endif
 struct TRESSFX_API FTressFXShaderUtil
 {
-    static void UploadGPUData(FStructuredBufferRHIParamRef Buffer, int32 ElementSize, int32 ElementCount, void* InData, EResourceLockMode LockMode = RLM_WriteOnly);
+    static void UploadGPUData(FRHIStructuredBuffer* Buffer, int32 ElementSize, int32 ElementCount, void* InData, EResourceLockMode LockMode = RLM_WriteOnly);
 };
 
 
@@ -113,18 +113,18 @@ public:
     void InitResources(uint32 InNumOfStrands);
     void ReleaseResources();
 
-    void UAVBarrierCSToVS(FRHICommandList& RHICmdList, FComputeFenceRHIParamRef Fence);
-    void UAVBarrierCSToCS(FRHICommandList& RHICmdList, FComputeFenceRHIParamRef Fence);
-    void UAVBarrierVSToCS(FRHICommandList& RHICmdList, FComputeFenceRHIParamRef Fence);
+    void UAVBarrierCSToVS(FRHICommandList& RHICmdList, FRHIComputeFence* Fence);
+    void UAVBarrierCSToCS(FRHICommandList& RHICmdList, FRHIComputeFence* Fence);
+    void UAVBarrierVSToCS(FRHICommandList& RHICmdList, FRHIComputeFence* Fence);
 
     //call in game thread
     void UpdateStrandParameter(FTressFXStrandStyleParameter* InStrandParameter);
     //only call in render thread
     void UpdateBuffer();
 
-    void SetUAV(FRHICommandList& RHICmdList, FComputeShaderRHIParamRef Shader, uint32 index);
+    void SetUAV(FRHICommandList& RHICmdList, FRHIComputeShader* Shader, uint32 index);
 
-    void UnsetUAV(FRHICommandList& RHICmdList, FComputeShaderRHIParamRef Shader, uint32 index);
+    void UnsetUAV(FRHICommandList& RHICmdList, FRHIComputeShader* Shader, uint32 index);
 
     FRWBufferStructured StrandStyleMaskBuffer;
     TUniformBufferRef<FTressFXStrandStyleUniformBuffer> StrandStyleUniformBuffer;

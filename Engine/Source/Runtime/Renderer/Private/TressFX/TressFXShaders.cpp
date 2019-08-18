@@ -101,7 +101,7 @@ void FTressFXShortCutResolveDepthPS<bWriteClosestDepth, bWriteShadingModelToGBuf
 	, FSceneRenderTargets& SceneContext																															\
 	, float MinAlphaForShadow)																																	\
 {																																								\
-	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();																									\
+	FRHIPixelShader* ShaderRHI = GetPixelShader();																										\
 																																								\
 	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);													\
 	SetTextureParameter(RHICmdList, ShaderRHI, FragmentDepthsTexture, SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().ShaderResourceTexture);	\
@@ -152,15 +152,14 @@ IMPLEMENT_GLOBAL_SHADER(FTressFXShortCutResolveColorPS, "/Engine/Private/TressFX
 void FTressFXShortCutResolveColorCS::SetParameters(
 	FRHICommandList& RHICmdList,
 	const FViewInfo& View,
-	const FTextureRHIParamRef InAccumInvAlphaSRV,
-	const FTextureRHIParamRef InFragmentColorsTextureSRV,
-	const FUnorderedAccessViewRHIRef SceneColorUAV,
+	FRHITexture* InAccumInvAlphaSRV,
+	FRHITexture* InFragmentColorsTextureSRV,
+	TRefCountPtr<FRHIUnorderedAccessView> SceneColorUAV,
 	FIntPoint TargetSize
 )
 {
 	const auto ShaderRHI = GetComputeShader();
 	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);
-
 	SetTextureParameter(RHICmdList, ShaderRHI, FragmentColorsTexture, InFragmentColorsTextureSRV);
 	SetTextureParameter(RHICmdList, ShaderRHI, AccumInvAlpha, InAccumInvAlphaSRV);
 	SetUAVParameter(RHICmdList, ShaderRHI, SceneColorTex, SceneColorUAV);
@@ -169,7 +168,7 @@ void FTressFXShortCutResolveColorCS::SetParameters(
 
 void FTressFXShortCutResolveColorCS::UnsetParameters(FRHICommandList& RHICmdList)
 {
-	const FComputeShaderRHIParamRef ShaderRHI = GetComputeShader();
+	FRHIComputeShader* ShaderRHI = GetComputeShader();
 	RHICmdList.SetUAVParameter(ShaderRHI, SceneColorTex.GetBaseIndex(), NULL);
 }
 
@@ -190,9 +189,9 @@ void FTressFXFKBufferResolvePS::ModifyCompilationEnvironment(const FGlobalShader
 	OutEnvironment.SetDefine(TEXT("KBUFFER_SIZE"), KBufferSize);
 }
 
-void FTressFXFKBufferResolvePS::SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FShaderResourceViewRHIParamRef InLinkedListSRV, FTextureRHIParamRef InHeadListSRV)
+void FTressFXFKBufferResolvePS::SetParameters(FRHICommandList& RHICmdList, const FViewInfo& View, FRHIShaderResourceView* InLinkedListSRV, FRHITexture* InHeadListSRV)
 {
-	const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
+	FRHIPixelShader* ShaderRHI = GetPixelShader();
 	FGlobalShader::SetParameters<FViewUniformShaderParameters>(RHICmdList, ShaderRHI, View.ViewUniformBuffer);
 
 	SetSRVParameter(RHICmdList, ShaderRHI, LinkedListSRV, InLinkedListSRV);
@@ -218,9 +217,9 @@ void FTressFXFKBufferResolveCS::ModifyCompilationEnvironment(const FGlobalShader
 void FTressFXFKBufferResolveCS::SetParameters(
 	FRHICommandList& RHICmdList,
 	const FViewInfo& View,
-	const FShaderResourceViewRHIParamRef InLinkedListSRV,
-	const FTextureRHIParamRef InHeadListSRV,
-	const FUnorderedAccessViewRHIRef SceneColorUAV,
+	FRHIShaderResourceView* InLinkedListSRV,
+	FRHITexture* InHeadListSRV,
+	TRefCountPtr<FRHIUnorderedAccessView> SceneColorUAV,
 	FIntPoint TargetSize
 )
 {
@@ -235,7 +234,7 @@ void FTressFXFKBufferResolveCS::SetParameters(
 
 void FTressFXFKBufferResolveCS::UnsetParameters(FRHICommandList& RHICmdList)
 {
-	const FComputeShaderRHIParamRef ShaderRHI = GetComputeShader();
+	FRHIComputeShader* ShaderRHI = GetComputeShader();
 	RHICmdList.SetUAVParameter(ShaderRHI, SceneColorTex.GetBaseIndex(), NULL);
 }
 

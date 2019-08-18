@@ -71,7 +71,7 @@ void FReadStructedBuffer::Initialize(uint32 BytesPerElement, uint32 NumElements,
 void FReadStructedBuffer::Release()
 {
 	NumBytes = 0;
-	Buffer.SafeRelease();
+	Buffer->Release();
 	SRV.SafeRelease();
 }
 
@@ -391,7 +391,7 @@ void FTressFXInstanceRenderData::InitDynamicRHI()
 {
 	PosTanCollection.InitResources(NumTotalVertice);
 
-	FStructuredBufferRHIParamRef Resources[] = {
+	FRHIStructuredBuffer* Resources[] = {
 		PosTanCollection.Positions.Buffer,
 		PosTanCollection.PositionsPrev.Buffer,
 		PosTanCollection.PositionsPrevPrev.Buffer,

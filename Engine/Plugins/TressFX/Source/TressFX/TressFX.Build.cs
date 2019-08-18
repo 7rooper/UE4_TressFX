@@ -9,7 +9,7 @@ public class TressFX : ModuleRules
 	{
         // Definitions.Add("TRESSFX_STANDALONE_PLUGIN=1");
 
-        // OptimizeCode = CodeOptimization.Never; //uncomment this when debugging
+        //OptimizeCode = CodeOptimization.Never; //uncomment this when debugging
         bFasterWithoutUnity = true;
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 

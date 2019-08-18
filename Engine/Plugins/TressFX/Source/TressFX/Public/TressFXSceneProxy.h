@@ -206,7 +206,7 @@ public:
 	float LodScreenSize;
 
 	virtual void GetDynamicMeshElements(const TArray<const FSceneView *>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, class FMeshElementCollector& Collector) const override;
-	virtual FUniformBufferRHIParamRef GetHairObjectShaderUniformBufferParam();
+	virtual FRHIUniformBuffer* GetHairObjectShaderUniformBufferParam();
 private:
 
 	FMaterialRelevance MaterialRelevance;

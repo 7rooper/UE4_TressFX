@@ -140,7 +140,7 @@ public:
 	{
 		check(ColorPassType == ETressFXPass::FillColor_KBuffer || ColorPassType == ETressFXPass::FillColor_Shortcut)
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
-		const FPixelShaderRHIParamRef ShaderRHI = GetPixelShader();
+		const FRHIPixelShader* ShaderRHI = GetPixelShader();
 		ITressFXSceneProxy* TFXProxy = (ITressFXSceneProxy*)PrimitiveSceneProxy;
 		ShaderBindings.Add(TressfxShadeParameters, TFXProxy->GetHairObjectShaderUniformBufferParam());
 		ShaderBindings.Add(ColorPassUniformBuffer, DrawRenderState.GetPassUniformBuffer());
@@ -972,7 +972,7 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 			ClearUAV(RHICmdList, SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem(), ShortcutClearValue);
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 			
-			FUnorderedAccessViewRHIParamRef UAVs[] = { SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().UAV};
+			FRHIUnorderedAccessView* UAVs[] = { SceneContext.TressFXFragmentDepthsTexture->GetRenderTargetItem().UAV};
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EWritable, EResourceTransitionPipeline::EGfxToGfx, UAVs, ARRAY_COUNT(UAVs));
 			
 			FRHITexture* ColorTargets[] = {
@@ -1181,7 +1181,7 @@ void RenderShortcutResolvePass(
 
 		{
 			//readable for resolve pass
-			FTextureRHIParamRef Resources[2] = {
+			FRHITexture* Resources[2] = {
 				SceneContext.TressFXAccumInvAlpha->GetRenderTargetItem().TargetableTexture,
 				SceneContext.TressFXFragmentColorsTexture->GetRenderTargetItem().TargetableTexture
 			};
@@ -1338,7 +1338,7 @@ void RenderKBufferResolvePasses(
 			static const uint32 Values[4] = { 1, 1, 1, 1 };
 			RHICmdList.ClearTinyUAV(TressFXKBufferCounter->UAV, Values);
 
-			FUnorderedAccessViewRHIParamRef UAVS[] = {
+			FRHIUnorderedAccessView* UAVS[] = {
 				TressFXKBufferListHeads->GetRenderTargetItem().UAV,
 				TressFXKBufferNodes->UAV,
 				TressFXKBufferCounter->UAV
@@ -1378,7 +1378,7 @@ void RenderKBufferResolvePasses(
 
 		{
 			//readable for resolve pass
-			FUnorderedAccessViewRHIParamRef UAVS[] = {
+			FRHIUnorderedAccessView* UAVS[] = {
 				TressFXKBufferListHeads->GetRenderTargetItem().UAV,
 				TressFXKBufferNodes->UAV
 			};
@@ -1596,7 +1596,7 @@ void FSceneRenderer::RenderTressFXResolveVelocity(FRHICommandListImmediate& RHIC
 			continue;
 		}
 
-		FTextureRHIParamRef Resources[] = {
+		FRHITexture* Resources[] = {
 			SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture,
 
 		};

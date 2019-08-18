@@ -452,7 +452,7 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 	{
 		SCOPED_DRAW_EVENTF(RHICmdList, SimulateTressFXAsset, TEXT("SimulateTressFXAsset %s"), *Proxy->TFXComponent->Asset->GetName());
 
-		FUnorderedAccessViewRHIParamRef SimResources[] =
+		FRHIUnorderedAccessView* SimResources[] =
 		{
 			Proxy->InstanceRenderData->PosTanCollection.Positions.UAV,
 			Proxy->InstanceRenderData->PosTanCollection.PositionsPrev.UAV,
@@ -467,7 +467,7 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 
 		if (bUseMorphs)
 		{
-			FUnorderedAccessViewRHIParamRef MorphResources[] =
+			FRHIUnorderedAccessView* MorphResources[] =
 			{
 				Proxy->MorphPositionDeltaBuffer.UAV
 			};
@@ -477,7 +477,7 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 		if (CVarTFXSimPass1.GetValueOnRenderThread() > 0)
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, IntegrationAndGlobalShapeConstraints);
-			auto Fence = RHICreateComputeFence(TEXT("IntegrationAndGlobalShapeConstraintsCSFence"));
+			TRefCountPtr<FRHIComputeFence> Fence = RHICreateComputeFence(TEXT("IntegrationAndGlobalShapeConstraintsCSFence"));
 
 			TShaderMapRef<FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 			RHICmdList.SetComputeShader(Shader->GetComputeShader());
@@ -504,7 +504,7 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 		if (SimQuality == ETressFXSimulationQuality::TFXSim_Full && CVarTFXSimPass2.GetValueOnRenderThread() > 0)
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, VelocityShockPropagation);
-			auto Fence = RHICreateComputeFence(TEXT("VelocityShockPropagationCSFence"));
+			TRefCountPtr<FRHIComputeFence> Fence = RHICreateComputeFence(TEXT("VelocityShockPropagationCSFence"));
 
 			TShaderMapRef<FVelocityShockPropagationCS> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 
@@ -526,7 +526,7 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 			SetSRVParameter(RHICmdList, LocalShapeConstraintsCS->GetComputeShader(), LocalShapeConstraintsCS->HairRefVecsInLocalFrame, Proxy->TressFXHairObject->HairRefVecsInLocalFrameBuffer.SRV);
 			for (int32 i = 0; i < CPULocalShapeIterations; ++i)
 			{
-				auto Fence = RHICreateComputeFence(TEXT("LocalShapeConstraintsCSFence"));
+				TRefCountPtr<FRHIComputeFence> Fence = RHICreateComputeFence(TEXT("LocalShapeConstraintsCSFence"));
 				DispatchComputeShader(RHICmdList, *LocalShapeConstraintsCS, NumGroupsForCS_StrandLevel, 1, 1);
 				Proxy->InstanceRenderData->PosTanCollection.UAVBarrier(RHICmdList, Fence);
 			}
@@ -534,7 +534,7 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 		if (SimQuality == ETressFXSimulationQuality::TFXSim_Full && CVarTFXSimPass4.GetValueOnRenderThread() > 0)
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, LengthConstriantsWindAndCollision);
-			auto Fence = RHICreateComputeFence(TEXT("LengthConstriantsWindAndCollisionCSFence"));
+			TRefCountPtr<FRHIComputeFence> Fence = RHICreateComputeFence(TEXT("LengthConstriantsWindAndCollisionCSFence"));
 			TShaderMapRef<FLengthConstriantsWindAndCollisionCS> LengthConstriantsWindAndCollisionCS(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 
 			RHICmdList.SetComputeShader(LengthConstriantsWindAndCollisionCS->GetComputeShader());
@@ -544,7 +544,7 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 			Proxy->InstanceRenderData->PosTanCollection.UAVBarrier(RHICmdList, Fence);
 		}
 
-		FComputeFenceRHIRef UpdateFollowHairsFence = nullptr;
+		TRefCountPtr<FRHIComputeFence> UpdateFollowHairsFence = nullptr;
 
 		if (CVarTFXSimPass5.GetValueOnRenderThread() > 0)
 		{
@@ -562,7 +562,7 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 
 		if (bUseSDFCollision && CVarTFXSDFApply.GetValueOnRenderThread() == 1)
 		{
-			FComputeFenceRHIRef ApplyFence = ApplySDF(RHICmdList, Proxy, UpdateFollowHairsFence, SimResources);
+			TRefCountPtr<FRHIComputeFence> ApplyFence = ApplySDF(RHICmdList, Proxy, UpdateFollowHairsFence, SimResources);
 			RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EComputeToGfx, SimResources, ARRAY_COUNT(SimResources), ApplyFence);
 		}
 		else

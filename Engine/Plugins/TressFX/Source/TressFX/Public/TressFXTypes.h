@@ -269,8 +269,8 @@ class TRESSFX_API FReadStructedBuffer
 
 public:
 
-	FStructuredBufferRHIRef Buffer;
-	FShaderResourceViewRHIRef SRV;
+	FRHIStructuredBuffer* Buffer;
+	TRefCountPtr<FRHIShaderResourceView> SRV;
 
 	uint32 NumBytes;
 
@@ -295,11 +295,11 @@ public:
 
 	void ReleaseResources();
 
-	void UAVBarrier(FRHICommandList& RHICmdList, FComputeFenceRHIParamRef Fence);
+	void UAVBarrier(FRHICommandList& RHICmdList, FRHIComputeFence* Fence);
 
-	void SetUAVs(FRHICommandList& RHICmdList, FComputeShaderRHIParamRef Shader);
+	void SetUAVs(FRHICommandList& RHICmdList, FRHIComputeShader* Shader);
 
-	void UnsetUAVs(FRHICommandList& RHICmdList, FComputeShaderRHIParamRef Shader);
+	void UnsetUAVs(FRHICommandList& RHICmdList, FRHIComputeShader* Shader);
 
 public:
 	uint32 NumOfVerts;
@@ -314,7 +314,7 @@ public:
 	TArray<FVector4> TangentsData;
 };
 
-extern void UploadGPUData(FStructuredBufferRHIParamRef Buffer, int32 ElementSize, int32 ElementCount, void* InData);
+extern void UploadGPUData(FRHIStructuredBuffer* Buffer, int32 ElementSize, int32 ElementCount, void* InData);
 
 class TRESSFX_API FTressFXHairObject : public FRenderResource
 {

@@ -29,7 +29,7 @@ void UpdateSDF(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy)
 		SCOPED_DRAW_EVENT(RHICmdList, BoneSkinning);
 		RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, Proxy->SDFMeshResources->MeshVertBuffer.UAV);
 
-		auto BoneSkinningFence = RHICreateComputeFence(TEXT("BoneSkinningFence"));
+		TRefCountPtr<FRHIComputeFence> BoneSkinningFence = RHICreateComputeFence(TEXT("BoneSkinningFence"));
 		TShaderMapRef<FTressBoneSkinningCS> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 		RHICmdList.SetComputeShader(Shader->GetComputeShader());
 		RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 0, Proxy->SDFMeshResources->MeshVertBuffer.UAV);
@@ -51,7 +51,7 @@ void UpdateSDF(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy)
 		SCOPED_DRAW_EVENT(RHICmdList, InitializeSignedDistanceField);
 		//InitializeSignedDistanceField - could probably just use clearUAV here with the default value.
 		RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EComputeToCompute, Proxy->SDFMeshResources->SignedDistanceFieldBuffer.UAV);
-		auto Fence = RHICreateComputeFence(TEXT("InitializeSignedDistanceFieldFence"));
+		TRefCountPtr<FRHIComputeFence> Fence = RHICreateComputeFence(TEXT("InitializeSignedDistanceFieldFence"));
 		TShaderMapRef<FInitializeSignedDistanceFieldCS> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 		RHICmdList.SetComputeShader(Shader->GetComputeShader());
 		RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 0, Proxy->SDFMeshResources->SignedDistanceFieldBuffer.UAV);
@@ -65,7 +65,7 @@ void UpdateSDF(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy)
 	if (CVarTFXSDFConstruct.GetValueOnRenderThread() == 1)
 	{
 		SCOPED_DRAW_EVENT(RHICmdList, ConstructSignedDistanceField);
-		auto Fence = RHICreateComputeFence(TEXT("ConstructSignedDistanceFieldFence"));
+		TRefCountPtr<FRHIComputeFence> Fence = RHICreateComputeFence(TEXT("ConstructSignedDistanceFieldFence"));
 		TShaderMapRef<FConstructSignedDistanceFieldCS> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 		RHICmdList.SetComputeShader(Shader->GetComputeShader());
 		RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 0, Proxy->SDFMeshResources->SignedDistanceFieldBuffer.UAV);
@@ -76,7 +76,7 @@ void UpdateSDF(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy)
 		DispatchComputeShader(RHICmdList, *Shader, DispatchSize, 1, 1);
 		Shader->g_SignedDistanceField.UnsetUAV(RHICmdList, Shader->GetComputeShader());
 		Shader->ColMeshVertexPositions.UnsetUAV(RHICmdList, Shader->GetComputeShader());
-		FUnorderedAccessViewRHIParamRef Resources[] = {
+		FRHIUnorderedAccessView*  Resources[] = {
 			Proxy->SDFMeshResources->SignedDistanceFieldBuffer.UAV,
 			Proxy->SDFMeshResources->MeshVertBuffer.UAV
 		};
@@ -87,7 +87,7 @@ void UpdateSDF(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy)
 	if (CVarTFXSDFFinalize.GetValueOnRenderThread() == 1)
 	{
 		SCOPED_DRAW_EVENT(RHICmdList, FinalizeSignedDistanceField);
-		auto Fence = RHICreateComputeFence(TEXT("FinalizeSignedDistanceFieldFence"));
+		TRefCountPtr<FRHIComputeFence> Fence = RHICreateComputeFence(TEXT("FinalizeSignedDistanceFieldFence"));
 		TShaderMapRef<FFinalizeSignedDistanceFieldCS> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 		RHICmdList.SetComputeShader(Shader->GetComputeShader());
 		RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 0, Proxy->SDFMeshResources->SignedDistanceFieldBuffer.UAV);
@@ -99,13 +99,13 @@ void UpdateSDF(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy)
 	}
 }
 
-FComputeFenceRHIRef ApplySDF(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, FComputeFenceRHIRef InFence, FUnorderedAccessViewRHIParamRef SimResources[])
+TRefCountPtr<FRHIComputeFence> ApplySDF(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, TRefCountPtr<FRHIComputeFence> InFence, FRHIUnorderedAccessView* SimResources[])
 {
 	Proxy->InstanceRenderData->PosTanCollection.UAVBarrier(RHICmdList, InFence);
 
 	SCOPED_DRAW_EVENT(RHICmdList, FCollideHairVerticesWithSdf_forward);
 
-	FComputeFenceRHIRef Fence = RHICreateComputeFence(TEXT("FCollideHairVerticesWithSdf_forwardFence"));
+	TRefCountPtr<FRHIComputeFence> Fence = RHICreateComputeFence(TEXT("FCollideHairVerticesWithSdf_forwardFence"));
 	TShaderMapRef<FCollideHairVerticesWithSdf_forwardCS> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 	RHICmdList.SetComputeShader(Shader->GetComputeShader());
 	RHICmdList.SetUAVParameter(Shader->GetComputeShader(), 0, Proxy->SDFMeshResources->SignedDistanceFieldBuffer.UAV);

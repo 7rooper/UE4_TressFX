@@ -273,4 +273,4 @@ public:
 
 static TAutoConsoleVariable<int32> CVarTFXSDFApply(TEXT("tfx.SDFCollisionApply"), 0, TEXT("Final SDF Collision Apply Pass toggle."), ECVF_RenderThreadSafe);
 void TRESSFX_API UpdateSDF(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy);
-FComputeFenceRHIRef TRESSFX_API ApplySDF(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, FComputeFenceRHIRef InFence, FUnorderedAccessViewRHIParamRef SimResources[]);
+TRefCountPtr<FRHIComputeFence> TRESSFX_API ApplySDF(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, TRefCountPtr<FRHIComputeFence> InFence, FRHIUnorderedAccessView* SimResources[]);

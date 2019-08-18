@@ -1,6 +1,6 @@
 #include "TressFXRenderData.h"
 
-void FTressFXShaderUtil::UploadGPUData(FStructuredBufferRHIParamRef Buffer, int32 ElementSize, int32 ElementCount, void* InData, EResourceLockMode LockMode/*=RLM_WriteOnly*/)
+void FTressFXShaderUtil::UploadGPUData(FRHIStructuredBuffer* Buffer, int32 ElementSize, int32 ElementCount, void* InData, EResourceLockMode LockMode/*=RLM_WriteOnly*/)
 {
     void* LockData = RHILockStructuredBuffer(Buffer, 0, ElementSize*ElementCount, LockMode);
     FMemory::Memcpy(LockData, InData, ElementSize*ElementCount);
@@ -72,9 +72,9 @@ void FTressFXStrandCollection::UpdateBuffer()
     StrandStyleUniformBuffer = TUniformBufferRef<FTressFXStrandStyleUniformBuffer>::CreateUniformBufferImmediate(StrandStyleParameter, UniformBuffer_SingleFrame);
 }
 
-void FTressFXStrandCollection::UAVBarrierCSToVS(FRHICommandList& RHICmdList, FComputeFenceRHIParamRef Fence)
+void FTressFXStrandCollection::UAVBarrierCSToVS(FRHICommandList& RHICmdList, FRHIComputeFence* Fence)
 {
-    FUnorderedAccessViewRHIParamRef UAVs[] =
+	FRHIUnorderedAccessView* UAVs[] =
     {
         StrandStyleMaskBuffer.UAV,
     };
@@ -82,9 +82,9 @@ void FTressFXStrandCollection::UAVBarrierCSToVS(FRHICommandList& RHICmdList, FCo
     RHICmdList.TransitionResources(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EComputeToGfx, UAVs, ARRAY_COUNT(UAVs), Fence);
 }
 
-void FTressFXStrandCollection::UAVBarrierCSToCS(FRHICommandList& RHICmdList, FComputeFenceRHIParamRef Fence)
+void FTressFXStrandCollection::UAVBarrierCSToCS(FRHICommandList& RHICmdList, FRHIComputeFence* Fence)
 {
-    FUnorderedAccessViewRHIParamRef UAVs[] =
+	FRHIUnorderedAccessView* UAVs[] =
     {
         StrandStyleMaskBuffer.UAV,
     };
@@ -92,9 +92,9 @@ void FTressFXStrandCollection::UAVBarrierCSToCS(FRHICommandList& RHICmdList, FCo
     RHICmdList.TransitionResources(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EComputeToCompute, UAVs, ARRAY_COUNT(UAVs), Fence);
 }
 
-void FTressFXStrandCollection::UAVBarrierVSToCS(FRHICommandList& RHICmdList, FComputeFenceRHIParamRef Fence)
+void FTressFXStrandCollection::UAVBarrierVSToCS(FRHICommandList& RHICmdList, FRHIComputeFence* Fence)
 {
-    FUnorderedAccessViewRHIParamRef UAVs[] =
+	FRHIUnorderedAccessView* UAVs[] =
     {
         StrandStyleMaskBuffer.UAV,
     };
@@ -102,12 +102,12 @@ void FTressFXStrandCollection::UAVBarrierVSToCS(FRHICommandList& RHICmdList, FCo
     RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, EResourceTransitionPipeline::EGfxToCompute, UAVs, ARRAY_COUNT(UAVs), Fence);
 }
 
-void FTressFXStrandCollection::SetUAV(FRHICommandList& RHICmdList, FComputeShaderRHIParamRef Shader, uint32 index)
+void FTressFXStrandCollection::SetUAV(FRHICommandList& RHICmdList, FRHIComputeShader* Shader, uint32 index)
 {
     RHICmdList.SetUAVParameter(Shader, index, StrandStyleMaskBuffer.UAV);
 }
 
-void FTressFXStrandCollection::UnsetUAV(FRHICommandList& RHICmdList, FComputeShaderRHIParamRef Shader, uint32 index)
+void FTressFXStrandCollection::UnsetUAV(FRHICommandList& RHICmdList, FRHIComputeShader* Shader, uint32 index)
 {
     RHICmdList.SetUAVParameter(Shader, index, nullptr);
 }

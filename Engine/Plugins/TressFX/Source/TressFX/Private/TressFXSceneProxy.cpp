@@ -141,7 +141,7 @@ FPrimitiveViewRelevance FTressFXSceneProxy::GetViewRelevance(const FSceneView * 
 	return ViewRel;
 }
 
-void UploadGPUData(FStructuredBufferRHIParamRef Buffer, int32 ElementSize, int32 ElementCount, void* InData)
+void UploadGPUData(FRHIStructuredBuffer* Buffer, int32 ElementSize, int32 ElementCount, void* InData)
 {
 	void* LockData = RHILockStructuredBuffer(Buffer, 0, ElementSize*ElementCount, RLM_WriteOnly);
 	FMemory::Memcpy(LockData, InData, ElementSize*ElementCount);
@@ -420,7 +420,7 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 	}
 }
 
-FUniformBufferRHIParamRef FTressFXSceneProxy::GetHairObjectShaderUniformBufferParam()
+FRHIUniformBuffer* FTressFXSceneProxy::GetHairObjectShaderUniformBufferParam()
 {
 	return InstanceRenderData->ShadeParametersUniformBuffer;
 }
@@ -535,9 +535,9 @@ void FTressFXPosTanCollection::ReleaseResources()
 	TempTangents.Release();
 }
 
-void FTressFXPosTanCollection::UAVBarrier(FRHICommandList& RHICmdList, FComputeFenceRHIParamRef Fence)
+void FTressFXPosTanCollection::UAVBarrier(FRHICommandList& RHICmdList, FRHIComputeFence* Fence)
 {
-	FUnorderedAccessViewRHIParamRef UAVs[] =
+	FRHIUnorderedAccessView* UAVs[] =
 	{
 		Positions.UAV,
 		PositionsPrev.UAV,
@@ -548,7 +548,7 @@ void FTressFXPosTanCollection::UAVBarrier(FRHICommandList& RHICmdList, FComputeF
 	RHICmdList.TransitionResources(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EComputeToCompute, UAVs, ARRAY_COUNT(UAVs), Fence);
 }
 
-void FTressFXPosTanCollection::SetUAVs(FRHICommandList& RHICmdList, FComputeShaderRHIParamRef Shader)
+void FTressFXPosTanCollection::SetUAVs(FRHICommandList& RHICmdList, FRHIComputeShader* Shader)
 {
 	RHICmdList.SetUAVParameter(Shader, 0, Positions.UAV);
 	RHICmdList.SetUAVParameter(Shader, 1, PositionsPrev.UAV);
@@ -556,7 +556,7 @@ void FTressFXPosTanCollection::SetUAVs(FRHICommandList& RHICmdList, FComputeShad
 	RHICmdList.SetUAVParameter(Shader, 3, Tangents.UAV);
 }
 
-void FTressFXPosTanCollection::UnsetUAVs(FRHICommandList& RHICmdList, FComputeShaderRHIParamRef Shader)
+void FTressFXPosTanCollection::UnsetUAVs(FRHICommandList& RHICmdList, FRHIComputeShader* Shader)
 {
 	RHICmdList.SetUAVParameter(Shader, 0, nullptr);
 	RHICmdList.SetUAVParameter(Shader, 1, nullptr);
