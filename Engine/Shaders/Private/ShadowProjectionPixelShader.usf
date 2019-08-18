@@ -184,7 +184,8 @@ float4 CalcTressFXShadows(in float4 SVPos)
 	}
 	#else // !USE_PCSS
 	{
-		#if SHADING_PATH_DEFERRED && !FORWARD_SHADING
+		//OIT tressfx doesnt render to the gbuffer, so we cant get NoL here.
+		#if SHADING_PATH_DEFERRED && !FORWARD_SHADING && 0
 			// Attenuate soft transition based on the angle with the light and the shading normal (acts as a receiver bias)
 			FGBufferData GBufferData = GetGBufferData(ScreenUV);
 			const bool bIsDirectional = LightPositionOrDirection.w == 0;
@@ -196,7 +197,8 @@ float4 CalcTressFXShadows(in float4 SVPos)
         Settings.ShadowDepthTexture = ShadowDepthTexture;
         Settings.ShadowDepthTextureSampler = ShadowDepthTextureSampler;
         Settings.ShadowBufferSize = ShadowBufferSize;
-		#if SHADING_PATH_DEFERRED && !FORWARD_SHADING
+		//OIT tressfx doesnt render to the gbuffer, so we cant get NoL here.
+		#if SHADING_PATH_DEFERRED && !FORWARD_SHADING && 0
 		Settings.TransitionScale = SoftTransitionScale.z * lerp(ProjectionDepthBiasParameters.z, 1.0, NoL);
 		#else
 		Settings.TransitionScale = SoftTransitionScale.z;

@@ -860,6 +860,9 @@ float3 GetForwardDirectLightingTressFX(
         #if MATERIAL_SHADINGMODEL_TRESSFX
 			float3 NewLighting = GetTressFXDynamicLighting(WorldPosition, -CameraVector, GBufferData, LightData, LightAttenuation, Dither, RectTexture, Root2Tip, HairId, TFXTangent, TFXAlpha, true, Coverage, false);
 		#else
+			#if ATTENUATE_SHADOW_BY_ALPHA
+				LightAttenuation = lerp(1, LightAttenuation, float4(1 - TFXAlpha,1 - TFXAlpha,1 - TFXAlpha,1 - TFXAlpha));
+			#endif
 			float3 NewLighting = GetDynamicLighting(WorldPosition, -CameraVector, GBufferData, 1, GBufferData.ShadingModelID, LightData, LightAttenuation, Dither, uint2(0, 0), RectTexture).xyz;
 		#endif
 
@@ -1105,7 +1108,7 @@ void main(
 	float3 SubsurfaceIndirectLighting;
 	float3 DiffuseColor = 0;
 	float IndirectIrradiance = 0;
-			GetPrecomputedIndirectLightingAndSkyLight(MaterialParameters, In.FactoryInterpolants, LightmapVTPageTableResult, GBuffer, DiffuseDir, VolumetricLightmapBrickTextureUVs, DiffuseIndirectLighting, SubsurfaceIndirectLighting, IndirectIrradiance);
+	GetPrecomputedIndirectLightingAndSkyLight(MaterialParameters, In.FactoryInterpolants, LightmapVTPageTableResult, GBuffer, DiffuseDir, VolumetricLightmapBrickTextureUVs, DiffuseIndirectLighting, SubsurfaceIndirectLighting, IndirectIrradiance);
 	DiffuseColor += (DiffuseIndirectLighting * DiffuseColorForIndirect + SubsurfaceIndirectLighting * SubsurfaceColor) * AOMultiBounce( GBuffer.BaseColor, DiffOcclusion );
 	Color += DiffuseColor;
 
