@@ -264,22 +264,54 @@ public:
 
 };
 
-class TRESSFX_API FReadStructedBuffer
+struct TRESSFX_API FReadStructedBuffer
 {
-
-public:
-
-	FRHIStructuredBuffer* Buffer;
-	TRefCountPtr<FRHIShaderResourceView> SRV;
-
+	FStructuredBufferRHIRef Buffer;
+	FShaderResourceViewRHIRef SRV;
 	uint32 NumBytes;
 
-	FReadStructedBuffer();
+	FReadStructedBuffer() : NumBytes(0) {}
 
-	void Initialize(uint32 BytesPerElement, uint32 NumElements, EPixelFormat Format, uint32 AdditionalUsage = 0);
+	~FReadStructedBuffer()
+	{
+		Release();
+	}
 
-	void Release();
+	void Initialize(uint32 BytesPerElement, uint32 NumElements, uint32 AdditionalUsage = 0, const TCHAR* InDebugName = NULL, bool bUseUavCounter = false, bool bAppendBuffer = false)
+	{
+		check(GMaxRHIFeatureLevel == ERHIFeatureLevel::SM5 || GMaxRHIFeatureLevel == ERHIFeatureLevel::ES3_1);
+		// Provide a debug name if using Fast VRAM so the allocators diagnostics will work
+		ensure(!((AdditionalUsage & BUF_FastVRAM) && !InDebugName));
 
+		NumBytes = BytesPerElement * NumElements;
+		FRHIResourceCreateInfo CreateInfo;
+		CreateInfo.DebugName = InDebugName;
+		Buffer = RHICreateStructuredBuffer(BytesPerElement, NumBytes, BUF_ShaderResource | AdditionalUsage, CreateInfo);
+		SRV = RHICreateShaderResourceView(Buffer);
+	}
+
+	void Release()
+	{
+		int32 BufferRefCount = Buffer ? Buffer->GetRefCount() : -1;
+
+		if (BufferRefCount == 1)
+		{
+			DiscardTransientResource();
+		}
+
+		NumBytes = 0;
+		Buffer.SafeRelease();
+		SRV.SafeRelease();
+	}
+
+	void AcquireTransientResource()
+	{
+		RHIAcquireTransientResource(Buffer);
+	}
+	void DiscardTransientResource()
+	{
+		RHIDiscardTransientResource(Buffer);
+	}
 };
 
 class TRESSFX_API FTressFXPosTanCollection

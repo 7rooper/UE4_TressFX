@@ -54,26 +54,6 @@ FTressFXRuntimeData::FTressFXRuntimeData()
 
 }
 
-FReadStructedBuffer::FReadStructedBuffer() : NumBytes(0)
-{
-
-}
-
-void FReadStructedBuffer::Initialize(uint32 BytesPerElement, uint32 NumElements, EPixelFormat Format, uint32 AdditionalUsage /*= 0*/)
-{
-	check(GMaxRHIFeatureLevel >= ERHIFeatureLevel::SM4);
-	NumBytes = BytesPerElement * NumElements;
-	FRHIResourceCreateInfo CreateInfo;
-	Buffer = RHICreateStructuredBuffer(BytesPerElement, NumBytes, BUF_ShaderResource | AdditionalUsage, CreateInfo);
-	SRV = RHICreateShaderResourceView(Buffer);
-}
-
-void FReadStructedBuffer::Release()
-{
-	NumBytes = 0;
-	Buffer->Release();
-	SRV.SafeRelease();
-}
 
 FTressFXPosTanCollection::FTressFXPosTanCollection(FTressFXRuntimeData* Data)
 {
