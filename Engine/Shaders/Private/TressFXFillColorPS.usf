@@ -93,44 +93,6 @@ float NormalCurvatureToRoughness(float3 WorldNormal)
 
 #if !FORWARD_SHADING
 
-void GetVolumeLightingNonDirectional(float4 AmbientLightingVector, float3 DiffuseColor, inout float3 InterpolatedLighting, out float4 VolumeLighting)
-{
-	// Normal is not taken into account with non directional lighting, and only the ambient term of the SH coefficients are needed
-    FOneBandSHVectorRGB TranslucentLighting;
-    TranslucentLighting.R.V.x = AmbientLightingVector.r;
-    TranslucentLighting.G.V.x = AmbientLightingVector.g;
-    TranslucentLighting.B.V.x = AmbientLightingVector.b;
-
-    FOneBandSHVector DiffuseTransferSH = CalcDiffuseTransferSH1(1);
-    VolumeLighting = float4(DotSH1(TranslucentLighting, DiffuseTransferSH), AmbientLightingVector.a);
-    InterpolatedLighting = DiffuseColor * VolumeLighting.rgb;
-}
-
-void GetVolumeLightingDirectional(float4 AmbientLightingVector, float3 DirectionalLightingVector, float3 WorldNormal, float3 DiffuseColor, inout float3 InterpolatedLighting, out float4 VolumeLighting)
-{
-    float DirectionalLightingIntensity = GetMaterialTranslucencyDirectionalLightingIntensity();
-
-    AmbientLightingVector.rgb /= DirectionalLightingIntensity;
-    DirectionalLightingVector.rgb *= DirectionalLightingIntensity;
-
-	// Reconstruct the SH coefficients based on what was encoded
-    FTwoBandSHVectorRGB TranslucentLighting;
-    TranslucentLighting.R.V.x = AmbientLightingVector.r;
-    TranslucentLighting.G.V.x = AmbientLightingVector.g;
-    TranslucentLighting.B.V.x = AmbientLightingVector.b;
-    float3 NormalizedAmbientColor = AmbientLightingVector.rgb / (Luminance(AmbientLightingVector.rgb) + 0.00001f);
-
-	// Scale the monocrome directional coefficients with the normalzed ambient color as an approximation to the uncompressed values
-    TranslucentLighting.R.V.yzw = DirectionalLightingVector.rgb * NormalizedAmbientColor.r;
-    TranslucentLighting.G.V.yzw = DirectionalLightingVector.rgb * NormalizedAmbientColor.g;
-    TranslucentLighting.B.V.yzw = DirectionalLightingVector.rgb * NormalizedAmbientColor.b;
-			
-	// Compute diffuse lighting which takes the normal into account
-    FTwoBandSHVector DiffuseTransferSH = CalcDiffuseTransferSH(WorldNormal, 1);
-    VolumeLighting = float4(max(half3(0, 0, 0), DotSH(TranslucentLighting, DiffuseTransferSH)), AmbientLightingVector.a);
-    InterpolatedLighting += DiffuseColor * VolumeLighting.rgb;
-}
-
 #endif
 
 #if SIMPLE_FORWARD_SHADING
@@ -141,10 +103,20 @@ void GetVolumeLightingDirectional(float4 AmbientLightingVector, float3 Direction
 
 /** Computes sky diffuse lighting, including precomputed shadowing. */
 // the following were adapted from the versions in basepasspixelshader
-void GetSkyLighting(FMaterialPixelParameters MaterialParameters, float3 WorldNormal, float2 LightmapUV, float3 SkyOcclusionUV3D, out float3 OutDiffuseLighting, out float3 OutSubsurfaceLighting)
+void GetSkyLighting(
+	  FMaterialPixelParameters MaterialParameters
+	, VTPageTableResult LightmapVTPageTableResult
+	, FGBufferData GBuffer
+	, float3 WorldNormal
+	, float2 LightmapUV
+	, uint LightmapDataIndex
+	, float3 SkyOcclusionUV3D
+	, out float3 OutDiffuseLighting
+	, out float3 OutSubsurfaceLighting
+)
 {
-    OutDiffuseLighting = 0;
-    OutSubsurfaceLighting = 0;
+	OutDiffuseLighting = 0;
+	OutSubsurfaceLighting = 0;
 
 #if ENABLE_SKY_LIGHT
 
@@ -152,27 +124,27 @@ void GetSkyLighting(FMaterialPixelParameters MaterialParameters, float3 WorldNor
 	float GeometryTerm = 1;
 	float3 SkyLightingNormal = WorldNormal;
 	
-#if HQ_TEXTURE_LIGHTMAP || CACHED_POINT_INDIRECT_LIGHTING || CACHED_VOLUME_INDIRECT_LIGHTING || PRECOMPUTED_IRRADIANCE_VOLUME_LIGHTING
+	#if HQ_TEXTURE_LIGHTMAP || CACHED_POINT_INDIRECT_LIGHTING || CACHED_VOLUME_INDIRECT_LIGHTING || PRECOMPUTED_IRRADIANCE_VOLUME_LIGHTING
 		BRANCH
 		if (View.SkyLightParameters.x > 0)
 		{
 			float3 NormalizedBentNormal = SkyLightingNormal;
 
-#if PRECOMPUTED_IRRADIANCE_VOLUME_LIGHTING
+			#if PRECOMPUTED_IRRADIANCE_VOLUME_LIGHTING
 			
 				float3 SkyBentNormal = GetVolumetricLightmapSkyBentNormal(SkyOcclusionUV3D);
 				SkyVisibility = length(SkyBentNormal);
 				NormalizedBentNormal = SkyBentNormal / max(SkyVisibility, .0001f);
 
-#elif HQ_TEXTURE_LIGHTMAP
+			#elif HQ_TEXTURE_LIGHTMAP
 
 				// Bent normal from precomputed texture
-				float4 WorldSkyBentNormalAndOcclusion = GetSkyBentNormalAndOcclusion(LightmapUV * float2(1, 2), MaterialParameters.SvPosition.xy);
+				float4 WorldSkyBentNormalAndOcclusion = GetSkyBentNormalAndOcclusion(LightmapVTPageTableResult, LightmapUV * float2(1, 2), LightmapDataIndex, MaterialParameters.SvPosition.xy);
 				// Renormalize as vector was quantized and compressed
 				NormalizedBentNormal = normalize(WorldSkyBentNormalAndOcclusion.xyz);
 				SkyVisibility = WorldSkyBentNormalAndOcclusion.w;
 
-#elif CACHED_POINT_INDIRECT_LIGHTING || CACHED_VOLUME_INDIRECT_LIGHTING
+			#elif CACHED_POINT_INDIRECT_LIGHTING || CACHED_VOLUME_INDIRECT_LIGHTING
 
 				// Bent normal from the indirect lighting cache - one value for the whole object
 				if (View.IndirectLightingCacheShowFlag > 0.0f)
@@ -181,12 +153,12 @@ void GetSkyLighting(FMaterialPixelParameters MaterialParameters, float3 WorldNor
 					SkyVisibility = IndirectLightingCache.PointSkyBentNormal.w;
 				}
 
-#endif
+			#endif
 
-#if (MATERIALBLENDING_TRANSLUCENT || MATERIALBLENDING_ADDITIVE) && (TRANSLUCENCY_LIGHTING_VOLUMETRIC_NONDIRECTIONAL || TRANSLUCENCY_LIGHTING_VOLUMETRIC_PERVERTEX_NONDIRECTIONAL)
+			#if (MATERIALBLENDING_TRANSLUCENT || MATERIALBLENDING_ADDITIVE) && (TRANSLUCENCY_LIGHTING_VOLUMETRIC_NONDIRECTIONAL || TRANSLUCENCY_LIGHTING_VOLUMETRIC_PERVERTEX_NONDIRECTIONAL)
 				// NonDirectional lighting can't depend on the normal
 				SkyLightingNormal = NormalizedBentNormal;
-#else
+			#else
 				
 				// Weight toward the material normal to increase directionality
 				float BentNormalWeightFactor = 1 - (1 - SkyVisibility) * (1 - SkyVisibility);
@@ -200,9 +172,9 @@ void GetSkyLighting(FMaterialPixelParameters MaterialParameters, float3 WorldNor
 				float DotProductFactor = lerp(saturate(dot(NormalizedBentNormal, WorldNormal)), 1, BentNormalWeightFactor);
 				// Account for darkening due to the geometry term
 				GeometryTerm = DotProductFactor;
-#endif
+			#endif
 		}
-#endif
+	#endif
 			
 	// Compute the preconvolved incoming lighting with the bent normal direction
 	float3 DiffuseLookup = GetEffectiveSkySHDiffuse(SkyLightingNormal) * ResolvedView.SkyLightColor.rgb;
@@ -210,10 +182,9 @@ void GetSkyLighting(FMaterialPixelParameters MaterialParameters, float3 WorldNor
 	// Apply AO to the sky diffuse
 	OutDiffuseLighting += DiffuseLookup * (SkyVisibility * GeometryTerm);
 
-#if MATERIAL_SHADINGMODEL_TWOSIDED_FOLIAGE
-		float3 BackfaceDiffuseLookup = GetEffectiveSkySHDiffuse(-WorldNormal) * ResolvedView.SkyLightColor.rgb;
-		OutSubsurfaceLighting += BackfaceDiffuseLookup * SkyVisibility;
-#endif
+	#if MATERIAL_SHADINGMODEL_TWOSIDED_FOLIAGE
+
+	#endif
 
 #endif
 }
@@ -228,36 +199,26 @@ void GetSkyLighting(FMaterialPixelParameters MaterialParameters, float3 WorldNor
 
 /** Calculates indirect lighting contribution on this object from precomputed data. */
 void GetPrecomputedIndirectLightingAndSkyLight(
-	FMaterialPixelParameters MaterialParameters,
+	FMaterialPixelParameters MaterialParameters, 
 	FVertexFactoryInterpolantsVSToPS Interpolants,
+	VTPageTableResult LightmapVTPageTableResult,
+	FGBufferData GBuffer,
 	float3 DiffuseDir,
 	float3 VolumetricLightmapBrickTextureUVs,
 	out float3 OutDiffuseLighting,
 	out float3 OutSubsurfaceLighting,
-	out float OutIndirectIrradiance)
+	out float OutIndirectIrradiance
+)
 {
     OutIndirectIrradiance = 0;
     OutDiffuseLighting = 0;
     OutSubsurfaceLighting = 0;
     float2 SkyOcclusionUV = 0;
+	uint SkyOcclusionDataIndex = 0u;
 
 #if PRECOMPUTED_IRRADIANCE_VOLUME_LIGHTING
 
-#if TRANSLUCENCY_LIGHTING_VOLUMETRIC_NONDIRECTIONAL || TRANSLUCENCY_LIGHTING_VOLUMETRIC_PERVERTEX_NONDIRECTIONAL
-
-
-			FOneBandSHVectorRGB IrradianceSH = GetVolumetricLightmapSH1(VolumetricLightmapBrickTextureUVs);
-			FOneBandSHVector DiffuseTransferSH = CalcDiffuseTransferSH1(1);
-			OutDiffuseLighting = max(float3(0,0,0), DotSH1(IrradianceSH, DiffuseTransferSH)) / PI;
-
-#else
-
-			FThreeBandSHVectorRGB IrradianceSH = GetVolumetricLightmapSH3(VolumetricLightmapBrickTextureUVs);
-			// Diffuse convolution
-			FThreeBandSHVector DiffuseTransferSH = CalcDiffuseTransferSH3(DiffuseDir, 1);
-			OutDiffuseLighting = max(float3(0,0,0), DotSH3(IrradianceSH, DiffuseTransferSH)) / PI;
-
-#endif
+		//not supported
 
 
 	// Method for movable components which want to use a volume texture of interpolated SH samples
@@ -272,14 +233,14 @@ void GetPrecomputedIndirectLightingAndSkyLight(
 			float4 Vector0 = Texture3DSample(IndirectLightingCache.IndirectLightingCacheTexture0, IndirectLightingCache.IndirectLightingCacheTextureSampler0, VolumeUVs);
 
 			// For debugging
-#define AMBIENTONLY 0
-#if AMBIENTONLY
+			#define AMBIENTONLY 0
+			#if AMBIENTONLY
 
 				OutDiffuseLighting = Vector0.rgb / SHAmbientFunction() / PI;
 
-#else
+			#else
 
-				float4 Vector1 = Texture3DSample(IndirectLightingCache.IndirectLightingCacheTexture1, ILCSharedSampler1, VolumeUVs);
+								float4 Vector1 = Texture3DSample(IndirectLightingCache.IndirectLightingCacheTexture1, ILCSharedSampler1, VolumeUVs);
 				float4 Vector2 = Texture3DSample(IndirectLightingCache.IndirectLightingCacheTexture2, ILCSharedSampler2, VolumeUVs);
 
 				// Construct the SH environment
@@ -292,16 +253,20 @@ void GetPrecomputedIndirectLightingAndSkyLight(
 				FTwoBandSHVector DiffuseTransferSH = CalcDiffuseTransferSH(DiffuseDir, 1);
 				OutDiffuseLighting = max(half3(0,0,0), DotSH(CachedSH, DiffuseTransferSH)) / PI;
 
-#endif
+				#if MATERIAL_SHADINGMODEL_TWOSIDED_FOLIAGE
+					
+				#endif
+
+			#endif
 		}
 
 	// Method for movable components which want to use a single interpolated SH sample
 #elif CACHED_POINT_INDIRECT_LIGHTING 
 		if (View.IndirectLightingCacheShowFlag > 0.0f)
 		{
-#if TRANSLUCENCY_LIGHTING_VOLUMETRIC_NONDIRECTIONAL
+		#if TRANSLUCENCY_LIGHTING_VOLUMETRIC_NONDIRECTIONAL
 
-			FOneBandSHVectorRGB PointIndirectLighting;
+		FOneBandSHVectorRGB PointIndirectLighting;
 			PointIndirectLighting.R.V = IndirectLightingCache.IndirectLightingSHCoefficients0[0].x;
 			PointIndirectLighting.G.V = IndirectLightingCache.IndirectLightingSHCoefficients0[1].x;
 			PointIndirectLighting.B.V = IndirectLightingCache.IndirectLightingSHCoefficients0[2].x;
@@ -309,7 +274,10 @@ void GetPrecomputedIndirectLightingAndSkyLight(
 			FOneBandSHVector DiffuseTransferSH = CalcDiffuseTransferSH1(1);
 			OutDiffuseLighting = DotSH1(PointIndirectLighting, DiffuseTransferSH);
 
-#else
+			#if MATERIAL_SHADINGMODEL_TWOSIDED_FOLIAGE
+			#endif
+
+		#else
 
 			FThreeBandSHVectorRGB PointIndirectLighting;
 			PointIndirectLighting.R.V0 = IndirectLightingCache.IndirectLightingSHCoefficients0[0];
@@ -328,61 +296,49 @@ void GetPrecomputedIndirectLightingAndSkyLight(
 			// Compute diffuse lighting which takes the normal into account
 			OutDiffuseLighting = max(half3(0,0,0), DotSH3(PointIndirectLighting, DiffuseTransferSH));
 
-#if MATERIAL_SHADINGMODEL_TWOSIDED_FOLIAGE
-				FThreeBandSHVector SubsurfaceTransferSH = CalcDiffuseTransferSH3(-DiffuseDir, 1);
-				OutSubsurfaceLighting += max(half3(0,0,0), DotSH3(PointIndirectLighting, SubsurfaceTransferSH));
-#endif
+			#if MATERIAL_SHADINGMODEL_TWOSIDED_FOLIAGE
+
+			#endif
 		
-#endif
+		#endif
 		}
 
 	// High quality texture lightmaps
-#elif HQ_TEXTURE_LIGHTMAP
+	#elif HQ_TEXTURE_LIGHTMAP
 
 		float2 LightmapUV0, LightmapUV1;
 		uint LightmapDataIndex;
 		GetLightMapCoordinates(Interpolants, LightmapUV0, LightmapUV1, LightmapDataIndex);
 		SkyOcclusionUV = LightmapUV0;
-
-		uint VTRequest = 0;
-		GetLightMapColorHQ(LightmapUV0, LightmapUV1, LightmapDataIndex, DiffuseDir, MaterialParameters.SvPosition.xy, OutDiffuseLighting, OutSubsurfaceLighting, VTRequest);
-
-#if LIGHTMAP_VT_ENABLED
-		uint2 PixelPos = (uint2)MaterialParameters.SvPosition.xy;
-		if( ( (PixelPos.x | PixelPos.y) & 15 ) == 0 )
-		{
-			// TODO use append buffer
-			VTFeedbackBuffer[ PixelPos / 16 ] = VTRequest;
-		}
-#endif
-
+		SkyOcclusionDataIndex = LightmapDataIndex;
+		GetLightMapColorHQ(LightmapVTPageTableResult, LightmapUV0, LightmapUV1, LightmapDataIndex, DiffuseDir, MaterialParameters.SvPosition.xy, GBuffer.ShadingModelID, OutDiffuseLighting, OutSubsurfaceLighting);
 
 	// Low quality texture lightmaps
-#elif LQ_TEXTURE_LIGHTMAP
+	#elif LQ_TEXTURE_LIGHTMAP
 
 		float2 LightmapUV0, LightmapUV1;
 		uint LightmapDataIndex;
 		GetLightMapCoordinates(Interpolants, LightmapUV0, LightmapUV1, LightmapDataIndex);
 		OutDiffuseLighting = GetLightMapColorLQ(LightmapUV0, LightmapUV1, LightmapDataIndex, DiffuseDir).rgb;
 
-#endif
+	#endif
 
 	// Apply indirect lighting scale while we have only accumulated lightmaps
-    OutDiffuseLighting *= View.IndirectLightingColorScale;
-    OutSubsurfaceLighting *= View.IndirectLightingColorScale;
+	OutDiffuseLighting *= View.IndirectLightingColorScale;
+	OutSubsurfaceLighting *= View.IndirectLightingColorScale;
 
-    float3 SkyDiffuseLighting;
-    float3 SkySubsurfaceLighting;
-    GetSkyLighting(MaterialParameters, DiffuseDir, SkyOcclusionUV, VolumetricLightmapBrickTextureUVs, SkyDiffuseLighting, SkySubsurfaceLighting);
+	float3 SkyDiffuseLighting;
+	float3 SkySubsurfaceLighting;
+	GetSkyLighting(MaterialParameters, LightmapVTPageTableResult, GBuffer, DiffuseDir, SkyOcclusionUV, SkyOcclusionDataIndex, VolumetricLightmapBrickTextureUVs, SkyDiffuseLighting, SkySubsurfaceLighting);
 
-    OutSubsurfaceLighting += SkySubsurfaceLighting;
+   OutSubsurfaceLighting += SkySubsurfaceLighting;
 
 	// Sky lighting must contribute to IndirectIrradiance for ReflectionEnvironment lightmap mixing
-    OutDiffuseLighting += SkyDiffuseLighting;
+	OutDiffuseLighting += SkyDiffuseLighting;
 
-#if HQ_TEXTURE_LIGHTMAP || LQ_TEXTURE_LIGHTMAP || CACHED_VOLUME_INDIRECT_LIGHTING || CACHED_POINT_INDIRECT_LIGHTING || PRECOMPUTED_IRRADIANCE_VOLUME_LIGHTING
+	#if HQ_TEXTURE_LIGHTMAP || LQ_TEXTURE_LIGHTMAP || CACHED_VOLUME_INDIRECT_LIGHTING || CACHED_POINT_INDIRECT_LIGHTING || PRECOMPUTED_IRRADIANCE_VOLUME_LIGHTING
 		OutIndirectIrradiance = Luminance(OutDiffuseLighting);
-#endif
+	#endif
 }
 
 #if SIMPLE_FORWARD_DIRECTIONAL_LIGHT
@@ -429,18 +385,6 @@ float3 AOMultiBounce(float3 BaseColor, float AO)
     float3 b = -4.7951 * BaseColor + 0.6417;
     float3 c = 2.7552 * BaseColor + 0.6903;
     return max(AO, ((AO * a + b) * AO + c) * AO);
-}
-
-float TFX_Hair_g(float B, float Theta)
-{
-    return exp(-0.5 * Pow2(Theta) / (B * B)) / (sqrt(2 * PI) * B);
-}
-
-float TFX_Hair_F(float CosTheta)
-{
-    const float n = 1.55;
-    const float F0 = Pow2((1 - n) / (1 + n));
-    return F0 + (1 - F0) * Pow5(1 - CosTheta);
 }
 
 //modified from hairworks
@@ -954,11 +898,17 @@ float3 GetForwardDirectLightingTressFX(
 		LightData.bSpotLight = LightData.SpotAngles.x > -2.0f;
 		LightData.SpecularScale = SpecularScale;
 
-		uint PackedShadowMapChannelMask = asuint(LocalLight.LightDirectionAndShadowMask.w);
-		LightData.ShadowedBits = (PackedShadowMapChannelMask & 0xFF) != 0 ? 1 : 0;
+		// LightType=bits[17:16], LightingChannelMask=[15:8], DynShadowMask=[7:4] ShadowMapChannelMask=[3:0]
+		uint LightTypeAndPackedShadowMapChannelMask = asuint(LocalLight.LightDirectionAndShadowMask.w);
+
+		// TODO: currently LightType is ignored and the code always sets 'LightData.bRectLight' to false (initialization)
+		//       but the light grid adds rect lights as well so this probably leads to artifacts.
+		uint LightType = LightTypeAndPackedShadowMapChannelMask >> 16;
+
+		LightData.ShadowedBits = (LightTypeAndPackedShadowMapChannelMask & 0xFF) != 0 ? 1 : 0;
 		// Static shadowing uses ShadowMapChannel, dynamic shadows are packed into light attenuation using PreviewShadowMapChannel
-		LightData.ShadowMapChannelMask = UnpackShadowMapChannelMask(PackedShadowMapChannelMask);
-		float4 PreviewShadowMapChannelMask = UnpackShadowMapChannelMask(PackedShadowMapChannelMask >> 4);
+		LightData.ShadowMapChannelMask = UnpackShadowMapChannelMask(LightTypeAndPackedShadowMapChannelMask);
+		float4 PreviewShadowMapChannelMask = UnpackShadowMapChannelMask(LightTypeAndPackedShadowMapChannelMask >> 4);
 		float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
 		float4 LightAttenuation = float4(1, 1, DynamicShadowing.x, DynamicShadowing.x);
         bool bSampleRectSourceTex = false;
@@ -987,7 +937,7 @@ float3 GetForwardDirectLightingTressFX(
 		
 		
 		FLATTEN
-		if ((PackedShadowMapChannelMask >> 8) & LightingChannelMask)
+		if ((LightTypeAndPackedShadowMapChannelMask >> 8) & LightingChannelMask)
 		{
 			DirectLighting += NewLighting;
 		}
@@ -1017,13 +967,23 @@ void main(
     FMaterialPixelParameters MaterialParameters = GetMaterialPixelParameters(In.FactoryInterpolants, In.Position);
     FPixelMaterialInputs PixelMaterialInputs;
 	
+	VTPageTableResult LightmapVTPageTableResult = (VTPageTableResult)0.0f;
+#if LIGHTMAP_VT_ENABLED
+	{
+		float2 LightmapUV0, LightmapUV1;
+		uint LightmapDataIndex;
+		GetLightMapCoordinates(Interpolants, LightmapUV0, LightmapUV1, LightmapDataIndex);
+		LightmapVTPageTableResult = LightmapGetVTSampleInfo(LightmapUV0, LightmapDataIndex, In.SvPosition.xy);
+	}
+#endif
+	
 #if HQ_TEXTURE_LIGHTMAP && USES_AO_MATERIAL_MASK && !MATERIAL_SHADINGMODEL_UNLIT
 	{
 		float2 LightmapUV0, LightmapUV1;
 		uint LightmapDataIndex;
 		GetLightMapCoordinates(Interpolants, LightmapUV0, LightmapUV1, LightmapDataIndex);
 		// Must be computed before BaseColor, Normal, etc are evaluated
-		MaterialParameters.AOMaterialMask = GetAOMaterialMask(LightmapUV0 * float2(1, 2), In.SvPosition.xy);
+		MaterialParameters.AOMaterialMask = GetAOMaterialMask(LightmapVTPageTableResult, LightmapUV0 * float2(1, 2), LightmapDataIndex, In.SvPosition.xy);
 	}
 #endif
 
@@ -1041,6 +1001,12 @@ void main(
         CalcMaterialParametersEx(MaterialParameters, PixelMaterialInputs, In.Position, ScreenPosition, bIsFrontFace, TranslatedWorldPosition, TranslatedWorldPosition);
     }
 	#endif
+
+#if LIGHTMAP_VT_ENABLED
+	// This must occur after CalcMaterialParameters(), which is required to initialize the VT feedback mechanism
+	// Lightmap request is always the first VT sample in the shader
+	StoreVirtualTextureFeedback(MaterialParameters.VirtualTextureFeedback, 0, LightmapVTPageTableResult.PackedRequest);
+#endif
 
     float2 viewport = ResolvedView.ViewSizeAndInvSize.xy;
     float2 NDC = MaterialParameters.ScreenPosition.xy / MaterialParameters.ScreenPosition.w;
@@ -1060,24 +1026,11 @@ void main(
     }
 
     int2 ScreenAddr = int2(In.Position.xy);
-	//not working out quite as i hoped but also im dyslexic so maybe i just got it backwards
-	#if TFX_PPLL && 0
-
-		const uint DepthAsUint = asuint(In.Position.w);
-		const uint DepthToWrite = (TFXAlpha > .8f) ? DepthAsUint : 0;
-		uint oldMinDepthAsUint;
-		InterlockedMin(RWOpacityThresholdingUAV[ScreenAddr], DepthToWrite, oldMinDepthAsUint);
-		if(DepthAsUint < oldMinDepthAsUint)
-		{
-			discard;
-			return;
-		}
-	#endif
 
     half3 BaseColor = GetMaterialBaseColor(PixelMaterialInputs);
     float Metallic = GetMaterialMetallic(PixelMaterialInputs);
-
     half Specular = GetMaterialSpecular(PixelMaterialInputs);
+
     float MaterialAO = GetMaterialAmbientOcclusion(PixelMaterialInputs);
     float Roughness = GetMaterialRoughness(PixelMaterialInputs);
 	// 0..1, SubsurfaceProfileId = int(x * 255)
@@ -1085,18 +1038,6 @@ void main(
 
 	// If we don't use this shading model the color should be black (don't generate shader code for unused data, don't do indirectlighting cache lighting with this color).
     float3 SubsurfaceColor = 0;
-	#if MATERIAL_SHADINGMODEL_SUBSURFACE || MATERIAL_SHADINGMODEL_PREINTEGRATED_SKIN || MATERIAL_SHADINGMODEL_SUBSURFACE_PROFILE || MATERIAL_SHADINGMODEL_TWOSIDED_FOLIAGE || MATERIAL_SHADINGMODEL_CLOTH || MATERIAL_SHADINGMODEL_EYE
-	{
-		float4 SubsurfaceData = GetMaterialSubsurfaceData(PixelMaterialInputs);
-
-	#if MATERIAL_SHADINGMODEL_SUBSURFACE || MATERIAL_SHADINGMODEL_PREINTEGRATED_SKIN || MATERIAL_SHADINGMODEL_TWOSIDED_FOLIAGE
-		SubsurfaceColor = SubsurfaceData.rgb * View.DiffuseOverrideParameter.w + View.DiffuseOverrideParameter.xyz;
-	#elif MATERIAL_SHADINGMODEL_CLOTH
-		SubsurfaceColor = SubsurfaceData.rgb;
-	#endif
-		SubsurfaceProfile = SubsurfaceData.a;
-	}
-	#endif
 
     float3 VolumetricLightmapBrickTextureUVs;
 		
@@ -1105,13 +1046,14 @@ void main(
 	#endif
 
     FGBufferData GBuffer = (FGBufferData) 0;
-    GBuffer.GBufferAO = MaterialAO;
-    GBuffer.PerObjectGBufferData = GetPrimitiveData(MaterialParameters.PrimitiveId).PerObjectGBufferData;
-    GBuffer.Depth = MaterialParameters.ScreenPosition.w;
-    GBuffer.PrecomputedShadowFactors = GetPrecomputedShadowMasks(In.FactoryInterpolants, MaterialParameters.PrimitiveId, MaterialParameters.AbsoluteWorldPosition, VolumetricLightmapBrickTextureUVs);
 
+	GBuffer.GBufferAO = MaterialAO;
+	GBuffer.PerObjectGBufferData = GetPrimitiveData(MaterialParameters.PrimitiveId).PerObjectGBufferData;
+	GBuffer.Depth = MaterialParameters.ScreenPosition.w;
+	GBuffer.PrecomputedShadowFactors = GetPrecomputedShadowMasks(LightmapVTPageTableResult, In.FactoryInterpolants, MaterialParameters.PrimitiveId, MaterialParameters.AbsoluteWorldPosition, VolumetricLightmapBrickTextureUVs);
     const float GBufferDither = InterleavedGradientNoise(MaterialParameters.SvPosition.xy, View.StateFrameIndexMod8);
-    SetGBufferForShadingModel(
+    uint ShadingModel = GetMaterialShadingModel(PixelMaterialInputs);
+	SetGBufferForShadingModel(
 		GBuffer,
 		MaterialParameters,
 		Opacity,
@@ -1121,11 +1063,19 @@ void main(
 		Roughness,
 		SubsurfaceColor,
 		SubsurfaceProfile,
-		GBufferDither);
+		GBufferDither,
+		ShadingModel
+	);
 
 	// So that the following code can still use DiffuseColor and SpecularColor.
     GBuffer.SpecularColor = ComputeF0(Specular, BaseColor, Metallic);
     GBuffer.DiffuseColor = BaseColor - BaseColor * Metallic;
+
+	if (View.RenderingReflectionCaptureMask) // Force material rendered in reflection capture to have an expanded albedo to try to be energy conservative (when specular is removed).
+	{
+		EnvBRDFApproxFullyRough(GBuffer.DiffuseColor, GBuffer.SpecularColor);
+		// When rendering reflection captures, GBuffer.Roughness is already forced to 1 using RoughnessOverrideParameter in GetMaterialRoughness.
+	}
     float3 BentNormal = MaterialParameters.WorldNormal;
     float DiffOcclusion = MaterialAO;
     float SpecOcclusion = MaterialAO;
@@ -1155,8 +1105,8 @@ void main(
 	float3 SubsurfaceIndirectLighting;
 	float3 DiffuseColor = 0;
 	float IndirectIrradiance = 0;
-	GetPrecomputedIndirectLightingAndSkyLight(MaterialParameters, In.FactoryInterpolants, DiffuseDir, VolumetricLightmapBrickTextureUVs, DiffuseIndirectLighting, SubsurfaceIndirectLighting, IndirectIrradiance);
-	DiffuseColor += (DiffuseIndirectLighting * DiffuseColorForIndirect + SubsurfaceIndirectLighting * SubsurfaceColor) * AOMultiBounce(GBuffer.BaseColor, DiffOcclusion);
+			GetPrecomputedIndirectLightingAndSkyLight(MaterialParameters, In.FactoryInterpolants, LightmapVTPageTableResult, GBuffer, DiffuseDir, VolumetricLightmapBrickTextureUVs, DiffuseIndirectLighting, SubsurfaceIndirectLighting, IndirectIrradiance);
+	DiffuseColor += (DiffuseIndirectLighting * DiffuseColorForIndirect + SubsurfaceIndirectLighting * SubsurfaceColor) * AOMultiBounce( GBuffer.BaseColor, DiffOcclusion );
 	Color += DiffuseColor;
 
 	float2 ScreenUV = NDC * ResolvedView.ScreenPositionScaleBias.xy + ResolvedView.ScreenPositionScaleBias.wz;
