@@ -79,23 +79,23 @@ public:
 
 	FTressFXFillColorPS() {}
 
-	static void ModifyCompilationEnvironment(EShaderPlatform Platform, const FMaterial* Material, FShaderCompilerEnvironment& OutEnvironment)
+	static void ModifyCompilationEnvironment(const FMaterialShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
-		FMeshMaterialShader::ModifyCompilationEnvironment(Platform, OutEnvironment);
-		FForwardLightingParameters::ModifyCompilationEnvironment(Platform, OutEnvironment);
+		FMeshMaterialShader::ModifyCompilationEnvironment(Parameters.Platform, OutEnvironment);
+		FForwardLightingParameters::ModifyCompilationEnvironment(Parameters.Platform, OutEnvironment);
 		FShaderUniformBufferParameter::ModifyCompilationEnvironment(
 			FTressFXColorPassUniformParameters::StaticStructMetadata.GetShaderVariableName(),
 			FTressFXColorPassUniformParameters::StaticStructMetadata,
-			Platform,
+			Parameters.Platform,
 			OutEnvironment
 		);
 
 		OutEnvironment.SetDefine(TEXT("TFX_SHORTCUT"), ColorPassType == ETressFXPass::FillColor_Shortcut ? TEXT("1") : TEXT("0"));
 		OutEnvironment.SetDefine(TEXT("TFX_PPLL"), ColorPassType == ETressFXPass::FillColor_KBuffer ? TEXT("1") : TEXT("0"));
-		OutEnvironment.SetDefine(TEXT("APPROX_DEEP_SHADOW"), Material->TressFXApproximateDeepShadow() ? TEXT("1") : TEXT("0"));
-		OutEnvironment.SetDefine(TEXT("ATTENUATE_SHADOW_BY_ALPHA"), Material->TressFXAttenuateShadowByAlpha() ? TEXT("1") : TEXT("0"));
-		OutEnvironment.SetDefine(TEXT("ENABLE_GLINT"), Material->TressFXEnableGlint() ? TEXT("1") : TEXT("0"));
-		OutEnvironment.SetDefine(TEXT("SUPPORT_RECT_LIGHT"), Material->TressFXEnableRectLights() ? TEXT("1") : TEXT("0"));
+		OutEnvironment.SetDefine(TEXT("APPROX_DEEP_SHADOW"), Parameters.Material->TressFXApproximateDeepShadow() ? TEXT("1") : TEXT("0"));
+		OutEnvironment.SetDefine(TEXT("ATTENUATE_SHADOW_BY_ALPHA"), Parameters.Material->TressFXAttenuateShadowByAlpha() ? TEXT("1") : TEXT("0"));
+		OutEnvironment.SetDefine(TEXT("ENABLE_GLINT"), Parameters.Material->TressFXEnableGlint() ? TEXT("1") : TEXT("0"));
+		OutEnvironment.SetDefine(TEXT("SUPPORT_RECT_LIGHT"), Parameters.Material->TressFXEnableRectLights() ? TEXT("1") : TEXT("0"));
 
 		if (ColorPassType == ETressFXPass::FillColor_KBuffer)
 		{
@@ -103,11 +103,11 @@ public:
 		}
 	}
 
-	static bool ShouldCompilePermutation(EShaderPlatform Platform, const FMaterial* Material, const FVertexFactoryType* VertexFactoryType)
+	static bool ShouldCompilePermutation(const FMeshMaterialShaderPermutationParameters& Parameters)
 	{
-		if (VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Material->IsUsedWithTressFX() || Material->IsSpecialEngineMaterial()))
+		if (Parameters.VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find)) && (Parameters.Material->IsUsedWithTressFX() || Parameters.Material->IsSpecialEngineMaterial()))
 		{
-			return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5);
+			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 		}
 
 		return false;
