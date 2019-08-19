@@ -255,8 +255,8 @@ float4 CalcTressFXShadows(in float4 SVPos)
 				Settings.SceneDepth = LightSpacePixelDepthForSSS + ProjectionDepthBiasParameters.x;
 				Settings.bSubsurface = true;
 				Settings.bTreatMaxDepthUnshadowed = false;
-				Settings.DensityMulConstant = Density * ProjectionDepthBiasParameters.y;
-				Settings.ProjectionDepthBiasParameters = ProjectionDepthBiasParameters;
+				Settings.DensityMulConstant = Density * ProjectionDepthBiasParameters.w;
+				Settings.ProjectionDepthBiasParameters = ProjectionDepthBiasParameters.xw;
 
 #if USE_TRANSMISSION
 				if (GBufferData.ShadingModelID == SHADINGMODELID_SUBSURFACE_PROFILE)
