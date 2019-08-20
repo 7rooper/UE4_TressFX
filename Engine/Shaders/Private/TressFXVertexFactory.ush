@@ -217,6 +217,7 @@ FMaterialVertexParameters GetMaterialVertexParameters(FVertexFactoryInput Input,
 
 float3 VertexFactoryGetWorldNormal(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates)
 {
+	//probably wrong
 	return Intermediates.TangentToWorld[2];
 }
 

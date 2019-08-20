@@ -45,6 +45,23 @@ void SetShadowDepthOutputs(
 		OutPosition.w = 1.0f;
 	}
 
+	/*@third party code - BEGIN TressFX*/
+	#if USE_TRESSFX
+			float TFXDepthBias = PassStruct.ShadowParams.x*2;
+		#if PERSPECTIVE_CORRECT_DEPTH
+			ShadowDepth = OutPosition.z;
+			OutDepthBias = TFXDepthBias;
+		#else
+
+			const float TFXInvMaxSubjectDepth = PassStruct.ShadowParams.w;
+			// Output linear, normalized depth
+			ShadowDepth = OutPosition.z * TFXInvMaxSubjectDepth + TFXDepthBias;
+			OutPosition.z = ShadowDepth * OutPosition.w;
+		#endif
+		return;
+	#endif
+	/*@third party code - END TressFX*/
+
 	#if ONEPASS_POINTLIGHT_SHADOW
 	const float3 ViewDirection = -normalize(mul(WorldPosition, WorldToShadowMatrix).xyz);
 	const float3 ViewNormal = mul(float4(WorldVertexNormal,0), WorldToShadowMatrix).xyz;

@@ -201,7 +201,7 @@ float4 CalcTressFXShadows(in float4 SVPos)
 		#if SHADING_PATH_DEFERRED && !FORWARD_SHADING && 0
 		Settings.TransitionScale = SoftTransitionScale.z * lerp(ProjectionDepthBiasParameters.z, 1.0, NoL);
 		#else
-		Settings.TransitionScale = SoftTransitionScale.z;
+        Settings.TransitionScale = SoftTransitionScale.z;
 		#endif
         Settings.SceneDepth = LightSpacePixelDepthForOpaque;
         Settings.bSubsurface = false;
@@ -252,11 +252,11 @@ float4 CalcTressFXShadows(in float4 SVPos)
 				Settings.ShadowDepthTextureSampler = ShadowDepthTextureSampler;
 				Settings.ShadowBufferSize = ShadowBufferSize;
 				Settings.TransitionScale = SoftTransitionScale.z;
-				Settings.SceneDepth = LightSpacePixelDepthForSSS + ProjectionDepthBiasParameters.x;
+				Settings.SceneDepth = LightSpacePixelDepthForSSS + ProjectionDepthBiasParameters.x*2;
 				Settings.bSubsurface = true;
 				Settings.bTreatMaxDepthUnshadowed = false;
 				Settings.DensityMulConstant = Density * ProjectionDepthBiasParameters.w;
-				Settings.ProjectionDepthBiasParameters = ProjectionDepthBiasParameters.xw;
+				Settings.ProjectionDepthBiasParameters = float2(ProjectionDepthBiasParameters.x*2, ProjectionDepthBiasParameters.w);
 
 #if USE_TRANSMISSION
 				if (GBufferData.ShadingModelID == SHADINGMODELID_SUBSURFACE_PROFILE)
@@ -456,7 +456,7 @@ void Main(
 		Settings.ShadowDepthTextureSampler = ShadowDepthTextureSampler;
 		Settings.ShadowBufferSize = ShadowBufferSize;
 		#if SHADING_PATH_DEFERRED && !FORWARD_SHADING
-		Settings.TransitionScale = SoftTransitionScale.z * lerp(ProjectionDepthBiasParameters.z, 1.0, NoL);
+		Settings.TransitionScale = /*@third party code - BEGIN TressFX*/ GBufferData.ShadingModelID  == SHADINGMODELID_TRESSFX ? SoftTransitionScale.z : /*@third party code - END TressFX*/ SoftTransitionScale.z * lerp(ProjectionDepthBiasParameters.z, 1.0, NoL);
 		#else
 		Settings.TransitionScale = SoftTransitionScale.z;
 		#endif
@@ -480,7 +480,9 @@ void Main(
 		FGBufferData GBufferData = GetGBufferData(ScreenUV);
 
 		/*@third party code - BEGIN TressFX*/
-		const bool bIsTressFXNonOpaquePixel = TRESSFX_SHADOWS && (GBufferData.SelectiveOutputMask & IS_TRESSFX_NON_OPAQUE_PIXEL);
+		#if TRESSFX_SHADOWS 
+			const bool bIsTressFXNonOpaquePixel = (GBufferData.SelectiveOutputMask & IS_TRESSFX_NON_OPAQUE_PIXEL);
+		#endif
 		/*@third party code - END TressFX*/
 
 		BRANCH
