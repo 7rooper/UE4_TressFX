@@ -223,12 +223,12 @@ float4 CalcTressFXShadows(in float4 SVPos)
 		FGBufferData GBufferData = GetGBufferData(ScreenUV);
 
 		BRANCH
-		if (IsSubsurfaceModel(GBufferData.ShadingModelID)  || bIsTressFXNonOpaquePixel )
+		if (1)
 		{
-			float Opacity = GBufferData.CustomData.a;
+			float Opacity = .5f;
 			// Derive density from a heuristic using opacity, tweaked for useful falloff ranges and to give a linear depth falloff with opacity
 			float Density = -.05f * log(1 - min(Opacity, .999f));
-			if (GBufferData.ShadingModelID == SHADINGMODELID_HAIR || GBufferData.ShadingModelID == SHADINGMODELID_EYE || bIsTressFXNonOpaquePixel || GBufferData.ShadingModelID == SHADINGMODELID_TRESSFX )
+			if ( 0 )
 			{
 				Opacity = 1;
 				Density = 1;

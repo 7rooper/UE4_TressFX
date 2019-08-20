@@ -34,7 +34,7 @@
 
 #define AMD_TRESSFX_KERNEL_SIZE 5
 
-#define TAME_FACTOR .07f
+#define TAME_FACTOR .1f
 
 
 struct HairShadeParams
