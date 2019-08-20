@@ -442,8 +442,8 @@ float3 TressFXHairShading(
     float3 SpecularColor = GetTressFXSpecularColor();
     float3 S = 0;
     float3 SpecDiffuse = TressFX_ComputeDiffuseSpecFactors(V, L, T, DiffuseBlend);
-    float VisibilityScale = lerp(1.0f, saturate(dot(N, L)), DiffuseBlend);
-    SpecDiffuse.yz *= VisibilityScale;
+   // float VisibilityScale = lerp(1.0f, NoL, DiffuseBlend);
+   // SpecDiffuse.yz *= VisibilityScale;
     S = SpecDiffuse.x * GBuffer.BaseColor; // diffuse
     S += SpecDiffuse.y; // 1st specular highlight	
     S += SpecDiffuse.z; // 2nd specular highlight
@@ -481,10 +481,8 @@ float3 TressFXHairShading(
 #else
 
 	//from ue4 hair shader
-    float3 FakeNormal = normalize(V - N * dot(V, N));
-    N = FakeNormal;
     float Wrap = 1;
-    float KajiyaDiffuse = 1 - abs(dot(N, L));
+    float KajiyaDiffuse = SpecDiffuse.x;//1 - abs(dot(N, L));
     float DiffuseScatter = (1 / PI) * lerp(NoL, KajiyaDiffuse, 0.33) * GBuffer.Metallic;
     float Luma = Luminance(GBuffer.BaseColor);
     float3 ScatterTint = pow((GBuffer.BaseColor) / Luma, 1 - Shadow);
