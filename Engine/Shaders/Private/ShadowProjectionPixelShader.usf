@@ -143,8 +143,10 @@ float4 CalcTressFXShadows(in float4 SVPos)
 	
 	// For debugging
 	#define UNFILTERED_SHADOW_PROJECTION 0
-	#define TFX_ENABLE_SURFACE_SHADOW 1 //does not look good in most cases so disabling for now
 
+	#ifndef TFX_ENABLE_SURFACE_SHADOW
+		#define TFX_ENABLE_SURFACE_SHADOW 0 //can be set from cvar
+	#endif
 	#if UNFILTERED_SHADOW_PROJECTION && TFX_ENABLE_SURFACE_SHADOW
 	{
 		Shadow = LightSpacePixelDepthForOpaque < Texture2DSampleLevel(ShadowDepthTexture, ShadowDepthTextureSampler, ShadowPosition.xy, 0).r;

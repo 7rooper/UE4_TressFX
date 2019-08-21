@@ -309,19 +309,19 @@ IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true);
 /*@third party code - BEGIN TressFX*/
 
 // Implements tressfx a pixel shader for directional light PCSS.
-#define IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseFadePlane, bTressFXInScene) \
-	typedef TDirectionalPercentageCloserShadowProjectionPS<Quality, UseFadePlane, bTressFXInScene> TDirectionalPercentageCloserShadowProjectionPS##Quality##UseFadePlane##bTressFXInScene; \
-	IMPLEMENT_SHADER_TYPE(template<>,TDirectionalPercentageCloserShadowProjectionPS##Quality##UseFadePlane##bTressFXInScene,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true);
+#define IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseFadePlane, bTressFXInScene, bTressFXSurfaceShadows) \
+	typedef TDirectionalPercentageCloserShadowProjectionPS<Quality, UseFadePlane, bTressFXInScene,bTressFXSurfaceShadows> TDirectionalPercentageCloserShadowProjectionPS##Quality##UseFadePlane##bTressFXInScene##bTressFXSurfaceShadows; \
+	IMPLEMENT_SHADER_TYPE(template<>,TDirectionalPercentageCloserShadowProjectionPS##Quality##UseFadePlane##bTressFXInScene##bTressFXSurfaceShadows,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true, false);
 #undef IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER
 
 // Implements tressfx a pixel shader for spot light PCSS.
-#define IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseFadePlane, bTressFXInScene) \
-	typedef TSpotPercentageCloserShadowProjectionPS<Quality, UseFadePlane, bTressFXInScene> TSpotPercentageCloserShadowProjectionPS##Quality##UseFadePlane##bTressFXInScene; \
-	IMPLEMENT_SHADER_TYPE(template<>,TSpotPercentageCloserShadowProjectionPS##Quality##UseFadePlane##bTressFXInScene,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true);
+#define IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseFadePlane, bTressFXInScene, bTressFXSurfaceShadows) \
+	typedef TSpotPercentageCloserShadowProjectionPS<Quality, UseFadePlane, bTressFXInScene, bTressFXSurfaceShadows> TSpotPercentageCloserShadowProjectionPS##Quality##UseFadePlane##bTressFXInScene##bTressFXSurfaceShadows; \
+	IMPLEMENT_SHADER_TYPE(template<>,TSpotPercentageCloserShadowProjectionPS##Quality##UseFadePlane##bTressFXInScene##bTressFXSurfaceShadows,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true, false);
 #undef IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER
 
 // Implements a tressfx pixel shader for one point spotlight PCSS.
@@ -343,35 +343,55 @@ IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true);
 
 #undef IMPLEMENT_TRESSFX_ONEPASS_POINT_SHADOW_PROJECTION_PIXEL_SHADER
 
-#define IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseFadePlane,UseTransmission, bTressFXInScene) \
-	typedef TShadowProjectionPS<Quality, UseFadePlane, false, UseTransmission, bTressFXInScene> FShadowProjectionPS##Quality##UseFadePlane##UseTransmission##bTressFXInScene; \
-	IMPLEMENT_SHADER_TYPE(template<>,FShadowProjectionPS##Quality##UseFadePlane##UseTransmission##bTressFXInScene,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
+#define IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(Quality,UseFadePlane,UseTransmission, bTressFXInScene, bTressFXSurfaceShadows) \
+	typedef TShadowProjectionPS<Quality, UseFadePlane, false, UseTransmission, bTressFXInScene, bTressFXSurfaceShadows> FShadowProjectionPS##Quality##UseFadePlane##UseTransmission##bTressFXInScene##bTressFXSurfaceShadows; \
+	IMPLEMENT_SHADER_TYPE(template<>,FShadowProjectionPS##Quality##UseFadePlane##UseTransmission##bTressFXInScene##bTressFXSurfaceShadows,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
 
+//TODO: be less dumb and use a macro or something
 // tressfx Projection shaders without the distance fade, with different quality levels.
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, false, false, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, false, false, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, false, false, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, false, false, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, false, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, false, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, false, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, false, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, false, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, false, false, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, false, false, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, false, false, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, false, false, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, false, true, false);
 
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, false, true, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, false, true, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, false, true, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, false, true, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, false, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, false, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, false, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, false, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, false, true, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, false, true, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, false, true, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, false, true, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true, true, false);
 
 // tressfx Projection shaders with the distance fade, with different quality levels.
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, true, false, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, true, false, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, true, false, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, true, false, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, false, true);
-
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, true, true, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, true, true, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, true, true, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, true, true, true);
-IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, true, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, true, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, true, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, true, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, false, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, true, false, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, true, false, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, true, false, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, true, false, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, false, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, true, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, true, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, true, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, true, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true, true, true);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(1, true, true, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(2, true, true, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(3, true, true, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(4, true, true, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true, true, false);
 #undef IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER
 
 /*@third party code - END TressFX*/

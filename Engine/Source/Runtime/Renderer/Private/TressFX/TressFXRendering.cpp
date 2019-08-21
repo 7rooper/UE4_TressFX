@@ -52,6 +52,14 @@ FAutoConsoleVariableRef CVarTressFXMinAlphaForSceneDepth(
 	ECVF_RenderThreadSafe
 );
 
+static TAutoConsoleVariable<int32> CVarTressFXEnableSurfaceShadow(
+	TEXT("tfx.OITSurfaceShadow"),
+	0,
+	TEXT("Allow surface shadows during shadow projection. If 0, only subsurface is used."),
+	ECVF_RenderThreadSafe
+);
+
+
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXFillColorPS - Pixel shader for Third pass of shortcut, and PPLL build of kbuffer
 ////////////////////////////////////////////////////////////////////////////////
