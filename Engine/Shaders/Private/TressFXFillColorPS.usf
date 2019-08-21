@@ -1029,6 +1029,7 @@ void main(
     int2 ScreenAddr = int2(In.Position.xy);
 
     half3 BaseColor = GetMaterialBaseColor(PixelMaterialInputs);
+    BaseColor = clamp(BaseColor, .01f, .99f);
     float Metallic = GetMaterialMetallic(PixelMaterialInputs);
     half Specular = GetMaterialSpecular(PixelMaterialInputs);
 

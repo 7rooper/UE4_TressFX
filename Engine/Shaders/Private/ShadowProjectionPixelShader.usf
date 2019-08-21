@@ -143,16 +143,17 @@ float4 CalcTressFXShadows(in float4 SVPos)
 	
 	// For debugging
 	#define UNFILTERED_SHADOW_PROJECTION 0
+	#define TFX_ENABLE_SURFACE_SHADOW 1 //does not look good in most cases so disabling for now
 
-	#if UNFILTERED_SHADOW_PROJECTION
+	#if UNFILTERED_SHADOW_PROJECTION && TFX_ENABLE_SURFACE_SHADOW
 	{
 		Shadow = LightSpacePixelDepthForOpaque < Texture2DSampleLevel(ShadowDepthTexture, ShadowDepthTextureSampler, ShadowPosition.xy, 0).r;
 	}
-	#elif APPLY_TRANSLUCENCY_SHADOWS
+	#elif APPLY_TRANSLUCENCY_SHADOWS && TFX_ENABLE_SURFACE_SHADOW
 	{
 		Shadow = CalculateTranslucencyShadowing(ShadowPosition.xy, ShadowZ);
 	}
-	#elif USE_PCSS
+	#elif USE_PCSS && TFX_ENABLE_SURFACE_SHADOW
 	{
 		FPCSSSamplerSettings Settings;
 
@@ -182,7 +183,7 @@ float4 CalcTressFXShadows(in float4 SVPos)
 		
 		Shadow = DirectionalPCSS(Settings, ShadowPosition.xy, ShadowPositionDDX.xyz, ShadowPositionDDY.xyz);
 	}
-	#else // !USE_PCSS
+	#elif TFX_ENABLE_SURFACE_SHADOW // !USE_PCSS
 	{
 		//OIT tressfx doesnt render to the gbuffer, so we cant get NoL here.
 		#if SHADING_PATH_DEFERRED && !FORWARD_SHADING && 0
@@ -193,7 +194,8 @@ float4 CalcTressFXShadows(in float4 SVPos)
 			const float NoL = saturate(dot(GBufferData.WorldNormal, LightDirection));
 		#endif
         FPCFSamplerSettings Settings;
-		
+		// ProjectionDepthBiasParameters
+		// .x:DepthBias, .y:SlopeDepthBias, .z:ReceiverBias, .w: MaxSubjectZ - MinSubjectZ
         Settings.ShadowDepthTexture = ShadowDepthTexture;
         Settings.ShadowDepthTextureSampler = ShadowDepthTextureSampler;
         Settings.ShadowBufferSize = ShadowBufferSize;
@@ -247,16 +249,17 @@ float4 CalcTressFXShadows(in float4 SVPos)
 		
 				// default code path
 				FPCFSamplerSettings Settings;
-				
+				// ProjectionDepthBiasParameters
+				// .x:DepthBias, .y:SlopeDepthBias, .z:ReceiverBias, .w: MaxSubjectZ - MinSubjectZ
 				Settings.ShadowDepthTexture = ShadowDepthTexture;
 				Settings.ShadowDepthTextureSampler = ShadowDepthTextureSampler;
 				Settings.ShadowBufferSize = ShadowBufferSize;
 				Settings.TransitionScale = SoftTransitionScale.z;
-				Settings.SceneDepth = LightSpacePixelDepthForSSS + ProjectionDepthBiasParameters.x*2;
+				Settings.SceneDepth = LightSpacePixelDepthForSSS + ProjectionDepthBiasParameters.x*4;
 				Settings.bSubsurface = true;
 				Settings.bTreatMaxDepthUnshadowed = false;
 				Settings.DensityMulConstant = Density * ProjectionDepthBiasParameters.w;
-				Settings.ProjectionDepthBiasParameters = float2(ProjectionDepthBiasParameters.x*2, ProjectionDepthBiasParameters.w);
+				Settings.ProjectionDepthBiasParameters = float2(ProjectionDepthBiasParameters.x*4, ProjectionDepthBiasParameters.w);
 
 #if USE_TRANSMISSION
 				if (GBufferData.ShadingModelID == SHADINGMODELID_SUBSURFACE_PROFILE)
