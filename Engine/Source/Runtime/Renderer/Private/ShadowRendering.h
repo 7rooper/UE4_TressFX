@@ -1424,7 +1424,7 @@ public:
 
 	TDirectionalPercentageCloserShadowProjectionPS() {}
 	TDirectionalPercentageCloserShadowProjectionPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) :
-		TShadowProjectionPS<Quality, bUseFadePlane /*@third party code - BEGIN TressFX*/, bTressFXShadows /*@third party code - END TressFX*/>(Initializer)
+		TShadowProjectionPS<Quality, bUseFadePlane /*@third party code - BEGIN TressFX*/, bTressFXShadows, bTressFXSurfaceShadows /*@third party code - END TressFX*/>(Initializer)
 	{
 		PCSSParameters.Bind(Initializer.ParameterMap, TEXT("PCSSParameters"));
 	}
