@@ -314,6 +314,7 @@ IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true);
 	IMPLEMENT_SHADER_TYPE(template<>,TDirectionalPercentageCloserShadowProjectionPS##Quality##UseFadePlane##bTressFXInScene##bTressFXSurfaceShadows,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
 IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true, true);
 IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true, false);
 #undef IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER
 
 // Implements tressfx a pixel shader for spot light PCSS.
@@ -322,6 +323,7 @@ IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true, false);
 	IMPLEMENT_SHADER_TYPE(template<>,TSpotPercentageCloserShadowProjectionPS##Quality##UseFadePlane##bTressFXInScene##bTressFXSurfaceShadows,TEXT("/Engine/Private/ShadowProjectionPixelShader.usf"),TEXT("Main"),SF_Pixel);
 IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true, true);
 IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, true, true, false);
+IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER(5, false, true, false);
 #undef IMPLEMENT_SHADOW_PROJECTION_PIXEL_SHADER
 
 // Implements a tressfx pixel shader for one point spotlight PCSS.
