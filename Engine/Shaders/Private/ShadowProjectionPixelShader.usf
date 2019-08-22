@@ -145,7 +145,7 @@ float4 CalcTressFXShadows(in float4 SVPos)
 	#define UNFILTERED_SHADOW_PROJECTION 0
 
 	#ifndef TFX_ENABLE_SURFACE_SHADOW
-		#define TFX_ENABLE_SURFACE_SHADOW 0 //can be set from cvar
+		#define TFX_ENABLE_SURFACE_SHADOW 0 //can be set from cvar tfx.OITSurfaceShadow
 	#endif
 	#if UNFILTERED_SHADOW_PROJECTION && TFX_ENABLE_SURFACE_SHADOW
 	{
