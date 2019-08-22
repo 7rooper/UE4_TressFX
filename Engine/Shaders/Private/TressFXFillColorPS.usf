@@ -1092,14 +1092,16 @@ void main(
 		float3 V = MaterialParameters.CameraVector;
 		float3 L = normalize( V - N * dot(V,N) );
 		DiffuseDir = L;
-#if MATERIAL_SHADINGMODEL_TRESSFX
+		// ue4 hair shader actually looks better for skylighting 
+#if MATERIAL_SHADINGMODEL_TRESSFX && 0
         DiffuseColorForIndirect = 2 * PI * TressFXHairShading(GBuffer, L, V, N, 1, 0, 0.2, In.FactoryInterpolants.Root2Tip, TFXTangent, TFXCoverage 
 															#if ENABLE_GLINT
 																	,0,0
 															#endif
 															);
 #else
-        DiffuseColorForIndirect = 2 * PI * HairShading(GBuffer, L, V, N, 1, 0, 0.2, uint2(0, 0));
+        const float IndirectMultiplier = 2.f;
+        DiffuseColorForIndirect = IndirectMultiplier * PI * HairShading(GBuffer, L, V, N, 1, 0, 0.2, uint2(0, 0));
 #endif
     }
 
