@@ -3,6 +3,8 @@
 
 #define TFXRectLightData TressFXColorFillPass.RectLightData
 
+#define USE_SOURCE_TEXTURE 0
+
 #include "Common.ush"
 #include "SHCommon.ush"
 #include "/Engine/Generated/Material.ush"
@@ -912,22 +914,25 @@ float3 GetForwardDirectLightingTressFX(
 		float4 PreviewShadowMapChannelMask = UnpackShadowMapChannelMask(LightTypeAndPackedShadowMapChannelMask >> 4);
 		float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
 		float4 LightAttenuation = float4(1, 1, DynamicShadowing.x, DynamicShadowing.x);
-        bool bSampleRectSourceTex = false;
-		int DynamicShadowChannel = GetDynamicShadowChannel(PreviewShadowMapChannelMask);
-		if (DynamicShadowChannel > -1)
-		{
-			LightData.bRectLight = IsRectLight(DynamicShadowChannel);
-		}
-		else
-		{
-			LightData.bRectLight = false;
-		}
-		#if SUPPORT_RECT_LIGHT
-			if (LightData.bRectLight)
+        
+		bool bSampleRectSourceTex = false;
+		#if MATERIAL_SHADINGMODEL_TRESSFX || MATERIAL_SHADINGMODEL_HAIR
+			int DynamicShadowChannel = GetDynamicShadowChannel(PreviewShadowMapChannelMask);
+			if (DynamicShadowChannel > -1)
 			{
-				LightData.RectLightBarnCosAngle = TFXRectLightData.RectLightInfos[DynamicShadowChannel].x;
-				LightData.RectLightBarnLength = TFXRectLightData.RectLightInfos[DynamicShadowChannel].y;
+				LightData.bRectLight = IsRectLight(DynamicShadowChannel);
 			}
+			else
+			{
+				LightData.bRectLight = false;
+			}
+			#if SUPPORT_RECT_LIGHT
+				if (LightData.bRectLight)
+				{
+					LightData.RectLightBarnCosAngle = TFXRectLightData.RectLightInfos[DynamicShadowChannel].x;
+					LightData.RectLightBarnLength = TFXRectLightData.RectLightInfos[DynamicShadowChannel].y;
+				}
+			#endif
 		#endif
 		#if MATERIAL_SHADINGMODEL_TRESSFX
 			float3 NewLighting = GetTressFXDynamicLighting(WorldPosition, -CameraVector, GBufferData, LightData, LightAttenuation, Dither, RectTexture, Root2Tip, HairId, TFXTangent, TFXAlpha, false, Coverage, bSampleRectSourceTex);

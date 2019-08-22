@@ -54,8 +54,9 @@ FAutoConsoleVariableRef CVarTressFXMinAlphaForSceneDepth(
 
 static TAutoConsoleVariable<int32> CVarTressFXEnableSurfaceShadow(
 	TEXT("tfx.OITSurfaceShadow"),
-	0,
-	TEXT("Enable surface shadows during shadow projection. If 0, only subsurface is used."),
+	1,
+	TEXT("Enable surface shadows during shadow projection. If 0, only subsurface is used.\n")
+	TEXT("This is mainly for debugging. Recommended to keep it at 1"),
 	ECVF_RenderThreadSafe
 );
 

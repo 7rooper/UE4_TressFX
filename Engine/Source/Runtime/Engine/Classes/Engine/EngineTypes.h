@@ -473,7 +473,7 @@ enum EMaterialShadingModel
 	MSM_Cloth					UMETA(DisplayName="Cloth"),
 	MSM_Eye						UMETA(DisplayName="Eye"),
 	/*@third party code - BEGIN TressFX*/
-	MSM_TressFX					UMETA(DisplayName = "TressFX"),
+	MSM_TressFX					UMETA(DisplayName = "TressFX (Experimental)"),
 	/*@third party code - END TressFX*/
 	/** Number of unique shading models. */
 	MSM_NUM						UMETA(Hidden),

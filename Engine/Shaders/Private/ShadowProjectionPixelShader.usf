@@ -224,8 +224,6 @@ float4 CalcTressFXShadows(in float4 SVPos)
 
 	#if FEATURE_LEVEL >= FEATURE_LEVEL_SM4 && !FORWARD_SHADING && !APPLY_TRANSLUCENCY_SHADOWS
 
-		FGBufferData GBufferData = GetGBufferData(ScreenUV);
-
 		BRANCH
 		if (1)
 		{
@@ -263,7 +261,7 @@ float4 CalcTressFXShadows(in float4 SVPos)
 				Settings.DensityMulConstant = Density * ProjectionDepthBiasParameters.w;
 				Settings.ProjectionDepthBiasParameters = float2(ProjectionDepthBiasParameters.x*4, ProjectionDepthBiasParameters.w);
 
-#if USE_TRANSMISSION
+#if USE_TRANSMISSION && 0
 				if (GBufferData.ShadingModelID == SHADINGMODELID_SUBSURFACE_PROFILE)
 				{
 					SSSTransmission = CalcTransmissionThickness(ScreenPosition.xyz, LightPositionAndInvRadius.xyz, GBufferData, Settings);
