@@ -349,9 +349,8 @@ void FDeferredShadingSceneRenderer::ComputeLightGrid(FRHICommandListImmediate& R
 			const FViewInfo& View = Views[ViewIndex];
 			bAnyViewUsesForwardLighting |= View.bTranslucentSurfaceLighting || ShouldRenderVolumetricFog();
 			/*@third party code - BEGIN TressFX*/
-			if (View.bHasTranslucentTressFX)
+			if (View.bHasTranslucentTressFX && View.TressFXMeshBatches.Num() > 0)
 			{
-				check(View.TressFXMeshBatches.Num() > 0)
 				bAnyViewUsesForwardLighting |= true;
 			}
 			/*@third party code - END TressFX*/

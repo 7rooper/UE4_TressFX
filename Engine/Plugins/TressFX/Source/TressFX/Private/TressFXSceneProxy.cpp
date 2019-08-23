@@ -148,6 +148,7 @@ FPrimitiveViewRelevance FTressFXSceneProxy::GetViewRelevance(const FSceneView * 
 		ViewRel.bTressFXOpaque = View->Family->EngineShowFlags.TressFX;
 		ViewRel.bTressFXTranslucent = false;
 	}
+	check(!(ViewRel.bTressFXOpaque && ViewRel.bTressFXTranslucent))
 #endif
 
 	return ViewRel;
