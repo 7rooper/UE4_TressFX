@@ -1268,12 +1268,9 @@ void FBasePassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, 
 		{
 			bShouldDraw = !bIsTranslucent;
 			/*@third party code - BEGIN TressFX*/
-			extern int32 GTressFXRenderType;
-			int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
-			TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
 			if (MeshBatch.bTressFX)
 			{
-				bShouldDraw = bShouldDraw && TFXRenderType == ETressFXRenderType::Opaque;
+				bShouldDraw = bShouldDraw && Material.GetTressFXRenderMode() == ETressFXRenderMode::TressFXRender_Opaque;
 			}
 			/*@third party code - END TressFX*/
 		}

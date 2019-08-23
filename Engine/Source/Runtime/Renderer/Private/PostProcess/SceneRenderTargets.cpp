@@ -662,10 +662,6 @@ void FSceneRenderTargets::Allocate(FRHICommandListImmediate& RHICmdList, const F
 	// Do allocation of render targets if they aren't available for the current shading path
 	CurrentFeatureLevel = NewFeatureLevel;
 	AllocateRenderTargets(RHICmdList, ViewFamily.Views.Num());
-
-	/*@third party code - BEGIN TressFX*/
-	AllocatTressFXTargets(RHICmdList, ViewFamily);
-	/*@third party code - END TressFX*/
 }
 
 void FSceneRenderTargets::BeginRenderingSceneColor(FRHICommandList& RHICmdList, ESimpleRenderTargetMode RenderTargetMode/*=EUninitializedColorExistingDepth*/, FExclusiveDepthStencil DepthStencilAccess, bool bTransitionWritable /*@third party code - BEGIN TressFX*/, bool bUseTressFXSceneDepth /*= false*/ /*@third party code - END TressFX*/)
@@ -2949,7 +2945,7 @@ void FSceneRenderTargets::ReleaseAllTargets()
 	VirtualTextureFeedback.ReleaseResources();
 
 	/*@third party code - BEGIN TressFX*/
-	ReleaseTressFXResources(ETressFXRenderType::Num);
+	ReleaseTressFXResources(true, true, true, true);
 	/*@third party code - END TressFX*/
 }
 

@@ -136,8 +136,20 @@ FPrimitiveViewRelevance FTressFXSceneProxy::GetViewRelevance(const FSceneView * 
 	ViewRel.bDynamicRelevance = true;
 	ViewRel.bRenderInMainPass = View->Family->EngineShowFlags.TRESSFX_SHOW_FLAG;
 #ifndef TRESSFX_STANDALONE_PLUGIN
-	ViewRel.bTressFX = View->Family->EngineShowFlags.TressFX;
+	if (Material &&Material->GetMaterial())
+	{
+		const ETressFXRenderMode RenderMode = Material->GetMaterial()->TressFXRenderMode;
+		ViewRel.bTressFXTranslucent = View->Family->EngineShowFlags.TressFX && RenderMode == ETressFXRenderMode::TressFXRender_Translucent;
+		ViewRel.bTressFXOpaque = ViewRel.bTressFXTranslucent ? false : true;
+	}
+	else 
+	{
+		//assume opaque
+		ViewRel.bTressFXOpaque = View->Family->EngineShowFlags.TressFX;
+		ViewRel.bTressFXTranslucent = false;
+	}
 #endif
+
 	return ViewRel;
 }
 

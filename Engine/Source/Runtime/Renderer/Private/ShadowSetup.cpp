@@ -1770,7 +1770,7 @@ void FSceneRenderer::CreatePerObjectProjectedShadow(
 		bOpaqueRelevance |= ViewRelevance.bOpaqueRelevance;
 		bTranslucentRelevance |= ViewRelevance.HasTranslucency();
 		/*@third party code - BEGIN TressFX*/
-		bTressFXInScene |= ViewRelevance.bTressFX;
+		bTressFXInScene |= ViewRelevance.HasTressFX();
 		/*@third party code - END TressFX*/
 	}
 
