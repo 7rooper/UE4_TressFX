@@ -224,8 +224,8 @@ float4 CalcTressFXShadows(in float4 SVPos)
 
 	#if FEATURE_LEVEL >= FEATURE_LEVEL_SM4 && !FORWARD_SHADING && !APPLY_TRANSLUCENCY_SHADOWS
 
-		BRANCH
-		if (1)
+	//	BRANCH
+	//	if (1)
 		{
 			float Opacity = .5f;
 			// Derive density from a heuristic using opacity, tweaked for useful falloff ranges and to give a linear depth falloff with opacity

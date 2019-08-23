@@ -862,6 +862,10 @@ public:
 
 	/*@third party code - BEGIN TressFX*/
 
+	/** Controls the way hair assigned this material is rendered. */
+	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "TressFX Render Mode"))
+	TEnumAsByte<enum ETressFXRenderMode> TressFXRenderMode;
+
 	/** Render Hair velocity into UE4's Velocity buffer. This is requried for temporal AA, motion blur etc. But could save on performance in some situations. */
 	UPROPERTY(EditAnywhere, Category = TressFX, meta = (DisplayName = "Render Hair Velocity"))
 	uint32 bTressFXRenderVelocity : 1;

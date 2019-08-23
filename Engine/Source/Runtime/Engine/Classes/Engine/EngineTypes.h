@@ -455,6 +455,16 @@ namespace EParticleCollisionMode
 	};
 }
 
+/*@third party code - BEGIN TressFX*/
+UENUM()
+enum ETressFXRenderMode
+{
+	TressFXRender_Opaque					UMETA(DisplayName = "Opaque"),
+	TressFXRender_Translucent				UMETA(DisplayName = "Translucent (OIT)"),
+	TressFXRender_Num						UMETA(Hidden)
+};
+/*@third party code - END TressFX*/
+
 /** 
  * Specifies the overal rendering/shading model for a material
  * @warning Check UMaterialInstance::Serialize if changed!

@@ -32,7 +32,7 @@
 
 DEFINE_LOG_CATEGORY(TressFXRenderingLog);
 
-extern int32 GTressFXRenderType;
+extern int32 GTressFXOITMode;
 extern int32 GTressFXKBufferSize;
 
 int32 GBTressFXPreferCompute = 1;
@@ -260,26 +260,25 @@ bool FSceneRenderer::TressFXCanUseComputeResolves(const FSceneRenderTargets& Sce
 //FTressFXDepthsVelocityPassMeshProcessor
 /////////////////////////////////////////////////////////////////////////
 
-#define PROCESS_DEPTHSVELOCITY(bCalcVelocity,TFXRenderType, ...)			\
+#define PROCESS_DEPTHSVELOCITY(bCalcVelocity,OITMode, ...)					\
 	if(bCalcVelocity)														\
 	{																		\
-		Process<true, TFXRenderType>(__VA_ARGS__);							\
+		Process<true, OITMode>(__VA_ARGS__);								\
 	}																		\
 	else																	\
 	{																		\
-		Process<false, TFXRenderType>(__VA_ARGS__);							\
+		Process<false, OITMode>(__VA_ARGS__);								\
 	}
 
-#define PROCESS_DEPTHSVELOCITY2(bCalcVelocity,TFXRenderType, ...)																		\
-switch (TFXRenderType)																													\
+#define PROCESS_DEPTHSVELOCITY2(bCalcVelocity,OITMode, ...)																				\
+switch (OITMode)																														\
 {																																		\
-	case ETressFXRenderType::KBuffer:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXRenderType::KBuffer, __VA_ARGS__) break;			\
-	case ETressFXRenderType::Opaque:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXRenderType::Opaque, __VA_ARGS__) break;				\
-	case ETressFXRenderType::ShortCut:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXRenderType::ShortCut, __VA_ARGS__) break;			\
+	case ETressFXOITMode::KBuffer:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXOITMode::KBuffer, __VA_ARGS__) break;					\
+	case ETressFXOITMode::Num:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXOITMode::Num, __VA_ARGS__) break;							\
 	default: check(0);																													\
 }
 
-template<bool bCalcVelocity, ETressFXRenderType::Type TFXRenderType>
+template<bool bCalcVelocity, ETressFXOITMode::Type OITMode>
 void FTressFXDepthsVelocityPassMeshProcessor::Process(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
@@ -316,9 +315,9 @@ void FTressFXDepthsVelocityPassMeshProcessor::Process(
 		FTressFXVS<bCalcVelocity>,
 		FMeshMaterialShader,
 		FMeshMaterialShader,
-		FTressFXVelocityDepthPS<bCalcVelocity, TFXRenderType>> TFXShaders;
+		FTressFXVelocityDepthPS<bCalcVelocity, OITMode>> TFXShaders;
 
-	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXVelocityDepthPS<bCalcVelocity, TFXRenderType>>(VertexFactory->GetType());
+	TFXShaders.PixelShader = MaterialResource.GetShader<FTressFXVelocityDepthPS<bCalcVelocity, OITMode>>(VertexFactory->GetType());
 	TFXShaders.VertexShader = MaterialResource.GetShader<FTressFXVS<bCalcVelocity>>(VertexFactory->GetType());
 
 	const FMeshDrawCommandSortKey SortKey = CalculateMeshStaticSortKey(TFXShaders.VertexShader, TFXShaders.PixelShader);
@@ -346,14 +345,17 @@ void FTressFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 	const FMaterial& MeshBatchMaterial = MeshBatch.MaterialRenderProxy->GetMaterialWithFallback(FeatureLevel, FallbackMaterialRenderProxyPtr);
 
 	const FMaterialRenderProxy& MaterialRenderProxy = FallbackMaterialRenderProxyPtr ? *FallbackMaterialRenderProxyPtr : *MeshBatch.MaterialRenderProxy;
+	const ETressFXRenderMode TFXMaterialRenderMode = MeshBatchMaterial.GetTressFXRenderMode();
+	const bool bIsOpaqueTressFX = TFXMaterialRenderMode == ETressFXRenderMode::TressFXRender_Opaque;
+	const bool bIsTranslucentTressFX = TFXMaterialRenderMode == ETressFXRenderMode::TressFXRender_Translucent;
 
 	const EBlendMode BlendMode = MeshBatchMaterial.GetBlendMode();
 	const bool bWantsVelocity = MeshBatchMaterial.TressFXShouldRenderVelocity();
-	int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
-	TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
+	int32 OITMode = static_cast<uint32>(GTressFXOITMode);
+	OITMode = FMath::Clamp(OITMode, 0, (int32)ETressFXOITMode::Max);
 
 	//blend mode masked will render depth in the regular pass (pre pass)
-	const bool bNoDepth = BlendMode == EBlendMode::BLEND_Masked;
+	const bool bNoDepth = BlendMode == EBlendMode::BLEND_Masked && bIsOpaqueTressFX;
 
 	if (bWantsVelocity == false && bNoDepth == true)
 	{
@@ -361,7 +363,12 @@ void FTressFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 		return;
 	}
 	
-	bool bDraw = MeshBatchMaterial.IsUsedWithTressFX() && MeshBatch.bTressFX;
+
+	const bool bDraw = (
+		MeshBatchMaterial.IsUsedWithTressFX() && 
+		MeshBatch.bTressFX && 
+		(bIsOpaqueTressFX || (bIsTranslucentTressFX && OITMode == ETressFXOITMode::KBuffer))
+	);
 
 	if (bDraw)
 	{
@@ -369,7 +376,7 @@ void FTressFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 		const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, MeshBatchMaterial);
 		PROCESS_DEPTHSVELOCITY2(
 			bWantsVelocity, 
-			TFXRenderType, 
+			bIsOpaqueTressFX ? ETressFXOITMode::Num : OITMode,
 			MeshBatch, 
 			BatchElementMask, 
 			StaticMeshId, 
@@ -686,7 +693,7 @@ switch (KBufferSize)											\
 	default: check(0);											\
 }
 
-template<ETressFXRenderType::Type RenderType>
+template<ETressFXOITMode::Type OITMode>
 void FTressFXFillColorPassMeshProcessor::Process(
 	const FMeshBatch& RESTRICT MeshBatch,
 	uint64 BatchElementMask,
@@ -699,9 +706,9 @@ void FTressFXFillColorPassMeshProcessor::Process(
 )
 {	   
 
-	switch (RenderType)
+	switch (OITMode)
 	{
-		case ETressFXRenderType::KBuffer: 
+		case ETressFXOITMode::KBuffer:
 		{
 			int32 KBufferSize = FMath::Clamp(static_cast<int32>(GTressFXKBufferSize), MIN_TFX_KBUFFER_SIZE, MAX_TFX_KBUFFER_SIZE);
 			PROCESS_KBUFFER(
@@ -717,7 +724,7 @@ void FTressFXFillColorPassMeshProcessor::Process(
 			);
 				break;
 		}
-		case ETressFXRenderType::ShortCut:
+		case ETressFXOITMode::ShortCut:
 		{
 			ProcessShortcut(
 				MeshBatch,
@@ -755,15 +762,15 @@ void FTressFXFillColorPassMeshProcessor::AddMeshBatch(const FMeshBatch& RESTRICT
 	{
 		const ERasterizerFillMode MeshFillMode = ComputeMeshFillMode(MeshBatch, MeshBatchMaterial);
 		const ERasterizerCullMode MeshCullMode = ComputeMeshCullMode(MeshBatch, MeshBatchMaterial);
-		int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
-		TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
-		 if(TFXRenderType == ETressFXRenderType::ShortCut)
+		int32 TressFXOITMode = static_cast<uint32>(GTressFXOITMode);
+		TressFXOITMode = FMath::Clamp(TressFXOITMode, 0, (int32)ETressFXOITMode::Max);
+		 if(TressFXOITMode == ETressFXOITMode::ShortCut)
 		{
-			 Process<ETressFXRenderType::ShortCut>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
+			 Process<ETressFXOITMode::ShortCut>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
 		}
-		else if(TFXRenderType == ETressFXRenderType::KBuffer)
+		else if(TressFXOITMode == ETressFXOITMode::KBuffer)
 		{
-			Process<ETressFXRenderType::KBuffer>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
+			Process<ETressFXOITMode::KBuffer>(MeshBatch, BatchElementMask, StaticMeshId, PrimitiveSceneProxy, MaterialRenderProxy, MeshBatchMaterial, MeshFillMode, MeshCullMode);
 		}
 	}
 }
@@ -793,22 +800,19 @@ FMeshPassProcessor* CreateTRessFXFillColorPassProcessor(const FScene* Scene, con
 	return new(FMemStack::Get()) FTressFXFillColorPassMeshProcessor(Scene, InViewIfDynamicMeshCommand, PassDrawRenderState, InDrawListContext);
 }
 
-bool FSceneRenderer::GetAnyViewHasTressFX()
+void FSceneRenderer::GetAnyViewHasTressFX(bool &bHasTranslucentTressFX, bool &bHasOpaqueTressFX)
 {
 	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ++ViewIndex)
 	{
 		const FViewInfo& View = Views[ViewIndex];
-		if (View.TressFXMeshBatches.Num() > 0)
-		{
-			return true;
-		}
+		bHasTranslucentTressFX |= View.bHasTranslucentTressFX;
+		bHasOpaqueTressFX |= View.bHasOpaqueTressFX;
 	}
-	return false;
 }
 
 bool FSceneRenderer::ShouldRenderTressFX(int32 TressFXPass)
 {
-	if (TressFXPass < 0 || TressFXPass > ETressFXPass::Max || !GetAnyViewHasTressFX())
+	if (TressFXPass < 0 || TressFXPass > ETressFXPass::Max)
 	{
 		return false;
 	}
@@ -826,7 +830,7 @@ bool FSceneRenderer::ShouldRenderTressFX(int32 TressFXPass)
 	return false;
 }
 
-void RenderDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene, int32 TFXRenderType)
+void RenderDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene, int32 OITMode)
 {
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
 
@@ -839,7 +843,7 @@ void RenderDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, TArray<FViewI
 			continue;
 		}
 
-		if (TFXRenderType == ETressFXRenderType::KBuffer)
+		if (OITMode == ETressFXOITMode::KBuffer)
 		{
 			//copy scene depth, so we have a copy that doesnt have hair depths in it
 			SCOPED_DRAW_EVENT(RHICmdList, TressFXCopySceneDepth);
@@ -1292,9 +1296,9 @@ void RenderShortcutResolvePass(
 /////////////////////////////////////////////////////////////////////////
 
 
-void RenderKbufferBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene, int32 TFXRenderType)
+void RenderKbufferBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene)
 {
-	RenderDepthsAndVelocity(RHICmdList, Views, Scene, TFXRenderType);
+	RenderDepthsAndVelocity(RHICmdList, Views, Scene, ETressFXOITMode::KBuffer);
 }
 
 void RenderKBufferResolvePasses(
@@ -1493,27 +1497,24 @@ void RenderKBufferResolvePasses(
 	}
 }
 
-void FSceneRenderer::RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, int32 TFXRenderType)
+void FSceneRenderer::RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, bool bHasOpaque, bool bHasTranslucent, int32 OITMode)
 {
 	if (!ShouldRenderTressFX((int32)ETressFXPass::DepthsVelocity))
 	{
 		return;
 	}
-	RenderDepthsAndVelocity(RHICmdList, Views, Scene, TFXRenderType);	
+	RenderDepthsAndVelocity(RHICmdList, Views, Scene, OITMode);
 }
 
-void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList, int32 TFXRenderType)
+//this should only get called if scene has any translucent tressfx
+void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList, int32 OITMode)
 {
 
 	SCOPED_DRAW_EVENT(RHICmdList, TressFXBasePass);
 
-	switch (TFXRenderType)
+	switch (OITMode)
 	{
-		case ETressFXRenderType::Opaque:
-		{
-			break;
-		}
-		case ETressFXRenderType::ShortCut:
+		case ETressFXOITMode::ShortCut:
 		{
 			if (ShouldRenderTressFX(ETressFXPass::DepthsAlpha))
 			{
@@ -1521,11 +1522,11 @@ void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList,
 			}
 			break;
 		}
-		case ETressFXRenderType::KBuffer:
+		case ETressFXOITMode::KBuffer:
 		{
 			if (ShouldRenderTressFX(ETressFXPass::DepthsVelocity))
 			{
-				RenderKbufferBasePass(RHICmdList, Views, Scene, TFXRenderType);
+				RenderKbufferBasePass(RHICmdList, Views, Scene);
 			}
 			break;
 		}
@@ -1536,18 +1537,14 @@ void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList,
 	}
 }
 
-void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture, int32 TFXRenderType)
+void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture, int32 OITMode)
 {
 
 	SCOPED_DRAW_EVENT(RHICmdList, TressFXResolvePass);
 
-	switch (TFXRenderType)
+	switch (OITMode)
 	{
-		case ETressFXRenderType::Opaque:
-		{
-			break;
-		}
-		case ETressFXRenderType::ShortCut:
+		case ETressFXOITMode::ShortCut:
 		{
 			if (ShouldRenderTressFX(ETressFXPass::FillColor_Shortcut)) 
 			{
@@ -1563,7 +1560,7 @@ void FSceneRenderer::RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdLi
 			}
 			break;
 		}
-		case ETressFXRenderType::KBuffer:
+		case ETressFXOITMode::KBuffer:
 		{
 			if (ShouldRenderTressFX(ETressFXPass::FillColor_KBuffer))
 			{

@@ -1348,6 +1348,7 @@ bool FMaterialResource::TressFXApproximateDeepShadow() const { return Material->
 bool FMaterialResource::TressFXAttenuateShadowByAlpha() const { return Material->bTressFXAttenuateShadowByAlpha; }
 bool FMaterialResource::TressFXEnableGlint() const { return Material->bTressFXEnableGlint; }
 bool FMaterialResource::TressFXEnableRectLights() const { return Material->bTressFXEnableRectLights; }
+bool FMaterialResource::GetTressFXRenderMode() { return Material->TressFXRenderMode; }
 /*@third party code - END TressFX*/
 bool FMaterialResource::ComputeFogPerPixel() const {return Material->bComputeFogPerPixel;}
 FString FMaterialResource::GetFriendlyName() const { return *GetNameSafe(Material); } //avoid using the material instance name here, we want materials that share a shadermap to also share a friendly name.

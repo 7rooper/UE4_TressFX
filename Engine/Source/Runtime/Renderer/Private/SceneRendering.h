@@ -898,7 +898,8 @@ public:
 
 	/*@third party code - BEGIN TressFX*/
 	TArray<FTressFXMeshBatch, SceneRenderingAllocator> TressFXMeshBatches;
-	bool bHasTressFX;
+	bool bHasOpaqueTressFX;
+	bool bHasTranslucentTressFX;
 	/*@third party code - END TressFX*/
 
 	/** A map from light ID to a boolean visibility value. */
@@ -1683,11 +1684,12 @@ protected:
 	/*@third party code - BEGIN TressFX*/
 	bool ShouldRenderTressFX(int32 TressFXPass);
 	bool TressFXCanUseComputeResolves(const FSceneRenderTargets& SceneContext);
-	void RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList, int32 TFXRenderType);
-	void RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, int32 TFXRenderType);
+	//this should only get called if scene has any translucent tressfx
+	void RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList, int32 OITMode);
+	void RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, bool bHasOpaque, bool bHasTranslucent, int32 OITMode);
 	void RenderTressFXResolveVelocity(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& VelocityRT);
-	void RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture, int32 TFXRenderType);
-	bool GetAnyViewHasTressFX();
+	void RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture, int32 OITMode);
+	void GetAnyViewHasTressFX(bool &bHasTranslucentTressFX, bool &bHasOpaqueTressFX);
 	/*@third party code - END TressFX*/
 
 private:

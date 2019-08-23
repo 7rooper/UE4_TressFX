@@ -1499,6 +1499,7 @@ public:
 	/*@third party code - BEGIN TressFX*/
 	virtual bool TressFXShouldRenderVelocity() const { return true; }
 	virtual bool TressFXAttenuateShadowByAlpha() const { return true; }
+	virtual enum ETressFXRenderMode GetTressFXRenderMode() const { return ETressFXRenderMode::TressFXRender_Opaque; }
 	virtual bool TressFXEnableGlint() const { return false; }
 	virtual bool TressFXEnableRectLights() const { return false; }
 	virtual bool TressFXApproximateDeepShadow() const { return false; }
@@ -2272,6 +2273,7 @@ public:
 	ENGINE_API virtual bool TressFXEnableGlint() const override;
 	ENGINE_API virtual bool TressFXEnableRectLights() const override;
 	ENGINE_API virtual bool TressFXApproximateDeepShadow() const override;
+	ENGINE_API virtual enum ETressFXRenderMode GetTressFXRenderMode() const override;
 	/*@third party code - END TressFX*/
 	ENGINE_API virtual bool ComputeFogPerPixel() const override;
 	ENGINE_API virtual bool HasRuntimeVirtualTextureOutput() const override;

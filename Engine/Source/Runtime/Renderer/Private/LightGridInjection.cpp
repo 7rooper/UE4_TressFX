@@ -349,12 +349,10 @@ void FDeferredShadingSceneRenderer::ComputeLightGrid(FRHICommandListImmediate& R
 			const FViewInfo& View = Views[ViewIndex];
 			bAnyViewUsesForwardLighting |= View.bTranslucentSurfaceLighting || ShouldRenderVolumetricFog();
 			/*@third party code - BEGIN TressFX*/
-			if (View.bHasTressFX || View.TressFXMeshBatches.Num() > 0)
+			if (View.bHasTranslucentTressFX)
 			{
-				extern int32 GTressFXRenderType;
-				int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
-				TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
-				bAnyViewUsesForwardLighting |= (TFXRenderType == ETressFXRenderType::ShortCut || TFXRenderType == ETressFXRenderType::KBuffer);
+				check(View.TressFXMeshBatches.Num() > 0)
+				bAnyViewUsesForwardLighting |= true;
 			}
 			/*@third party code - END TressFX*/
 		}

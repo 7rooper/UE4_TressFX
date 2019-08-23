@@ -82,7 +82,8 @@ struct ENGINE_API FMaterialRelevance
 	uint8 bHasVolumeMaterialDomain : 1;
 	uint8 bUsesDistanceCullFade : 1;
 	/*@third party code - BEGIN TressFX*/
-	uint8 bTressFX : 1;
+	uint8 bTressFXOpaque : 1;
+	uint8 bTressFXTranslucent : 1;
 	/*@third party code - END TressFX*/
 
 	/** Default constructor */

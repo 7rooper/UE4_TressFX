@@ -1460,11 +1460,10 @@ IMPLEMENT_GetTressFXKBufferResources(FRHICommandListImmediate);
 
 #undef IMPLEMENT_GetTressFXKBufferResources
 
-void FSceneRenderTargets::ReleaseTressFXResources(int32 TypeToRelease)
+void FSceneRenderTargets::ReleaseTressFXResources(bool bReleaseOpaque, bool bReleaseShortcut, bool bReleaseKBuffer, bool bReleaseAll /*= false*/)
 {
-	const bool bReleaseAll = TypeToRelease == ETressFXRenderType::Num;
 
-	if (bReleaseAll || TypeToRelease == ETressFXRenderType::KBuffer)
+	if (bReleaseAll || bReleaseKBuffer)
 	{
 		TressFXKBufferListHeads.SafeRelease();
 		TressFXKBufferNodes.Release();
@@ -1472,13 +1471,13 @@ void FSceneRenderTargets::ReleaseTressFXResources(int32 TypeToRelease)
 		TressFXKBufferNodePoolSize = 0;
 	}
 
-	if (bReleaseAll || TypeToRelease == ETressFXRenderType::ShortCut)
+	if (bReleaseAll || bReleaseShortcut)
 	{
 		TressFXAccumInvAlpha.SafeRelease();
 		TressFXFragmentDepthsTexture.SafeRelease();
 		TressFXFragmentColorsTexture.SafeRelease();
 	}
-	if (bReleaseAll || TypeToRelease == ETressFXRenderType::Opaque)
+	if (bReleaseAll || bReleaseOpaque)
 	{
 		TressFXVelocity.SafeRelease();
 	}
@@ -1489,7 +1488,7 @@ void FSceneRenderTargets::ReleaseTressFXResources(int32 TypeToRelease)
 	}
 }
 
-void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, const FSceneViewFamily& ViewFamily)
+void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, bool bHasOpaque, bool bHasTranslucent, int32 OITMode)
 {
 	const int SampleCount = 1;
 
@@ -1507,10 +1506,8 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 			GRenderTargetPool.FindFreeElement(RHICmdList, VelocityDesc, TressFXVelocity, TEXT("TressFXVelocity"));
 		}
 
-		const int32 TFXRenderType = FMath::Clamp(static_cast<int32>(GTressFXRenderType), 0, (int32)ETressFXRenderType::Max);
-
 		// everything but opaque needs its own depth buffer
-		if (TFXRenderType > ETressFXRenderType::Opaque)
+		if (bHasTranslucent)
 		{
 			FPooledRenderTargetDesc TressFXSceneDepthDesc(
 				FPooledRenderTargetDesc::Create2DDesc(
@@ -1529,10 +1526,10 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 		}
 
 
-		if (TFXRenderType == ETressFXRenderType::ShortCut)
+		if (bHasTranslucent && OITMode == ETressFXOITMode::ShortCut)
 		{
 			//make sure k-buffer resources are not allocated, they use a lot of memory
-			ReleaseTressFXResources(ETressFXRenderType::KBuffer);
+			ReleaseTressFXResources(false, false, true);
 
 			{
 				FPooledRenderTargetDesc Desc(
@@ -1572,21 +1569,20 @@ void FSceneRenderTargets::AllocatTressFXTargets(FRHICommandList& RHICmdList, con
 				GRenderTargetPool.FindFreeElement(RHICmdList, Desc, TressFXFragmentColorsTexture, TEXT("TressFX_FragmentColorsTexture"), false);
 			}
 		}
-		else if (TFXRenderType == ETressFXRenderType::KBuffer)
+		else if (bHasTranslucent && OITMode == ETressFXOITMode::KBuffer)
 		{
 			//release shortcut textures
-			ReleaseTressFXResources(ETressFXRenderType::ShortCut);
+			ReleaseTressFXResources(false, true, false);
 			InitializeTressFXKBufferResources(RHICmdList);
 		}
-		else if (TFXRenderType == ETressFXRenderType::Opaque)
+		else if (bHasOpaque && !bHasTranslucent)
 		{
-			ReleaseTressFXResources(ETressFXRenderType::KBuffer);
-			ReleaseTressFXResources(ETressFXRenderType::ShortCut);
+			ReleaseTressFXResources(false, true, true);
 		}
 	}
 	else
 	{
-		ReleaseTressFXResources(ETressFXRenderType::Num);
+		ReleaseTressFXResources(true, true, true, true);
 	}
 }
 /*@third party code - END TressFX*/

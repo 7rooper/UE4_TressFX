@@ -79,15 +79,15 @@ IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXDepthsAlphaPS<false>, TEXT("/
 //  FTressFX_VelocityDepthPS
 ////////////////////////////////////////////////////////////////////////////////
 
-#define IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(TFXRenderType) \
-	typedef FTressFXVelocityDepthPS<true, TFXRenderType> FTressFXVelocityDepthPS##WithVelocity##TFXRenderType; \
-	typedef FTressFXVelocityDepthPS<false, TFXRenderType> FTressFXVelocityDepthPS##NoVelocity##TFXRenderType; \
-	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS##WithVelocity##TFXRenderType, TEXT("/Engine/Private/TressFXVelocityDepthPS.usf"), TEXT("TRessFXVelocityDepthPS"), SF_Pixel); \
-	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS##NoVelocity##TFXRenderType, TEXT("/Engine/Private/TressFXVelocityDepthPS.usf"), TEXT("TRessFXVelocityDepthPS"), SF_Pixel);
+#define IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(OITMode) \
+	typedef FTressFXVelocityDepthPS<true, OITMode> FTressFXVelocityDepthPS##WithVelocity##OITMode; \
+	typedef FTressFXVelocityDepthPS<false, OITMode> FTressFXVelocityDepthPS##NoVelocity##OITMode; \
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS##WithVelocity##OITMode, TEXT("/Engine/Private/TressFXVelocityDepthPS.usf"), TEXT("TRessFXVelocityDepthPS"), SF_Pixel); \
+	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS##NoVelocity##OITMode, TEXT("/Engine/Private/TressFXVelocityDepthPS.usf"), TEXT("TRessFXVelocityDepthPS"), SF_Pixel);
 
-IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(0); //opaque
-IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(1); //shortcut
-IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(2); //kbuffer
+IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(0); //shortcut
+IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(1); //kbuffer
+IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(2); //opaque
 #undef IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER
 
 ///////////////////////////////////////////////////////////////////////////////////

@@ -184,7 +184,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 
 
-template <bool bCalcVelocity, int32 TFXRenderType>
+template <bool bCalcVelocity, int32 OITMode>
 class FTressFXVelocityDepthPS : public FMeshMaterialShader
 {
 
@@ -201,7 +201,7 @@ public:
 	static void ModifyCompilationEnvironment(const FMaterialShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		OutEnvironment.SetDefine(TEXT("NEEDS_VELOCITY"), bCalcVelocity ? 1 : 0 );
-		OutEnvironment.SetDefine(TEXT("TFX_PPLL"), TFXRenderType == ETressFXRenderType::KBuffer ? 1 : 0);
+		OutEnvironment.SetDefine(TEXT("TFX_PPLL"), OITMode == ETressFXOITMode::KBuffer ? 1 : 0);
 		FMeshMaterialShader::ModifyCompilationEnvironment(Parameters.Platform, OutEnvironment);
 	}
 

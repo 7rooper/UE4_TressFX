@@ -79,7 +79,12 @@ struct FPrimitiveViewRelevance
 	uint32 bUseCustomViewData : 1;
 
 	/*@third party code - BEGIN TressFX*/
-	uint32 bTressFX : 1;
+	uint32 bTressFXOpaque : 1;
+	uint32 bTressFXTranslucent : 1;
+	bool HasTressFX() const
+	{
+		return bTressFXOpaque || bTressFXTranslucent;
+	}
 	/*@third party code - END TressFX*/
 
 	/** 

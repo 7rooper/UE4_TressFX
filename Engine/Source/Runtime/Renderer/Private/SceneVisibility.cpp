@@ -1841,7 +1841,8 @@ struct FRelevancePacket
 	FRelevancePrimSet<FPrimitiveSceneInfo*> RecachedReflectionCapturePrimitives;
 
 	/*@third party code - BEGIN TressFX*/
-	bool bHasTressFX;
+	bool bHasOpaqueTressFX;
+	bool bHasTranslucentTressFX;
 	TArray<FTressFXMeshBatch> TressFXMeshBatches;
 	/*@third party code - END TressFX*/
 
@@ -1930,7 +1931,8 @@ struct FRelevancePacket
 		, bUsesSceneDepth(false)
 	{
 		/*@third party code - BEGIN TressFX*/
-		bHasTressFX = false;
+		bHasOpaqueTressFX = false;
+		bHasTranslucentTressFX = false;
 		/*@third party code - END TressFX*/
 	}
 
@@ -2053,9 +2055,13 @@ struct FRelevancePacket
 			}
 
 			/*@third party code - BEGIN TressFX*/
-			if (ViewRelevance.bTressFX)
+			if (ViewRelevance.bTressFXOpaque)
 			{
-				bHasTressFX = true;
+				bHasOpaqueTressFX = true;
+			}
+			if (ViewRelevance.bTressFXTranslucent)
+			{
+				bHasTranslucentTressFX = true;
 			}
 			/*@third party code - END TressFX*/
 
@@ -2389,7 +2395,8 @@ struct FRelevancePacket
 
 		/*@third party code - BEGIN TressFX*/
 		WriteView.TressFXMeshBatches.Append(TressFXMeshBatches);
-		WriteView.bHasTressFX |= bHasTressFX;
+		WriteView.bHasOpaqueTressFX |= bHasOpaqueTressFX;
+		WriteView.bHasTranslucentTressFX |= bHasTranslucentTressFX;
 		/*@third party code - END TressFX*/
 
 		for (int32 Index = 0; Index < RecachedReflectionCapturePrimitives.NumPrims; ++Index)
@@ -2743,34 +2750,37 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 #endif
 
 	/*@third party code - BEGIN TressFX*/
-	if (ViewRelevance.bTressFX)
+	if (ViewRelevance.HasTressFX())
 	{
-		extern int32 GTressFXRenderType;
-		int32 TFXRenderType = static_cast<uint32>(GTressFXRenderType);
-		TFXRenderType = FMath::Clamp(TFXRenderType, 0, (int32)ETressFXRenderType::Max);
-		if (TFXRenderType == ETressFXRenderType::Opaque)
+		if (ViewRelevance.bTressFXOpaque) 
 		{
-			//opaque will get rendered by ue4s base pass shaders
+			//opaque will get rendered by ue4s base pass shaders, we just need 1 additional pass for velocity/depth
 			PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
 			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
 		}
-		else if (TFXRenderType == ETressFXRenderType::ShortCut)
+
+		if (ViewRelevance.bTressFXTranslucent) 
 		{
-			PassMask.Set(EMeshPass::TressFX_DepthsAlpha);
-			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsAlpha] += NumElements;
+			extern int32 GTressFXOITMode;
+			int32 TressFXOITMode = static_cast<uint32>(GTressFXOITMode);
+			TressFXOITMode = FMath::Clamp(TressFXOITMode, 0, (int32)ETressFXOITMode::Max);
+			if (TressFXOITMode == ETressFXOITMode::ShortCut)
+			{
+				PassMask.Set(EMeshPass::TressFX_DepthsAlpha);
+				View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsAlpha] += NumElements;
 
-			PassMask.Set(EMeshPass::TressFX_FillColors);
-			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
+				PassMask.Set(EMeshPass::TressFX_FillColors);
+				View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
+			}
+			else if (TressFXOITMode == ETressFXOITMode::KBuffer)
+			{
+				PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
+				View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
+
+				PassMask.Set(EMeshPass::TressFX_FillColors);
+				View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
+			}
 		}
-		else if (TFXRenderType == ETressFXRenderType::KBuffer)
-		{
-			PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
-			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
-
-			PassMask.Set(EMeshPass::TressFX_FillColors);
-			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;
-		}
-
 		View.TressFXMeshBatches.AddUninitialized(1);
 		FTressFXMeshBatch& BatchAndProxy = View.TressFXMeshBatches.Last();
 		BatchAndProxy.Mesh = MeshBatch.Mesh;

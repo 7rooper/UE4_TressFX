@@ -485,8 +485,8 @@ public:
 	
 	/*@third party code - BEGIN TressFX*/
 	void AllocateTressFXScreenShadowMask(FRHICommandList& RHICmdList, TRefCountPtr<IPooledRenderTarget>& TressFXScreenShadowMaskTexture);
-	void AllocatTressFXTargets(FRHICommandList& RHICmdList, const FSceneViewFamily& ViewFamily);
-	void ReleaseTressFXResources(int32 TypeToRelease);
+	void AllocatTressFXTargets(FRHICommandList& RHICmdList, bool bHasOpaque, bool bHasTranslucent, int32 OITMode);
+	void ReleaseTressFXResources(bool bReleaseOpaque, bool bReleaseShortcut, bool bReleaseKBuffer, bool bReleaseAll = false);
 	/*@third party code - END TressFX*/
 
 	TRefCountPtr<IPooledRenderTarget>& GetReflectionBrightnessTarget();

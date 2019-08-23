@@ -904,6 +904,7 @@ UMaterial::UMaterial(const FObjectInitializer& ObjectInitializer)
 	bTressFXAttenuateShadowByAlpha = false;
 	bTressFXEnableGlint = false;
 	bTressFXEnableRectLights = false;
+	TressFXRenderMode = ETressFXRenderMode::TressFXRender_Opaque;
 	/*@third party code - END TressFX*/
 }
 
@@ -3971,18 +3972,36 @@ bool UMaterial::CanEditChange(const UProperty* InProperty) const
 		/*@third party code - BEGIN TressFX*/
 		if (
 			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXRenderVelocity) ||
-			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXAttenuateShadowByAlpha) ||
-			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXApproximateDeepShadow) ||
-			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXEnableGlint) ||
-			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXEnableRectLights)
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, TressFXRenderMode)
 			)
 		{
 			return bUsedWithTressFX;
 		}
-
-		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, MaterialDomain))
+		if(bUsedWithTressFX)
 		{
-			return !bUsedWithTressFX;
+			if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, MaterialDomain))
+			{
+				return false;
+			}
+		}
+		if (
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXApproximateDeepShadow) ||
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXEnableGlint)
+		)
+		{
+			return 
+				(
+					bUsedWithTressFX && 
+					TressFXRenderMode == ETressFXRenderMode::TressFXRender_Translucent &&
+					ShadingModel == MSM_TressFX
+				);
+		}
+		if (		
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXAttenuateShadowByAlpha) ||
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXEnableRectLights)
+			)
+		{
+			return bUsedWithTressFX && TressFXRenderMode == ETressFXRenderMode::TressFXRender_Translucent;
 		}
 		/*@third party code - END TressFX*/
 

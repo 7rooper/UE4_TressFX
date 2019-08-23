@@ -39,15 +39,14 @@ public:
 
 };
 
-struct ETressFXRenderType
+struct ETressFXOITMode
 {
 	enum Type
 	{
-		Opaque,
 		ShortCut,
 		KBuffer,
 		///////
-		Num,
+		Num, //opaque
 		Max = (Num - 1)
 	};
 
@@ -88,7 +87,7 @@ public:
 	virtual void AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId = -1) override final;
 
 private:
-	template<bool bCalcVelocity, ETressFXRenderType::Type TFXRenderType>
+	template<bool bCalcVelocity, ETressFXOITMode::Type OITMode>
 	void Process(
 		const FMeshBatch& RESTRICT MeshBatch,
 		uint64 BatchElementMask,
@@ -158,7 +157,7 @@ public:
 	virtual void AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId = -1) override final;
 
 private:
-	template<ETressFXRenderType::Type RenderType>
+	template<ETressFXOITMode::Type OITMode>
 	void Process(
 		const FMeshBatch& RESTRICT MeshBatch,
 		uint64 BatchElementMask,
