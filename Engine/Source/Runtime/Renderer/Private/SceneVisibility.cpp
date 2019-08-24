@@ -1836,15 +1836,16 @@ struct FRelevancePacket
 	FTranslucenyPrimCount TranslucentPrimCount;
 	bool bHasDistortionPrimitives;
 	bool bHasCustomDepthPrimitives;
-	FRelevancePrimSet<FPrimitiveSceneInfo*> LazyUpdatePrimitives;
-	FRelevancePrimSet<FPrimitiveSceneInfo*> DirtyIndirectLightingCacheBufferPrimitives;
-	FRelevancePrimSet<FPrimitiveSceneInfo*> RecachedReflectionCapturePrimitives;
-
 	/*@third party code - BEGIN TressFX*/
 	bool bHasOpaqueTressFX;
 	bool bHasTranslucentTressFX;
 	TArray<FTressFXMeshBatch> TressFXMeshBatches;
 	/*@third party code - END TressFX*/
+	FRelevancePrimSet<FPrimitiveSceneInfo*> LazyUpdatePrimitives;
+	FRelevancePrimSet<FPrimitiveSceneInfo*> DirtyIndirectLightingCacheBufferPrimitives;
+	FRelevancePrimSet<FPrimitiveSceneInfo*> RecachedReflectionCapturePrimitives;
+
+
 
 	TArray<FMeshDecalBatch> MeshDecalBatches;
 	TArray<FVolumetricMeshBatch> VolumetricMeshBatches;
@@ -1922,6 +1923,10 @@ struct FRelevancePacket
 		, NumVisibleDynamicEditorPrimitives(0)
 		, bHasDistortionPrimitives(false)
 		, bHasCustomDepthPrimitives(false)
+		/*@third party code - BEGIN TressFX*/
+		, bHasOpaqueTressFX(false)
+		, bHasTranslucentTressFX(false)
+		/*@third party code - END TressFX*/
 		, PrimitiveCustomDataMemStack(InPrimitiveCustomDataMemStack)
 		, OutHasViewCustomDataMasks(InOutHasViewCustomDataMasks)
 		, CombinedShadingModelMask(0)
@@ -1930,10 +1935,6 @@ struct FRelevancePacket
 		, bTranslucentSurfaceLighting(false)
 		, bUsesSceneDepth(false)
 	{
-		/*@third party code - BEGIN TressFX*/
-		bHasOpaqueTressFX = false;
-		bHasTranslucentTressFX = false;
-		/*@third party code - END TressFX*/
 	}
 
 	void AnyThreadTask()
@@ -2750,7 +2751,7 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 #endif
 
 	/*@third party code - BEGIN TressFX*/
-	if (ViewRelevance.HasTressFX())
+	if (ViewRelevance.HasTressFX() && MeshBatch.Mesh->bTressFX && MeshBatch.PrimitiveSceneProxy->IsTressFX())
 	{
 		if (ViewRelevance.bTressFXOpaque) 
 		{
@@ -2783,8 +2784,11 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 		}
 		View.TressFXMeshBatches.AddUninitialized(1);
 		FTressFXMeshBatch& BatchAndProxy = View.TressFXMeshBatches.Last();
+		check(MeshBatch.PrimitiveSceneProxy->IsTressFX());
+		check(MeshBatch.Mesh->bTressFX);
 		BatchAndProxy.Mesh = MeshBatch.Mesh;
 		BatchAndProxy.Proxy = (const ITressFXSceneProxy*)MeshBatch.PrimitiveSceneProxy;
+		
 	}
 	/*@third party code - END TressFX*/
 

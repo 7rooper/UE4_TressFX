@@ -921,6 +921,10 @@ void FViewInfo::Init()
 
 	NumVisibleDynamicPrimitives = 0;
 	NumVisibleDynamicEditorPrimitives = 0;
+	/*@third party code - BEGIN TressFX*/
+	bHasOpaqueTressFX = false;
+	bHasTranslucentTressFX = false;
+	/*@third party code - END TressFX*/
 }
 
 FViewInfo::~FViewInfo()
