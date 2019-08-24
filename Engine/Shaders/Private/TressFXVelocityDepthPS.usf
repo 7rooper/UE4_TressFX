@@ -53,6 +53,7 @@ struct PS_INPUT_HAIR_AA
 
 #if TFX_PPLL
 	RWTexture2D<float4> RWGBufferB : register(u1);
+	float MinAlphaForSceneDepth;
 #endif
 
 EARLYDEPTHSTENCIL
@@ -62,12 +63,11 @@ void TRessFXVelocityDepthPS(
 )
 {
 
-	#if NEEDS_VELOCITY
+
 		float4 position = input.Position;
 		ResolvedView = ResolveView();
-
-		float4 p0p1 = input.FactoryInterpolants.p0p1;
-		float4 Tangent = input.FactoryInterpolants.Tangent;;
+		
+		//float4 Tangent = input.FactoryInterpolants.Tangent;;
 
 		FMaterialPixelParameters MaterialParameters = GetMaterialPixelParameters(input.FactoryInterpolants, input.Position);
 		FPixelMaterialInputs PixelMaterialInputs;
@@ -85,20 +85,32 @@ void TRessFXVelocityDepthPS(
 				CalcMaterialParametersEx(MaterialParameters, PixelMaterialInputs, input.Position, ScreenPosition, bIsFrontFace, TranslatedWorldPosition, TranslatedWorldPosition);
 			}
 		#endif
-
+	#if NEEDS_VELOCITY
 		float2 Velocity = Calculate2DVelocity(MaterialParameters.ScreenPosition, input.FactoryInterpolants.VelocityPrevScreenPosition);
 		OutVelocity = float4(EncodeVelocityToTexture(Velocity), 0, 0);
 	#else
 		OutVelocity = float4(0, 0, 0, 0);
-#endif
+	#endif
 
 	#if TFX_PPLL
-		// we need to know if a pixel is non-opaque tressfx, but without actually writing the shading model to the gbuffer			
-		float4 Current = RWGBufferB[uint2(input.Position.xy)];
-		uint CurrentMask = DecodeSelectiveOutputMask(Current.a);
-		uint CurrentShadingModel = DecodeShadingModelId(Current.a);
-		CurrentMask |= IS_TRESSFX_NON_OPAQUE_PIXEL;
-		Current.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) CurrentShadingModel, (uint) CurrentMask); 
-		RWGBufferB[uint2(input.Position.xy)] = Current;
+		float4 p0p1 = input.FactoryInterpolants.p0p1;
+		float2 viewport = ResolvedView.ViewSizeAndInvSize.xy;
+		float2 NDC = MaterialParameters.ScreenPosition.xy / MaterialParameters.ScreenPosition.w;
+		float coverage = ComputeCoverage(p0p1.xy, p0p1.zw, NDC, viewport, position.z);
+
+	    half Opacity = GetMaterialOpacity(PixelMaterialInputs);
+		float alpha = coverage * Opacity; 
+		if(alpha > MinAlphaForSceneDepth)
+		{
+			// we need to know if a pixel is non-opaque tressfx, but without actually writing the shading model to the gbuffer		
+			// race condition doesnt matter here since its |=
+			float4 Current = RWGBufferB[uint2(input.Position.xy)];
+			uint CurrentMask = DecodeSelectiveOutputMask(Current.a);
+			uint CurrentShadingModel = DecodeShadingModelId(Current.a);
+			CurrentMask |= IS_TRESSFX_NON_OPAQUE_PIXEL;
+			Current.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) CurrentShadingModel, (uint) CurrentMask); 
+			RWGBufferB[uint2(input.Position.xy)] = Current;
+		}
+
 	#endif
 }

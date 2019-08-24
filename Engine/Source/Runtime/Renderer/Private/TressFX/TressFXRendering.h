@@ -36,6 +36,7 @@ public:
 	ETressFXPass::Type TFXPass;
 	FVector4 FragmentBufferSize;
 	FIntRect ViewRect;
+	float MinAlphaForSceneDepth;
 
 };
 

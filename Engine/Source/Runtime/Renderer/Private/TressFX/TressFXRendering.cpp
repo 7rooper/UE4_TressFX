@@ -309,6 +309,8 @@ void FTressFXDepthsVelocityPassMeshProcessor::Process(
 	//SetDepthPassDitheredLODTransitionState(ViewIfDynamicMeshCommand, MeshBatch, StaticMeshId, DrawRenderState);
 
 	FTressFXShaderElementData ShaderElementData(ETressFXPass::DepthsVelocity, ViewIfDynamicMeshCommand);
+	float MinAlphaForShadow = FMath::Clamp(static_cast<float> (GTressFXMinAlphaForDepth), 0.1f, 1.0f);
+	ShaderElementData.MinAlphaForSceneDepth = MinAlphaForShadow;
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
 
 	TMeshProcessorShaders<

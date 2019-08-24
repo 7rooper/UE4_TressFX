@@ -197,6 +197,7 @@ public:
 		if (OITMode == ETressFXOITMode::KBuffer)
 		{
 			RWGBufferB.Bind(Initializer.ParameterMap, TEXT("RWGBufferB"));
+			MinAlphaForSceneDepth.Bind(Initializer.ParameterMap, TEXT("MinAlphaForSceneDepth"));
 		}
 	}
 
@@ -226,7 +227,7 @@ public:
 		const bool result = FMeshMaterialShader::Serialize(Ar);
 		if (OITMode == ETressFXOITMode::KBuffer)
 		{
-			Ar << RWGBufferB;
+			Ar << RWGBufferB << MinAlphaForSceneDepth;
 		}
 		return result;
 	}
@@ -243,12 +244,14 @@ public:
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
 		check(OITMode == ETressFXOITMode::KBuffer || OITMode == ETressFXOITMode::None);
+		ShaderBindings.Add(MinAlphaForSceneDepth, ShaderElementData.MinAlphaForSceneDepth);
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
 	}
 
 public:
 
 	FRWShaderParameter RWGBufferB;
+	FShaderParameter MinAlphaForSceneDepth;
 
 };
 

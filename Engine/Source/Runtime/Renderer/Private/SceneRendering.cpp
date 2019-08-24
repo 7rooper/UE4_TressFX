@@ -365,7 +365,7 @@ FAutoConsoleVariableRef CVarTressOITMode(
 	TEXT("tfx.OITMode"),
 	GTressFXOITMode,
 	TEXT("0: ShortCut (default)\n")
-	TEXT("1: KBuffer (Experimental)"),
+	TEXT("1: KBuffer (Experimental, not recommended)"),
 	ECVF_RenderThreadSafe
 );
 
