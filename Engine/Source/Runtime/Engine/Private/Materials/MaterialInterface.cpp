@@ -163,8 +163,8 @@ FMaterialRelevance UMaterialInterface::GetRelevance_Internal(const UMaterial* Ma
 			MaterialRelevance.bHasVolumeMaterialDomain = MaterialResource->IsVolumetricPrimitive();
 			MaterialRelevance.bUsesDistanceCullFade = MaterialResource->MaterialUsesDistanceCullFade_GameThread();
 			/*@third party code - BEGIN TressFX*/
-			MaterialRelevance.bTressFXOpaque = MaterialResource->GetTressFXRenderMode() == ETressFXRenderMode::TressFXRender_Opaque;
-			MaterialRelevance.bTressFXTranslucent = MaterialResource->GetTressFXRenderMode() == ETressFXRenderMode::TressFXRender_Translucent;
+			MaterialRelevance.bTressFXOpaque = MaterialResource->IsUsedWithTressFX() && MaterialResource->GetTressFXRenderMode() == ETressFXRenderMode::TressFXRender_Opaque;
+			MaterialRelevance.bTressFXTranslucent = MaterialResource->IsUsedWithTressFX() && MaterialResource->GetTressFXRenderMode() == ETressFXRenderMode::TressFXRender_Translucent;
 			/*@third party code - END TressFX*/
 		}
 		return MaterialRelevance;
