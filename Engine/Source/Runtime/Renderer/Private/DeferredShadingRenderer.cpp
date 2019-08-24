@@ -1165,8 +1165,8 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	check(bDidAfterTaskWork);
 
 	/*@third party code - BEGIN TressFX*/
-	bool bSceneHasOpaqueTressFX;
-	bool bSceneHasTranslucentTressFX;
+	bool bSceneHasOpaqueTressFX = false;
+	bool bSceneHasTranslucentTressFX = false;
 	GetAnyViewHasTressFX(bSceneHasTranslucentTressFX,bSceneHasOpaqueTressFX);
 	extern int32 GTressFXOITMode;
 	int32 TressFXOITMode = static_cast<uint32>(GTressFXOITMode);
