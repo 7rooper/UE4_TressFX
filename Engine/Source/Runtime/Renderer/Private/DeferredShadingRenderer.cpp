@@ -1187,7 +1187,7 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 		//Only opaque hairs should render depths here, otherwise, wait until after basepass
 		if (bSceneHasOpaqueTressFX)
 		{
-			RenderTressFXDepthsAndVelocity(RHICmdList, bSceneHasOpaqueTressFX, false, ETressFXOITMode::Num);
+			RenderTressFXDepthsAndVelocity(RHICmdList, bSceneHasOpaqueTressFX, false, ETressFXOITMode::None);
 		}
 		if (bSceneHasTranslucentTressFX)
 		{

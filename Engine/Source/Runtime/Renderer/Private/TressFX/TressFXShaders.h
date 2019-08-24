@@ -194,7 +194,10 @@ public:
 
 	FTressFXVelocityDepthPS(const FMeshMaterialShaderType::CompiledShaderInitializerType& Initializer) : FMeshMaterialShader(Initializer)
 	{
-
+		if (OITMode == ETressFXOITMode::KBuffer)
+		{
+			RWGBufferB.Bind(Initializer.ParameterMap, TEXT("RWGBufferB"));
+		}
 	}
 
 
@@ -221,6 +224,10 @@ public:
 	virtual bool Serialize(FArchive& Ar) override
 	{
 		const bool result = FMeshMaterialShader::Serialize(Ar);
+		if (OITMode == ETressFXOITMode::KBuffer)
+		{
+			Ar << RWGBufferB;
+		}
 		return result;
 	}
 
@@ -235,10 +242,13 @@ public:
 		const FTressFXShaderElementData& ShaderElementData,
 		FMeshDrawSingleShaderBindings& ShaderBindings) const
 	{
+		check(OITMode == ETressFXOITMode::KBuffer || OITMode == ETressFXOITMode::None);
 		FMeshMaterialShader::GetShaderBindings(Scene, FeatureLevel, PrimitiveSceneProxy, MaterialRenderProxy, Material, DrawRenderState, ShaderElementData, ShaderBindings);
 	}
 
 public:
+
+	FRWShaderParameter RWGBufferB;
 
 };
 

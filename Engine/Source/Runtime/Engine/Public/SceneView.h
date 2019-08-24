@@ -987,6 +987,11 @@ public:
 	/** True if we need to bind the instanced view uniform buffer parameters. */
 	bool bShouldBindInstancedViewUB;
 
+	/*@third party code - BEGIN TressFX*/
+	bool bHasOpaqueTressFX;
+	bool bHasTranslucentTressFX;
+	/*@third party code - END TressFX*/
+
 	/** Global clipping plane being applied to the scene, or all 0's if disabled.  This is used when rendering the planar reflection pass. */
 	FPlane GlobalClippingPlane;
 

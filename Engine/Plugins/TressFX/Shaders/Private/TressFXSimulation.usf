@@ -773,7 +773,7 @@ void IntegrationAndGlobalShapeConstraints(
     float4 CurrentPos = SharedPos[Indices.IndexForSharedMem] = HairVertexPositions[Indices.GlobalVertexIndex];
 	
 	//not sure this is needed
-	SharedPos[Indices.IndexForSharedMem] = InitialPos;
+	//SharedPos[Indices.IndexForSharedMem] = InitialPos;
 
 	#if UPDATE_PREV_FOLLOW_HAIRS
 	    for (uint i = 0; i < NumFollowersPerGuideHair; i++)

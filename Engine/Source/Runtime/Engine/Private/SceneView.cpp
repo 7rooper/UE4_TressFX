@@ -644,6 +644,10 @@ FSceneView::FSceneView(const FSceneViewInitOptions& InitOptions)
 	, bIsMobileMultiViewEnabled(false)
 	, bIsMobileMultiViewDirectEnabled(false)
 	, bShouldBindInstancedViewUB(false)
+	/*@third party code - BEGIN TressFX*/
+	, bHasOpaqueTressFX(false)
+	, bHasTranslucentTressFX(false)
+	/*@third party code - END TressFX*/
 	, GlobalClippingPlane(FPlane(0, 0, 0, 0))
 #if WITH_EDITOR
 	, OverrideLODViewOrigin(InitOptions.OverrideLODViewOrigin)

@@ -898,8 +898,6 @@ public:
 
 	/*@third party code - BEGIN TressFX*/
 	TArray<FTressFXMeshBatch, SceneRenderingAllocator> TressFXMeshBatches;
-	bool bHasOpaqueTressFX;
-	bool bHasTranslucentTressFX;
 	/*@third party code - END TressFX*/
 
 	/** A map from light ID to a boolean visibility value. */
@@ -1689,7 +1687,7 @@ protected:
 	void RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, bool bHasOpaque, bool bHasTranslucent, int32 OITMode);
 	void RenderTressFXResolveVelocity(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& VelocityRT);
 	void RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture, int32 OITMode);
-	void GetAnyViewHasTressFX(bool &bHasTranslucentTressFX, bool &bHasOpaqueTressFX);
+	void GetAnyViewHasTressFX(bool &bOutHasTranslucentTressFX, bool &bOutHasOpaqueTressFX);
 	/*@third party code - END TressFX*/
 
 private:

@@ -46,7 +46,8 @@ struct ETressFXOITMode
 		ShortCut,
 		KBuffer,
 		///////
-		Num, //opaque
+		None, //opaque
+		Num = (None),
 		Max = (Num - 1)
 	};
 

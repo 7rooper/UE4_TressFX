@@ -274,7 +274,7 @@ bool FSceneRenderer::TressFXCanUseComputeResolves(const FSceneRenderTargets& Sce
 switch (OITMode)																														\
 {																																		\
 	case ETressFXOITMode::KBuffer:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXOITMode::KBuffer, __VA_ARGS__) break;					\
-	case ETressFXOITMode::Num:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXOITMode::Num, __VA_ARGS__) break;							\
+	case ETressFXOITMode::None:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXOITMode::Num, __VA_ARGS__) break;							\
 	default: check(0);																													\
 }
 
@@ -354,7 +354,7 @@ void FTressFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 	int32 OITMode = static_cast<uint32>(GTressFXOITMode);
 	OITMode = FMath::Clamp(OITMode, 0, (int32)ETressFXOITMode::Max);
 
-	//blend mode masked will render depth in the regular pass (pre pass)
+	//blend mode masked will render hair depth in the regular pass (pre pass if its on)
 	const bool bNoDepth = BlendMode == EBlendMode::BLEND_Masked && bIsOpaqueTressFX;
 
 	if (bWantsVelocity == false && bNoDepth == true)
@@ -800,13 +800,13 @@ FMeshPassProcessor* CreateTRessFXFillColorPassProcessor(const FScene* Scene, con
 	return new(FMemStack::Get()) FTressFXFillColorPassMeshProcessor(Scene, InViewIfDynamicMeshCommand, PassDrawRenderState, InDrawListContext);
 }
 
-void FSceneRenderer::GetAnyViewHasTressFX(bool &bHasTranslucentTressFX, bool &bHasOpaqueTressFX)
+void FSceneRenderer::GetAnyViewHasTressFX(bool &bOutHasTranslucentTressFX, bool &bOutHasOpaqueTressFX)
 {
 	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ++ViewIndex)
 	{
 		const FViewInfo& View = Views[ViewIndex];
-		bHasTranslucentTressFX |= View.bHasTranslucentTressFX;
-		bHasOpaqueTressFX |= View.bHasOpaqueTressFX;
+		bOutHasTranslucentTressFX |= View.bHasTranslucentTressFX;
+		bOutHasOpaqueTressFX |= View.bHasOpaqueTressFX;
 	}
 }
 
@@ -830,7 +830,12 @@ bool FSceneRenderer::ShouldRenderTressFX(int32 TressFXPass)
 	return false;
 }
 
-void RenderDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, TArray<FViewInfo>& Views, FScene* Scene, int32 OITMode)
+void RenderDepthsAndVelocity(
+	FRHICommandListImmediate& RHICmdList
+	, TArray<FViewInfo>& Views
+	, FScene* Scene
+	, int32 OITMode
+)
 {
 	FSceneRenderTargets& SceneContext = FSceneRenderTargets::Get(RHICmdList);
 
@@ -845,15 +850,15 @@ void RenderDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, TArray<FViewI
 
 		if (OITMode == ETressFXOITMode::KBuffer)
 		{
-			//copy scene depth, so we have a copy that doesnt have hair depths in it
+			//copy scene depth, so we have a copy that doesnt have OIT hair depths in it, opaque hairs will be in it though, and thats ok
 			SCOPED_DRAW_EVENT(RHICmdList, TressFXCopySceneDepth);
 			TressFXCopySceneDepth(RHICmdList, View, SceneContext, SceneContext.TressFXSceneDepth);
 		}
 
 
 		Scene->UniformBuffers.UpdateViewUniformBuffer(View);
-
 		RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
+		
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, TressFXDepthsVelocity);
 
@@ -863,8 +868,27 @@ void RenderDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, TArray<FViewI
 			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.GetSceneDepthSurface();;
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
 
+			
+			/*
+			 we need to clear here on 2 conditions: 
+			 1. if its the opaque pass. 
+				OR
+			 2. if its the k-buffer pass and there was no opaque pass 
+			*/
+			if (OITMode == ETressFXOITMode::None || (OITMode == ETressFXOITMode::KBuffer && !View.bHasOpaqueTressFX))
+			{
+				RHICmdList.BindClearMRTValues(true, false, false);
+			}
+			
+			if(OITMode == ETressFXOITMode::KBuffer)
+			{
+				const TRefCountPtr<IPooledRenderTarget> GBufferB = SceneContext.GBufferB;
+				RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToGfx, GBufferB->GetRenderTargetItem().UAV);
+				RPInfo.UAVIndex = 1;
+				RPInfo.UAVs[RPInfo.NumUAVs++] = GBufferB->GetRenderTargetItem().UAV;
+			}
+
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXDepthsVelocity"));
-			RHICmdList.BindClearMRTValues(true, false, false);
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
 			View.ParallelMeshDrawCommandPasses[EMeshPass::TressFX_DepthsVelocity].DispatchDraw(nullptr, RHICmdList);
 			RHICmdList.EndRenderPass();

@@ -85,7 +85,7 @@ IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXDepthsAlphaPS<false>, TEXT("/
 	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS##WithVelocity##OITMode, TEXT("/Engine/Private/TressFXVelocityDepthPS.usf"), TEXT("TRessFXVelocityDepthPS"), SF_Pixel); \
 	IMPLEMENT_MATERIAL_SHADER_TYPE(template<>, FTressFXVelocityDepthPS##NoVelocity##OITMode, TEXT("/Engine/Private/TressFXVelocityDepthPS.usf"), TEXT("TRessFXVelocityDepthPS"), SF_Pixel);
 
-IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(0); //shortcut
+IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(0); //shortcut, not actually used
 IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(1); //kbuffer
 IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER(2); //opaque
 #undef IMPLEMENT_TRESSFX_DEPTHSVELOCITY_SHADER

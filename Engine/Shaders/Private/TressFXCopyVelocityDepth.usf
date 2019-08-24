@@ -18,8 +18,6 @@ float CopyHairDepthPs(FScreenVertexOutput Input) : SV_Depth
 	// Skip non-hair depth using stencil
     uint Stencil = StencilTexture.Load(ScreenAddr).g;
 
-	// if we ever get shader model 11.3 support i would rather use sv_stencil in TressFXShortCut_ResolveDepthPS.usf
-	// to make sure we are only returning hair depths here...
 	if (Stencil == 0)
 	{
 		return NearestDepth;

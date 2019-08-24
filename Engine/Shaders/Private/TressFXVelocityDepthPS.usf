@@ -30,6 +30,7 @@
 
 
 #include "TressFXRendering.ush"
+#include "DeferredShadingCommon.ush"
 
 struct PS_INPUT_HAIR_AA
 {
@@ -44,6 +45,14 @@ struct PS_INPUT_HAIR_AA
 
 #ifndef NEEDS_VELOCITY
 	#define NEEDS_VELOCITY 1
+#endif
+
+#ifndef TFX_PPLL
+	#define TFX_PPLL 0
+#endif
+
+#if TFX_PPLL
+	RWTexture2D<float4> RWGBufferB : register(u1);
 #endif
 
 EARLYDEPTHSTENCIL
@@ -82,4 +91,14 @@ void TRessFXVelocityDepthPS(
 	#else
 		OutVelocity = float4(0, 0, 0, 0);
 #endif
+
+	#if TFX_PPLL
+		// we need to know if a pixel is non-opaque tressfx, but without actually writing the shading model to the gbuffer			
+		float4 Current = RWGBufferB[uint2(input.Position.xy)];
+		uint CurrentMask = DecodeSelectiveOutputMask(Current.a);
+		uint CurrentShadingModel = DecodeShadingModelId(Current.a);
+		CurrentMask |= IS_TRESSFX_NON_OPAQUE_PIXEL;
+		Current.a = EncodeShadingModelIdAndSelectiveOutputMask((uint) CurrentShadingModel, (uint) CurrentMask); 
+		RWGBufferB[uint2(input.Position.xy)] = Current;
+	#endif
 }
