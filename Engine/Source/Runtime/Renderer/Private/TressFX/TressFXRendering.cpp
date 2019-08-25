@@ -275,7 +275,7 @@ bool FSceneRenderer::TressFXCanUseComputeResolves(const FSceneRenderTargets& Sce
 switch (OITMode)																														\
 {																																		\
 	case ETressFXOITMode::KBuffer:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXOITMode::KBuffer, __VA_ARGS__) break;					\
-	case ETressFXOITMode::None:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXOITMode::Num, __VA_ARGS__) break;							\
+	case ETressFXOITMode::None:  PROCESS_DEPTHSVELOCITY(bCalcVelocity,ETressFXOITMode::None, __VA_ARGS__) break;						\
 	default: check(0);																													\
 }
 
@@ -309,7 +309,7 @@ void FTressFXDepthsVelocityPassMeshProcessor::Process(
 
 	//SetDepthPassDitheredLODTransitionState(ViewIfDynamicMeshCommand, MeshBatch, StaticMeshId, DrawRenderState);
 
-	FTressFXShaderElementData ShaderElementData(ETressFXPass::DepthsVelocity, ViewIfDynamicMeshCommand);
+	FTressFXShaderElementData ShaderElementData(bIsOpaquePass ? ETressFXPass::DepthsVelocity_Opaque : ETressFXPass::DepthsVelocity_KBuffer, ViewIfDynamicMeshCommand);
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
 
 	TMeshProcessorShaders<
@@ -350,8 +350,11 @@ void FTressFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 	const bool bIsOpaqueTressFX = TFXMaterialRenderMode == ETressFXRenderMode::TressFXRender_Opaque;
 	const bool bIsTranslucentTressFX = TFXMaterialRenderMode == ETressFXRenderMode::TressFXRender_Translucent;
 
+	check(bIsOpaqueTressFX || bIsTranslucentTressFX);
+
 	const EBlendMode BlendMode = MeshBatchMaterial.GetBlendMode();
 	const bool bWantsVelocity = MeshBatchMaterial.TressFXShouldRenderVelocity();
+	
 	int32 OITMode = static_cast<uint32>(GTressFXOITMode);
 	OITMode = FMath::Clamp(OITMode, 0, (int32)ETressFXOITMode::Max);
 
@@ -363,13 +366,17 @@ void FTressFXDepthsVelocityPassMeshProcessor::AddMeshBatch(const FMeshBatch& RES
 		//nothing to do
 		return;
 	}
-	
 
-	const bool bDraw = (
-		MeshBatchMaterial.IsUsedWithTressFX() && 
-		MeshBatch.bTressFX && 
-		(bIsOpaqueTressFX || (bIsTranslucentTressFX && OITMode == ETressFXOITMode::KBuffer))
-	);
+	bool bDraw = MeshBatchMaterial.IsUsedWithTressFX() && MeshBatch.bTressFX;
+	
+	if(bDraw && bIsTranslucentTressFX)
+	{
+		bDraw &= ((!bIsOpaquePass) && OITMode == ETressFXOITMode::KBuffer);
+	}
+	else if (bDraw && bIsOpaqueTressFX)
+	{
+		bDraw &= (bIsOpaquePass && bIsOpaqueTressFX);
+	}
 
 	if (bDraw)
 	{
@@ -395,13 +402,16 @@ FTressFXDepthsVelocityPassMeshProcessor::FTressFXDepthsVelocityPassMeshProcessor
 	const FScene* Scene,
 	const FSceneView* InViewIfDynamicMeshCommand,
 	const FMeshPassProcessorRenderState& InPassDrawRenderState,
-	FMeshPassDrawListContext* InDrawListContext)
+	FMeshPassDrawListContext* InDrawListContext,
+	ETressFXPass::Type PassType)
 	: FMeshPassProcessor(Scene, Scene->GetFeatureLevel(), InViewIfDynamicMeshCommand, InDrawListContext)
 {
+	check(PassType == ETressFXPass::DepthsVelocity_KBuffer || PassType == ETressFXPass::DepthsVelocity_Opaque);
 	PassDrawRenderState = InPassDrawRenderState;
 	PassDrawRenderState.SetViewUniformBuffer(Scene->UniformBuffers.ViewUniformBuffer);
 	PassDrawRenderState.SetInstancedViewUniformBuffer(Scene->UniformBuffers.InstancedViewUniformBuffer);
 	PassDrawRenderState.SetPassUniformBuffer(Scene->UniformBuffers.DepthPassUniformBuffer);
+	bIsOpaquePass = PassType == ETressFXPass::DepthsVelocity_Opaque;
 }
 
 void SetupDepthsVelocityPassState(FMeshPassProcessorRenderState& DrawRenderState)
@@ -410,11 +420,18 @@ void SetupDepthsVelocityPassState(FMeshPassProcessorRenderState& DrawRenderState
 	DrawRenderState.SetDepthStencilState(TStaticDepthStencilState<true, CF_DepthNearOrEqual>::GetRHI());
 }
 
-FMeshPassProcessor* CreateTRessFXDepthsVelocityPassProcessor(const FScene* Scene, const FSceneView* InViewIfDynamicMeshCommand, FMeshPassDrawListContext* InDrawListContext)
+FMeshPassProcessor* CreateOpaqueTressFXDepthsVelocityPassProcessor(const FScene* Scene, const FSceneView* InViewIfDynamicMeshCommand, FMeshPassDrawListContext* InDrawListContext)
 {
 	FMeshPassProcessorRenderState TRessFXDepthsVelocityPassState;
 	SetupDepthsVelocityPassState(TRessFXDepthsVelocityPassState);
-	return new(FMemStack::Get()) FTressFXDepthsVelocityPassMeshProcessor(Scene, InViewIfDynamicMeshCommand, TRessFXDepthsVelocityPassState, InDrawListContext);
+	return new(FMemStack::Get()) FTressFXDepthsVelocityPassMeshProcessor(Scene, InViewIfDynamicMeshCommand, TRessFXDepthsVelocityPassState, InDrawListContext, ETressFXPass::DepthsVelocity_Opaque);
+}
+
+FMeshPassProcessor* CreateKBufferTressFXDepthsVelocityPassProcessor(const FScene* Scene, const FSceneView* InViewIfDynamicMeshCommand, FMeshPassDrawListContext* InDrawListContext)
+{
+	FMeshPassProcessorRenderState TRessFXDepthsVelocityPassState;
+	SetupDepthsVelocityPassState(TRessFXDepthsVelocityPassState);
+	return new(FMemStack::Get()) FTressFXDepthsVelocityPassMeshProcessor(Scene, InViewIfDynamicMeshCommand, TRessFXDepthsVelocityPassState, InDrawListContext, ETressFXPass::DepthsVelocity_KBuffer);
 }
 
 #undef PROCESS_DEPTHSVELOCITY
@@ -863,20 +880,23 @@ void RenderDepthsAndVelocity(
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, TressFXDepthsVelocity);
 
-			//Clear_Store to clear the TFX Velocity Target
-			FRHIRenderPassInfo RPInfo(SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture, ERenderTargetActions::Clear_Store);
-			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_Store, ERenderTargetActions::Load_Store);
-			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.GetSceneDepthSurface();;
-			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
-
-			
 			/*
 			 we need to clear here on 2 conditions: 
 			 1. if its the opaque pass. 
 				OR
 			 2. if its the k-buffer pass and there was no opaque pass 
 			*/
-			if (OITMode == ETressFXOITMode::None || (OITMode == ETressFXOITMode::KBuffer && !View.bHasOpaqueTressFX))
+			const bool bVelocityNeedsClear = OITMode == ETressFXOITMode::None || (OITMode == ETressFXOITMode::KBuffer && !View.bHasOpaqueTressFX);
+
+			//Clear_Store to clear the TFX Velocity Target
+			FRHIRenderPassInfo RPInfo(SceneContext.TressFXVelocity->GetRenderTargetItem().TargetableTexture, bVelocityNeedsClear ? ERenderTargetActions::Clear_Store : ERenderTargetActions::Load_Store);
+			RPInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Load_Store, ERenderTargetActions::Load_Store);
+			RPInfo.DepthStencilRenderTarget.DepthStencilTarget = SceneContext.GetSceneDepthSurface();;
+			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
+
+			
+	
+			if (bVelocityNeedsClear)
 			{
 				RHICmdList.BindClearMRTValues(true, false, false);
 			}
@@ -888,10 +908,11 @@ void RenderDepthsAndVelocity(
 				RPInfo.UAVIndex = 1;
 				RPInfo.UAVs[RPInfo.NumUAVs++] = GBufferB->GetRenderTargetItem().UAV;
 			}
+			const EMeshPass::Type Pass = OITMode == ETressFXOITMode::KBuffer ? EMeshPass::TressFX_DepthsVelocity_KBuffer : EMeshPass::TressFX_DepthsVelocity_Opaque;
 
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXDepthsVelocity"));
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
-			View.ParallelMeshDrawCommandPasses[EMeshPass::TressFX_DepthsVelocity].DispatchDraw(nullptr, RHICmdList);
+			View.ParallelMeshDrawCommandPasses[Pass].DispatchDraw(nullptr, RHICmdList);
 			RHICmdList.EndRenderPass();
 		}
 	}
@@ -1027,8 +1048,21 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXDepthsAlpha"));
 
-			FLinearColor ClearColors[] = { FLinearColor::White, FLinearColor::Transparent };
-			DrawClearQuadMRT( RHICmdList, true, 2, ClearColors, false, 0, false, 0);
+			//only clear velocity if opaque pass has not already cleared it
+			const bool bVelocityNeedsClear = !View.bHasOpaqueTressFX;
+
+			if (bVelocityNeedsClear) 
+			{
+				//clear all
+				FLinearColor ClearColors[] = { FLinearColor::White, FLinearColor::Transparent };
+				DrawClearQuadMRT(RHICmdList, true, 2, ClearColors, false, 0, false, 0);
+			}
+			else
+			{
+				//clear AccumInvAlpha, but not velocity
+				DrawClearQuad(RHICmdList, true, FLinearColor::White, false, 0, false, 0);
+			}
+
 			FMeshPassProcessorRenderState DrawRenderState(View);
 
 			RHICmdList.SetViewport(View.ViewRect.Min.X, View.ViewRect.Min.Y, 0.0f, View.ViewRect.Max.X, View.ViewRect.Max.Y, 1.0f);
@@ -1083,8 +1117,7 @@ FTressFXRectLightData GetRectLightInfos(const FScene* Scene, TArray<FVisibleLigh
 {
 	/* 
 		This is a very "hacky" and non-optimal way to add rect light support in a forward-rendering type path. 
-		Its behind a  Material compile switch because its quite expensive.
-		Proper and optimized support would have to modify the light grid culling shaders, which i am not sure I want to do yet.
+		Proper support would have to modify the light grid culling shaders, which i am not sure I want to do.
 	*/
 
 	FTressFXRectLightData RectLightData;
@@ -1522,13 +1555,13 @@ void RenderKBufferResolvePasses(
 	}
 }
 
-void FSceneRenderer::RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, bool bHasOpaque, bool bHasTranslucent, int32 OITMode)
+void FSceneRenderer::RenderTressOpaqueFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList)
 {
-	if (!ShouldRenderTressFX((int32)ETressFXPass::DepthsVelocity))
+	if (!ShouldRenderTressFX((int32)ETressFXPass::DepthsVelocity_Opaque))
 	{
 		return;
 	}
-	RenderDepthsAndVelocity(RHICmdList, Views, Scene, OITMode);
+	RenderDepthsAndVelocity(RHICmdList, Views, Scene, ETressFXOITMode::None);
 }
 
 //this should only get called if scene has any translucent tressfx
@@ -1549,7 +1582,7 @@ void FSceneRenderer::RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList,
 		}
 		case ETressFXOITMode::KBuffer:
 		{
-			if (ShouldRenderTressFX(ETressFXPass::DepthsVelocity))
+			if (ShouldRenderTressFX(ETressFXPass::DepthsVelocity_KBuffer))
 			{
 				RenderKbufferBasePass(RHICmdList, Views, Scene);
 			}
@@ -1663,8 +1696,9 @@ void FSceneRenderer::RenderTressFXResolveVelocity(FRHICommandListImmediate& RHIC
 	}
 }
 
-FRegisterPassProcessorCreateFunction RegisterTRessFXDepthsVelocityPass(&CreateTRessFXDepthsVelocityPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_DepthsVelocity, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
-FRegisterPassProcessorCreateFunction RegisterTRessFXDepthsAlphaPass(&CreateTRessFXDepthsAlphaPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_DepthsAlpha, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
-FRegisterPassProcessorCreateFunction RegisterTRessFXFillColorPass(&CreateTRessFXFillColorPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_FillColors, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
+FRegisterPassProcessorCreateFunction RegisterOpaqueTressFXDepthsVelocityPass(&CreateOpaqueTressFXDepthsVelocityPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_DepthsVelocity_Opaque, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
+FRegisterPassProcessorCreateFunction RegisterKBufferTressFXDepthsVelocityPass(&CreateKBufferTressFXDepthsVelocityPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_DepthsVelocity_KBuffer, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
+FRegisterPassProcessorCreateFunction RegisterTressFXDepthsAlphaPass(&CreateTRessFXDepthsAlphaPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_DepthsAlpha, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
+FRegisterPassProcessorCreateFunction RegisterTressFXFillColorPass(&CreateTRessFXFillColorPassProcessor, EShadingPath::Deferred, EMeshPass::TressFX_FillColors, EMeshPassFlags::CachedMeshCommands | EMeshPassFlags::MainView);
 
 //#pragma optimize("", on)

@@ -11,7 +11,8 @@ struct ETressFXPass
 	enum Type {
 		DepthsAlpha,
 		ResolveDepths,
-		DepthsVelocity,
+		DepthsVelocity_Opaque,
+		DepthsVelocity_KBuffer,
 		ResolveVelocity,
 		FillColor_Shortcut,
 		Resolve_Shortcut,

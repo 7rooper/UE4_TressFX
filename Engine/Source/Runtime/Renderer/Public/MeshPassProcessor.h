@@ -38,7 +38,8 @@ namespace EMeshPass
 		EditorSelection,
 #endif
 		/*@third party code - BEGIN TressFX*/
-		TressFX_DepthsVelocity,
+		TressFX_DepthsVelocity_Opaque,
+		TressFX_DepthsVelocity_KBuffer,
 		TressFX_DepthsAlpha,
 		TressFX_FillColors,
 		/*@third party code - END TressFX*/
@@ -72,7 +73,8 @@ inline const TCHAR* GetMeshPassName(EMeshPass::Type MeshPass)
 	case EMeshPass::EditorSelection: return TEXT("EditorSelection");
 #endif
 		/*@third party code - BEGIN TressFX*/
-	case EMeshPass::TressFX_DepthsVelocity: return TEXT("TressFX_DepthsVelocity");
+	case EMeshPass::TressFX_DepthsVelocity_KBuffer: return TEXT("TressFX_DepthsVelocity_KBuffer");
+	case EMeshPass::TressFX_DepthsVelocity_Opaque: return TEXT("TressFX_DepthsVelocity_Opaque");
 	case EMeshPass::TressFX_DepthsAlpha: return TEXT("TressFX_DepthsAlpha");
 	case EMeshPass::TressFX_FillColors: return TEXT("TressFX_FillColors");
 		/*@third party code - END TressFX*/

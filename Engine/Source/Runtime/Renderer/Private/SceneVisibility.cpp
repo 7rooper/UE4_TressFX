@@ -2756,8 +2756,8 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 		if (ViewRelevance.bTressFXOpaque) 
 		{
 			//opaque will get rendered by ue4s base pass shaders, we just need 1 additional pass for velocity/depth
-			PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
-			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
+			PassMask.Set(EMeshPass::TressFX_DepthsVelocity_Opaque);
+			View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity_Opaque] += NumElements;
 		}
 
 		if (ViewRelevance.bTressFXTranslucent) 
@@ -2775,8 +2775,8 @@ void ComputeDynamicMeshRelevance(EShadingPath ShadingPath, bool bAddLightmapDens
 			}
 			else if (TressFXOITMode == ETressFXOITMode::KBuffer)
 			{
-				PassMask.Set(EMeshPass::TressFX_DepthsVelocity);
-				View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity] += NumElements;
+				PassMask.Set(EMeshPass::TressFX_DepthsVelocity_KBuffer);
+				View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_DepthsVelocity_KBuffer] += NumElements;
 
 				PassMask.Set(EMeshPass::TressFX_FillColors);
 				View.NumVisibleDynamicMeshElements[EMeshPass::TressFX_FillColors] += NumElements;

@@ -1684,7 +1684,7 @@ protected:
 	bool TressFXCanUseComputeResolves(const FSceneRenderTargets& SceneContext);
 	//this should only get called if scene has any translucent tressfx
 	void RenderTressFXBasePass(FRHICommandListImmediate& RHICmdList, int32 OITMode);
-	void RenderTressFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList, bool bHasOpaque, bool bHasTranslucent, int32 OITMode);
+	void RenderTressOpaqueFXDepthsAndVelocity(FRHICommandListImmediate& RHICmdList);
 	void RenderTressFXResolveVelocity(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& VelocityRT);
 	void RenderTressfXResolvePass(FRHICommandListImmediate& RHICmdList, TRefCountPtr<IPooledRenderTarget>& ScreenShadowMaskTexture, int32 OITMode);
 	void GetAnyViewHasTressFX(bool &bOutHasTranslucentTressFX, bool &bOutHasOpaqueTressFX);

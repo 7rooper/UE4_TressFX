@@ -83,7 +83,8 @@ public:
 		const FScene* Scene,
 		const FSceneView* InViewIfDynamicMeshCommand,
 		const FMeshPassProcessorRenderState& InPassDrawRenderState,
-		FMeshPassDrawListContext* InDrawListContext
+		FMeshPassDrawListContext* InDrawListContext,
+		ETressFXPass::Type PassType
 	);
 
 	virtual void AddMeshBatch(const FMeshBatch& RESTRICT MeshBatch, uint64 BatchElementMask, const FPrimitiveSceneProxy* RESTRICT PrimitiveSceneProxy, int32 StaticMeshId = -1) override final;
@@ -103,7 +104,7 @@ private:
 	);
 
 	FMeshPassProcessorRenderState PassDrawRenderState;
-
+	bool bIsOpaquePass;
 };
 
 
