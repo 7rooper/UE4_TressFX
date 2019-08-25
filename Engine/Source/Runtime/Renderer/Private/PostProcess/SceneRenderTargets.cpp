@@ -1400,7 +1400,7 @@ void FSceneRenderTargets::InitializeTressFXKBufferResources(TRHICmdList& RHICmdL
 		FPooledRenderTargetDesc Desc(
 			FPooledRenderTargetDesc::Create2DDesc(
 				BuffSize,
-				PF_R8_UINT, // if you need more than 255 depth linked list, increase this i guess you psycho
+				PF_R32_UINT, 
 				FClearValueBinding::Transparent,
 				TexCreate_None,
 				TexCreate_RenderTargetable | TexCreate_UAV,
