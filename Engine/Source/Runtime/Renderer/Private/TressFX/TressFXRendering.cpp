@@ -84,6 +84,7 @@ public:
 			RWFragmentListHead.Bind(Initializer.ParameterMap, TEXT("RWFragmentListHead"));
 			RWLinkedListUAV.Bind(Initializer.ParameterMap, TEXT("RWLinkedListUAV"));
 			RWCounterBuffer.Bind(Initializer.ParameterMap, TEXT("RWCounterBuffer"));
+			RWPixelCounter.Bind(Initializer.ParameterMap, TEXT("RWPixelCounter"));
 		}
 	}
 
@@ -133,6 +134,7 @@ public:
 			Ar << RWFragmentListHead;
 			Ar << RWLinkedListUAV;
 			Ar << RWCounterBuffer;
+			Ar << RWPixelCounter;
 		}
 		return result;
 	}
@@ -164,6 +166,7 @@ public:
 	FRWShaderParameter RWFragmentListHead;
 	FRWShaderParameter RWLinkedListUAV;
 	FRWShaderParameter RWCounterBuffer;
+	FRWShaderParameter RWPixelCounter;
 };
 
 typedef FTressFXFillColorPS<ETressFXPass::FillColor_Shortcut,0> FTressFXFillColorPS_Shortcut;
@@ -1384,12 +1387,14 @@ void RenderKBufferResolvePasses(
 		SCOPED_DRAW_EVENT(RHICmdList, TressFXKBufferPasses);
 
 		TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
+		TRefCountPtr<IPooledRenderTarget> TressFXOpacityThresholdingUAV;
 		FRWBufferStructured* TressFXKBufferNodes = nullptr;
 		FRWBuffer* TressFXKBufferCounter = nullptr;
 		int32 TressFXKBufferNodePoolSize;
 		SceneContext.GetTressFXKBufferResources(
 			  RHICmdList
 			, TressFXKBufferListHeads
+			, TressFXOpacityThresholdingUAV
 			, TressFXKBufferNodes
 			, TressFXKBufferCounter
 			, TressFXKBufferNodePoolSize
@@ -1404,6 +1409,8 @@ void RenderKBufferResolvePasses(
 			TressFXKBufferNodes->AcquireTransientResource();
 			TressFXKBufferCounter->AcquireTransientResource();
 			ClearUAV(RHICmdList, *TressFXKBufferNodes, 0);
+			const uint32 OpacityAccumClear[4] = { 0, 0, 0, 0 };
+			ClearUAV(RHICmdList, TressFXOpacityThresholdingUAV->GetRenderTargetItem(), OpacityAccumClear);
 
 			//starts at one so if it rolls over to 0 after max uint it wont try to add more
 			static const uint32 Values[4] = { 1, 1, 1, 1 };
@@ -1412,7 +1419,8 @@ void RenderKBufferResolvePasses(
 			FRHIUnorderedAccessView* UAVS[] = {
 				TressFXKBufferListHeads->GetRenderTargetItem().UAV,
 				TressFXKBufferNodes->UAV,
-				TressFXKBufferCounter->UAV
+				TressFXKBufferCounter->UAV,
+				TressFXOpacityThresholdingUAV->GetRenderTargetItem().UAV
 			};
 			RHICmdList.TransitionResources(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToGfx, UAVS, ARRAY_COUNT(UAVS));
 

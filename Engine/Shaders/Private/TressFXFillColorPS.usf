@@ -1029,8 +1029,19 @@ void main(
 		#endif
         return;
     }
+	 int2 ScreenAddr = int2(In.Position.xy);
 
-    int2 ScreenAddr = int2(In.Position.xy);
+	#if TFX_PPLL
+		uint OutOld;
+		InterlockedAdd(RWPixelCounter[ScreenAddr],1, OutOld);
+		if (OutOld > MAX_FRAGMENTS_PER_PIXEL)
+		{
+			discard;
+			return;
+		}
+	#endif
+
+   
 
     half3 BaseColor = GetMaterialBaseColor(PixelMaterialInputs);
     BaseColor = clamp(BaseColor, .01f, .99f);

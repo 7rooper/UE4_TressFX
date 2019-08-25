@@ -604,6 +604,7 @@ public:
 	void GetTressFXKBufferResources(
 		TRHICmdList& RHICmdList,
 		TRefCountPtr<IPooledRenderTarget>& OutTressFXKBufferListHeads,
+		TRefCountPtr<IPooledRenderTarget>& OutTressFXOpacityThresholdingUAV,
 		FRWBufferStructured*& OutTressFXKBufferNodes,
 		FRWBuffer*& OutTressFXKBufferCounter,
 		int32& OutTressFXKBufferNodePoolSize
@@ -615,6 +616,7 @@ private:
 
 	/** k-buffer specific */
 	TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
+	TRefCountPtr<IPooledRenderTarget> TressFXOpacityThresholdingUAV;
 	FRWBufferStructured TressFXKBufferNodes;
 	FRWBuffer TressFXKBufferCounter;
 	int32 TressFXKBufferNodePoolSize;
