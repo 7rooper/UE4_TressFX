@@ -48,7 +48,8 @@ float GTressFXMinAlphaForDepth = 0.5f;
 FAutoConsoleVariableRef CVarTressFXMinAlphaForSceneDepth(
 	TEXT("tfx.MinAlphaForSceneDepth"),
 	GTressFXMinAlphaForDepth,
-	TEXT("The minimum alpha value for hair to be considered for hair shadows. Shadows cast by hair onto the scene dont yet take opacity into account."),
+	TEXT("The minimum alpha value for hair to be considered for hair shadows. This only affects shortcut rendering.")
+	TEXT("Shadows cast by hair onto the scene dont yet take opacity into account.")	,
 	ECVF_RenderThreadSafe
 );
 
@@ -309,8 +310,6 @@ void FTressFXDepthsVelocityPassMeshProcessor::Process(
 	//SetDepthPassDitheredLODTransitionState(ViewIfDynamicMeshCommand, MeshBatch, StaticMeshId, DrawRenderState);
 
 	FTressFXShaderElementData ShaderElementData(ETressFXPass::DepthsVelocity, ViewIfDynamicMeshCommand);
-	float MinAlphaForShadow = FMath::Clamp(static_cast<float> (GTressFXMinAlphaForDepth), 0.1f, 1.0f);
-	ShaderElementData.MinAlphaForSceneDepth = MinAlphaForShadow;
 	ShaderElementData.InitializeMeshMaterialData(ViewIfDynamicMeshCommand, PrimitiveSceneProxy, MeshBatch, StaticMeshId, true);
 
 	TMeshProcessorShaders<

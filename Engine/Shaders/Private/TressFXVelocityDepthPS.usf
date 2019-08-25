@@ -53,7 +53,6 @@ struct PS_INPUT_HAIR_AA
 
 #if TFX_PPLL
 	RWTexture2D<float4> RWGBufferB : register(u1);
-	float MinAlphaForSceneDepth;
 #endif
 
 EARLYDEPTHSTENCIL
@@ -62,17 +61,13 @@ void TRessFXVelocityDepthPS(
 	,out float4 OutVelocity : SV_Target0
 )
 {
-
-
 		float4 position = input.Position;
 		ResolvedView = ResolveView();
-		
-		//float4 Tangent = input.FactoryInterpolants.Tangent;;
 
 		FMaterialPixelParameters MaterialParameters = GetMaterialPixelParameters(input.FactoryInterpolants, input.Position);
 		FPixelMaterialInputs PixelMaterialInputs;
 
-		#if USE_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS
+		#if USE_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS && 0
 				{
 					float4 ScreenPosition = SvPositionToResolvedScreenPosition(input.Position);
 					float3 TranslatedWorldPosition = SvPositionToResolvedTranslatedWorld(input.Position);
@@ -100,7 +95,7 @@ void TRessFXVelocityDepthPS(
 
 	    half Opacity = GetMaterialOpacity(PixelMaterialInputs);
 		float alpha = coverage * Opacity; 
-		if(alpha > MinAlphaForSceneDepth)
+		if(alpha > .05f)
 		{
 			// we need to know if a pixel is non-opaque tressfx, but without actually writing the shading model to the gbuffer		
 			// race condition doesnt matter here since its |=
