@@ -1663,7 +1663,7 @@ void FSceneRenderer::RenderTressFXResolveVelocity(FRHICommandListImmediate& RHIC
 	{
 		const FViewInfo& View = Views[ViewIndex];
 
-		if (!View.Family->EngineShowFlags.TressFX) 
+		if (!View.Family->EngineShowFlags.TressFX || (!View.bHasOpaqueTressFX && !View.bHasTranslucentTressFX)) 
 		{
 			continue;
 		}
