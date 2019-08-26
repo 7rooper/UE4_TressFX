@@ -270,8 +270,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 		FTressFXShadeSettings ShadeSettings;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX|LOD")
 		float LodScreenSize;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX|LOD")
+		float LodThreshold;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX|LOD")
+		float MinLodRate;
 
 public:
 

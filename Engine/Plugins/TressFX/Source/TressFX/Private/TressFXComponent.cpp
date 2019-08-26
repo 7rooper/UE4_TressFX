@@ -28,7 +28,9 @@ UTressFXComponent::UTressFXComponent(const FObjectInitializer& ObjectInitializer
 	CastShadow = true;
 	bCastInsetShadow = true;
 	bCastShadowAsTwoSided = true;
-	LodScreenSize = 1;// larger for aggresive LOD
+	LodScreenSize = 1.0f;// larger for aggresive LOD
+	LodThreshold = 5.0f;
+	MinLodRate = 0.1f;
 }
 
 UTressFXComponent::~UTressFXComponent()
@@ -409,6 +411,8 @@ void UTressFXComponent::RunSimulation()
 	DynamicRenderData->HairMaterial = HairMaterial;
 	DynamicRenderData->CollisionType = CollisionType.GetValue();
 	DynamicRenderData->LodScreenSize = LodScreenSize;
+	DynamicRenderData->LodThreshold = LodThreshold;
+	DynamicRenderData->MinLodRate = MinLodRate;
 
 	if (!DynamicRenderData->HairMaterial)
 	{

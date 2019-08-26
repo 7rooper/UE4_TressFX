@@ -90,7 +90,9 @@ FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName 
 	, VertexFactory(GetScene().GetFeatureLevel())
 {
 	bIsTressFX = true;
-	LodScreenSize = 0;
+	LodScreenSize = 0.f;
+	LodThreshold = 5.0f;
+	MinLodRate = 0.1f;
 	TFXComponent = Cast<UTressFXComponent>(InComponent);
 	TressFXHairObject = InHairObject;
 	bCastShadowAsTwoSided = true;
@@ -220,6 +222,8 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 	this->SDFMeshResources = DynamicData.SDFMeshResources;
 	this->bEnableMorphTargets = DynamicData.bEnableMorphTargets;
 	LodScreenSize = DynamicData.LodScreenSize;
+	LodThreshold = DynamicData.LodThreshold;
+	MinLodRate = DynamicData.MinLodRate;
 
 #ifdef TRESSFX_STANDALONE_PLUGIN
 	this->MorphVertexBuffer = nullptr;
@@ -380,18 +384,20 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 			if (VisibilityMap & (1 << ViewIndex))
 			{
 				float LodRate = 1.0f;
-				if (LodScreenSize > 0)
+				if (this->LodScreenSize > 1.f)
 				{
 					const FBoxSphereBounds& ProxyBounds = GetBounds();
-
-					float ScreenSize = ComputeBoundsScreenRadiusSquared(ProxyBounds.Origin, ProxyBounds.SphereRadius, *View);
-					if (ScreenSize < LodScreenSize * 0.25f)
+					const float ScreenRadiusSquared = ComputeBoundsScreenRadiusSquared(ProxyBounds.Origin, ProxyBounds.SphereRadius, *View);
+					if (ScreenRadiusSquared < this->LodThreshold)
 					{
-						LodRate = 0.1f;
-					}
-					else if (ScreenSize < LodScreenSize)
-					{
-						LodRate = 0.5f;
+						if (ScreenRadiusSquared > 1)
+						{
+							LodRate = FMath::Clamp(ScreenRadiusSquared / this->LodScreenSize, MinLodRate, 1.0f);
+						}
+						else
+						{
+							LodRate = MinLodRate;
+						}
 					}
 				}
 
