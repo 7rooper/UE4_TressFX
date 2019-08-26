@@ -162,7 +162,7 @@ public:
 		FIntVector4 NumCollisionCapsules;
 		class FSkeletalMeshObjectGPUSkin* ParentSkin = nullptr;
 		bool bEnableMorphTargets = false;
-		float LodScreenSize;
+		float LodAmount;
 		float LodThreshold;
 		float MinLodRate;
 
@@ -179,7 +179,7 @@ public:
 			CollisionType = Other.CollisionType;
 			ParentSkin = Other.ParentSkin;
 			bEnableMorphTargets = Other.bEnableMorphTargets;
-			LodScreenSize = Other.LodScreenSize;
+			LodAmount = Other.LodAmount;
 			LodThreshold = Other.LodThreshold;
 			MinLodRate = Other.MinLodRate;
 			return *this;
@@ -208,7 +208,7 @@ public:
 
 	UMaterialInterface* Material;
 
-	float LodScreenSize;
+	float LodAmount;
 	float LodThreshold;
 	float MinLodRate;
 

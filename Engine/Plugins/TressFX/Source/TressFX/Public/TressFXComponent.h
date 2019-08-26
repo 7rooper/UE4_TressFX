@@ -270,13 +270,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX")
 		FTressFXShadeSettings ShadeSettings;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX|LOD")
-		float LodScreenSize;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX|LOD")
+	// Larger values = more agressive lod. less than 0 turns off LOD
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX|LOD", meta = (DisplayName = "LOD Amount",ClampMin = "-1.0", ClampMax = "50.0", UIMin = "-1.0", UIMax = "50.0"))
+		float LodAmount;
+	
+	// BoundsScreenRadiusSquared threshold where lod kicks in. Larger values -> Lod kicks in faster
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX|LOD", meta = (DisplayName = "LOD Threshold", ClampMin = "0.0", ClampMax = "50.0", UIMin = "0.0", UIMax = "50.0"))
 		float LodThreshold;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX|LOD")
+	// 1 = no LOD
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFX|LOD", meta = (DisplayName = "Min LOD Rate", ClampMin = "0.05", ClampMax = "1.0", UIMin = "0.05", UIMax = "1.0"))
 		float MinLodRate;
 
 public:

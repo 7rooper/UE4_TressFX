@@ -90,7 +90,7 @@ FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName 
 	, VertexFactory(GetScene().GetFeatureLevel())
 {
 	bIsTressFX = true;
-	LodScreenSize = 0.f;
+	LodAmount = 0.f;
 	LodThreshold = 5.0f;
 	MinLodRate = 0.1f;
 	TFXComponent = Cast<UTressFXComponent>(InComponent);
@@ -221,7 +221,7 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 	this->InstanceRenderData = DynamicData.InstanceRenderData;
 	this->SDFMeshResources = DynamicData.SDFMeshResources;
 	this->bEnableMorphTargets = DynamicData.bEnableMorphTargets;
-	LodScreenSize = DynamicData.LodScreenSize;
+	LodAmount = DynamicData.LodAmount;
 	LodThreshold = DynamicData.LodThreshold;
 	MinLodRate = DynamicData.MinLodRate;
 
@@ -384,19 +384,19 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 			if (VisibilityMap & (1 << ViewIndex))
 			{
 				float LodRate = 1.0f;
-				if (this->LodScreenSize > 1.f)
+				if (this->LodAmount > 0.f && this->MinLodRate < 1.0f)
 				{
 					const FBoxSphereBounds& ProxyBounds = GetBounds();
 					const float ScreenRadiusSquared = ComputeBoundsScreenRadiusSquared(ProxyBounds.Origin, ProxyBounds.SphereRadius, *View);
 					if (ScreenRadiusSquared < this->LodThreshold)
 					{
-						if (ScreenRadiusSquared > 1)
+						if (ScreenRadiusSquared > 1.0f)
 						{
-							LodRate = FMath::Clamp(ScreenRadiusSquared / this->LodScreenSize, MinLodRate, 1.0f);
+							LodRate = FMath::Clamp(ScreenRadiusSquared / FMath::Max(this->LodAmount, 1.0f), this->MinLodRate, 1.0f);
 						}
 						else
 						{
-							LodRate = MinLodRate;
+							LodRate = this->MinLodRate;
 						}
 					}
 				}
