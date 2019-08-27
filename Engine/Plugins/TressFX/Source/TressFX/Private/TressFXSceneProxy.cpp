@@ -90,9 +90,9 @@ FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName 
 	, VertexFactory(GetScene().GetFeatureLevel())
 {
 	bIsTressFX = true;
-	LodAmount = 0.f;
-	LodThreshold = 5.0f;
-	MinLodRate = 0.1f;
+	LODCullingFactor = 1.0f;
+	LODScreenSizeThreshold = 2.5f;
+	MinLODRate = 0.1f;
 	TFXComponent = Cast<UTressFXComponent>(InComponent);
 	TressFXHairObject = InHairObject;
 	bCastShadowAsTwoSided = true;
@@ -221,9 +221,9 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 	this->InstanceRenderData = DynamicData.InstanceRenderData;
 	this->SDFMeshResources = DynamicData.SDFMeshResources;
 	this->bEnableMorphTargets = DynamicData.bEnableMorphTargets;
-	LodAmount = DynamicData.LodAmount;
-	LodThreshold = DynamicData.LodThreshold;
-	MinLodRate = DynamicData.MinLodRate;
+	LODCullingFactor = DynamicData.LODCullingFactor;
+	LODScreenSizeThreshold = DynamicData.LODScreenSizeThreshold;
+	MinLODRate = DynamicData.MinLODRate;
 
 #ifdef TRESSFX_STANDALONE_PLUGIN
 	this->MorphVertexBuffer = nullptr;
@@ -384,19 +384,20 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 			if (VisibilityMap & (1 << ViewIndex))
 			{
 				float LodRate = 1.0f;
-				if (this->LodAmount > 0.f && this->MinLodRate < 1.0f)
+				//the transitions still arent as smooth as i would like
+				if (!FMath::IsNearlyZero(this->LODCullingFactor) && !FMath::IsNearlyEqual(this->MinLODRate, 1.0f))
 				{
 					const FBoxSphereBounds& ProxyBounds = GetBounds();
 					const float ScreenRadiusSquared = ComputeBoundsScreenRadiusSquared(ProxyBounds.Origin, ProxyBounds.SphereRadius, *View);
-					if (ScreenRadiusSquared < this->LodThreshold)
+					if (ScreenRadiusSquared < this->LODScreenSizeThreshold)
 					{
 						if (ScreenRadiusSquared > 1.0f)
 						{
-							LodRate = FMath::Clamp(ScreenRadiusSquared / FMath::Max(this->LodAmount, 1.0f), this->MinLodRate, 1.0f);
+							LodRate = FMath::Clamp(ScreenRadiusSquared / FMath::Max(this->LODCullingFactor, 1.0f), this->MinLODRate, 1.0f);
 						}
 						else
 						{
-							LodRate = this->MinLodRate;
+							LodRate = this->MinLODRate;
 						}
 					}
 				}

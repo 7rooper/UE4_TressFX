@@ -162,9 +162,9 @@ public:
 		FIntVector4 NumCollisionCapsules;
 		class FSkeletalMeshObjectGPUSkin* ParentSkin = nullptr;
 		bool bEnableMorphTargets = false;
-		float LodAmount;
-		float LodThreshold;
-		float MinLodRate;
+		float LODCullingFactor;
+		float LODScreenSizeThreshold;
+		float MinLODRate;
 
 		FDynamicRenderData() {}
 
@@ -179,9 +179,9 @@ public:
 			CollisionType = Other.CollisionType;
 			ParentSkin = Other.ParentSkin;
 			bEnableMorphTargets = Other.bEnableMorphTargets;
-			LodAmount = Other.LodAmount;
-			LodThreshold = Other.LodThreshold;
-			MinLodRate = Other.MinLodRate;
+			LODCullingFactor = Other.LODCullingFactor;
+			LODScreenSizeThreshold = Other.LODScreenSizeThreshold;
+			MinLODRate = Other.MinLODRate;
 			return *this;
 		}
 	};
@@ -208,9 +208,9 @@ public:
 
 	UMaterialInterface* Material;
 
-	float LodAmount;
-	float LodThreshold;
-	float MinLodRate;
+	float LODCullingFactor;
+	float LODScreenSizeThreshold;
+	float MinLODRate;
 
 	virtual void GetDynamicMeshElements(const TArray<const FSceneView *>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, class FMeshElementCollector& Collector) const override;
 	virtual FRHIUniformBuffer* GetHairObjectShaderUniformBufferParam();
