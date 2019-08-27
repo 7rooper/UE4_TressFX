@@ -370,9 +370,9 @@ void UTressFXComponent::RunSimulation()
 		float WindMinGust;
 		float WindMaxGust;
 		World->Scene->GetWindParameters_GameThread(Position, OutWindDirection, OutWindSpeed, WindMinGust, WindMaxGust);
-		//OutWindSpeed *= -1; // not sure why this was here...
 		//adjust windspeed, tressfx seems to needs much stronger wind to have any effect
 		OutWindSpeed *= TressFXSimulationSettings.WindMagnitude;
+		
 	}
 
 	TSharedRef<FTressFXSceneProxy::FDynamicRenderData> DynamicRenderData(new FTressFXSceneProxy::FDynamicRenderData);
@@ -442,14 +442,34 @@ void UTressFXComponent::RunSimulation()
 			}
 		}
 	}
-	else if (ParentSkeletalMeshComponent && CollisionType == ETressFXCollisionType::TFXCollsion_PhysicsAsset && ParentSkeletalMeshComponent->IsAnySimulatingPhysics())
+	else if (false && ParentSkeletalMeshComponent && CollisionType == ETressFXCollisionType::TFXCollsion_PhysicsAsset)
 	{
 
 		UPhysicsAsset* PhysicsAsset = ParentSkeletalMeshComponent->GetPhysicsAsset();
 		if (PhysicsAsset)
 		{
 			//TODO
-
+			//PhysicsAsset->GetNearestBodyIndicesBelow
+			for (auto Entry : PhysicsAsset->BodySetupIndexMap)
+			{
+				const FName Name = Entry.Key;
+				const int32 Index = Entry.Value;
+				const USkeletalBodySetup* BodySetup = PhysicsAsset->SkeletalBodySetups[Index];
+				for (const FKSphylElem& Elem : BodySetup->AggGeom.SphylElems)
+				{
+					const FTransform BodyTransform = Elem.GetTransform();
+					//BodyTransform.GetScale3D
+					const FVector CurrentScale = this->CachedRelativeTransform.GetScale3D();
+					float CapsuleHalfHeight = Elem.GetScaledHalfLength(CurrentScale);
+					float CapsuleRad = Elem.GetScaledRadius(CurrentScale);
+					FVector CapsuleZAxis = BodyTransform.GetScaledAxis(EAxis::Z)*CapsuleHalfHeight;
+					DynamicRenderData->CollisionCapsuleCenterAndRadius0[NumCapsules] = FVector4(BodyTransform.GetLocation() + CapsuleZAxis, CapsuleRad);
+					DynamicRenderData->CollisionCapsuleCenterAndRadius1[NumCapsules] = FVector4(BodyTransform.GetLocation() - CapsuleZAxis, CapsuleRad);
+					NumCapsules++;					
+				}
+				
+			}
+			
 		}
 	}
 
