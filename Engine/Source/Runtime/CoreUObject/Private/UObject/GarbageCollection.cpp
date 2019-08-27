@@ -1023,7 +1023,8 @@ public:
 		// are part of the array so we don't suffer from cache misses as much as we would if we were to check ObjectFlags.
 		ParallelFor(NumThreads, [&ObjectsToSerializeList, &ClustersToDissolveList, &KeepClusterRefsList, FastKeepFlags, KeepFlags, NumberOfObjectsPerThread, NumThreads, MaxNumberOfObjects](int32 ThreadIndex)
 		{
-			int32 FirstObjectIndex = ThreadIndex * NumberOfObjectsPerThread + GUObjectArray.GetFirstGCIndex();
+			// Temporary clamping for 4.23 as GUObjectArray.GetFirstGCIndex() is -1 in some rare circumstances UE-76532
+			int32 FirstObjectIndex = FMath::Max(ThreadIndex * NumberOfObjectsPerThread + GUObjectArray.GetFirstGCIndex(), 0);
 			int32 NumObjects = (ThreadIndex < (NumThreads - 1)) ? NumberOfObjectsPerThread : (MaxNumberOfObjects - (NumThreads - 1) * NumberOfObjectsPerThread);
 			int32 LastObjectIndex = FMath::Min(GUObjectArray.GetObjectArrayNum() - 1, FirstObjectIndex + NumObjects - 1);
 			int32 ObjectCountDuringMarkPhase = 0;
