@@ -4,20 +4,6 @@ Crumbs:
 Description: This is a procedurally generated markdown page.
 Version: 4.23
 
-### XboxOnePlatform
-
-$ Compiler : Version of the compiler toolchain to use on Windows platform. A value of "default" will be changed to a specific version at UBT startup.
-
-$ bOverrideUseFastPDBLinking : Override for fast PDB linking on xbox - seems a bit more stable on xbox one than PC so it's good to set them separately
-
-### XboxOneProjectGenerator
-
-### PS4ProjectGenerator
-
-### PS4Platform
-
-$ bUseLiveCodeEdit : Enable support for edit and continue code modification on ps4
-
 ### BuildConfiguration
 
 $ bGeneratedSYMFile : Whether to generate dSYM files Lists Architectures that you want to build
