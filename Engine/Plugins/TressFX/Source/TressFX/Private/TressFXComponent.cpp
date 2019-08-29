@@ -372,7 +372,6 @@ void UTressFXComponent::RunSimulation()
 		World->Scene->GetWindParameters_GameThread(Position, OutWindDirection, OutWindSpeed, WindMinGust, WindMaxGust);
 		//adjust windspeed, tressfx seems to needs much stronger wind to have any effect
 		OutWindSpeed *= TressFXSimulationSettings.WindMagnitude;
-		
 	}
 
 	TSharedRef<FTressFXSceneProxy::FDynamicRenderData> DynamicRenderData(new FTressFXSceneProxy::FDynamicRenderData);

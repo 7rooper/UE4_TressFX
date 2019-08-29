@@ -115,7 +115,7 @@ public:
 
 	void UpdateSimulationParameters(const FTressFXSimulationSettings& settings, uint32 frame, FTressFXHairObject* HairObject);
 
-	void SetWind(const FVector& windDir, float windMag, int32 frame);
+	void SetWind(const FVector& WindDir, float WindMagnitude, int32 FrameNumber);
 
 	FTressFXSimParametersUniformBuffer GetBuffer();
 

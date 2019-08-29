@@ -179,23 +179,6 @@ SIZE_T FTressFXSceneProxy::GetTypeHash() const
 	return reinterpret_cast<size_t>(&UniquePointer);
 }
 
-static void SetWindCorner(
-	FQuat rotFromXAxisToWindDir,
-	FVector	rotAxis,
-	float angleToWideWindCone,
-	float wM,
-	FVector4 &outVec
-)
-{
-	static const FVector XAxis(1.0f, 0, 0);
-	FQuat rot(rotAxis, angleToWideWindCone);
-	FVector  newWindDir = rotFromXAxisToWindDir * rot * XAxis;
-	outVec.X = newWindDir.X * wM;
-	outVec.Y = newWindDir.Y * wM;
-	outVec.Z = newWindDir.Z * wM;
-	outVec.W = 0;  // unused
-}
-
 void FTressFXSceneProxy::UpdateMorphIndices_RenderThread(const TArray<int32>& MorphIndices)
 {
 	if (MorphIndexBuffer.NumBytes != MorphIndices.Num() * sizeof(int32))
@@ -484,39 +467,23 @@ void FTressFXSimParameters::UpdateSimulationParameters(const FTressFXSimulationS
 
 	// Set wind parameters
 	SetWind(InSettings.WindDirection, InSettings.WindMagnitude, Frame);
-
 	//Note: collision capsules are set in UpdateDynamicData_RenderThread
 }
 
-void FTressFXSimParameters::SetWind(const FVector& windDir, float windMag, int32 frame)
+void FTressFXSimParameters::SetWind(const FVector& WindDir, const float WindMagnitude, const int32 FrameNumber)
 {
+	const float Magnitude = WindMagnitude * (FMath::Pow(FMath::Sin(FrameNumber * 0.01f), 2.0f) + 0.5f);
 
-	float Magnitude = windMag * (FMath::Pow(FMath::Sin(frame * 0.01f), 2.0f) + 0.5f);
-
-	FVector WindDirNomalized = FVector(windDir);
+	FVector WindDirNomalized = FVector(WindDir);
 	WindDirNomalized.Normalize();
+	this->Wind = WindDirNomalized;
+	this->Wind *= Magnitude;
 
-	FVector XAxis(1.0f, 0, 0);
-	FVector xCrossW = XAxis ^ WindDirNomalized;
-
-	FQuat RotFromXAxisToWindDir = FQuat::Identity;
-
-	float Angle = FMath::Asin(xCrossW.Size());
-
-	if (Angle > 0.001)
-	{
-		RotFromXAxisToWindDir = FQuat(xCrossW.GetSafeNormal(), Angle);
-	}
-
-	float AngleToWideWindCone = FMath::DegreesToRadians(40.f);
-
-	SetWindCorner(RotFromXAxisToWindDir,
-		FVector(0, -1.0, 0),
-		AngleToWideWindCone,
-		Magnitude,
-		Wind);
-
-	// fourth component unused. (used to store frame number, but no longer used).
+	static const FRotator WindRotator = FRotator(0, -180, 0);
+	FVector FinalWind = FVector(Wind.X, Wind.Y, Wind.Z);
+	FinalWind = WindRotator.RotateVector(FinalWind);
+	FinalWind.Z *= -1.f;
+	this->Wind = FVector4(FinalWind, this->Wind.W);
 }
 
 // NOTE: collision and bones etc need to be set by whatever calls this function!
