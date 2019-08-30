@@ -441,38 +441,6 @@ void UTressFXComponent::RunSimulation()
 			}
 		}
 	}
-	else if (false && ParentSkeletalMeshComponent && CollisionType == ETressFXCollisionType::TFXCollsion_PhysicsAsset)
-	{
-
-		UPhysicsAsset* PhysicsAsset = ParentSkeletalMeshComponent->GetPhysicsAsset();
-		if (PhysicsAsset)
-		{
-			//TODO
-			//PhysicsAsset->GetNearestBodyIndicesBelow
-			for (auto Entry : PhysicsAsset->BodySetupIndexMap)
-			{
-				const FName Name = Entry.Key;
-				const int32 Index = Entry.Value;
-				const USkeletalBodySetup* BodySetup = PhysicsAsset->SkeletalBodySetups[Index];
-				for (const FKSphylElem& Elem : BodySetup->AggGeom.SphylElems)
-				{
-					const FTransform BodyTransform = Elem.GetTransform();
-					//BodyTransform.GetScale3D
-					const FVector CurrentScale = this->CachedRelativeTransform.GetScale3D();
-					float CapsuleHalfHeight = Elem.GetScaledHalfLength(CurrentScale);
-					float CapsuleRad = Elem.GetScaledRadius(CurrentScale);
-					FVector CapsuleZAxis = BodyTransform.GetScaledAxis(EAxis::Z)*CapsuleHalfHeight;
-					DynamicRenderData->CollisionCapsuleCenterAndRadius0[NumCapsules] = FVector4(BodyTransform.GetLocation() + CapsuleZAxis, CapsuleRad);
-					DynamicRenderData->CollisionCapsuleCenterAndRadius1[NumCapsules] = FVector4(BodyTransform.GetLocation() - CapsuleZAxis, CapsuleRad);
-					NumCapsules++;					
-				}
-				
-			}
-			
-		}
-	}
-
-	DynamicRenderData->NumCollisionCapsules = FIntVector4(NumCapsules, NumCapsules, NumCapsules, NumCapsules);
 
 #if WITH_EDITOR
 	// for debugging
@@ -508,7 +476,6 @@ void UTressFXComponent::RunSimulation()
 
 			FMatrix Result = (RefBase * ParentSkel);
 			Result = CachedRelativeTransformMatrix * Result;
-
 			if (Result.ContainsNaN())
 			{
 				UE_LOG(TressFXComponentLog, Warning, TEXT("Found NaN in Result Bone Matrix:  %s"), *this->GetFName().ToString());
@@ -520,6 +487,38 @@ void UTressFXComponent::RunSimulation()
 #if WITH_EDITOR
 				UsedBoneIndexes.Add(SkelBoneIndex);
 #endif
+				//physics asset collision
+				if (false && CollisionType == ETressFXCollisionType::TFXCollsion_PhysicsAsset)
+				{					
+					const UPhysicsAsset* PhysicsAsset = ParentSkeletalMeshComponent->GetPhysicsAsset();
+					if (PhysicsAsset)
+					{
+						const int32 BodyIndex = PhysicsAsset->FindBodyIndex(TFXBoneName);
+						if (BodyIndex != INDEX_NONE) 
+						{
+							const USkeletalBodySetup* BodySetup = PhysicsAsset->SkeletalBodySetups[BodyIndex];
+							int32 BoneIndex = ParentSkeletalMeshComponent->SkeletalMesh->RefSkeleton.FindBoneIndex(BodySetup->BoneName);
+							for (const FKSphylElem& Elem : BodySetup->AggGeom.SphylElems)
+							{							
+
+								FTransform BoneTransform = ParentSkeletalMeshComponent->GetBoneTransform(BoneIndex);
+								const FTransform BodyTransform = Elem.GetTransform();
+								FVector BodyLocation = BoneTransform.TransformPosition(BodyTransform.GetLocation());
+								BodyLocation = CachedRelativeTransform.TransformPosition(BodyLocation);
+								//BodyLocation = Result.TransformVector(BodyLocation);
+								//BodyTransform.GetScale3D
+
+								const FVector CurrentScale = this->CachedRelativeTransform.GetScale3D();
+								float CapsuleHalfHeight = Elem.GetScaledHalfLength(CurrentScale);
+								float CapsuleRad = Elem.GetScaledRadius(CurrentScale);
+								FVector CapsuleZAxis = BodyTransform.GetScaledAxis(EAxis::Z) * CapsuleHalfHeight;
+								DynamicRenderData->CollisionCapsuleCenterAndRadius0[NumCapsules] = FVector4(BodyLocation + CapsuleZAxis, CapsuleRad);
+								DynamicRenderData->CollisionCapsuleCenterAndRadius1[NumCapsules] = FVector4(BodyLocation - CapsuleZAxis, CapsuleRad);
+								NumCapsules++;
+							}
+						}
+					}
+				}
 			}
 		}
 		else
@@ -527,6 +526,7 @@ void UTressFXComponent::RunSimulation()
 			DynamicRenderData->BoneTransforms[TFXIndex] = FMatrix::Identity;
 		}
 	}
+	DynamicRenderData->NumCollisionCapsules = FIntVector4(NumCapsules, NumCapsules, NumCapsules, NumCapsules);
 
 	FTressFXSceneProxy* LocalTFXProxy = static_cast<FTressFXSceneProxy*>(SceneProxy);
 
