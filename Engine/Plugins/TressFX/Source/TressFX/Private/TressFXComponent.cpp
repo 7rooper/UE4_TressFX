@@ -441,6 +441,70 @@ void UTressFXComponent::RunSimulation()
 			}
 		}
 	}
+	else if (CollisionType == ETressFXCollisionType::TFXCollsion_PhysicsAsset)
+	{
+		if (ParentSkeletalMeshComponent->Bodies.Num() > 0)
+		{
+			for (FBodyInstance* BI : ParentSkeletalMeshComponent->Bodies)
+			{				
+				auto BodySetup = BI->BodySetup;
+				if (BodySetup.IsValid() && BodySetup->AggGeom.SphylElems.Num() > 0)
+				{	
+					FRigidBodyState BodyState;
+					FVector BodyPos;
+					FQuat BodyRot;
+					FVector BodyScale;
+					FTransform Trans;
+					if (BI->GetRigidBodyState(BodyState))
+					{
+						//its simulating physics
+						BodyRot = BodyState.Quaternion;
+						BodyPos = BodyState.Position;
+						BodyScale = FVector(1, 1, 1);
+					}
+					else 
+					{
+						Trans = BI->GetUnrealWorldTransform();
+						BodyRot = Trans.GetRotation();
+						BodyPos = Trans.GetTranslation();
+						BodyScale = Trans.GetScale3D();
+					}
+					
+					BodyPos = BodyPos / BI->Scale3D;
+
+					const FKSphylElem& Sphyl = BodySetup->AggGeom.SphylElems[0];
+					//this is relative to the bone its attached to
+					FTransform BodyRelativeTransform = Sphyl.GetTransform();
+					//BodyRelativeTransform.SetScale3D(BI->Scale3D);
+					FVector BodyRelativeLocation = Sphyl.Center;
+					FRotator BodyRelativeRotation = Sphyl.Rotation;
+
+					const int32 BodyBoneIndex = FTressFXUtils::FindEngineBoneIndex(ParentSkeletalMeshComponent->SkeletalMesh, BodySetup->BoneName, false);
+					FVector BoneLocation = ParentSkeletalMeshComponent->GetBoneLocation(BodySetup->BoneName, EBoneSpaces::ComponentSpace);
+					//FQuat BoneRotation = ParentSkeletalMeshComponent->GetBoneQuaternion(BodySetup->BoneName, EBoneSpaces::ComponentSpace);
+					
+					FMatrix RefBase = ParentSkeletalMeshComponent->SkeletalMesh->RefBasesInvMatrix[BodyBoneIndex];
+					FMatrix ParentSkel = ParentSkeletalMeshComponent->GetBoneMatrix(BodyBoneIndex);
+					ParentSkeletalMeshComponent->GetRelativeTransform().GetLocation();
+					FMatrix BoneMat = (RefBase * ParentSkel);
+					BodyPos = BoneMat.TransformPosition(BodyPos);
+					
+					const FVector CurrentScale = this->CachedRelativeTransform.GetScale3D();
+					float CapsuleHalfHeight = Sphyl.GetScaledHalfLength(BI->Scale3D);
+					float CapsuleRad = Sphyl.GetScaledRadius(BI->Scale3D);
+
+					//BodyRelativeLocation = BodyRelativeRotation.RotateVector(BodyRelativeLocation);
+					//BodyRelativeLocation = BoneMat.TransformPosition(BodyRelativeLocation);
+
+					FVector CapsuleZAxis = BodyRelativeTransform.GetScaledAxis(EAxis::Z) * CapsuleHalfHeight;
+
+					DynamicRenderData->CollisionCapsuleCenterAndRadius0[NumCapsules] = FVector4(BodyPos + CapsuleZAxis, CapsuleRad);
+					DynamicRenderData->CollisionCapsuleCenterAndRadius1[NumCapsules] = FVector4(BodyPos - CapsuleZAxis, CapsuleRad);
+					NumCapsules++;
+				}
+			}
+		}
+	}
 
 #if WITH_EDITOR
 	// for debugging
@@ -487,38 +551,6 @@ void UTressFXComponent::RunSimulation()
 #if WITH_EDITOR
 				UsedBoneIndexes.Add(SkelBoneIndex);
 #endif
-				//physics asset collision
-				if (false && CollisionType == ETressFXCollisionType::TFXCollsion_PhysicsAsset)
-				{					
-					const UPhysicsAsset* PhysicsAsset = ParentSkeletalMeshComponent->GetPhysicsAsset();
-					if (PhysicsAsset)
-					{
-						const int32 BodyIndex = PhysicsAsset->FindBodyIndex(TFXBoneName);
-						if (BodyIndex != INDEX_NONE) 
-						{
-							const USkeletalBodySetup* BodySetup = PhysicsAsset->SkeletalBodySetups[BodyIndex];
-							int32 BoneIndex = ParentSkeletalMeshComponent->SkeletalMesh->RefSkeleton.FindBoneIndex(BodySetup->BoneName);
-							for (const FKSphylElem& Elem : BodySetup->AggGeom.SphylElems)
-							{							
-
-								FTransform BoneTransform = ParentSkeletalMeshComponent->GetBoneTransform(BoneIndex);
-								const FTransform BodyTransform = Elem.GetTransform();
-								FVector BodyLocation = BoneTransform.TransformPosition(BodyTransform.GetLocation());
-								BodyLocation = CachedRelativeTransform.TransformPosition(BodyLocation);
-								//BodyLocation = Result.TransformVector(BodyLocation);
-								//BodyTransform.GetScale3D
-
-								const FVector CurrentScale = this->CachedRelativeTransform.GetScale3D();
-								float CapsuleHalfHeight = Elem.GetScaledHalfLength(CurrentScale);
-								float CapsuleRad = Elem.GetScaledRadius(CurrentScale);
-								FVector CapsuleZAxis = BodyTransform.GetScaledAxis(EAxis::Z) * CapsuleHalfHeight;
-								DynamicRenderData->CollisionCapsuleCenterAndRadius0[NumCapsules] = FVector4(BodyLocation + CapsuleZAxis, CapsuleRad);
-								DynamicRenderData->CollisionCapsuleCenterAndRadius1[NumCapsules] = FVector4(BodyLocation - CapsuleZAxis, CapsuleRad);
-								NumCapsules++;
-							}
-						}
-					}
-				}
 			}
 		}
 		else
