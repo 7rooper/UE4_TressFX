@@ -511,7 +511,7 @@ void UTressFXComponent::RunSimulation()
 					FMatrix BoneMat = (RefBase * ParentSkel);
 					BodyPos = BoneMat.TransformPosition(BodyPos);
 					//SPhylLoc = BoneMat.TransformPosition(SPhylLoc);
-					BodyPos += SPhylLoc;
+					BodyPos += SPhylLoc; //-- scaling is off on this...
 					//BodyPos += BodyPos2;
 					//BodyPos2 = BoneMat.TransformPosition(BodyPos2);
 					//BodyRelativeLocation = BoneMat.TransformPosition(BodyRelativeLocation);
@@ -519,7 +519,7 @@ void UTressFXComponent::RunSimulation()
 					float CapsuleHalfHeight = Sphyl.GetScaledHalfLength(BI->Scale3D);
 					float CapsuleRad = Sphyl.GetScaledRadius(BI->Scale3D);
 					FVector CapsuleZAxis = SphylTrans.GetScaledAxis(EAxis::Z) * CapsuleHalfHeight;
-
+					CapsuleZAxis = BodyRot.RotateVector(CapsuleZAxis);
 					DynamicRenderData->CollisionCapsuleCenterAndRadius0[NumCapsules] = FVector4(BodyPos + CapsuleZAxis, CapsuleRad);
 					DynamicRenderData->CollisionCapsuleCenterAndRadius1[NumCapsules] = FVector4(BodyPos - CapsuleZAxis, CapsuleRad);
 					NumCapsules++;
