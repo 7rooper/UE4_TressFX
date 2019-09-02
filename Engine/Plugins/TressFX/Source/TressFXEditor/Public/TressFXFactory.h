@@ -31,30 +31,6 @@
 #include "UObject/ObjectMacros.h"
 #include "TressFXFactory.generated.h"
 
-/**
- *TressFX asset (.tfx) factory
- */
-UCLASS()
-class TRESSFXEDITOR_API UTressFXFactory : public UFactory
-{
-
-	GENERATED_UCLASS_BODY()
-
-public:
-	//~ Begin UFactory Interface
-	virtual bool CanCreateNew() const override;
-	virtual bool FactoryCanImport(const FString& Filename) override;
-	virtual bool ConfigureProperties() override;
-
-protected:
-	virtual UObject* FactoryCreateBinary(UClass* InClass, UObject* InParent, FName InName, EObjectFlags Flags, UObject* Context, const TCHAR* Type, const uint8*& Buffer, const uint8* BufferEnd, FFeedbackContext* Warn) override;
-
-	//~ End UFactory Interface
-
-	TressFXImportOptions ImportConfig;
-
-};
-
 UCLASS()
 class TRESSFXEDITOR_API UTressFXJSONFactory : public UFactory
 {
@@ -75,27 +51,6 @@ protected:
 
 };
 
-/**
- *TressFX Skinning data factory
- */
-UCLASS()
-class TRESSFXEDITOR_API UTressFXBoneSkinningFactory : public UFactory
-{
-	GENERATED_UCLASS_BODY()
-
-public:
-
-	virtual bool FactoryCanImport(const FString& Filename) override;
-	virtual bool CanCreateNew() const override;	
-	virtual void PostInitProperties() override;
-
-protected:
-
-	virtual UObject* FactoryCreateBinary(UClass* InClass, UObject* InParent, FName InName, EObjectFlags Flags, UObject* Context, const TCHAR* Type, const uint8*& Buffer, const uint8* BufferEnd, FFeedbackContext* Warn) override;
-
-private:
-
-};
 
 /**
  *TressFX json Skinning data factory

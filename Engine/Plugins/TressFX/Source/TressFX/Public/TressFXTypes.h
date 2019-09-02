@@ -120,7 +120,7 @@ struct FTressFXBoneSkinngAssetType
 {
 	enum Type
 	{
-		TFXBone_Binary = 0,
+		TFXBone_Binary = 0, // no longer supporting
 		TFXBone_Json = 1
 	};
 };

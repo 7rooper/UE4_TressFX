@@ -63,34 +63,6 @@
 #include "Runtime/Json/Public/Serialization/JsonSerializer.h"
 #include "Runtime/Core/Public/Templates/SharedPointer.h"
 
-struct FTressFXTFXFileHeader
-{
-	// Specifies TressFX version number
-	float version;
-	// Number of hair strands in this file. All strands in this file are guide strands.
-	uint32 numHairStrands;        
-	// Follow hair strands are generated procedurally.
-	// From 4 to 64 inclusive (POW2 only). This should be a fixed value within tfx value.
-	// The total vertices from the tfx file is numHairStrands * numVerticesPerStrand.
-	uint32 numVerticesPerStrand; 										
-
-	// Offsets to array data starts here. Offset values are in bytes, aligned on 8 bytes boundaries,
-	// and relative to beginning of the .tfx file
-
-	// Array size: FLOAT4[numHairStrands]
-	uint32 offsetVertexPosition;
-	// Array size: FLOAT2[numHairStrands], if 0 no texture coordinates
-	uint32 offsetStrandUV;
-	// Array size: FLOAT2[numHairStrands * numVerticesPerStrand], if 0, no per vertex texture coordinates
-	uint32 offsetVertexUV;
-	// Array size: float[numHairStrands]
-	uint32 offsetStrandThickness;
-	// Array size: FLOAT4[numHairStrands * numVerticesPerStrand], if 0, no vertex colors
-	uint32 offsetVertexColor;      
-	// Reserved for future versions
-	uint32 reserved[32];           
-};
-
 UTressFXBoneSkinningAsset* ParseTFXBoneJson(TSharedPtr<FJsonObject> TFXBoneDataJson, UObject* InOuter, FString AssetName, int32& OutNumStrandsInfile)
 {
 	const TArray<TSharedPtr<FJsonValue>>* SkinDataArray;
@@ -163,147 +135,6 @@ UTressFXBoneSkinningAsset* ParseTFXBoneJson(FString JsonString, UObject* InOuter
 }
 
 //////////////////////////////////////////////
-//UTressFXFactory - tfx
-/////////////////////////////////////////////
-
-UTressFXFactory::UTressFXFactory(const class FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
-{
-	bCreateNew = false;
-	SupportedClass = UTressFXAsset::StaticClass();
-	bEditorImport = true;
-	Formats.Add(TEXT("tfx;Tress FX asset"));
-}
-
-bool UTressFXFactory::ConfigureProperties()
-{
-	TSharedRef<STressFXImportWindow> ImportWindow = SNew(STressFXImportWindow);
-	if (ImportWindow->ShowModal() != EAppReturnType::Cancel)
-	{
-		this->ImportConfig = ImportWindow->GetImportOptions();
-		return true;
-	}
-
-	return false;
-}
-
-
-bool UTressFXFactory::CanCreateNew() const
-{
-	return false;
-}
-
-bool UTressFXFactory::FactoryCanImport(const FString& Filename)
-{
-	return true;
-}
-
-UObject* UTressFXFactory::FactoryCreateBinary(UClass* InClass, UObject* InParent, FName InName, EObjectFlags Flags, UObject* Context, const TCHAR* Type, const uint8*& Buffer, const uint8* BufferEnd, FFeedbackContext* Warn)
-{
-
-	Flags |= RF_Transactional;
-
-	GEditor->GetEditorSubsystem<UImportSubsystem>()->BroadcastAssetPreImport(this, InClass, InParent, InName, Type);
-	FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
-	FString CurrentSourcePath;
-	FString FilenameNoExtension;
-	FString UnusedExtension;
-	FPaths::Split(UFactory::GetCurrentFilename(), CurrentSourcePath, FilenameNoExtension, UnusedExtension);
-
-	const FString LongPackagePath = FPackageName::GetLongPackagePath(InParent->GetOutermost()->GetPathName());
-
-	const FString NameForErrors(InName.ToString());
-
-
-	TArray<uint8> FileContent;
-
-	if (!FFileHelper::LoadFileToArray(FileContent, *UFactory::GetCurrentFilename()))
-	{
-		return nullptr;
-	}
-
-	//Process TFX file header
-
-	FBufferReader Reader(FileContent.GetData(), FileContent.Num(), false);
-	FTressFXTFXFileHeader Header;
-	FMemory::Memzero(&Header, sizeof(FTressFXTFXFileHeader));
-	Reader.Serialize(&Header, sizeof(FTressFXTFXFileHeader));
-
-	if (Header.version < AMD_TRESSFX_VERSION_MAJOR)
-	{
-		return nullptr;
-	}
-
-	uint32 NumStrandsInFile = Header.numHairStrands;
-
-	UTressFXAsset* Result = nullptr;
-
-	FString NewName = FString::Printf(TEXT("%s_TFX"), *InName.ToString());
-	Result = NewObject<UTressFXAsset>(InParent, *NewName, Flags);
-
-
-	// We make the number of strands be multiple of TRESSFX_SIM_THREAD_GROUP_SIZE. 
-	if (NumStrandsInFile % TRESSFX_SIM_THREAD_GROUP_SIZE == 0)
-	{
-		Result->ImportData->NumGuideStrands = NumStrandsInFile;
-	}
-	else
-	{
-		Result->ImportData->NumGuideStrands = (NumStrandsInFile - NumStrandsInFile % TRESSFX_SIM_THREAD_GROUP_SIZE) + TRESSFX_SIM_THREAD_GROUP_SIZE;
-	}	
-
-	Result->ImportData->NumVerticesPerStrand = Header.numVerticesPerStrand;
-
-	Result->ImportData->NumFollowStrandsPerGuide = Result->NumFollowStrandsPerGuide;
-	// Until we call GenerateFollowHairs, the number of total strands is equal to the number of guide strands. 
-	Result->ImportData->NumTotalStrands = Result->ImportData->NumGuideStrands; 
-	Result->ImportData->NumGuideVertices = Result->ImportData->NumGuideStrands * Result->ImportData->NumVerticesPerStrand;
-	// Again, the total number of vertices is equal to the number of guide vertices here. 
-	int32 NumTotalVertices = Result->ImportData->NumGuideVertices; 
-
-	Result->ImportData->ImportedPositions.AddZeroed(NumTotalVertices);
-
-	Reader.Seek(Header.offsetVertexPosition);
-
-	Reader.Serialize(Result->ImportData->ImportedPositions.GetData(), NumStrandsInFile * Result->ImportData->NumVerticesPerStrand * sizeof(FVector4));
-
-	Result->ImportData->ImportRotation = ImportConfig.PickedImportRotation;
-	Result->ImportData->ImportTranslation = ImportConfig.PickedImportTranslation;
-	Result->ImportData->ImportScale = ImportConfig.PickedScale;
-
-	int32 numStrandsToMakeUp = Result->ImportData->NumGuideStrands - NumStrandsInFile;
-
-	for (int32 i = 0; i < numStrandsToMakeUp; ++i)
-	{
-		for (int32 j = 0; j < Result->ImportData->NumVerticesPerStrand; ++j)
-		{
-			int32 indexLastVertex = (NumStrandsInFile - 1) * Result->ImportData->NumVerticesPerStrand + j;
-			int32 indexVertex = (NumStrandsInFile + i) * Result->ImportData->NumVerticesPerStrand + j;
-			Result->ImportData->ImportedPositions[indexVertex] = Result->ImportData->ImportedPositions[indexLastVertex];
-		}
-	}
-
-	Result->ImportData->StrandUV.AddZeroed(Result->ImportData->NumTotalStrands);
-	Reader.Seek(Header.offsetStrandUV);
-	Reader.Serialize(Result->ImportData->StrandUV.GetData(), NumStrandsInFile * sizeof(FVector2D));
-
-	int32 indexLastStrand = (NumStrandsInFile - 1);
-
-	for (int32 i = 0; i < numStrandsToMakeUp; ++i)
-	{
-		int32 indexStrand = (NumStrandsInFile + i);
-		Result->ImportData->StrandUV[indexStrand] = Result->ImportData->StrandUV[indexLastStrand];
-	}
-
-	// make copy of the strandUVS for using when regenerating follow hairs.
-	// This is the only time that StrandUV_Original should ever be edited.
-	Result->ImportData->StrandUV_Original = Result->ImportData->StrandUV;
-	Result->ImportData->ProcessAsset(Result->TipSeparationFactor, Result->MaxRadiusAroundGuideHair, true);
-
-	return Result;
-}
-
-
-//////////////////////////////////////////////
 //UTressFXJSONFactory - tfxjson
 /////////////////////////////////////////////
 
@@ -353,7 +184,6 @@ UObject* UTressFXJSONFactory::FactoryCreateText(UClass* InClass, UObject* InPare
 	FString FilenameNoExtension;
 	FString UnusedExtension;
 	FPaths::Split(UFactory::GetCurrentFilename(), CurrentSourcePath, FilenameNoExtension, UnusedExtension);
-
 
 	TSharedPtr<FJsonObject> JsonObject;
 	TSharedRef< TJsonReader<> > Reader = TJsonReaderFactory<>::Create(FileContent);
@@ -502,8 +332,8 @@ UObject* UTressFXJSONFactory::FactoryCreateText(UClass* InClass, UObject* InPare
 			AssetToolsModule.Get().CreateUniqueAssetName(PackagePath, BoneAssetName, PackageNameStr /*out*/, SaveName /*out*/);
 			EObjectFlags BoneFlags = EObjectFlags::RF_Public | EObjectFlags::RF_Standalone;
 			UPackage *Package = CreatePackage(nullptr, *PackageNameStr);
+			
 			int32 NumStrandsInBoneFile;
-
 			BoneAsset = ParseTFXBoneJson(*TFXBoneDataJson, Package, BoneAssetName, NumStrandsInBoneFile);
 
 			if (NumStrandsInBoneFile != NumStrandsInFile)
@@ -516,7 +346,7 @@ UObject* UTressFXJSONFactory::FactoryCreateText(UClass* InClass, UObject* InPare
 
 		if (NumStrandsToMakeUp > 0)
 		{
-			// evenly distribute the strands we need to make up, instead of just using the last one like the sample does.
+			// evenly distribute the strands we need to make up, instead of just using the last one like the AMD sample does.
 			int32 DistributionInterval = FMath::FloorToInt((NumStrandsInFile / NumStrandsToMakeUp));
 
 			for (int32 MakeUpStrandIndex = 0; MakeUpStrandIndex < NumStrandsToMakeUp; ++MakeUpStrandIndex)
@@ -563,79 +393,6 @@ UObject* UTressFXJSONFactory::FactoryCreateText(UClass* InClass, UObject* InPare
 	{
 		return nullptr;
 	}
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//Bone skinning assets .tfxbone
-//////////////////////////////////////////////////////////////////////////////
-
-UTressFXBoneSkinningFactory::UTressFXBoneSkinningFactory(const class FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
-{
-	bCreateNew = false;
-	SupportedClass = UTressFXBoneSkinningAsset::StaticClass();
-
-	bEditorImport = true;
-	bText = false;
-	Formats.Add(TEXT("tfxbone;Tress FX bone skinning asset"));
-}
-
-
-bool UTressFXBoneSkinningFactory::FactoryCanImport(const FString& Filename)
-{
-	return true;
-}
-
-bool UTressFXBoneSkinningFactory::CanCreateNew() const
-{
-	return false;
-}
-
-
-void UTressFXBoneSkinningFactory::PostInitProperties()
-{
-	Super::PostInitProperties();
-}
-
-UObject * UTressFXBoneSkinningFactory::FactoryCreateBinary(UClass * InClass, UObject * InParent, FName InName, EObjectFlags Flags, UObject * Context, const TCHAR * Type, const uint8 *& Buffer, const uint8 * BufferEnd, FFeedbackContext * Warn)
-{
-	Flags |= RF_Transactional;
-	GEditor->GetEditorSubsystem<UImportSubsystem>()->BroadcastAssetPreImport(this, InClass, InParent, InName, Type);
-
-	FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
-
-	bool bLoadedSuccessfully = true;
-
-	FString CurrentSourcePath;
-	FString FilenameNoExtension;
-	FString UnusedExtension;
-	FPaths::Split(UFactory::GetCurrentFilename(), CurrentSourcePath, FilenameNoExtension, UnusedExtension);
-
-	const FString LongPackagePath = FPackageName::GetLongPackagePath(InParent->GetOutermost()->GetPathName());
-
-	const FString NameForErrors(InName.ToString());
-
-	TArray<uint8> FileContent;
-
-	if (!FFileHelper::LoadFileToArray(FileContent, *UFactory::GetCurrentFilename()))
-	{
-		return nullptr;
-	}
-
-	FBufferReader Reader(FileContent.GetData(), FileContent.Num(), false);
-	
-	UTressFXBoneSkinningAsset* Result = nullptr;
-	FString NewName = FString::Printf(TEXT("%s_BoneMap"), *InName.ToString());
-
-	Result = NewObject<UTressFXBoneSkinningAsset>(InParent, *NewName, Flags);
-
-	if (!Result)
-	{
-		return nullptr;
-	}
-	Result->RawData = FileContent;
-	Result->AssetType = FTressFXBoneSkinngAssetType::TFXBone_Binary;
-	return Result;
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////
