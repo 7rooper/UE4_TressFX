@@ -1176,7 +1176,7 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	{
 		SceneContext.AllocatTressFXTargets(RHICmdList, bSceneHasOpaqueTressFX, bSceneHasTranslucentTressFX, TressFXOITMode);
 	}
-	else
+	else if(Scene->World && Scene->World->WorldType != EWorldType::EditorPreview)
 	{
 		SceneContext.ReleaseTressFXResources(true, true, true, true);
 	}	
