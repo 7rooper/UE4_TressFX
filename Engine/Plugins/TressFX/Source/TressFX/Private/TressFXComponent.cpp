@@ -447,77 +447,63 @@ void UTressFXComponent::RunSimulation()
 		{
 			for (FBodyInstance* BI : ParentSkeletalMeshComponent->Bodies)
 			{				
-				auto BodySetup = BI->BodySetup;
+				const TWeakObjectPtr<UBodySetup> BodySetup = BI->BodySetup;
 				
+				//we only support sphyls for now
 				if (BodySetup.IsValid() && BodySetup->AggGeom.SphylElems.Num() > 0)
 				{	
 					FRigidBodyState BodyState;
 					FVector BodyPos;
 					FQuat BodyRot;
 					FVector BodyScale;
-					FTransform Trans;
+
 					if (BI->GetRigidBodyState(BodyState))
 					{
 						//its simulating physics
 						BodyRot = BodyState.Quaternion;
 						BodyPos = BodyState.Position;
-						BodyScale = FVector(1, 1, 1);
 					}
 					else 
 					{
-						Trans = BI->GetUnrealWorldTransform();
+						const FTransform Trans = BI->GetUnrealWorldTransform();
 						BodyRot = Trans.GetRotation();
-						BodyPos = Trans.GetTranslation();
-						BodyScale = Trans.GetScale3D();
-						
+						BodyPos = Trans.GetTranslation();						
 					}
-					
+
+					//to correct scaling on meshes with funky scaling
 					const FVector ScaleMultiplier = FVector::OneVector / BI->Scale3D;
-					// this is the pos of the body setup, need to offset it by the sphyl pos and rotation...
-					auto Com = BI->GetCOMPosition();
-
-					//TODO, not just firs elem
-					const FKSphylElem& Sphyl = BodySetup->AggGeom.SphylElems[0];
 					
-					//this is relative to the bone its attached to
-					FTransform SphylTrans = Sphyl.GetTransform();
-					//SphylTrans.SetRotation(BodyRot);
-					FVector SPhylLoc = Sphyl.Center;
-					//SPhylLoc *= ScaleMultiplier;
-					SPhylLoc = BodyRot.RotateVector(SPhylLoc);
-	
-					const int32 BodyBoneIndex = FTressFXUtils::FindEngineBoneIndex(ParentSkeletalMeshComponent->SkeletalMesh, BodySetup->BoneName, false);
-					
-					FVector BoneLocation = ParentSkeletalMeshComponent->GetBoneLocation(BodySetup->BoneName, EBoneSpaces::WorldSpace);
-		
-					//FQuat BoneRotation = ParentSkeletalMeshComponent->GetBoneQuaternion(BodySetup->BoneName, EBoneSpaces::ComponentSpace);
-					//BoneLocation = BoneRotation.RotateVector(BoneLocation);
-					//FTransform BoneTrans = ParentSkeletalMeshComponent->GetBoneTransform(BodyBoneIndex);
-					//BoneLocation *= FVector::OneVector / BI->Scale3D;
+					// NOTE: BodyPos and BodyRot are the pos and rot of the body setup.
+					// we need to offset it by the sphyl relative transforms now			
 
-					FMatrix RefBase = ParentSkeletalMeshComponent->SkeletalMesh->RefBasesInvMatrix[BodyBoneIndex];
-					FMatrix ParentSkel = ParentSkeletalMeshComponent->GetBoneMatrix(BodyBoneIndex);
-					FMatrix BoneMat = (RefBase * ParentSkel);
-					//BodyPos = BoneMat.TransformPosition(BodyPos);
-					//BodyPos = BoneMat.TransformPosition(BodyPos);
-					//SPhylLoc = BoneMat.TransformPosition(SPhylLoc);
-					BodyPos *= ScaleMultiplier;
-					BodyPos += SPhylLoc; 
-					BodyPos *= BI->Scale3D;
-					//BodyPos *= ScaleMultiplier;
-					//BodyPos += BodyPos2;
-					//BodyPos2 = BoneMat.TransformPosition(BodyPos2);
-					//BodyRelativeLocation = BoneMat.TransformPosition(BodyRelativeLocation);
-					
+					for(const FKSphylElem& Sphyl : BodySetup->AggGeom.SphylElems)
+					{
+						if (NumCapsules >= TRESSFX_MAX_NUM_COLLISION_CAPSULES)
+						{
+							break;
+						}
 
+						FTransform CapsuleTransform = Sphyl.GetTransform();
+						FVector CapsuleRelativeLoc = Sphyl.Center;
+						CapsuleRelativeLoc = BodyRot.RotateVector(CapsuleRelativeLoc);
 
-					float CapsuleHalfHeight = Sphyl.GetScaledHalfLength(BI->Scale3D);
-					float CapsuleRad = Sphyl.GetScaledRadius(BI->Scale3D);
-					FVector CapsuleZAxis = SphylTrans.GetScaledAxis(EAxis::Z) * CapsuleHalfHeight;
-					CapsuleZAxis = BodyRot.RotateVector(CapsuleZAxis);
-					DynamicRenderData->CollisionCapsuleCenterAndRadius0[NumCapsules] = FVector4(BodyPos + CapsuleZAxis, CapsuleRad);
-					DynamicRenderData->CollisionCapsuleCenterAndRadius1[NumCapsules] = FVector4(BodyPos - CapsuleZAxis, CapsuleRad);
-					NumCapsules++;
+						// scale the body to correct scale before adding capsule relative loc
+						BodyPos *= ScaleMultiplier;
+						BodyPos += CapsuleRelativeLoc;
+						// re-apply scaling
+						BodyPos *= BI->Scale3D;
+
+						float CapsuleHalfHeight = Sphyl.GetScaledHalfLength(BI->Scale3D);
+						float CapsuleRad = Sphyl.GetScaledRadius(BI->Scale3D);
+						FVector CapsuleZAxis = CapsuleTransform.GetScaledAxis(EAxis::Z) * CapsuleHalfHeight;
+
+						// apply rotation of body instance to sphyl
+						CapsuleZAxis = BodyRot.RotateVector(CapsuleZAxis);
+
+						DynamicRenderData->CollisionCapsuleCenterAndRadius0[NumCapsules] = FVector4(BodyPos + CapsuleZAxis, CapsuleRad);
+						DynamicRenderData->CollisionCapsuleCenterAndRadius1[NumCapsules] = FVector4(BodyPos - CapsuleZAxis, CapsuleRad);
+						NumCapsules++;
+					}
 				}
 			}
 		}
