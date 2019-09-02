@@ -448,16 +448,6 @@ void UTressFXComponent::RunSimulation()
 			for (FBodyInstance* BI : ParentSkeletalMeshComponent->Bodies)
 			{				
 				auto BodySetup = BI->BodySetup;
-				//FPhysScene* PS = BI->GetPhysicsScene();
-				//auto Handle = BI->GetPhysicsActorHandle();
-				//if (!NewTransform.EqualsNoScale(GetComponentTransform()))
-				//{
-				//	const FVector MoveBy = NewTransform.GetLocation() - GetComponentTransform().GetLocation();
-				//	const FRotator NewRotation = NewTransform.Rotator();
-
-				//	//@warning: do not reference BodyInstance again after calling MoveComponent() - events from the move could have made it unusable (destroying the actor, SetPhysics(), etc)
-				//	MoveComponent(MoveBy, NewRotation, false, NULL, MOVECOMP_SkipPhysicsMove);
-				//}
 				
 				if (BodySetup.IsValid() && BodySetup->AggGeom.SphylElems.Num() > 0)
 				{	
@@ -479,13 +469,12 @@ void UTressFXComponent::RunSimulation()
 						BodyRot = Trans.GetRotation();
 						BodyPos = Trans.GetTranslation();
 						BodyScale = Trans.GetScale3D();
+						
 					}
 					
-					const FTransform ParentToWorld = ParentSkeletalMeshComponent->GetSocketTransform(BodySetup->BoneName);
-
 					const FVector ScaleMultiplier = FVector::OneVector / BI->Scale3D;
 					// this is the pos of the body setup, need to offset it by the sphyl pos and rotation...
-					BodyPos *= ScaleMultiplier;
+					auto Com = BI->GetCOMPosition();
 
 					//TODO, not just firs elem
 					const FKSphylElem& Sphyl = BodySetup->AggGeom.SphylElems[0];
@@ -494,12 +483,12 @@ void UTressFXComponent::RunSimulation()
 					FTransform SphylTrans = Sphyl.GetTransform();
 					//SphylTrans.SetRotation(BodyRot);
 					FVector SPhylLoc = Sphyl.Center;
-					SPhylLoc *= ScaleMultiplier;
+					//SPhylLoc *= ScaleMultiplier;
 					SPhylLoc = BodyRot.RotateVector(SPhylLoc);
 	
 					const int32 BodyBoneIndex = FTressFXUtils::FindEngineBoneIndex(ParentSkeletalMeshComponent->SkeletalMesh, BodySetup->BoneName, false);
 					
-					//FVector BoneLocation = ParentSkeletalMeshComponent->GetBoneLocation(BodySetup->BoneName, EBoneSpaces::ComponentSpace);
+					FVector BoneLocation = ParentSkeletalMeshComponent->GetBoneLocation(BodySetup->BoneName, EBoneSpaces::WorldSpace);
 		
 					//FQuat BoneRotation = ParentSkeletalMeshComponent->GetBoneQuaternion(BodySetup->BoneName, EBoneSpaces::ComponentSpace);
 					//BoneLocation = BoneRotation.RotateVector(BoneLocation);
@@ -509,12 +498,18 @@ void UTressFXComponent::RunSimulation()
 					FMatrix RefBase = ParentSkeletalMeshComponent->SkeletalMesh->RefBasesInvMatrix[BodyBoneIndex];
 					FMatrix ParentSkel = ParentSkeletalMeshComponent->GetBoneMatrix(BodyBoneIndex);
 					FMatrix BoneMat = (RefBase * ParentSkel);
-					BodyPos = BoneMat.TransformPosition(BodyPos);
+					//BodyPos = BoneMat.TransformPosition(BodyPos);
+					//BodyPos = BoneMat.TransformPosition(BodyPos);
 					//SPhylLoc = BoneMat.TransformPosition(SPhylLoc);
-					BodyPos += SPhylLoc; //-- scaling is off on this...
+					BodyPos *= ScaleMultiplier;
+					BodyPos += SPhylLoc; 
+					BodyPos *= BI->Scale3D;
+					//BodyPos *= ScaleMultiplier;
 					//BodyPos += BodyPos2;
 					//BodyPos2 = BoneMat.TransformPosition(BodyPos2);
 					//BodyRelativeLocation = BoneMat.TransformPosition(BodyRelativeLocation);
+					
+
 
 					float CapsuleHalfHeight = Sphyl.GetScaledHalfLength(BI->Scale3D);
 					float CapsuleRad = Sphyl.GetScaledRadius(BI->Scale3D);
