@@ -44,6 +44,15 @@ FAutoConsoleVariableRef CVarTressFXUseComputeResolves(
 	ECVF_RenderThreadSafe
 );
 
+int32 GBTressRenderInEditorPreview = 1;
+FAutoConsoleVariableRef CVarTressRenderInEditorPreview(
+	TEXT("tfx.PreferCompute"),
+	GBTressRenderInEditorPreview,
+	TEXT("1: (default) Render Hair in Editor Preview worlds Blueprint editor for example. \n")
+	TEXT("0: Dont do that."),
+	ECVF_RenderThreadSafe
+);
+
 float GTressFXMinAlphaForDepth = 0.5f;
 FAutoConsoleVariableRef CVarTressFXMinAlphaForSceneDepth(
 	TEXT("tfx.MinAlphaForSceneDepth"),
@@ -838,16 +847,17 @@ bool FSceneRenderer::ShouldRenderTressFX(int32 TressFXPass)
 		return false;
 	}
 
-	const bool bRenderInPreview = true;//easy to turn off later...
+	const bool bRenderInPreview = false;//easy to turn off later...
 	const bool isEditorPreview = Scene->World->WorldType == EWorldType::EditorPreview;
-	if (!Scene->World || (Scene->World->WorldType != EWorldType::Inactive))
+	if (isEditorPreview)
+	{
+		return GBTressRenderInEditorPreview > 0;
+	}
+	else if (!Scene->World || (Scene->World->WorldType != EWorldType::Inactive))
 	{
 		return true;
 	}
-	if (isEditorPreview) 
-	{
-		return bRenderInPreview;
-	}
+
 	return false;
 }
 
