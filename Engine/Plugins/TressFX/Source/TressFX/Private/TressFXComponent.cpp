@@ -449,8 +449,10 @@ void UTressFXComponent::RunSimulation()
 			{				
 				const TWeakObjectPtr<UBodySetup> BodySetup = BI->BodySetup;
 				
+				const bool bCollisionEnabled = (BodySetup.IsValid() && BodySetup->CollisionReponse == EBodyCollisionResponse::BodyCollision_Enabled);
+
 				//we only support sphyls for now
-				if (BodySetup.IsValid() && BodySetup->AggGeom.SphylElems.Num() > 0)
+				if (bCollisionEnabled && BodySetup->AggGeom.SphylElems.Num() > 0)
 				{	
 					FRigidBodyState BodyState;
 					FVector BodyPos;
@@ -481,6 +483,12 @@ void UTressFXComponent::RunSimulation()
 						if (NumCapsules >= TRESSFX_MAX_NUM_COLLISION_CAPSULES)
 						{
 							break;
+						}
+						// i dont want to add custom properties to collision assets/bodies to mark as use for tressfx
+						// so just doing this for now
+						if (!Sphyl.GetName().ToString().EndsWith("tressfx", ESearchCase::CaseSensitive)) 
+						{
+							continue;
 						}
 
 						FTransform CapsuleTransform = Sphyl.GetTransform();
