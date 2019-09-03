@@ -81,7 +81,7 @@ void SLiveLinkDataView::Construct(const FArguments& Args, FLiveLinkClient* InCli
 			.MaxValue(10.0)
 			.MinSliderValue(0.0)
 			.MaxSliderValue(10.0)
-			.ToolTipText(LOCTEXT("RefreshDelay", "Refresh delay of Static & Frame data."))
+			.ToolTipText(LOCTEXT("RefreshDelay_ToolTip", "Refresh delay of Static & Frame data."))
 			.Value(this, &SLiveLinkDataView::GetRefreshDelay)
 			.OnValueCommitted(this, &SLiveLinkDataView::SetRefreshDelayInternal)
 			.IsEnabled(this, &SLiveLinkDataView::CanEditRefreshDelay);
@@ -182,20 +182,23 @@ void SLiveLinkDataView::Tick(const FGeometry& AllottedGeometry, const double InC
 		if (Client->IsSubjectEnabled(SubjectKey, true))
 		{
 			TSubclassOf<ULiveLinkRole> SubjectRole = Client->GetSubjectRole(SubjectKey.SubjectName);
-			FLiveLinkSubjectFrameData SubjectData;
-			if (Client->EvaluateFrame_AnyThread(SubjectKey.SubjectName, SubjectRole, SubjectData))
+			if (SubjectRole)
 			{
-				if (DetailType == EDetailType::StaticData)
+				FLiveLinkSubjectFrameData SubjectData;
+				if (Client->EvaluateFrame_AnyThread(SubjectKey.SubjectName, SubjectRole, SubjectData))
 				{
-					TSharedPtr<FStructOnScope> StructOnScope = MakeShared<FStructOnScope>(SubjectData.StaticData.GetStruct());
-					CastChecked<UScriptStruct>(StructOnScope->GetStruct())->CopyScriptStruct(StructOnScope->GetStructMemory(), SubjectData.StaticData.GetBaseData());
-					StructureDetailsView->SetStructureData(StructOnScope);
-				}
-				else
-				{
-					TSharedPtr<FStructOnScope> StructOnScope = MakeShared<FStructOnScope>(SubjectData.FrameData.GetStruct());
-					CastChecked<UScriptStruct>(StructOnScope->GetStruct())->CopyScriptStruct(StructOnScope->GetStructMemory(), SubjectData.FrameData.GetBaseData());
-					StructureDetailsView->SetStructureData(StructOnScope);
+					if (DetailType == EDetailType::StaticData)
+					{
+						TSharedPtr<FStructOnScope> StructOnScope = MakeShared<FStructOnScope>(SubjectData.StaticData.GetStruct());
+						CastChecked<UScriptStruct>(StructOnScope->GetStruct())->CopyScriptStruct(StructOnScope->GetStructMemory(), SubjectData.StaticData.GetBaseData());
+						StructureDetailsView->SetStructureData(StructOnScope);
+					}
+					else
+					{
+						TSharedPtr<FStructOnScope> StructOnScope = MakeShared<FStructOnScope>(SubjectData.FrameData.GetStruct());
+						CastChecked<UScriptStruct>(StructOnScope->GetStruct())->CopyScriptStruct(StructOnScope->GetStructMemory(), SubjectData.FrameData.GetBaseData());
+						StructureDetailsView->SetStructureData(StructOnScope);
+					}
 				}
 			}
 		}

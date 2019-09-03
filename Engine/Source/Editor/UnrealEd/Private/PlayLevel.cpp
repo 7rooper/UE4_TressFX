@@ -529,8 +529,9 @@ void UEditorEngine::EndPlayMap()
 		GEngine->PendingDroppedNotes.Empty();
 	}
 
-	//ensure stereo rendering is disabled in case we need to re-enable next PIE run.
-	if (GEngine->StereoRenderingDevice)
+	//ensure stereo rendering is disabled in case we need to re-enable next PIE run (except when the editor is running in VR)
+	bool bInVRMode = IVREditorModule::Get().IsVREditorModeActive();
+	if (GEngine->StereoRenderingDevice && !bInVRMode)
 	{
 		GEngine->StereoRenderingDevice->EnableStereo(false);
 	}
@@ -3186,11 +3187,6 @@ UGameInstance* UEditorEngine::CreatePIEGameInstance(int32 InPIEInstance, bool bI
 	// Initialize the viewport client.
 	UGameViewportClient* ViewportClient = NULL;
 	ULocalPlayer *NewLocalPlayer = NULL;
-	
-	if (GEngine->XRSystem.IsValid() && !bInSimulateInEditor )
-	{
-		GEngine->XRSystem->OnBeginPlay(*PieWorldContext);
-	}
 
 	if (!PieWorldContext->RunAsDedicated)
 	{

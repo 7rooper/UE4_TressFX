@@ -3071,7 +3071,9 @@ void FSceneRenderer::PreVisibilityFrameSetup(FRHICommandListImmediate& RHICmdLis
 		// HighResScreenshot should get best results so we don't do the occlusion optimization based on the former frame
 		extern bool GIsHighResScreenshot;
 		const bool bIsHitTesting = ViewFamily.EngineShowFlags.HitProxies;
-		if (GIsHighResScreenshot || !DoOcclusionQueries(FeatureLevel) || bIsHitTesting)
+		// Don't test occlusion queries in collision viewmode as they can be bigger then the rendering bounds.
+		const bool bCollisionView = ViewFamily.EngineShowFlags.CollisionVisibility || ViewFamily.EngineShowFlags.CollisionPawn;
+		if (GIsHighResScreenshot || !DoOcclusionQueries(FeatureLevel) || bIsHitTesting || bCollisionView)
 		{
 			View.bDisableQuerySubmissions = true;
 			View.bIgnoreExistingQueries = true;
@@ -4540,7 +4542,9 @@ void FLODSceneTree::UpdateVisibilityStates(FViewInfo& View)
 
 			// Update visibility states of this node and owned children
 			const float DistanceSquared = Bounds.BoxSphereBounds.ComputeSquaredDistanceFromBoxToPoint(View.ViewMatrices.GetViewOrigin());
-			const bool bIsInDrawRange = DistanceSquared >= Bounds.MinDrawDistanceSq * HLODState.FOVDistanceScaleSq;
+			const bool bNearCulled = DistanceSquared < Bounds.MinDrawDistanceSq * HLODState.FOVDistanceScaleSq;
+			const bool bFarCulled = DistanceSquared > Bounds.MaxDrawDistance * Bounds.MaxDrawDistance * HLODState.FOVDistanceScaleSq;
+			const bool bIsInDrawRange = !bNearCulled && !bFarCulled;
 
 			const bool bWasFadingPreUpdate = !!NodeVisibility.bIsFading;
 			const bool bIsDitheredTransition = NodeMeshRelevances[0].bDitheredLODTransition;
@@ -4620,6 +4624,12 @@ void FLODSceneTree::UpdateVisibilityStates(FViewInfo& View)
 			{
 				// Not visible and waiting for a transition to fade, keep HLOD hidden
 				HLODState.ForcedHiddenPrimitiveMap[NodeIndex] = true;
+
+				// Also hide children when performing far culling
+				if (bFarCulled)
+				{
+					HideNodeChildren(ViewState, Node);
+				}
 			}
 		}
 	}	

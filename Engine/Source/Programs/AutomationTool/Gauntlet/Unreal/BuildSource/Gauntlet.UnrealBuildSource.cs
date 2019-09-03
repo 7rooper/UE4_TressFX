@@ -429,17 +429,6 @@ namespace Gauntlet
 			// Add in editor - TODO, should this be in the editor build?
 			if (Role.RoleType.UsesEditor() || IsContentOnlyProject)
 			{
-				string ProjectParam = ProjectPath.FullName;
-
-				// if content only we need to provide a relative path to the uproject.
-				if (IsContentOnlyProject && !Role.RoleType.UsesEditor())
-				{
-					ProjectParam = string.Format("../../../{0}/{0}.uproject", ProjectName);
-				}
-
-				// project must be first
-				Config.CommandLine = ProjectParam + " " + Config.CommandLine;
-
 				// add in -game or -server
 				if (Role.RoleType.IsClient())
 				{
@@ -449,6 +438,17 @@ namespace Gauntlet
 				{
 					Config.CommandLine = "-server " + Config.CommandLine;
 				}
+
+				string ProjectParam = ProjectPath.FullName;
+
+				// if content only we need to provide a relative path to the uproject.
+				if (IsContentOnlyProject && !Role.RoleType.UsesEditor())
+				{
+					ProjectParam = string.Format("../../../{0}/{0}.uproject", ProjectName);
+				}
+
+				// project must be first
+				Config.CommandLine = String.Format("\"{0}\"", ProjectParam) + " " + Config.CommandLine;
 			}
 
             if (Role.FilesToCopy != null)

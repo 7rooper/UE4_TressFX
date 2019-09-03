@@ -18,6 +18,7 @@
 #include "Physics/Experimental/PhysScene_LLImmediate.h"
 #include "GeometryCollection/GeometryDynamicCollection.h"
 #include "GeometryCollectionObject.h"
+#include "GeometryCollectionEditorSelection.h"
 #include "GeometryCollection/RecordedTransformTrack.h"
 #include "Templates/UniquePtr.h"
 #include "PhysicalMaterials/Experimental/ChaosPhysicalMaterial.h"
@@ -26,10 +27,6 @@
 #include "Chaos/ChaosSolverComponentTypes.h"
 
 #include "GeometryCollectionComponent.generated.h"
-
-#ifndef GEOMETRYCOLLECTION_EDITOR_SELECTION
-#define GEOMETRYCOLLECTION_EDITOR_SELECTION WITH_EDITOR
-#endif
 
 struct FGeometryCollectionConstantData;
 struct FGeometryCollectionDynamicData;

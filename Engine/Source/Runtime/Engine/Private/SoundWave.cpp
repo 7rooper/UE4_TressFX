@@ -1473,7 +1473,7 @@ void USoundWave::Parse(FAudioDevice* AudioDevice, const UPTRINT NodeWaveInstance
 	{
 		WaveInstance->bIsFinished = false;
 #if !(NO_LOGGING || UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		if (!ActiveSound.bWarnedAboutOrphanedLooping && ActiveSound.GetAudioComponentID() == 0)
+		if (!ActiveSound.bWarnedAboutOrphanedLooping && ActiveSound.GetAudioComponentID() == 0 && ActiveSound.FadeOut == FActiveSound::EFadeOut::None)
 		{
 			UE_LOG(LogAudio, Warning, TEXT("Detected orphaned looping sound '%s'."), *ActiveSound.GetSound()->GetName());
 			ActiveSound.bWarnedAboutOrphanedLooping = true;
@@ -1589,8 +1589,8 @@ void USoundWave::Parse(FAudioDevice* AudioDevice, const UPTRINT NodeWaveInstance
 	// If we're normalizing 3d stereo spatialized sounds, we need to scale by -6 dB
 	if (WaveInstance->GetUseSpatialization() && ParseParams.bApplyNormalizationToStereoSounds && NumChannels == 2)
 	{
-		float WaveInstanceVolume = WaveInstance->GetVolume();
-		WaveInstance->SetVolume(WaveInstanceVolume * 0.5f);
+		const float ThisVolumeMultiplier = WaveInstance->GetVolumeMultiplier();
+		WaveInstance->SetVolumeMultiplier(ThisVolumeMultiplier * 0.5f);
 	}
 
 	// Copy reverb send settings

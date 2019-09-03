@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 
-class FDatasmithPlacement
+class FHDRIBackdropPlacement
 {
 public:
 	static void RegisterPlacement();

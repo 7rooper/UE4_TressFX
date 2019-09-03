@@ -281,6 +281,7 @@ void FSequencer::InitSequencer(const FSequencerInitParams& InitParams, const TSh
 {
 	bIsEditingWithinLevelEditor = InitParams.bEditWithinLevelEditor;
 	ScrubStyle = InitParams.ViewParams.ScrubberStyle;
+	HostCapabilities = InitParams.HostCapabilities;
 
 	SilentModeCount = 0;
 	bReadOnly = InitParams.ViewParams.bReadOnly;
@@ -3608,6 +3609,17 @@ FReply FSequencer::OnPlay(bool bTogglePlay)
 	}
 	else
 	{
+		TRange<FFrameNumber> TimeBounds = GetTimeBounds();
+
+		FFrameNumber MinInclusiveTime = MovieScene::DiscreteInclusiveLower(TimeBounds);
+		FFrameNumber MaxInclusiveTime = MovieScene::DiscreteExclusiveUpper(TimeBounds) - 1;
+
+		if (GetLocalTime().Time <= MinInclusiveTime || GetLocalTime().Time >= MaxInclusiveTime)
+		{
+			FFrameTime NewLocalTime = (PlaybackSpeed > 0 ? MinInclusiveTime : MaxInclusiveTime) * RootToLocalTransform.Inverse();
+			SetLocalTimeDirectly(NewLocalTime);
+		}
+
 		SetPlaybackStatus(EMovieScenePlayerStatus::Playing);
 
 		// Make sure Slate ticks during playback
@@ -4944,6 +4956,12 @@ void FSequencer::SetShowCurveEditor(bool bInShowCurveEditor)
 
 bool FSequencer::GetCurveEditorIsVisible() const
 {
+	// Some Sequencer usages don't support the Curve Editor
+	if (!GetHostCapabilities().bSupportsCurveEditor)
+	{
+		return false;
+	}
+
 	// We always want to retrieve this directly from the UI instead of mirroring it to a local bool as there are
 	// a lot of ways the UI could get out of sync with a local bool (such as previously restored tab layouts)
 	return GetToolkitHost()->GetTabManager()->FindExistingLiveTab(FTabId(SSequencer::CurveEditorTabName)).IsValid();
@@ -5021,12 +5039,13 @@ void FSequencer::SaveCurrentMovieScene()
 
 void FSequencer::SaveCurrentMovieSceneAs()
 {
-	TSharedPtr<IToolkitHost> MyToolkitHost = GetToolkitHost();
-
-	if (!MyToolkitHost.IsValid())
+	if (!GetHostCapabilities().bSupportsSaveMovieSceneAsset)
 	{
 		return;
 	}
+
+	TSharedPtr<IToolkitHost> MyToolkitHost = GetToolkitHost();
+	check(MyToolkitHost);
 
 	TArray<UObject*> AssetsToSave;
 	AssetsToSave.Add(GetCurrentAsset());
@@ -5285,6 +5304,8 @@ void FSequencer::SynchronizeExternalSelectionWithSequencerSelection()
 
 	GEditor->GetSelectedActors()->EndBatchSelectOperation();
 
+	GEditor->NoteSelectionChange();
+
 	if (SelectedSequencerComponents.Num())
 	{
 		GEditor->GetSelectedComponents()->Modify();
@@ -5299,9 +5320,9 @@ void FSequencer::SynchronizeExternalSelectionWithSequencerSelection()
 		}
 
 		GEditor->GetSelectedComponents()->EndBatchSelectOperation();
+
+		GEditor->NoteSelectionChange();
 	}
-		
-	GEditor->NoteSelectionChange();
 }
 
 
@@ -7656,7 +7677,10 @@ TArray<FGuid> FSequencer::ExpandMultiplePossessableBindings(FGuid PossessableGui
 	for (TWeakObjectPtr<> FoundObjectPtr : FoundObjects)
 	{
 		UObject* FoundObject = FoundObjectPtr.Get();
-		check(FoundObject);
+		if (!FoundObject)
+		{
+			continue;
+		}
 
 		FoundObject->Modify();
 
@@ -7720,7 +7744,13 @@ TArray<FMovieSceneSpawnable*> FSequencer::ConvertToSpawnableInternal(FGuid Posse
 
 	TArray<FMovieSceneSpawnable*> CreatedSpawnables;
 
-	if (FoundObjects.Num() > 1)
+	if (FoundObjects.Num() == 0)
+	{
+		FMovieScenePossessable* Possessable = MovieScene->FindPossessable(PossessableGuid);
+
+		UE_LOG(LogSequencer, Error, TEXT("Failed to convert %s to spawnable because there are no objects bound to it"), Possessable ? *Possessable->GetName() : TEXT(""));
+	}
+	else if (FoundObjects.Num() > 1)
 	{
 		// Expand to individual possessables for each bound object, then convert each one individually
 		TArray<FGuid> ExpandedPossessableGuids = ExpandMultiplePossessableBindings(PossessableGuid);

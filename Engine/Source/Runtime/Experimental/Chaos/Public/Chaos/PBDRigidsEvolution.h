@@ -48,7 +48,7 @@ struct CHAOS_API FEvolutionStats
 
 
 template<class FPBDRigidsEvolution, class FPBDCollisionConstraint, class T, int d>
-class TPBDRigidsEvolutionBase
+class CHAOS_API TPBDRigidsEvolutionBase
 {
   public:
 	typedef typename FPBDCollisionConstraint::FRigidBodyContactConstraint FRigidBodyContactConstraint;
@@ -61,10 +61,10 @@ class TPBDRigidsEvolutionBase
 	typedef TFunction<void(TPBDRigidParticles<T, d>&, const T, const T, const int32)> FKinematicUpdateRule;
 
 	// TODO(mlentine): Init particles from some type of input
-	CHAOS_API TPBDRigidsEvolutionBase(TPBDRigidParticles<T, d>&& InParticles, int32 NumIterations = 1);
-	CHAOS_API virtual ~TPBDRigidsEvolutionBase() {}
+	TPBDRigidsEvolutionBase(TPBDRigidParticles<T, d>&& InParticles, int32 NumIterations = 1);
+	virtual ~TPBDRigidsEvolutionBase() {}
 
-	CHAOS_API inline void InitializeFromParticleData(const int32 StartIndex)
+	inline void InitializeFromParticleData(const int32 StartIndex)
 	{
 		if (!StartIndex)
 		{
@@ -112,7 +112,7 @@ class TPBDRigidsEvolutionBase
 	/**
 	 * Enable a particle in the same island and state as another particle
 	 */
-	CHAOS_API void EnableParticle(const int32 ParticleIndex, const int32 ParentParticleIndex)
+	void EnableParticle(const int32 ParticleIndex, const int32 ParentParticleIndex)
 	{
 		Particles.SetDisabledLowLevel(ParticleIndex, false);
 		NonDisabledIndices.Add(ParticleIndex);
@@ -121,7 +121,7 @@ class TPBDRigidsEvolutionBase
 		ConstraintGraph.EnableParticle(Particles, ParticleIndex, ParentParticleIndex);
 	}
 
-	CHAOS_API void DisableParticle(const int32 ParticleIndex)
+	void DisableParticle(const int32 ParticleIndex)
 	{
 		Particles.SetDisabledLowLevel(ParticleIndex, true);
 		NonDisabledIndices.Remove(ParticleIndex);
@@ -133,11 +133,11 @@ class TPBDRigidsEvolutionBase
 	}
 
 	// @todo(ccaulfield): remove uint version
-	CHAOS_API void DisableParticles(const TSet<uint32>& InParticleIndices)
+	void DisableParticles(const TSet<uint32>& InParticleIndices)
 	{
 		DisableParticles(reinterpret_cast<const TSet<int32>&>(InParticleIndices));
 	}
-	CHAOS_API void DisableParticles(const TSet<int32>& InParticleIndices)
+	void DisableParticles(const TSet<int32>& InParticleIndices)
 	{
 		for (int32 ParticleIndex : InParticleIndices)
 		{
@@ -151,7 +151,7 @@ class TPBDRigidsEvolutionBase
 		RemoveConstraints(InParticleIndices);
 	}
 
-	CHAOS_API void WakeIsland(const int32 Island)
+	void WakeIsland(const int32 Island)
 	{
 		ConstraintGraph.WakeIsland(Particles, Island);
 		for (int32 Particle : ConstraintGraph.GetIslandParticles(Island))
@@ -161,11 +161,11 @@ class TPBDRigidsEvolutionBase
 	}
 
 	// @todo(ccaulfield): Remove uint version
-	CHAOS_API void WakeIslands(const TSet<uint32>& InIslandIndices)
+	void WakeIslands(const TSet<uint32>& InIslandIndices)
 	{
 		WakeIslands(reinterpret_cast<const TSet<int32>&>(InIslandIndices));
 	}
-	CHAOS_API void WakeIslands(const TSet<int32>& InIslandIndices)
+	void WakeIslands(const TSet<int32>& InIslandIndices)
 	{
 		for (int32 Island : InIslandIndices)
 		{
@@ -177,17 +177,17 @@ class TPBDRigidsEvolutionBase
 		}
 	}
 
-	CHAOS_API void ReconcileIslands()
+	void ReconcileIslands()
 	{
 		ConstraintGraph.ReconcileIslands(Particles);
 	}
 
 	// @todo(ccaulfield): Remove the uint version
-	CHAOS_API void RemoveConstraints(const TSet<uint32>& RemovedParticles)
+	void RemoveConstraints(const TSet<uint32>& RemovedParticles)
 	{
 		RemoveConstraints(reinterpret_cast<const TSet<int32>&>(RemovedParticles));
 	}
-	CHAOS_API void RemoveConstraints(const TSet<int32>& RemovedParticles)
+	void RemoveConstraints(const TSet<int32>& RemovedParticles)
 	{
 		for (FConstraintRule* ConstraintRule : ConstraintRules)
 		{
@@ -196,10 +196,10 @@ class TPBDRigidsEvolutionBase
 	}
 
 	//CHAOS_API void SetKinematicUpdateFunction(TFunction<void(TPBDRigidParticles<T, d>&, const T, const T, const int32)> KinematicUpdate) { MKinematicUpdate = KinematicUpdate; }
-	CHAOS_API void SetParticleUpdateVelocityFunction(TFunction<void(TPBDRigidParticles<T, d>&, const T, const TArray<int32>& InActiveIndices)> ParticleUpdate) { ParticleUpdateVelocity = ParticleUpdate; }
-	CHAOS_API void SetParticleUpdatePositionFunction(TFunction<void(TPBDRigidParticles<T, d>&, const T)> ParticleUpdate) { ParticleUpdatePosition = ParticleUpdate; }
-	CHAOS_API void AddForceFunction(TFunction<void(TPBDRigidParticles<T, d>&, const T, const int32)> ForceFunction) { ForceRules.Add(ForceFunction); }
-	CHAOS_API void AddConstraintRule(FConstraintRule* ConstraintRule) 
+	void SetParticleUpdateVelocityFunction(TFunction<void(TPBDRigidParticles<T, d>&, const T, const TArray<int32>& InActiveIndices)> ParticleUpdate) { ParticleUpdateVelocity = ParticleUpdate; }
+	void SetParticleUpdatePositionFunction(TFunction<void(TPBDRigidParticles<T, d>&, const T)> ParticleUpdate) { ParticleUpdatePosition = ParticleUpdate; }
+	void AddForceFunction(TFunction<void(TPBDRigidParticles<T, d>&, const T, const int32)> ForceFunction) { ForceRules.Add(ForceFunction); }
+	void AddConstraintRule(FConstraintRule* ConstraintRule) 
 	{ 
 		uint32 ContainerId = (uint32)ConstraintRules.Num();
 		ConstraintRules.Add(ConstraintRule); 
@@ -209,27 +209,27 @@ class TPBDRigidsEvolutionBase
 	// @todo(ccaulfield): Disallow direct write access to containers and provide methods to add/remove enable/disable sleep/wake particles
 
 	/**/
-	CHAOS_API TPBDRigidParticles<T, d>& GetParticles() { return Particles; }
-	CHAOS_API const TPBDRigidParticles<T, d>& GetParticles() const { return Particles; }
+	TPBDRigidParticles<T, d>& GetParticles() { return Particles; }
+	const TPBDRigidParticles<T, d>& GetParticles() const { return Particles; }
 
 	/**/
-	CHAOS_API const TArray<int32>& GetIslandParticles(const int32 Island) const { return ConstraintGraph.GetIslandParticles(Island); }
-	CHAOS_API int32 NumIslands() const { return ConstraintGraph.NumIslands(); }
+	const TArray<int32>& GetIslandParticles(const int32 Island) const { return ConstraintGraph.GetIslandParticles(Island); }
+	int32 NumIslands() const { return ConstraintGraph.NumIslands(); }
 
 	/**/
-	CHAOS_API TSet<int32>& GetActiveIndices() { return ActiveIndices; }
-	CHAOS_API const TSet<int32>& GetActiveIndices() const { return ActiveIndices; }
+	TSet<int32>& GetActiveIndices() { return ActiveIndices; }
+	const TSet<int32>& GetActiveIndices() const { return ActiveIndices; }
 
 	// @todo(ccaulfield): optimize this (member array with dirty flag) when we have removed public write access to ActiveIndices
-	CHAOS_API const TArray<int32> GetActiveIndicesArray() const { return ActiveIndices.Array(); }
+	const TArray<int32> GetActiveIndicesArray() const { return ActiveIndices.Array(); }
 
 	/**/
-	CHAOS_API TArray<int32>& GetNonDisabledIndices() { return NonDisabledIndices; }
-	CHAOS_API const TArray<int32>& GetNonDisabledIndices() const { return NonDisabledIndices; }
+	TArray<int32>& GetNonDisabledIndices() { return NonDisabledIndices; }
+	const TArray<int32>& GetNonDisabledIndices() const { return NonDisabledIndices; }
 
 	/**/
-	CHAOS_API TSet<TTuple<int32, int32>>& GetDisabledCollisions() { return DisabledCollisions; }
-	CHAOS_API const TSet<TTuple<int32, int32>>& GetDisabledCollisions() const { return DisabledCollisions; }
+	TSet<TTuple<int32, int32>>& GetDisabledCollisions() { return DisabledCollisions; }
+	const TSet<TTuple<int32, int32>>& GetDisabledCollisions() const { return DisabledCollisions; }
 
 	/**/
 	FRigidClustering& GetRigidClustering() { return Clustering; }
@@ -237,19 +237,19 @@ class TPBDRigidsEvolutionBase
 
 	/**/
 	// @todo(ccaulfield): make sure these are hooked up
-	CHAOS_API inline void SetIterations(int32 Iterations) { NumIterations = Iterations; }
-	CHAOS_API virtual void SetPushOutIterations(int32 PushOutIterations) {}
-	CHAOS_API virtual void SetPushOutPairIterations(int32 PushOutPairIterations) {}
+	inline void SetIterations(int32 Iterations) { NumIterations = Iterations; }
+	virtual void SetPushOutIterations(int32 PushOutIterations) {}
+	virtual void SetPushOutPairIterations(int32 PushOutPairIterations) {}
 
-	CHAOS_API TSerializablePtr<TChaosPhysicsMaterial<T>> GetPhysicsMaterial(const int32 Index) const { return PhysicsMaterials[Index]; }
-	CHAOS_API void SetPhysicsMaterial(const int32 Index, TSerializablePtr<TChaosPhysicsMaterial<T>> InMaterial)
+	TSerializablePtr<TChaosPhysicsMaterial<T>> GetPhysicsMaterial(const int32 Index) const { return PhysicsMaterials[Index]; }
+	void SetPhysicsMaterial(const int32 Index, TSerializablePtr<TChaosPhysicsMaterial<T>> InMaterial)
 	{
 		check(!PerParticlePhysicsMaterials[Index]);	//shouldn't be setting non unique material if a unique one already exists
 		PhysicsMaterials[Index] = InMaterial;
 	}
 
-	CHAOS_API const TUniquePtr<TChaosPhysicsMaterial<T>>& GetPerParticlePhysicsMaterial(const int32 Index) const { return PerParticlePhysicsMaterials[Index]; }
-	CHAOS_API void SetPerParticlePhysicsMaterial(const int32 Index, TUniquePtr<TChaosPhysicsMaterial<T>>&& PerParticleMaterial)
+	const TUniquePtr<TChaosPhysicsMaterial<T>>& GetPerParticlePhysicsMaterial(const int32 Index) const { return PerParticlePhysicsMaterials[Index]; }
+	void SetPerParticlePhysicsMaterial(const int32 Index, TUniquePtr<TChaosPhysicsMaterial<T>>&& PerParticleMaterial)
 	{
 		PhysicsMaterials[Index] = MakeSerializable(PerParticleMaterial);
 		PerParticlePhysicsMaterials[Index] = MoveTemp(PerParticleMaterial);
@@ -257,13 +257,13 @@ class TPBDRigidsEvolutionBase
 
 
 #if !UE_BUILD_SHIPPING
-	CHAOS_API void SerializeForPerfTest(FChaosArchive& Ar);
+	void SerializeForPerfTest(FChaosArchive& Ar);
 #endif
 
 	/* Return the instance of the debug substep object that manages the debug pause/progress to step/substep commands for this solver. */
-	CHAOS_API inline FDebugSubstep& GetDebugSubstep() const { return DebugSubstep; }
+	inline FDebugSubstep& GetDebugSubstep() const { return DebugSubstep; }
 
-	CHAOS_API const FEvolutionStats& GetEvolutionStats() const { return EvolutionStats; }
+	const FEvolutionStats& GetEvolutionStats() const { return EvolutionStats; }
 
 
 	int32 NumConstraints() const

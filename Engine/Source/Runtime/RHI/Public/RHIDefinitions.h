@@ -151,7 +151,6 @@ struct RHI_API FDataDrivenShaderPlatformInfo
 	bool bSupportsDistanceFields; // used for DFShadows and DFAO - since they had the same checks
 	bool bSupportsDiaphragmDOF;
 	bool bSupportsRGBColorBuffer;
-	bool bSupportsByteBufferComputeShaders;
 	bool bSupportsCapsuleShadows;
 	bool bSupportsVolumetricFog; // also used for FVVoxelization
 	bool bSupportsIndexBufferUAVs;
@@ -1169,12 +1168,12 @@ inline bool RHISupportsSeparateMSAAAndResolveTextures(const EShaderPlatform Plat
 inline bool RHISupportsComputeShaders(const EShaderPlatform Platform)
 {
 	return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5) 
-		|| GetMaxSupportedFeatureLevel(Platform) == ERHIFeatureLevel::ES3_1;
+		|| (GetMaxSupportedFeatureLevel(Platform) == ERHIFeatureLevel::ES3_1 && !IsSwitchPlatform(Platform));
 }
 
 inline bool RHISupportsGeometryShaders(const EShaderPlatform Platform)
 {
-	return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM4) && !IsMetalPlatform(Platform) && !IsVulkanMobilePlatform(Platform) && Platform != SP_VULKAN_SM5_LUMIN;
+	return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM4) && !IsMetalPlatform(Platform) && !IsVulkanMobilePlatform(Platform);
 }
 
 /** Return true if and only if the GPU support rendering to volume textures (2D Array, 3D) is guaranteed supported for a target platform.
@@ -1184,7 +1183,8 @@ inline bool RHIVolumeTextureRenderingSupportGuaranteed(const EShaderPlatform Pla
 {
 	return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM4)
 		&& !IsMetalPlatform(Platform)		// EMetalFeaturesLayeredRendering supports needs to be checked at runtime
-		&& !IsOpenGLPlatform(Platform);		// Apparently, some OpenGL 3.3 cards support SM4 but can't render to volume textures 
+		&& !IsOpenGLPlatform(Platform)		// Apparently, some OpenGL 3.3 cards support SM4 but can't render to volume textures 
+		&& Platform != SP_VULKAN_SM5_LUMIN;
 }
 
 inline bool RHIHasTiledGPU(const EShaderPlatform Platform)

@@ -114,7 +114,11 @@ void UChaosGameplayEventDispatcher::TickComponent(float DeltaTime, enum ELevelTi
 
 									Chaos::TCollisionData<float, 3> const& CollisionDataItem = CollisionData[CollisionIdx];
 									const int32 ParticleIndex1 = bSwapOrder ? CollisionDataItem.ParticleIndex : CollisionDataItem.LevelsetIndex;
-									ISolverObjectBase* const SolverObject1 = SolverObjectReverseMappingArray[ParticleIndex1].SolverObject;
+									ISolverObjectBase* const SolverObject1 = ParticleIndex1 < SolverObjectReverseMappingArray.Num() ? SolverObjectReverseMappingArray[ParticleIndex1].SolverObject : nullptr;
+									if (!SolverObject1)
+									{
+										continue;
+									}
 
 									if (HandlerSet.bLegacyComponentNotify)
 									{

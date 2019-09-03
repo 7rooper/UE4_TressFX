@@ -60,6 +60,12 @@ namespace Audio
 		// Adds the given submix to this submix's children
 		void AddChildSubmix(TWeakPtr<FMixerSubmix, ESPMode::ThreadSafe> Submix);
 
+		// Sets the static output volume of the submix
+		void SetOutputVolume(float InVolume);
+
+		// Sets the dynamic output volume
+		void SetDynamicOutputVolume(float InVolume);
+
 		// Gets the submix channels channels
 		ESubmixChannelFormat GetSubmixChannels() const;
 
@@ -153,6 +159,9 @@ namespace Audio
 		void BroadcastEnvelope();
 
 	protected:
+		// Initialize the submix internal 
+		void InitInternal();
+
 		// Down mix the given buffer to the desired down mix channel count
 		void FormatChangeBuffer(const ESubmixChannelFormat NewChannelType, AlignedFloatBuffer& InBuffer, AlignedFloatBuffer& OutNewBuffer);
 
@@ -249,6 +258,15 @@ namespace Audio
 		// Decoder ID set up with Ambisonics Mixer. Set to INDEX_NONE if there is no decoder stream open.
 		uint32 SubmixAmbisonicsDecoderID;
 
+		// The output volume of the submix set via the USoundSubmix property. Can be set in the editor.
+		float InitializedOutputVolume;
+		
+		// The current dynamic output volume
+		float OutputVolume;
+		
+		// The target dynamic output volume
+		float TargetOutputVolume;
+
 		// Envelope following data
 		float EnvelopeValues[AUDIO_MIXER_MAX_OUTPUT_CHANNELS];
 		Audio::FEnvelopeFollower EnvelopeFollowers[AUDIO_MIXER_MAX_OUTPUT_CHANNELS];
@@ -284,6 +302,9 @@ namespace Audio
 
 		// Whether or not this submix is muted.
 		uint8 bIsBackgroundMuted : 1;
+
+		// Whether or not to apply a volume scale to output
+		uint8 bApplyOutputVolumeScale : 1;
 
 		// Bool set to true when envelope following is enabled
 		FThreadSafeBool bIsEnvelopeFollowing;

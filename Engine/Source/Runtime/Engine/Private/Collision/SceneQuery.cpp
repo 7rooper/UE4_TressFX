@@ -1,9 +1,5 @@
 // Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
 
-#if WITH_CHAOS || PHYSICS_INTERFACE_LLIMMEDIATE
-#define STARTQUERYTIMER()
-#endif
-
 #include "Engine/World.h"
 #include "Collision.h"
 #include "PhysicsEngine/PhysicsSettings.h"
@@ -24,6 +20,10 @@
 #endif
 
 #include "Collision/CollisionDebugDrawing.h"
+
+#if WITH_CHAOS || PHYSICS_INTERFACE_LLIMMEDIATE
+#define STARTQUERYTIMER()
+#endif
 
 float DebugLineLifetime = 2.f;
 

@@ -407,16 +407,18 @@ void SSequencer::Construct(const FArguments& InArgs, TSharedRef<FSequencer> InSe
 	TrackArea->SetTreeView(TreeView);
 
 	TAttribute<FAnimatedRange> ViewRangeAttribute = InArgs._ViewRange;
-	
-	// We create a custom Time Slider Controller which is just a wrapper around the actual one, but is aware of our custom bounds logic. Currently the range the
-	// bar displays is tied to Sequencer timeline and not the Bounds, so we need a way of changing it to look at the Bounds but only for the Curve Editor time
-	// slider controller. We want everything else to just pass through though.
-	TSharedRef<ITimeSliderController> CurveEditorTimeSliderController = MakeShared<FSequencerCurveEditorTimeSliderController>(TimeSliderArgs, SequencerPtr, InSequencer->GetCurveEditor().ToSharedRef());
 
-	// Initialize the Curve Editor Widget if there is a tab manager to spawn our extra tab in.
-	// Some areas that use Sequencer don't use our curve editor. In this case no button is shown on the UI.
-	if (InSequencer->GetToolkitHost().IsValid())
+	if (InSequencer->GetHostCapabilities().bSupportsCurveEditor)
 	{
+		// If they've said they want to support the curve editor then they need to provide a toolkit host
+		// so that we know where to spawn our tab into.
+		check(InSequencer->GetToolkitHost().IsValid());
+
+		// We create a custom Time Slider Controller which is just a wrapper around the actual one, but is aware of our custom bounds logic. Currently the range the
+		// bar displays is tied to Sequencer timeline and not the Bounds, so we need a way of changing it to look at the Bounds but only for the Curve Editor time
+		// slider controller. We want everything else to just pass through though.
+		TSharedRef<ITimeSliderController> CurveEditorTimeSliderController = MakeShared<FSequencerCurveEditorTimeSliderController>(TimeSliderArgs, SequencerPtr, InSequencer->GetCurveEditor().ToSharedRef());
+
 		CurveEditorTree = SNew(SCurveEditorTree, InSequencer->GetCurveEditor());
 		TSharedRef<SCurveEditorPanel> CurveEditorWidget = SNew(SCurveEditorPanel, InSequencer->GetCurveEditor().ToSharedRef())
 			// Grid lines match the color specified in FSequencerTimeSliderController::OnPaintViewArea
@@ -1177,23 +1179,30 @@ TSharedRef<SWidget> SSequencer::MakeToolBar()
 				}
 			}));
 
-			ToolBarBuilder.AddToolBarButton(
-				FUIAction(FExecuteAction::CreateSP(this, &SSequencer::OnSaveMovieSceneClicked)),
-				NAME_None,
-				LOCTEXT("SaveDirtyPackages", "Save"),
-				LOCTEXT("SaveDirtyPackagesTooltip", "Saves the current sequence and any subsequences"),
-				SaveIcon
-			);
+			if (SequencerPtr.Pin()->GetHostCapabilities().bSupportsSaveMovieSceneAsset)
+			{
+				ToolBarBuilder.AddToolBarButton(
+					FUIAction(FExecuteAction::CreateSP(this, &SSequencer::OnSaveMovieSceneClicked)),
+					NAME_None,
+					LOCTEXT("SaveDirtyPackages", "Save"),
+					LOCTEXT("SaveDirtyPackagesTooltip", "Saves the current sequence and any subsequences"),
+					SaveIcon
+				);
 
-			ToolBarBuilder.AddToolBarButton(
-				FUIAction(FExecuteAction::CreateSP(this, &SSequencer::OnSaveMovieSceneAsClicked)),
-				NAME_None,
-				LOCTEXT("SaveAs", "Save As"),
-				LOCTEXT("SaveAsTooltip", "Saves the current sequence under a different name"),
-				FSlateIcon(FEditorStyle::GetStyleSetName(), "Sequencer.SaveAs")
-			);
+				ToolBarBuilder.AddToolBarButton(
+					FUIAction(FExecuteAction::CreateSP(this, &SSequencer::OnSaveMovieSceneAsClicked)),
+					NAME_None,
+					LOCTEXT("SaveAs", "Save As"),
+					LOCTEXT("SaveAsTooltip", "Saves the current sequence under a different name"),
+					FSlateIcon(FEditorStyle::GetStyleSetName(), "Sequencer.SaveAs")
+				);
+			}
 
-			//ToolBarBuilder.AddToolBarButton( FSequencerCommands::Get().DiscardChanges );
+			if (SequencerPtr.Pin()->GetHostCapabilities().bSupportsDiscardChanges)
+			{
+				ToolBarBuilder.AddToolBarButton( FSequencerCommands::Get().DiscardChanges );
+			}
+
 			ToolBarBuilder.AddToolBarButton( FSequencerCommands::Get().FindInContentBrowser );
 			ToolBarBuilder.AddToolBarButton( FSequencerCommands::Get().CreateCamera );
 			ToolBarBuilder.AddToolBarButton( FSequencerCommands::Get().RenderMovie );
@@ -1364,8 +1373,8 @@ TSharedRef<SWidget> SSequencer::MakeToolBar()
 
 	ToolBarBuilder.BeginSection("Curve Editor");
 	{
-		// Only add the button if we have a toolkit host to spawn tabs in
-		if (SequencerPtr.Pin()->GetToolkitHost().IsValid())
+		// Only add the button if supported
+		if (SequencerPtr.Pin()->GetHostCapabilities().bSupportsCurveEditor)
 		{
 			ToolBarBuilder.AddToolBarButton( FSequencerCommands::Get().ToggleShowCurveEditor );
 		}
@@ -2117,11 +2126,14 @@ SSequencer::~SSequencer()
 	TSharedPtr<FSequencer> Sequencer = SequencerPtr.Pin();
 	if(Sequencer)
 	{
-		FTabId TabId = FTabId(SSequencer::CurveEditorTabName);
-		TSharedPtr<SDockTab> CurveEditorTab = Sequencer->GetToolkitHost()->GetTabManager()->FindExistingLiveTab(TabId);
-		if (CurveEditorTab)
+		if (Sequencer->GetHostCapabilities().bSupportsCurveEditor)
 		{
-			CurveEditorTab->RequestCloseTab();
+			FTabId TabId = FTabId(SSequencer::CurveEditorTabName);
+			TSharedPtr<SDockTab> CurveEditorTab = Sequencer->GetToolkitHost()->GetTabManager()->FindExistingLiveTab(TabId);
+			if (CurveEditorTab)
+			{
+				CurveEditorTab->RequestCloseTab();
+			}
 		}
 	}
 }
@@ -2166,84 +2178,6 @@ void RestoreSelectionState(const TArray<TSharedRef<FSequencerDisplayNode>>& Disp
 	}
 }
 
-void RestoreSectionSelection(const TSet<TWeakObjectPtr<UMovieSceneSection> >& SelectedSections, FSequencerSelection& Selection)
-{
-	for (auto Section : SelectedSections)
-	{
-		if (Section.IsValid())
-		{
-			Selection.AddToSelection(Section.Get());
-		}
-	}
-}
-
-/** Attempt to restore key selection from the specified set of selected keys. Only works for key areas that have the same key handles as their expired counterparts (this is generally the case) */
-void RestoreKeySelection(const TSet<FSequencerSelectedKey>& OldKeys, FSequencerSelection& Selection, FSequencerNodeTree& Tree)
-{
-	// Store a map of previous section/key area pairs to their current pairs
-	TMap<FSequencerSelectedKey, FSequencerSelectedKey> OldToNew;
-
-	for (FSequencerSelectedKey OldKeyTemplate : OldKeys)
-	{
-		// Cache of this key's handle for assignment to the new handle
-		TOptional<FKeyHandle> OldKeyHandle = OldKeyTemplate.KeyHandle;
-		// Reset the key handle so we can reuse cached section/key area pairs
-		OldKeyTemplate.KeyHandle.Reset();
-
-		FSequencerSelectedKey NewKeyTemplate = OldToNew.FindRef(OldKeyTemplate);
-		if (!NewKeyTemplate.Section)
-		{
-			// Not cached yet, so we'll need to search for it
-			for (const TSharedRef<FSequencerDisplayNode>& RootNode : Tree.GetRootNodes())
-			{
-				auto FindKeyArea =
-					[&](FSequencerDisplayNode& InNode)
-					{
-						FSequencerSectionKeyAreaNode* KeyAreaNode = nullptr;
-
-						if (InNode.GetType() == ESequencerNode::KeyArea)
-						{
-							KeyAreaNode = static_cast<FSequencerSectionKeyAreaNode*>(&InNode);
-						}
-						else if (InNode.GetType() == ESequencerNode::Track)
-						{
-							KeyAreaNode = static_cast<FSequencerTrackNode&>(InNode).GetTopLevelKeyNode().Get();
-						}
-
-						if (KeyAreaNode)
-						{
-							for (const TSharedRef<IKeyArea>& KeyArea : KeyAreaNode->GetAllKeyAreas())
-							{
-								if (KeyArea->GetOwningSection() == OldKeyTemplate.Section)
-								{
-									NewKeyTemplate.Section = OldKeyTemplate.Section;
-									NewKeyTemplate.KeyArea = KeyArea;
-									OldToNew.Add(OldKeyTemplate, NewKeyTemplate);
-									// stop iterating
-									return false;
-								}
-							}
-						}
-						return true;
-					};
-				
-				// If the traversal returned false, we've found what we're looking for - no need to look at any more nodes
-				if (!RootNode->Traverse_ParentFirst(FindKeyArea))
-				{
-					break;
-				}
-			}
-		}
-
-		// If we've got a curretn section/key area pair, we can add this key to the selection
-		if (NewKeyTemplate.Section)
-		{
-			NewKeyTemplate.KeyHandle = OldKeyHandle;
-			Selection.AddToSelection(NewKeyTemplate);
-		}
-	}
-}
-
 void SSequencer::UpdateLayoutTree()
 {
 	TrackArea->Empty();
@@ -2272,19 +2206,15 @@ void SSequencer::UpdateLayoutTree()
 
 		// Suspend broadcasting selection changes because we don't want unnecessary rebuilds.
 		Sequencer->GetSelection().SuspendBroadcast();
-		Sequencer->GetSelection().Empty();
 
 		// Update the node tree
 		Sequencer->GetNodeTree()->Update();
 
-		// Restore the selection state.
+		// Restore the selection state. This is still needed to apply the AdditionalSelectionsToAdd hack.
 		RestoreSelectionState(Sequencer->GetNodeTree()->GetRootNodes(), SelectedPathNames, SequencerPtr.Pin()->GetSelection());	// Update to actor selection.
 
 		// This must come after the selection state has been restored so that the tree and curve editor are populated with the correctly selected nodes
 		TreeView->Refresh();
-
-		RestoreKeySelection(SelectedKeys, Sequencer->GetSelection(), *Sequencer->GetNodeTree());
-		RestoreSectionSelection(SelectedSections, Sequencer->GetSelection());
 		
 		// If we've manually specified an additional selection to add it's because the item was newly created.
 		// Now that the treeview has been refreshed and selection restored, we'll try to focus the first item
@@ -2860,6 +2790,12 @@ void SSequencer::OnCurveEditorVisibilityChanged(bool bShouldBeVisible)
 {
 	TSharedPtr<FSequencer> Sequencer = SequencerPtr.Pin();
 	FTabId TabId = FTabId(SSequencer::CurveEditorTabName);
+
+	// Curve Editor may not be supported
+	if (!Sequencer->GetHostCapabilities().bSupportsCurveEditor)
+	{
+		return;
+	}
 
 	if (bShouldBeVisible)
 	{

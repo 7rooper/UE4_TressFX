@@ -714,6 +714,11 @@ bool UNiagaraEmitter::AreAllScriptAndSourcesSynchronized() const
 		}
 	}
 
+	if (GPUComputeScript->IsCompilable() && !GPUComputeScript->AreScriptAndSourceSynchronized())
+	{
+		return false;
+	}
+
 	return true;
 }
 
