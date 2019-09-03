@@ -847,7 +847,6 @@ bool FSceneRenderer::ShouldRenderTressFX(int32 TressFXPass)
 		return false;
 	}
 
-	const bool bRenderInPreview = false;//easy to turn off later...
 	const bool isEditorPreview = Scene->World->WorldType == EWorldType::EditorPreview;
 	if (isEditorPreview)
 	{
@@ -1103,29 +1102,6 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 	}
 }
 
-// gather shadow infos for Approximate deep shadows. Only supported for a single directional light ATM.
-// And for now I am assuming a single directional light in the scene. This is mainly just to show how to do it, i dont plan on using.
-TArray<FProjectedShadowInfo*> GatherTressFXProjectionShadows(TArray<FVisibleLightInfo, SceneRenderingAllocator> VisibleLightInfos)
-{
-	TArray<FProjectedShadowInfo*> TressFXPerObjectShadowInfos;
-	{
-		for (int32 VisibleLightIndex = 0; VisibleLightIndex < VisibleLightInfos.Num(); VisibleLightIndex++)
-		{
-			for (int32 ShadowsToProjectIndex = 0; ShadowsToProjectIndex < VisibleLightInfos[VisibleLightIndex].ShadowsToProject.Num(); ShadowsToProjectIndex++)
-			{
-				FProjectedShadowInfo* Shadow = VisibleLightInfos[VisibleLightIndex].ShadowsToProject[ShadowsToProjectIndex];
-				const bool bIsPerObjectTressFX = Shadow->bIsPerObjectTressFX;
-				const bool bIsDirectional = Shadow->bDirectionalLight;
-				if (bIsPerObjectTressFX && bIsDirectional)
-				{
-					TressFXPerObjectShadowInfos.Add(Shadow);
-				}
-			}
-		}
-	}
-	return TressFXPerObjectShadowInfos;
-}
-
 FTressFXRectLightData GetRectLightInfos(const FScene* Scene, TArray<FVisibleLightInfo, SceneRenderingAllocator> VisibleLightInfos, const FViewInfo& View)
 {
 	/* 
@@ -1229,8 +1205,6 @@ void RenderShortcutResolvePass(
 			);
 		}
 
-
-		TArray<FProjectedShadowInfo*> TressFXPerObjectShadowInfos = GatherTressFXProjectionShadows(VisibleLightInfos);
 		const FTressFXRectLightData RectLightInfo = GetRectLightInfos(Scene, VisibleLightInfos, View);
 
 		// shortcut pass 3, fill colors
@@ -1250,8 +1224,6 @@ void RenderShortcutResolvePass(
 				, View
 				, ScreenShadowMaskTexture
 				, TFXColorPassUniformBuffer
-				, SortedShadowsForShadowDepthPass
-				, TressFXPerObjectShadowInfos
 				, RectLightInfo
 			);
 			FMeshPassProcessorRenderState DrawRenderState(View, TFXColorPassUniformBuffer);
@@ -1392,8 +1364,6 @@ void RenderKBufferResolvePasses(
 			continue;
 		}
 
-		TArray<FProjectedShadowInfo*> TressFXPerObjectShadowInfos = GatherTressFXProjectionShadows(VisibleLightInfos);
-
 		SCOPED_DRAW_EVENT(RHICmdList, TressFXKBufferPasses);
 
 		TRefCountPtr<IPooledRenderTarget> TressFXKBufferListHeads;
@@ -1453,8 +1423,6 @@ void RenderKBufferResolvePasses(
 				View, 
 				ScreenShadowMaskTexture, 
 				TFXColorPassUniformBuffer, 
-				SortedShadowsForShadowDepthPass, 
-				TressFXPerObjectShadowInfos,
 				RectLightInfo,
 				TressFXKBufferNodePoolSize
 			);

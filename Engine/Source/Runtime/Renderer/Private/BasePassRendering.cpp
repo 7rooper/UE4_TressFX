@@ -529,8 +529,6 @@ void CreateTressFXColorPassUniformBuffer(
 	const FViewInfo& View,
 	IPooledRenderTarget* ForwardScreenSpaceShadowMask,
 	TUniformBufferRef<FTressFXColorPassUniformParameters>& TFXColorPassUniformBuffer,
-	const FSortedShadowMaps& SortedShadowsForShadowDepthPass,
-	const TArray<FProjectedShadowInfo*>& TressFXPerObjectShadowInfos,
 	const FTressFXRectLightData& RectLightInfos,
 	uint32 KbufferNodePoolSize /*= 0*/
 )
@@ -540,28 +538,6 @@ void CreateTressFXColorPassUniformBuffer(
 	FTressFXColorPassUniformParameters ColorPassParams;
 	ColorPassParams.RectLightData = RectLightInfos;
 	SetupSharedBasePassParameters(RHICmdList, View, SceneRenderTargets, ColorPassParams.Shared);
-	//first atlas is for whole scene shadows, second one holds per-object shadows, if any (i think)
-	if (SortedShadowsForShadowDepthPass.ShadowMapAtlases.Num() > 1)
-	{
-		const FSortedShadowMapAtlas& ShadowMapAtlas = SortedShadowsForShadowDepthPass.ShadowMapAtlases.Last();
-		ColorPassParams.ShadowDepthTex = ShadowMapAtlas.RenderTargets.DepthTarget->GetRenderTargetItem().ShaderResourceTexture;
-		if (TressFXPerObjectShadowInfos.Num() > 0)
-		{
-			FVector4 MinMax;
-			ColorPassParams.DirectionalLightWorldToShadowMatrix = TressFXPerObjectShadowInfos[0]->GetWorldToShadowMatrix(MinMax);
-			const FIntPoint ShadowBufferResolution = ShadowMapAtlas.RenderTargets.GetSize();
-			FVector2D ShadowBufferSizeValue(ShadowBufferResolution.X, ShadowBufferResolution.Y);
-			ColorPassParams.ShadowBufferSize = FVector4(ShadowBufferSizeValue.X, ShadowBufferSizeValue.Y, 1.0f / ShadowBufferSizeValue.X, 1.0f / ShadowBufferSizeValue.Y);
-		}
-		else
-		{
-			ColorPassParams.DirectionalLightWorldToShadowMatrix = FMatrix::Identity;
-		}
-	}
-	else
-	{
-		ColorPassParams.ShadowDepthTex = GWhiteTexture->TextureRHI;
-	}
 
 	ColorPassParams.UseForwardScreenSpaceShadowMask = 1;
 

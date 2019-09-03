@@ -497,30 +497,57 @@ float3 TressFXHairShading(
 
 #define USE_PCF 1
 
-float ApproximateDeepShadow(float3 FragmentWorldPos, float SelfshadowStrength)
+float ComputeDirectionalLightDynamicShadowingTressFX(float3 WorldPosition, float SceneDepth)
 {
+	float ShadowFactor = 1;
 
-    float4 ShadowPos = mul(float4(FragmentWorldPos, 1.f), TressFXColorFillPass.DirectionalLightWorldToShadowMatrix);
-    float2 ShadowUVs = ShadowPos.xy / ShadowPos.w;
+	if (ForwardLightData.NumDirectionalLightCascades > 0)
+	{
+		uint CascadeIndex = ForwardLightData.NumDirectionalLightCascades;
 
-#if USE_PCF
-    FPCFSamplerSettings Settings;
-    Settings.ShadowDepthTexture = TressFXColorFillPass.ShadowDepthTex;
-    Settings.ShadowDepthTextureSampler = ForwardLightData.ShadowmapSampler;
-    Settings.ShadowBufferSize = TressFXColorFillPass.ShadowBufferSize;
-    Settings.TransitionScale = 60.f; //SoftTransitionScale.z;
-    Settings.SceneDepth = min(ShadowPos.z, 0.99999f);
-    Settings.bSubsurface = false;
-    Settings.bTreatMaxDepthUnshadowed = false;
-    Settings.DensityMulConstant = 0;
-    Settings.ProjectionDepthBiasParameters = 0;
-    float ShadowMapDepth = ManualPCF(ShadowUVs, Settings);
-#else
-    float ShadowMapDepth = PoissonSampleFloat(ShadowUVs, .01f, TressFXColorFillPass.ShadowBufferSize.zw, TressFXColorFillPass.ShadowDepthTex, ForwardLightData.ShadowmapSampler);
-#endif
-	float shadowDistFalloff = 1.0f;
-    float shadowRange = max(0.0f, shadowDistFalloff * (ShadowPos.z - ShadowMapDepth));
-    return ComputeHairShadowAttenuation(shadowRange, g_FiberSpacing, g_FiberRadius, SelfshadowStrength);
+		for (uint TestCascadeIndex = 0; TestCascadeIndex < ForwardLightData.NumDirectionalLightCascades; TestCascadeIndex++)
+		{
+			if (SceneDepth < ForwardLightData.CascadeEndDepths[TestCascadeIndex])
+			{
+				CascadeIndex = TestCascadeIndex;
+				break;
+			}
+		}
+
+		if (CascadeIndex < ForwardLightData.NumDirectionalLightCascades)
+		{
+			// Transform the world position into shadowmap space
+			float4 HomogeneousShadowPosition = mul(float4(WorldPosition, 1), ForwardLightData.DirectionalLightWorldToShadowMatrix[CascadeIndex]);
+			float2 ShadowUVs = HomogeneousShadowPosition.xy / HomogeneousShadowPosition.w;
+			float4 ShadowmapMinMax = ForwardLightData.DirectionalLightShadowmapMinMax[CascadeIndex];
+
+			// Treat as unshadowed if the voxel is outside of the shadow map
+			if (all(ShadowUVs >= ShadowmapMinMax.xy && ShadowUVs <= ShadowmapMinMax.zw))
+			{
+			#if USE_PCF
+				FPCFSamplerSettings Settings;
+				Settings.ShadowDepthTexture = ForwardLightData.DirectionalLightShadowmapAtlas;
+				Settings.ShadowDepthTextureSampler = ForwardLightData.ShadowmapSampler;
+				Settings.ShadowBufferSize = ForwardLightData.DirectionalLightShadowmapAtlasBufferSize;
+				Settings.SceneDepth = HomogeneousShadowPosition.z;
+				Settings.TransitionScale = 4000;
+				Settings.bSubsurface = false;
+				Settings.bTreatMaxDepthUnshadowed = false;
+				Settings.DensityMulConstant = 0;
+				Settings.ProjectionDepthBiasParameters = float2(0, 0);
+
+				ShadowFactor = ManualPCF(ShadowUVs, Settings);
+				ShadowFactor = max(0.0f,  (HomogeneousShadowPosition.z - ShadowFactor));
+			#else
+				// Sample the shadowmap depth and determine if this voxel is shadowed
+				float ShadowDepth = Texture2DSampleLevel(ForwardLightData.DirectionalLightShadowmapAtlas, ForwardLightData.ShadowmapSampler, ShadowUVs, 0).x;
+				ShadowFactor = HomogeneousShadowPosition.z < ShadowDepth - ForwardLightData.DirectionalLightDepthBias.x;
+			#endif
+			}
+		}
+	}
+
+	return ComputeHairShadowAttenuation(ShadowFactor, g_FiberSpacing, g_FiberRadius, GetTressFXSelfShadowStrength());
 }
 
 bool ComputeLightAttenuationNoShadow(FDeferredLightData LightData, float3 WorldPosition, float3 N, inout float3 ToLight, inout float3 L, inout float NoL, out float LightAttenuationNoShadow)
@@ -676,13 +703,6 @@ float3 GetTressFXDynamicLighting(
     ShadowTerms.SurfaceShadow = 1;	
     ShadowTerms.TransmissionShadow = 1;
     
-	float ApproxDeepShadow = 1.0f;
-#if APPROX_DEEP_SHADOW
-    if (bDirectionalLight && GetTressFXSelfShadowStrength() > 1e-3)
-    {
-        ApproxDeepShadow = ApproximateDeepShadow(WorldPosition, GetTressFXSelfShadowStrength());
-    }
-#else
     if (LightData.ShadowedBits)
     {
         GetShadowTerms(GbufferData, LightData, WorldPosition, L, LightAttenuation, Dither, ShadowTerms);
@@ -691,14 +711,14 @@ float3 GetTressFXDynamicLighting(
     {
         ShadowTerms.SurfaceShadow = GbufferData.GBufferAO;
     }
-#endif
+
 
     float ShadowAttenuation = saturate(ShadowTerms.SurfaceShadow);
-#if ATTENUATE_SHADOW_BY_ALPHA && !APPROX_DEEP_SHADOW
+#if ATTENUATE_SHADOW_BY_ALPHA
     ShadowAttenuation = lerp(1, ShadowAttenuation, 1 - TFXAlpha);
 #endif
 
-    float AllShadow = LightAttenuationNoShadow * ApproxDeepShadow * ShadowAttenuation;
+    float AllShadow = LightAttenuationNoShadow * ShadowAttenuation;
 
 #if ENABLE_GLINT
     float GlintAmbient = 0;
@@ -776,7 +796,7 @@ bool IsRectLight(int DynamicShadowMapChannel)
 
 int GetDynamicShadowChannel(float4 PreviewShadowMapChannelMask)
 {
-    return dot(PreviewShadowMapChannelMask, float4(1.0, 2.0, 3.0, 4.0)) - 1;
+    return dot(PreviewShadowMapChannelMask, float4(1.0f, 2.0f, 3.0f, 4.0f)) - 1;
 }
 
 float3 GetForwardDirectLightingTressFX(
@@ -798,7 +818,7 @@ float3 GetForwardDirectLightingTressFX(
 
 	float4 DynamicShadowFactors = 1;
 
-#if MATERIALBLENDING_SOLID || MATERIALBLENDING_MASKED
+	#if !APPROX_DEEP_SHADOW
 		DynamicShadowFactors = GetForwardDynamicShadowFactors(ScreenUV);
 	#endif
 
@@ -831,7 +851,7 @@ float3 GetForwardDirectLightingTressFX(
 		LightData.ShadowMapChannelMask = UnpackShadowMapChannelMask(DirectionalLightData.DirectionalLightShadowMapChannelMask);
         LightData.bRectLight = false;
 
-		#if MATERIALBLENDING_SOLID || MATERIALBLENDING_MASKED
+		#if !APPROX_DEEP_SHADOW
 			float4 PreviewShadowMapChannelMask = UnpackShadowMapChannelMask(DirectionalLightData.DirectionalLightShadowMapChannelMask >> 4);
 			float DynamicShadowing = dot(PreviewShadowMapChannelMask, DynamicShadowFactors);
 
@@ -851,7 +871,7 @@ float3 GetForwardDirectLightingTressFX(
 			#else
 				GBufferData.PrecomputedShadowFactors.x = 1;
 			#endif
-			float DynamicShadowFactor = ComputeDirectionalLightDynamicShadowing(WorldPosition, GBufferData.Depth);
+			float DynamicShadowFactor = ComputeDirectionalLightDynamicShadowingTressFX(WorldPosition, GBufferData.Depth);
 			float4 LightAttenuation = float4(DynamicShadowFactor.x, DynamicShadowFactor.x, 1, 1);
 		#endif
 

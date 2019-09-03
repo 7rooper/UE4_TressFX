@@ -3985,7 +3985,6 @@ bool UMaterial::CanEditChange(const UProperty* InProperty) const
 			}
 		}
 		if (
-			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXApproximateDeepShadow) ||
 			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXEnableGlint)
 		)
 		{
@@ -3998,7 +3997,8 @@ bool UMaterial::CanEditChange(const UProperty* InProperty) const
 		}
 		if (		
 			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXAttenuateShadowByAlpha) ||
-			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXEnableRectLights)
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXEnableRectLights) ||
+			PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UMaterial, bTressFXApproximateDeepShadow)
 			)
 		{
 			return bUsedWithTressFX && TressFXRenderMode == ETressFXRenderMode::TressFXRender_Translucent;
