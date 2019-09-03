@@ -77,7 +77,6 @@ IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FOpaqueBasePassUniformParameters, "Opaq
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTranslucentBasePassUniformParameters, "TranslucentBasePass");
 
 /*@third party code - BEGIN TressFX*/
-IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXRectLightData, "TressFXRectLightInfo");
 IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FTressFXColorPassUniformParameters, "TressFXColorFillPass");
 /*@third party code - END TressFX*/
 
@@ -529,14 +528,12 @@ void CreateTressFXColorPassUniformBuffer(
 	const FViewInfo& View,
 	IPooledRenderTarget* ForwardScreenSpaceShadowMask,
 	TUniformBufferRef<FTressFXColorPassUniformParameters>& TFXColorPassUniformBuffer,
-	const FTressFXRectLightData& RectLightInfos,
 	uint32 KbufferNodePoolSize /*= 0*/
 )
 {
 	FSceneRenderTargets& SceneRenderTargets = FSceneRenderTargets::Get(RHICmdList);
 
 	FTressFXColorPassUniformParameters ColorPassParams;
-	ColorPassParams.RectLightData = RectLightInfos;
 	SetupSharedBasePassParameters(RHICmdList, View, SceneRenderTargets, ColorPassParams.Shared);
 
 	ColorPassParams.UseForwardScreenSpaceShadowMask = 1;

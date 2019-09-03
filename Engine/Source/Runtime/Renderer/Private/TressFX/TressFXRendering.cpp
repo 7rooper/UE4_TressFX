@@ -27,7 +27,6 @@
 #include "Engine/Public/TressFXPublicDef.h"
 #include "PostProcess/RenderingCompositionGraph.h"
 #include "PostProcess/PostProcessing.h"
-#include "RectLightSceneProxy.h"
 #include "PipelineStateCache.h"
 
 DEFINE_LOG_CATEGORY(TressFXRenderingLog);
@@ -1102,73 +1101,6 @@ void RenderShortcutBasePass(FRHICommandListImmediate& RHICmdList, TArray<FViewIn
 	}
 }
 
-FTressFXRectLightData GetRectLightInfos(const FScene* Scene, TArray<FVisibleLightInfo, SceneRenderingAllocator> VisibleLightInfos, const FViewInfo& View)
-{
-	/* 
-		This is a very "hacky" and non-optimal way to add rect light support in a forward-rendering type path. 
-		Proper support would have to modify the light grid culling shaders, which i am not sure I want to do.
-	*/
-
-	FTressFXRectLightData RectLightData;
-	// channel flag < 0 will indicate not rect light
-	RectLightData.RectLightShadowChannelFlags = FIntVector4(-1, -1, -1, -1);
-	if (View.Family->EngineShowFlags.RectLights) 
-	{
-		for (TSparseArray<FLightSceneInfoCompact>::TConstIterator LightIt(Scene->Lights); LightIt; ++LightIt)
-		{
-			const FLightSceneInfoCompact& LightSceneInfoCompact = *LightIt;
-			const FLightSceneInfo* const LightSceneInfo = LightSceneInfoCompact.LightSceneInfo;
-			const FVisibleLightInfo& VisibleLightInfo = VisibleLightInfos[LightSceneInfo->Id];
-			const FLightSceneProxy* LightProxy = LightSceneInfo->Proxy;
-			do
-			{
-				if (!(LightProxy->IsRectLight() && LightProxy->CastsTressFXDynamicShadow()))
-				{
-					break;
-				}
-				if (!LightSceneInfo->ShouldRenderLight(View))
-				{
-					break;
-				}
-				const int32 ShadowMapChannel = LightSceneInfo->GetDynamicShadowMapChannel();
-				if (ShadowMapChannel < 0 || ShadowMapChannel > 3)
-				{
-					break;
-				}
-
-				// we use the dynamic shadow map channel to look up whether its a rect light or not
-				// mark as rect light
-				RectLightData.RectLightShadowChannelFlags[ShadowMapChannel] = 1;
-
-				const FRectLightSceneProxy* RectProxy = (const FRectLightSceneProxy*)LightProxy;
-
-				FLightShaderParameters RectLightShaderParameters;
-				RectProxy->GetLightShaderParameters(RectLightShaderParameters);
-
-				RectLightData.RectLightInfos[ShadowMapChannel] = FVector4(
-					RectLightShaderParameters.RectLightBarnCosAngle,
-					RectLightShaderParameters.RectLightBarnLength,
-					-1, //  unused for now
-					-1 // unused for now
-				);
-			
-
-			} while (false);
-		}
-	}
-
-	//initialize to dummy values if not a rect light
-	for (int32 ChannelIndex = 0; ChannelIndex < 4; ChannelIndex++)
-	{
-		if (RectLightData.RectLightShadowChannelFlags[ChannelIndex] < 0)
-		{
-			RectLightData.RectLightInfos[ChannelIndex] = FVector4(-1.f, -1.f, -1.f, -1.f);
-		}
-	}
-	RectLightData.RectTextureDummy = GSystemTextures.WhiteDummy->GetRenderTargetItem().ShaderResourceTexture;
-	return RectLightData;
-}
-
 void RenderShortcutResolvePass(
 	FRHICommandListImmediate& RHICmdList, 
 	TArray<FViewInfo>& Views, 
@@ -1205,8 +1137,6 @@ void RenderShortcutResolvePass(
 			);
 		}
 
-		const FTressFXRectLightData RectLightInfo = GetRectLightInfos(Scene, VisibleLightInfos, View);
-
 		// shortcut pass 3, fill colors
 		{
 			SCOPED_DRAW_EVENT(RHICmdList, FillColors);
@@ -1224,7 +1154,6 @@ void RenderShortcutResolvePass(
 				, View
 				, ScreenShadowMaskTexture
 				, TFXColorPassUniformBuffer
-				, RectLightInfo
 			);
 			FMeshPassProcessorRenderState DrawRenderState(View, TFXColorPassUniformBuffer);
 			Scene->UniformBuffers.UpdateViewUniformBuffer(View);
@@ -1414,8 +1343,6 @@ void RenderKBufferResolvePasses(
 			RPInfo.DepthStencilRenderTarget.ExclusiveDepthStencil = FExclusiveDepthStencil::DepthWrite_StencilWrite;
 			RHICmdList.BeginRenderPass(RPInfo, TEXT("TressFXFillKBuffer"));
 
-			FTressFXRectLightData RectLightInfo = GetRectLightInfos(Scene, VisibleLightInfos, View);
-
 			TUniformBufferRef<FTressFXColorPassUniformParameters> TFXColorPassUniformBuffer;
 
 			CreateTressFXColorPassUniformBuffer(
@@ -1423,7 +1350,6 @@ void RenderKBufferResolvePasses(
 				View, 
 				ScreenShadowMaskTexture, 
 				TFXColorPassUniformBuffer, 
-				RectLightInfo,
 				TressFXKBufferNodePoolSize
 			);
 			FMeshPassProcessorRenderState DrawRenderState(View, TFXColorPassUniformBuffer);

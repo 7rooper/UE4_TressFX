@@ -1,8 +1,6 @@
 
 #define OpaqueBasePass TressFXColorFillPass
 
-#define TFXRectLightData TressFXColorFillPass.RectLightData
-
 #define USE_SOURCE_TEXTURE 0
 
 #include "Common.ush"
@@ -789,11 +787,6 @@ float3 GetTressFXDynamicLighting(
     return saturate(OutColor);
 }
 
-bool IsRectLight(int DynamicShadowMapChannel)
-{
-	return TFXRectLightData.RectLightShadowChannelFlags[DynamicShadowMapChannel] > 0;
-}
-
 int GetDynamicShadowChannel(float4 PreviewShadowMapChannelMask)
 {
     return dot(PreviewShadowMapChannelMask, float4(1.0f, 2.0f, 3.0f, 4.0f)) - 1;
@@ -833,7 +826,7 @@ float3 GetForwardDirectLightingTressFX(
 	uint LightingChannelMask = GetPrimitiveData(PrimitiveId).LightingChannelMask;
 
 	const FDirectionalLightData DirectionalLightData = GetDirectionalLightData(EyeIndex);
-	FRectTexture RectTexture = InitRectTexture(TFXRectLightData.RectTextureDummy);
+	FRectTexture RectTexture = InitRectTexture(ForwardLightData.DummyRectLightSourceTexture);
 
 	BRANCH
 	if (DirectionalLightData.HasDirectionalLight)
@@ -917,16 +910,14 @@ float3 GetForwardDirectLightingTressFX(
         LightData.Tangent = LocalLight.LightTangentAndSoftSourceRadius.xyz;
         LightData.SoftSourceRadius = LocalLight.LightTangentAndSoftSourceRadius.w;
 		LightData.bInverseSquared = LightData.FalloffExponent == 0;
+		LightData.RectLightBarnCosAngle = LocalLight.RectBarnDoor.x;
+		LightData.RectLightBarnLength = LocalLight.RectBarnDoor.y;
 		LightData.bRadialLight = true;
 		LightData.bSpotLight = LightData.SpotAngles.x > -2.0f;
 		LightData.SpecularScale = SpecularScale;
 
 		// LightType=bits[17:16], LightingChannelMask=[15:8], DynShadowMask=[7:4] ShadowMapChannelMask=[3:0]
 		uint LightTypeAndPackedShadowMapChannelMask = asuint(LocalLight.LightDirectionAndShadowMask.w);
-
-		// TODO: currently LightType is ignored and the code always sets 'LightData.bRectLight' to false (initialization)
-		//       but the light grid adds rect lights as well so this probably leads to artifacts.
-		uint LightType = LightTypeAndPackedShadowMapChannelMask >> 16;
 
 		LightData.ShadowedBits = (LightTypeAndPackedShadowMapChannelMask & 0xFF) != 0 ? 1 : 0;
 		// Static shadowing uses ShadowMapChannel, dynamic shadows are packed into light attenuation using PreviewShadowMapChannel
@@ -937,21 +928,10 @@ float3 GetForwardDirectLightingTressFX(
         
 		bool bSampleRectSourceTex = false;
 		#if MATERIAL_SHADINGMODEL_TRESSFX || MATERIAL_SHADINGMODEL_HAIR
-			int DynamicShadowChannel = GetDynamicShadowChannel(PreviewShadowMapChannelMask);
-			if (DynamicShadowChannel > -1)
-			{
-				LightData.bRectLight = IsRectLight(DynamicShadowChannel);
-			}
-			else
-			{
-				LightData.bRectLight = false;
-			}
 			#if SUPPORT_RECT_LIGHT
-				if (LightData.bRectLight)
-				{
-					LightData.RectLightBarnCosAngle = TFXRectLightData.RectLightInfos[DynamicShadowChannel].x;
-					LightData.RectLightBarnLength = TFXRectLightData.RectLightInfos[DynamicShadowChannel].y;
-				}
+				LightData.bRectLight = LightData.RectLightBarnLength > -2.0f;
+			#else
+				LightData.bRectLight = false;
 			#endif
 		#endif
 		#if MATERIAL_SHADINGMODEL_TRESSFX
@@ -1136,7 +1116,7 @@ void main(
 															);
 #else
         const float IndirectMultiplier = 2.f;
-        DiffuseColorForIndirect = IndirectMultiplier * PI * HairShading(GBuffer, L, V, N, 1, 0, 0.2, uint2(0, 0));
+        DiffuseColorForIndirect = IndirectMultiplier * PI * HairShading(GBuffer, L, V, N, 1, 0, 0.2, uint2(0, 0), true);
 #endif
     }
 
