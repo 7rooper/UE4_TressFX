@@ -485,6 +485,7 @@ void UTressFXComponent::RunSimulation()
 							break;
 						}
 						// i dont want to add custom properties to collision assets/bodies to mark as use for tressfx
+						// i would have to modify serialization and i dont want to do that.
 						// so just doing this for now
 						if (!Sphyl.GetName().ToString().EndsWith("tressfx", ESearchCase::CaseSensitive)) 
 						{

@@ -10,6 +10,8 @@
 #include "TressFXVertexFactory.h"
 #include "MaterialShared.h"
 #include "Materials/Material.h"
+#include "RayTracingDefinitions.h"
+#include "RayTracingInstance.h"
 
 #ifdef TRESSFX_STANDALONE_PLUGIN
 	#define TRESSFX_SHOW_FLAG StaticMeshes
@@ -349,6 +351,27 @@ bool FTressFXSceneProxy::WantsVelocityDraw()
 #endif
 }
 
+float GetLodRate(float MinLODRate, float LODCullingFactor, float LODScreenSizeThreshold, const FBoxSphereBounds ProxyBounds, const FSceneView * View)
+{
+	float LodRate = 1.0f;
+	//the transitions still arent as smooth as i would like
+	if (!FMath::IsNearlyZero(LODCullingFactor) && !FMath::IsNearlyEqual(MinLODRate, 1.0f))
+	{
+		const float ScreenRadiusSquared = ComputeBoundsScreenRadiusSquared(ProxyBounds.Origin, ProxyBounds.SphereRadius, *View);
+		if (ScreenRadiusSquared < LODScreenSizeThreshold)
+		{
+			if (ScreenRadiusSquared > 1.0f)
+			{
+				LodRate = FMath::Clamp(ScreenRadiusSquared / FMath::Max(LODCullingFactor, 1.0f), MinLODRate, 1.0f);
+			}
+			else
+			{
+				LodRate = MinLODRate;
+			}
+		}
+	}
+}
+
 void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, class FMeshElementCollector& Collector) const
 {
 
@@ -366,24 +389,7 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 		{
 			if (VisibilityMap & (1 << ViewIndex))
 			{
-				float LodRate = 1.0f;
-				//the transitions still arent as smooth as i would like
-				if (!FMath::IsNearlyZero(this->LODCullingFactor) && !FMath::IsNearlyEqual(this->MinLODRate, 1.0f))
-				{
-					const FBoxSphereBounds& ProxyBounds = GetBounds();
-					const float ScreenRadiusSquared = ComputeBoundsScreenRadiusSquared(ProxyBounds.Origin, ProxyBounds.SphereRadius, *View);
-					if (ScreenRadiusSquared < this->LODScreenSizeThreshold)
-					{
-						if (ScreenRadiusSquared > 1.0f)
-						{
-							LodRate = FMath::Clamp(ScreenRadiusSquared / FMath::Max(this->LODCullingFactor, 1.0f), this->MinLODRate, 1.0f);
-						}
-						else
-						{
-							LodRate = this->MinLODRate;
-						}
-					}
-				}
+				float LodRate = GetLodRate(MinLODRate, LODCullingFactor, LODScreenSizeThreshold, GetBounds(), View);
 
 				// Draw the mesh.
 				FMeshBatch& Mesh = Collector.AllocateMesh();
@@ -551,3 +557,66 @@ void FTressFXPosTanCollection::UnsetUAVs(FRHICommandList& RHICmdList, FRHIComput
 	RHICmdList.SetUAVParameter(Shader, 3, nullptr);
 	RHICmdList.SetUAVParameter(Shader, 4, nullptr);
 }
+
+
+#if RHI_RAYTRACING
+
+void FTressFXSceneProxy::GetDynamicRayTracingInstances(FRayTracingMaterialGatheringContext& Context, TArray<FRayTracingInstance>& OutRayTracingInstances)
+{
+	//copied and adapted from proceduralmeshcomponent, also see niagararenderersprites
+	if (true)
+	{
+		FMaterialRenderProxy* MaterialProxy = this->Material->GetRenderProxy();
+
+		if (MaterialProxy && RayTracingGeometry.RayTracingGeometryRHI.IsValid())
+		{
+			check(RayTracingGeometry.Initializer.PositionVertexBuffer.IsValid());
+			check(RayTracingGeometry.Initializer.IndexBuffer.IsValid());
+
+			FRayTracingInstance RayTracingInstance;
+			RayTracingInstance.Geometry = &RayTracingGeometry;
+			RayTracingInstance.InstanceTransforms.Add(GetLocalToWorld()); //JAKETODO, is this right?
+
+			FMeshBatch MeshBatch;
+#ifndef TRESSFX_STANDALONE_PLUGIN
+			MeshBatch.bTressFX = true;
+#endif
+			
+			//Mesh.bWireframe = bWireframe;
+			MeshBatch.VertexFactory = &VertexFactory;
+			MeshBatch.SegmentIndex = 0;
+			MeshBatch.MaterialRenderProxy = MaterialProxy;
+			MeshBatch.ReverseCulling = IsLocalToWorldDeterminantNegative();
+			MeshBatch.Type = PT_TriangleList;
+			MeshBatch.DepthPriorityGroup = SDPG_World;
+			MeshBatch.bCanApplyViewModeOverrides = false;
+
+			FMeshBatchElement& BatchElement = MeshBatch.Elements[0];
+			BatchElement.IndexBuffer = &TressFXHairObject->IndexBuffer;
+
+			FTressFXVertexFactoryUserDataWrapper& UserDataWrapper = Context.RayTracingMeshResourceCollector.AllocateOneFrameResource<FTressFXVertexFactoryUserDataWrapper>();
+			UserDataWrapper.Data.TressFXHairObject = TressFXHairObject;
+			UserDataWrapper.Data.InstanceRenderData = InstanceRenderData;
+			BatchElement.VertexFactoryUserData = &UserDataWrapper.Data;
+			FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = Context.RayTracingMeshResourceCollector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
+			DynamicPrimitiveUniformBuffer.Set(GetLocalToWorld(), GetLocalToWorld(), GetBounds(), GetLocalBounds(), true, false, false, false);
+			BatchElement.PrimitiveUniformBuffer = DynamicPrimitiveUniformBuffer.UniformBuffer.GetUniformBufferRHI();
+			
+			//JAKETODO
+			float LodRate = 1.f;// GetLodRate(MinLODRate, LODCullingFactor, LODScreenSizeThreshold, GetBounds(), View);
+
+			BatchElement.FirstIndex = 0;
+			BatchElement.NumPrimitives = (uint32)((TressFXHairObject->mtotalIndices / 3) * LodRate);
+			BatchElement.MinVertexIndex = 0;
+			BatchElement.MaxVertexIndex = InstanceRenderData->PosTanCollection.PositionsData.Num() - 1;
+
+			RayTracingInstance.Materials.Add(MeshBatch);
+
+			RayTracingInstance.BuildInstanceMaskAndFlags();
+			OutRayTracingInstances.Add(RayTracingInstance);
+		}
+	}
+	
+}
+
+#endif
