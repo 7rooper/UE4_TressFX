@@ -10,6 +10,9 @@
 #include "RHIResources.h"
 #include "../Private/SkeletalRenderGPUSkin.h"
 
+#ifndef TRESSFX_RAYTRACING
+	#define TRESSFX_RAYTRACING 1
+#endif
 class ITressFXSceneProxy : public FPrimitiveSceneProxy
 {
 public:

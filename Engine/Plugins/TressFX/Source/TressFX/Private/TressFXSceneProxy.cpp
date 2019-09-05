@@ -116,12 +116,20 @@ FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName 
 	BeginInitResource(&VertexFactory);
 	InstanceRenderData = nullptr;
 	TressFXHairObject = nullptr;
+
 }
 
 FTressFXSceneProxy::~FTressFXSceneProxy()
 {
 	TressFXHairObject = nullptr;
 	VertexFactory.ReleaseResource();
+#if TRESSFX_RAYTRACING && RHI_RAYTRACING
+	if (IsRayTracingEnabled())
+	{
+		RayTracingGeometry.ReleaseResource();
+		RayTracingDynamicVertexBuffer.Release();
+	}
+#endif
 
 }
 
@@ -167,6 +175,31 @@ void UploadGPUData(FRHIStructuredBuffer* Buffer, int32 ElementSize, int32 Elemen
 void FTressFXSceneProxy::CreateRenderThreadResources()
 {
 	SimulationFrame = 0;
+
+#if TRESSFX_RAYTRACING && RHI_RAYTRACING
+	if (IsRayTracingEnabled())
+	{
+		ENQUEUE_RENDER_COMMAND(InitTressFXRayTracingGeometry)(
+			[this](FRHICommandListImmediate& RHICmdList)
+		{
+			const int32 NumPosVerts = InstanceRenderData->PosTanCollection.PositionsData.Num();
+			RayTracingDynamicVertexBuffer.Initialize( sizeof(FVector4), NumPosVerts, PF_R32_FLOAT, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("TressFXRayTracingDynamicVertexBuffer"));
+			FRayTracingGeometryInitializer Initializer;
+			Initializer.PositionVertexBuffer = nullptr;
+			Initializer.IndexBuffer = nullptr;
+			Initializer.BaseVertexIndex = 0;
+			Initializer.VertexBufferStride = sizeof(FVector4);
+			Initializer.VertexBufferByteOffset = 0;
+			Initializer.TotalPrimitiveCount = 0;
+			Initializer.VertexBufferElementType = VET_Float4;
+			Initializer.GeometryType = RTGT_Triangles;
+			Initializer.bFastBuild = true;
+			Initializer.bAllowUpdate = false;
+			RayTracingGeometry.SetInitializer(Initializer);
+			RayTracingGeometry.InitResource();
+		});
+	}
+#endif
 }
 
 void FTressFXSceneProxy::OnTransformChanged()
@@ -313,7 +346,6 @@ void FTressFXSceneProxy::CopyMorphs(FRHICommandList& RHICmdList)
 		if (MorphPositionDeltaBuffer.NumBytes != VertexCount * sizeof(FVector))
 		{
 			MorphPositionDeltaBuffer.Initialize(sizeof(FVector), VertexCount);
-			//MorphNormalDeltaBuffer.Initialize(sizeof(FVector), VertexCount);
 		}
 
 		{
@@ -395,6 +427,9 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 				FMeshBatch& Mesh = Collector.AllocateMesh();
 #ifndef TRESSFX_STANDALONE_PLUGIN
 				Mesh.bTressFX = true;
+#endif
+#if TRESSFX_RAYTRACING && RHI_RAYTRACING
+				Mesh.CastRayTracedShadow = CastsDynamicShadow();
 #endif
 				FMeshBatchElement& BatchElement = Mesh.Elements[0];
 				BatchElement.IndexBuffer = &TressFXHairObject->IndexBuffer;
@@ -559,62 +594,16 @@ void FTressFXPosTanCollection::UnsetUAVs(FRHICommandList& RHICmdList, FRHIComput
 }
 
 
-#if 0 && RHI_RAYTRACING
+#if TRESSFX_RAYTRACING && RHI_RAYTRACING
 
 void FTressFXSceneProxy::GetDynamicRayTracingInstances(FRayTracingMaterialGatheringContext& Context, TArray<FRayTracingInstance>& OutRayTracingInstances)
 {
 	//copied and adapted from proceduralmeshcomponent, also see niagararenderersprites
-	if (true)
+	FMaterialRenderProxy* MaterialProxy = this->Material->GetRenderProxy();
+
+	if (MaterialProxy && RayTracingGeometry.RayTracingGeometryRHI.IsValid())
 	{
-		FMaterialRenderProxy* MaterialProxy = this->Material->GetRenderProxy();
-
-		if (MaterialProxy && RayTracingGeometry.RayTracingGeometryRHI.IsValid())
-		{
-			check(RayTracingGeometry.Initializer.PositionVertexBuffer.IsValid());
-			check(RayTracingGeometry.Initializer.IndexBuffer.IsValid());
-
-			FRayTracingInstance RayTracingInstance;
-			RayTracingInstance.Geometry = &RayTracingGeometry;
-			RayTracingInstance.InstanceTransforms.Add(GetLocalToWorld()); //JAKETODO, is this right?
-
-			FMeshBatch MeshBatch;
-#ifndef TRESSFX_STANDALONE_PLUGIN
-			MeshBatch.bTressFX = true;
-#endif
-			
-			//Mesh.bWireframe = bWireframe;
-			MeshBatch.VertexFactory = &VertexFactory;
-			MeshBatch.SegmentIndex = 0;
-			MeshBatch.MaterialRenderProxy = MaterialProxy;
-			MeshBatch.ReverseCulling = IsLocalToWorldDeterminantNegative();
-			MeshBatch.Type = PT_TriangleList;
-			MeshBatch.DepthPriorityGroup = SDPG_World;
-			MeshBatch.bCanApplyViewModeOverrides = false;
-
-			FMeshBatchElement& BatchElement = MeshBatch.Elements[0];
-			BatchElement.IndexBuffer = &TressFXHairObject->IndexBuffer;
-
-			FTressFXVertexFactoryUserDataWrapper& UserDataWrapper = Context.RayTracingMeshResourceCollector.AllocateOneFrameResource<FTressFXVertexFactoryUserDataWrapper>();
-			UserDataWrapper.Data.TressFXHairObject = TressFXHairObject;
-			UserDataWrapper.Data.InstanceRenderData = InstanceRenderData;
-			BatchElement.VertexFactoryUserData = &UserDataWrapper.Data;
-			FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = Context.RayTracingMeshResourceCollector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
-			DynamicPrimitiveUniformBuffer.Set(GetLocalToWorld(), GetLocalToWorld(), GetBounds(), GetLocalBounds(), true, false, false, false);
-			BatchElement.PrimitiveUniformBuffer = DynamicPrimitiveUniformBuffer.UniformBuffer.GetUniformBufferRHI();
-			
-			//JAKETODO
-			float LodRate = 1.f;// GetLodRate(MinLODRate, LODCullingFactor, LODScreenSizeThreshold, GetBounds(), View);
-
-			BatchElement.FirstIndex = 0;
-			BatchElement.NumPrimitives = (uint32)((TressFXHairObject->mtotalIndices / 3) * LodRate);
-			BatchElement.MinVertexIndex = 0;
-			BatchElement.MaxVertexIndex = InstanceRenderData->PosTanCollection.PositionsData.Num() - 1;
-
-			RayTracingInstance.Materials.Add(MeshBatch);
-
-			RayTracingInstance.BuildInstanceMaskAndFlags();
-			OutRayTracingInstances.Add(RayTracingInstance);
-		}
+		//see GetDynamicRayTracingInstances in NiagaraRendersprites.cpp	
 	}
 	
 }

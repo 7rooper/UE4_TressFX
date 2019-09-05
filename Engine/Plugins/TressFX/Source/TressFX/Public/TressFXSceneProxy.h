@@ -229,11 +229,12 @@ public:
 	FRWBufferStructured MorphPositionDeltaBuffer;
 	bool GetMorphTargetsEnabled() { return bEnableMorphTargets; }
 
-#if RHI_RAYTRACING && 0
+#if TRESSFX_RAYTRACING && RHI_RAYTRACING
 
 	virtual bool IsRayTracingRelevant() const override { return true; }
 	virtual void GetDynamicRayTracingInstances(FRayTracingMaterialGatheringContext& Context, TArray<FRayTracingInstance>& OutRayTracingInstances) override final;
 	FRayTracingGeometry RayTracingGeometry;
+	FRWBuffer RayTracingDynamicVertexBuffer;
 
 #endif // RHI_RAYTRACING
 
