@@ -10,7 +10,6 @@
 #include "TressFXVertexFactory.h"
 #include "MaterialShared.h"
 #include "Materials/Material.h"
-#include "RayTracingDefinitions.h"
 #include "RayTracingInstance.h"
 
 #ifdef TRESSFX_STANDALONE_PLUGIN
@@ -370,6 +369,7 @@ float GetLodRate(float MinLODRate, float LODCullingFactor, float LODScreenSizeTh
 			}
 		}
 	}
+	return LodRate;
 }
 
 void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, class FMeshElementCollector& Collector) const
@@ -559,7 +559,7 @@ void FTressFXPosTanCollection::UnsetUAVs(FRHICommandList& RHICmdList, FRHIComput
 }
 
 
-#if RHI_RAYTRACING
+#if 0 && RHI_RAYTRACING
 
 void FTressFXSceneProxy::GetDynamicRayTracingInstances(FRayTracingMaterialGatheringContext& Context, TArray<FRayTracingInstance>& OutRayTracingInstances)
 {

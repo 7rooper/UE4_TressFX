@@ -229,7 +229,7 @@ public:
 	FRWBufferStructured MorphPositionDeltaBuffer;
 	bool GetMorphTargetsEnabled() { return bEnableMorphTargets; }
 
-#if RHI_RAYTRACING
+#if RHI_RAYTRACING && 0
 
 	virtual bool IsRayTracingRelevant() const override { return true; }
 	virtual void GetDynamicRayTracingInstances(FRayTracingMaterialGatheringContext& Context, TArray<FRayTracingInstance>& OutRayTracingInstances) override final;

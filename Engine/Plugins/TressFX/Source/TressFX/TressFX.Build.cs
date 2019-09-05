@@ -8,6 +8,7 @@ public class TressFX : ModuleRules
 	public TressFX(ReadOnlyTargetRules Target) : base(Target)
 	{
         // Definitions.Add("TRESSFX_STANDALONE_PLUGIN=1");
+		PrivateIncludePaths.Add("../../../Shaders/Shared");
 
         //OptimizeCode = CodeOptimization.Never; //uncomment this when debugging
         bFasterWithoutUnity = true;
