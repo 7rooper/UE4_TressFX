@@ -223,7 +223,8 @@ private:
 		const FSceneViewFamily& ViewFamily,
 		FTressFXVertexFactoryUserDataWrapper& UserDataWrapper,
 		FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer,
-		FMeshBatch& OutMeshBatch
+		FMeshBatch& OutMeshBatch,
+		float &OutLodRate
 	) const;
 
 protected:

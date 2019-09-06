@@ -5,17 +5,26 @@ TressFX Hair for Unreal
 Overview
 ----------------------
 
-This Unreal Engine fork implements a **modified** version AMD's TressFX hair/fur rendering and simulation technology. TressFX uses the GPU to simulate and render high-quality, realistic hair and fur. TressFX makes use of the processing power of high-performance GPUs to do realistic rendering and utilizes compute shaders to physically simulate each individual strand of hair.
+This open source Unreal Engine fork implements a **modified** version AMD's [TressFX](https://github.com/GPUOpen-Effects/TressFX) hair/fur rendering and simulation technology into Unreal Engine. It uses the GPU to simulate and render hair and fur. TressFX makes use of the processing power of high-performance GPUs to do realistic rendering and utilizes compute shaders to physically simulate each individual strand of hair.
 
-Changes from AMDs original library include:
+We are opening the source to the community to get more people involved and help solve the remaining issues.
+
+### Current Features and Changes from AMDs [original library](https://github.com/GPUOpen-Effects/TressFX) include:
 - Support for up to 16 bone influences per hair
+- Morph target support
 - New [Maya And Blender exporters](https://github.com/kostenickj/TressFXExporter).
+
     Previously, boneskinning and hair assets were separate files upon exporting from Maya. We have combined them into a single file in json format for easier exporter debugging: .tfxjson. Upon import into the editor they are converted to binary. I consider the blender exporter "experimental", It hasn't been tested much yet. The Maya exporter should be production ready. Due to the changes in asset format, .tfx and .tfxbone binary files are not supported.
 - Platform agnostic (mostly) thanks to unreal's cross compiling
 
-    It should work on any platform that supports SM5 and above. This needs confirmation/testing as i only have access to test on windows.
+    It should work on any platform that supports SM5 and above. This needs confirmation/testing as I only have access to test on windows.
 
+- Two render modes which can be set on a per material basis: 
 
+    * Opaque: 
+        Opaque mode _should_ support all unreal engine features.
+    * Order Independent Transparency (OIT).
+        OIT mode supports most unreal engine features, but is currently limited to 4 dynamic lights (same as the forward renderer). Additionally, there are two OIT modes: Shortcut (recommended), and K-Buffer Linked List (experimental). The mode used can be set from a Console Variable. Information on how they each mode works can be found [here](https://gpuopen.com/tressfx-3-1/).
 
 ---
 

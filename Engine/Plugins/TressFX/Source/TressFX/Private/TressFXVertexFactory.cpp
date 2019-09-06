@@ -70,7 +70,7 @@ void FTressFXVertexFactoryShaderParameters::GetElementShaderBindings(
 
 FVertexFactoryShaderParameters* FTressFXVertexFactory::ConstructShaderParameters(EShaderFrequency ShaderFrequency)
 {
-	if (ShaderFrequency == SF_Vertex)
+	if (ShaderFrequency == SF_Vertex || ShaderFrequency == SF_Compute || ShaderFrequency == SF_RayHitGroup)
 	{
 		return new FTressFXVertexFactoryShaderParameters();
 	}
