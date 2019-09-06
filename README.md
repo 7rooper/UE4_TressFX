@@ -1,3 +1,24 @@
+TressFX Hair for Unreal
+=============
+
+
+Overview
+----------------------
+
+This Unreal Engine fork implements a **modified** version AMD's TressFX hair/fur rendering and simulation technology. TressFX uses the GPU to simulate and render high-quality, realistic hair and fur. TressFX makes use of the processing power of high-performance GPUs to do realistic rendering and utilizes compute shaders to physically simulate each individual strand of hair.
+
+Changes from AMDs original library include:
+- Support for up to 16 bone influences per hair
+- New [Maya And Blender exporters](https://github.com/kostenickj/TressFXExporter).
+    Previously, boneskinning and hair assets were separate files upon exporting from Maya. We have combined them into a single file in json format for easier exporter debugging: .tfxjson. Upon import into the editor they are converted to binary. I consider the blender exporter "experimental", It hasn't been tested much yet. The Maya exporter should be production ready. Due to the changes in asset format, .tfx and .tfxbone binary files are not supported.
+- Platform agnostic (mostly) thanks to unreal's cross compiling
+
+    It should work on any platform that supports SM5 and above. This needs confirmation/testing as i only have access to test on windows.
+
+
+
+---
+
 Unreal Engine
 =============
 

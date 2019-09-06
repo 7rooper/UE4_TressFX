@@ -218,6 +218,14 @@ private:
 
 	FMaterialRelevance MaterialRelevance;
 
+	void CreateMeshBatchForView(
+		const FSceneView* View,
+		const FSceneViewFamily& ViewFamily,
+		FTressFXVertexFactoryUserDataWrapper& UserDataWrapper,
+		FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer,
+		FMeshBatch& OutMeshBatch
+	) const;
+
 protected:
 
 	//** For morph targets*/

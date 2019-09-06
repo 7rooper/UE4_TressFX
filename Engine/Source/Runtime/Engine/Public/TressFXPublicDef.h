@@ -11,7 +11,7 @@
 #include "../Private/SkeletalRenderGPUSkin.h"
 
 #ifndef TRESSFX_RAYTRACING
-	#define TRESSFX_RAYTRACING 1
+	#define TRESSFX_RAYTRACING 0
 #endif
 class ITressFXSceneProxy : public FPrimitiveSceneProxy
 {

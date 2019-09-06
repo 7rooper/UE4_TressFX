@@ -404,6 +404,48 @@ float GetLodRate(float MinLODRate, float LODCullingFactor, float LODScreenSizeTh
 	return LodRate;
 }
 
+
+void FTressFXSceneProxy::CreateMeshBatchForView(
+	const FSceneView* View,	
+	const FSceneViewFamily& ViewFamily,	
+	FTressFXVertexFactoryUserDataWrapper& UserDataWrapper,
+	FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer,
+	FMeshBatch& OutMeshBatch) const
+{
+	FMaterialRenderProxy* MaterialProxy = Material->GetRenderProxy();
+	float LodRate = GetLodRate(MinLODRate, LODCullingFactor, LODScreenSizeThreshold, GetBounds(), View);
+
+	#ifndef TRESSFX_STANDALONE_PLUGIN
+		OutMeshBatch.bTressFX = true;
+	#endif
+	#if TRESSFX_RAYTRACING && RHI_RAYTRACING
+		OutMeshBatch.CastRayTracedShadow = CastsDynamicShadow();
+	#endif
+		FMeshBatchElement& BatchElement = OutMeshBatch.Elements[0];
+		BatchElement.IndexBuffer = &TressFXHairObject->IndexBuffer;
+		//Mesh.bWireframe = bWireframe;
+		OutMeshBatch.VertexFactory = &VertexFactory;
+		OutMeshBatch.MaterialRenderProxy = MaterialProxy;
+
+		UserDataWrapper.Data.TressFXHairObject = TressFXHairObject;
+		UserDataWrapper.Data.InstanceRenderData = InstanceRenderData;
+		BatchElement.VertexFactoryUserData = &UserDataWrapper.Data;
+		DynamicPrimitiveUniformBuffer.Set(GetLocalToWorld(), GetLocalToWorld(), GetBounds(), GetLocalBounds(), true, false, false, false);
+		BatchElement.PrimitiveUniformBuffer = DynamicPrimitiveUniformBuffer.UniformBuffer.GetUniformBufferRHI();
+
+		BatchElement.FirstIndex = 0;
+	#ifndef TRESSFX_STANDALONE_PLUGIN
+		BatchElement.NumIndices = TressFXHairObject->mtotalIndices;
+	#endif
+		BatchElement.NumPrimitives = (uint32)((TressFXHairObject->mtotalIndices / 3) * LodRate);
+		BatchElement.MinVertexIndex = 0;
+		BatchElement.MaxVertexIndex = InstanceRenderData->PosTanCollection.PositionsData.Num() - 1;
+		OutMeshBatch.ReverseCulling = IsLocalToWorldDeterminantNegative();
+		OutMeshBatch.Type = PT_TriangleList;
+		OutMeshBatch.DepthPriorityGroup = SDPG_World;
+		OutMeshBatch.bCanApplyViewModeOverrides = false;
+}
+
 void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, class FMeshElementCollector& Collector) const
 {
 
@@ -421,42 +463,11 @@ void FTressFXSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView *>
 		{
 			if (VisibilityMap & (1 << ViewIndex))
 			{
-				float LodRate = GetLodRate(MinLODRate, LODCullingFactor, LODScreenSizeThreshold, GetBounds(), View);
-
 				// Draw the mesh.
 				FMeshBatch& Mesh = Collector.AllocateMesh();
-#ifndef TRESSFX_STANDALONE_PLUGIN
-				Mesh.bTressFX = true;
-#endif
-#if TRESSFX_RAYTRACING && RHI_RAYTRACING
-				Mesh.CastRayTracedShadow = CastsDynamicShadow();
-#endif
-				FMeshBatchElement& BatchElement = Mesh.Elements[0];
-				BatchElement.IndexBuffer = &TressFXHairObject->IndexBuffer;
-				//Mesh.bWireframe = bWireframe;
-				Mesh.VertexFactory = &VertexFactory;
-				Mesh.MaterialRenderProxy = MaterialProxy;
-
 				FTressFXVertexFactoryUserDataWrapper& UserDataWrapper = Collector.AllocateOneFrameResource<FTressFXVertexFactoryUserDataWrapper>();
-				UserDataWrapper.Data.TressFXHairObject = TressFXHairObject;
-				UserDataWrapper.Data.InstanceRenderData = InstanceRenderData;
-				BatchElement.VertexFactoryUserData = &UserDataWrapper.Data;
 				FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = Collector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
-				//DynamicPrimitiveUniformBuffer.Set(GetLocalToWorld(), GetLocalToWorld(), GetBounds(), GetLocalBounds(), true, false, UseEditorDepthTest());
-				DynamicPrimitiveUniformBuffer.Set(GetLocalToWorld(), GetLocalToWorld(), GetBounds(), GetLocalBounds(), true, false, false,false);
-				BatchElement.PrimitiveUniformBuffer = DynamicPrimitiveUniformBuffer.UniformBuffer.GetUniformBufferRHI();
-
-				BatchElement.FirstIndex = 0;
-#ifndef TRESSFX_STANDALONE_PLUGIN
-				BatchElement.NumIndices = TressFXHairObject->mtotalIndices;
-#endif
-				BatchElement.NumPrimitives = (uint32) ( (TressFXHairObject->mtotalIndices / 3) * LodRate);
-				BatchElement.MinVertexIndex = 0;
-				BatchElement.MaxVertexIndex = InstanceRenderData->PosTanCollection.PositionsData.Num() - 1;
-				Mesh.ReverseCulling = IsLocalToWorldDeterminantNegative();
-				Mesh.Type = PT_TriangleList;
-				Mesh.DepthPriorityGroup = SDPG_World;
-				Mesh.bCanApplyViewModeOverrides = false;
+				CreateMeshBatchForView(View, ViewFamily, UserDataWrapper, DynamicPrimitiveUniformBuffer, Mesh);
 				Collector.AddMesh(ViewIndex, Mesh);
 			}
 
@@ -603,7 +614,14 @@ void FTressFXSceneProxy::GetDynamicRayTracingInstances(FRayTracingMaterialGather
 
 	if (MaterialProxy && RayTracingGeometry.RayTracingGeometryRHI.IsValid())
 	{
+		FRayTracingInstance RayTracingInstance;
+		RayTracingInstance.Geometry = &RayTracingGeometry;
+		RayTracingInstance.InstanceTransforms.Add(FMatrix::Identity);
+
 		//see GetDynamicRayTracingInstances in NiagaraRendersprites.cpp	
+		FMeshBatch MeshBatch;
+		//CreateMeshBatchForView(Context.ReferenceView, Context.ReferenceViewFamily, SceneProxy, DynamicDataSprites, IndirectArgsOffset, MeshBatch, CollectorResources);
+
 	}
 	
 }
