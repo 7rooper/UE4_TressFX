@@ -57,6 +57,18 @@ half3x3 VertexFactoryGetTangentToLocal(FVertexFactoryInput Input, FVertexFactory
     return Intermediates.TangentToLocal;
 }
 
+uint GetNumRayTracingDynamicMeshVerticesIndirect()
+{
+	return 0;
+}
+
+FVertexFactoryInput LoadVertexFactoryInput(uint TriangleIndex, int VertexIndex)
+{
+	FVertexFactoryInput Input;
+	Input.vertexId = 0; //i dont THINK this matters for our case.
+	return Input;
+}
+
 
 // @return previous translated world position
 float4 VertexFactoryGetPreviousWorldPosition(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates)
@@ -217,7 +229,7 @@ FMaterialVertexParameters GetMaterialVertexParameters(FVertexFactoryInput Input,
 
 float3 VertexFactoryGetWorldNormal(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates)
 {
-	//probably wrong
+	//is this right? JAKETODO
 	return Intermediates.TangentToWorld[2];
 }
 

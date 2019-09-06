@@ -636,7 +636,7 @@ void FTressFXSceneProxy::GetDynamicRayTracingInstances(FRayTracingMaterialGather
 			FRayTracingDynamicGeometryUpdateParams
 			{
 				RayTracingInstance.Materials,
-				false,
+				false,		// bUsingIndirectDraw
 				NumPosVerts, // num verts
 				NumPosVerts * (uint32)sizeof(FVector4), // vertex buffer size
 				(uint32)((TressFXHairObject->mtotalIndices / 3) * LodRate), // num triangles

@@ -13,7 +13,13 @@ static bool IsSupportedDynamicVertexFactoryType(const FVertexFactoryType* Vertex
 	return VertexFactoryType == FindVertexFactoryType(FName(TEXT("FNiagaraSpriteVertexFactory"), FNAME_Find))
 		|| VertexFactoryType == FindVertexFactoryType(FName(TEXT("FLandscapeVertexFactory"), FNAME_Find))
 		|| VertexFactoryType == FindVertexFactoryType(FName(TEXT("FLandscapeXYOffsetVertexFactory"), FNAME_Find))
-		|| VertexFactoryType == FindVertexFactoryType(FName(TEXT("FGPUSkinPassthroughVertexFactory"), FNAME_Find));
+		|| VertexFactoryType == FindVertexFactoryType(FName(TEXT("FGPUSkinPassthroughVertexFactory"), FNAME_Find))
+		/*@third party code - BEGIN TressFX*/
+#if TRESSFX_RAYTRACING
+		||  VertexFactoryType == FindVertexFactoryType(FName(TEXT("FTressFXVertexFactory"), FNAME_Find))
+#endif
+		/*@third party code - END TressFX*/
+		;
 }
 
 class FRayTracingDynamicGeometryConverterCS : public FMeshMaterialShader
