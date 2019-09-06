@@ -24,20 +24,20 @@ We are opening the source to the community to get more people involved and help 
 
     1. **Opaque**: Opaque mode _should_ support all unreal engine features.
     2. **Order Independent Transparency (OIT)**:
-        OIT mode supports most unreal engine features, but is currently limited to 4 dynamic lights (same as the forward renderer). Additionally, there are two OIT modes: Shortcut (recommended), and K-Buffer Linked List (experimental, performance heavy). The mode used can be set from a Console Variable. Information on how each mode works can be found [here](https://gpuopen.com/tressfx-3-1/).
+        OIT mode supports most Unreal Engine features, but is currently limited to 4 dynamic lights (same as the forward renderer). Additionally, there are two OIT modes: Shortcut (recommended), and K-Buffer Linked List (experimental, performance heavy). The mode used can be set from a Console Variable. Information on how each mode works can be found [here](https://gpuopen.com/tressfx-3-1/).
 
 - Velocity Rendering
-    - To support Temporal Anti Aliasing and more that unreal needs.
+    - To support Temporal Anti Aliasing and more that Unreal needs.
 	
 - Physics asset integration
 	- Capsule collision with up to 10 capsules can be used.
 	- Only capsules/sphyls are currently supported.
-	- Uses the same physics asset as the underlying mesh. To mark a capsule for tressfx collision, the name of the capsule must end with "tressfx". A bool flag will be added eventually.
+	- Uses the same physics asset as the underlying mesh. To mark a capsule for TressFX collision, the name of the capsule must end with "tressfx". A bool flag will be added eventually.
 
 Shading Models
 --------------------
 
-Currently, we recommending using UE4's built in hair shading model with TressFX. It has nearly full material editor integration and plays nicer with Unreal's systems. There is also an experimental TressFX shading model, ported from AMD's original sample that has _partial_ material editor integration, but many parameters can only be set from the TressFXComponent.
+Currently, we recommend using UE4's built in hair shading model with TressFX. It has nearly full material editor integration and plays nicer with Unreal's systems. There is also an experimental TressFX shading model, ported from AMD's original sample that has _partial_ material editor integration, but many parameters can only be set from the TressFXComponent.
 
 Console Variables
 ----------------------
