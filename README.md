@@ -9,23 +9,64 @@ This open source Unreal Engine fork implements a **modified** version AMD's [Tre
 
 We are opening the source to the community to get more people involved and help solve the remaining issues.
 
-### Current Features and Changes from AMDs [original library](https://github.com/GPUOpen-Effects/TressFX) include:
+### Current Features and Changes from AMDs [original library](https://github.com/GPUOpen-Effects/TressFX):
 - Support for up to 16 bone influences per hair
 - Morph target support
 - New [Maya And Blender exporters](https://github.com/kostenickj/TressFXExporter).
 
-    Previously, boneskinning and hair assets were separate files upon exporting from Maya. We have combined them into a single file in json format for easier exporter debugging: .tfxjson. Upon import into the editor they are converted to binary. I consider the blender exporter "experimental", It hasn't been tested much yet. The Maya exporter should be production ready. Due to the changes in asset format, .tfx and .tfxbone binary files are not supported.
+    * Previously, boneskinning and hair assets were separate files upon exporting from Maya. We have combined them into a single file in json format for easier exporter debugging: .tfxjson. Upon import into the editor they are converted to binary and saved as UAssets. I consider the blender exporter "beta", It hasn't been tested much yet. The Maya exporter should be production ready. Due to the changes in asset format, old .tfx and .tfxbone binary files are not supported.
 - Platform agnostic (mostly) thanks to unreal's cross compiling
 
-    It should work on any platform that supports SM5 and above. This needs confirmation/testing as I only have access to test on windows.
+    It should work on any platform that supports SM5 and above. However, this needs confirmation/testing as I only have access to test on windows.
 
-- Two render modes which can be set on a per material basis: 
+- Two render modes for hair which can be set on a per material basis: 
 
-    * Opaque: 
-        Opaque mode _should_ support all unreal engine features.
-    * Order Independent Transparency (OIT).
+    1. **Opaque**: Opaque mode _should_ support all unreal engine features.
+    2. **Order Independent Transparency (OIT)**:
         OIT mode supports most unreal engine features, but is currently limited to 4 dynamic lights (same as the forward renderer). Additionally, there are two OIT modes: Shortcut (recommended), and K-Buffer Linked List (experimental). The mode used can be set from a Console Variable. Information on how they each mode works can be found [here](https://gpuopen.com/tressfx-3-1/).
 
+- Velocity Rendering
+    - To support Temporal Anti Aliasing and more that unreal needs.
+
+Shading Models
+--------------------
+
+Currently, we recommending using UE4's built in hair shading model with TressFX. It has nearly full material editor integration and plays nicer with Unreal's systems. We also an experimental TressFX shading model, ported from AMD's original sample that has _partial_ material editor integration, but some parameters can only be set from the TressFXComponent.
+
+Console Variables
+----------------------
+todo
+
+Known Issues/Future Work
+----------------------
+- Dynamic Shadows technically "work" but improvement is needed.
+    - Hair can recieve shadow cast shadow onto the scene, but self shadow is not quite good enough yet. I plan on implementing Adaptive Volumetric Shadow Maps for self shadowing. See [here](https://github.com/kostenickj/UE4_TressFX/issues/22) also.
+- Raytracing Support, see [here](https://github.com/kostenickj/UE4_TressFX/issues/22).
+- Only 4 dynamic lights currently supported at once.
+
+
+Contributing
+----------------------
+Pull request are very welcome! There are are many things that can be improved and several features that are not fully implemented and we want help! See the [issues](https://github.com/kostenickj/UE4_TressFX/issues) on github for starters. 
+
+Bugs? Im counting on it. When you encounter bugs please open an [issue](https://github.com/kostenickj/UE4_TressFX/issues).
+
+join the TressFX for Unreal discord server to coordinate work and discuss ideas: https://discord.gg/aM5Ge5Y
+
+
+FAQ
+----------------------
+### Does this use the forward render?
+
+A: No. It uses some of the same systems and concepts as the Forward Renderer, but it is _not_ compatable with forward rendering. The lighting system is comparable to the "Transluceny Surface Forward Shading" lighting mode.
+
+
+### What about VR or instanced stereo?
+
+Untested, but I doubt it without changes. Its not something i personally plan on adding, but pull requests are certainly welcome :)
+
+---
+---
 ---
 
 Unreal Engine
