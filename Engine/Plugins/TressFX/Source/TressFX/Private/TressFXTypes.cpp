@@ -80,7 +80,7 @@ void FTressFXHairObject::UpdateTressFXData(FTressFXRuntimeData* InAssetData)
 	NumTotalVertice = AssetData->NumTotalVertices;
 	NumTotalStrands = AssetData->NumTotalStrands;
 	NumVerticePerStrand = AssetData->NumVerticesPerStrand;
-	mtotalIndices = AssetData->GetNumHairTriangleIndices();
+	TotalIndices = AssetData->GetNumHairTriangleIndices();
 	IndexBufferData = AssetData->TriangleIndices;
 }
 
@@ -115,7 +115,7 @@ void FTressFXHairObject::InitDynamicRHI()
 	UploadGPUData(BoneIndexDataBuffer.Buffer, sizeof(FTressFXBoneIndexData), NumTotalStrands, AssetData->BoneIndexDataArr.GetData());
 
 	IndexBuffer.Indices = IndexBufferData;
-	IndexBuffer.NumTotalIndices = mtotalIndices;
+	IndexBuffer.NumTotalIndices = TotalIndices;
 	IndexBuffer.InitResource();
 
 	HairTexCoords.Initialize(sizeof(FVector2D), NumTotalStrands, PF_Unknown);

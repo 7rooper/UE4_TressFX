@@ -186,7 +186,8 @@ public:
 		}
 	};
 
-	void UpdateDynamicData_RenderThread(const FDynamicRenderData& DynamicData);
+	void UpdateDynamicData_RenderThread(FDynamicRenderData* InDynamicData);
+	FDynamicRenderData* DynamicData;
 
 	void CopyMorphs(FRHICommandList& RHICmdList);
 
@@ -244,6 +245,7 @@ public:
 	virtual void GetDynamicRayTracingInstances(FRayTracingMaterialGatheringContext& Context, TArray<FRayTracingInstance>& OutRayTracingInstances) override final;
 	FRayTracingGeometry RayTracingGeometry;
 	FRWBuffer RayTracingDynamicVertexBuffer;
+	bool bRaytraceGeometryNeedsRecreate = false;
 
 #endif // RHI_RAYTRACING
 

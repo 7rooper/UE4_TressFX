@@ -579,7 +579,7 @@ void UTressFXComponent::RunSimulation()
 		ENQUEUE_RENDER_COMMAND(TRessFXSimulateCommand)(
 			[LocalTFXProxy, DynamicRenderData](FRHICommandListImmediate& RHICmdList)
 			{
-				LocalTFXProxy->UpdateDynamicData_RenderThread(*DynamicRenderData);
+				LocalTFXProxy->UpdateDynamicData_RenderThread(&DynamicRenderData.Get());
 				LocalTFXProxy->CopyMorphs(RHICmdList);
 				SimulateTressFX(RHICmdList, LocalTFXProxy, DynamicRenderData->TressFXSimulationSettings.LengthConstraintsIterations);
 			}

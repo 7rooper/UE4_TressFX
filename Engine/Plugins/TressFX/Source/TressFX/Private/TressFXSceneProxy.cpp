@@ -98,7 +98,7 @@ FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName 
 	TressFXHairObject = InHairObject;
 	bCastShadowAsTwoSided = true;
 	Material = TFXComponent->HairMaterial;
-
+	DynamicData = nullptr;
 
 #ifdef TRESSFX_STANDALONE_PLUGIN
 	if (!Material || !Material->CheckMaterialUsage_Concurrent(MATUSAGE_SkeletalMesh))
@@ -175,31 +175,6 @@ void UploadGPUData(FRHIStructuredBuffer* Buffer, int32 ElementSize, int32 Elemen
 void FTressFXSceneProxy::CreateRenderThreadResources()
 {
 	SimulationFrame = 0;
-
-#if TRESSFX_RAYTRACING && RHI_RAYTRACING
-	if (IsRayTracingEnabled())
-	{
-		ENQUEUE_RENDER_COMMAND(InitTressFXRayTracingGeometry)(
-			[this](FRHICommandListImmediate& RHICmdList)
-		{
-			const int32 NumPosVerts = TFXComponent->Asset->ImportData->Positions.Num();
-			RayTracingDynamicVertexBuffer.Initialize( sizeof(FVector4), NumPosVerts, PF_R32_FLOAT, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("TressFXRayTracingDynamicVertexBuffer"));
-			FRayTracingGeometryInitializer Initializer;
-			Initializer.PositionVertexBuffer = nullptr;
-			Initializer.IndexBuffer = nullptr;// TressFXHairObject->IndexBuffer.IndexBufferRHI;
-			Initializer.BaseVertexIndex = 0;
-			Initializer.VertexBufferStride = sizeof(FVector);
-			Initializer.VertexBufferByteOffset = 0;
-			Initializer.TotalPrimitiveCount = 0;
-			Initializer.VertexBufferElementType = VET_Float3;
-			Initializer.GeometryType = RTGT_Triangles;
-			Initializer.bFastBuild = true;
-			Initializer.bAllowUpdate = true;
-			RayTracingGeometry.SetInitializer(Initializer);
-			RayTracingGeometry.InitResource();
-		});
-	}
-#endif
 }
 
 void FTressFXSceneProxy::OnTransformChanged()
@@ -232,54 +207,64 @@ void FTressFXSceneProxy::UpdateMorphIndices_RenderThread(const TArray<int32>& Mo
 	RHIUnlockVertexBuffer(MorphIndexBuffer.Buffer);
 }
 
-void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData& DynamicData)
+void FTressFXSceneProxy::UpdateDynamicData_RenderThread(FDynamicRenderData* InDynamicData)
 {
-	this->TressFXHairObject = DynamicData.HairObject;
-	this->InstanceRenderData = DynamicData.InstanceRenderData;
-	this->SDFMeshResources = DynamicData.SDFMeshResources;
-	this->bEnableMorphTargets = DynamicData.bEnableMorphTargets;
-	LODCullingFactor = DynamicData.LODCullingFactor;
-	LODScreenSizeThreshold = DynamicData.LODScreenSizeThreshold;
-	MinLODRate = DynamicData.MinLODRate;
+#if TRESSFX_RAYTRACING && RHI_RAYTRACING
+	bRaytraceGeometryNeedsRecreate = (
+		DynamicData == nullptr /*||
+		(
+			DynamicData != nullptr && DynamicData-> != InDynamicData->LODIndex			
+		)*/
+	); // JAKETODO, other situations will need update too
+#endif
+
+	DynamicData = InDynamicData;
+	TressFXHairObject = DynamicData->HairObject;
+	InstanceRenderData = DynamicData->InstanceRenderData;
+	SDFMeshResources = DynamicData->SDFMeshResources;
+	bEnableMorphTargets = DynamicData->bEnableMorphTargets;
+	LODCullingFactor = DynamicData->LODCullingFactor;
+	LODScreenSizeThreshold = DynamicData->LODScreenSizeThreshold;
+	MinLODRate = DynamicData->MinLODRate;
 
 #ifdef TRESSFX_STANDALONE_PLUGIN
-	this->MorphVertexBuffer = nullptr;
-	this->MorphVertexUpdateFrameNumber = 0;
+	MorphVertexBuffer = nullptr;
+	MorphVertexUpdateFrameNumber = 0;
 #else
 	// Morph data. It's too early to update morph data here. It's not ready yet. Delay it just before simulation.
-	if (this->bEnableMorphTargets && DynamicData.ParentSkin != nullptr && DynamicData.ParentSkin->GetMorphVertexBuffer().bHasBeenUpdated)
+	if (bEnableMorphTargets && DynamicData->ParentSkin != nullptr && DynamicData->ParentSkin->GetMorphVertexBuffer().bHasBeenUpdated)
 	{
-		DynamicData.ParentSkin->GetMorphVertexBuffer().RequireSRV();
-		this->MorphVertexBuffer = DynamicData.ParentSkin->GetMorphVertexBuffer().GetSRV();
+		DynamicData->ParentSkin->GetMorphVertexBuffer().RequireSRV();
+		MorphVertexBuffer = DynamicData->ParentSkin->GetMorphVertexBuffer().GetSRV();
 	}
 	else
 	{
-		this->MorphVertexBuffer = nullptr;
+		MorphVertexBuffer = nullptr;
 	}
-	this->MorphVertexUpdateFrameNumber = GFrameNumberRenderThread;
+	MorphVertexUpdateFrameNumber = GFrameNumberRenderThread;
 #endif
 
-	this->MorphVertexUpdateFrameNumber = GFrameNumberRenderThread;
+	MorphVertexUpdateFrameNumber = GFrameNumberRenderThread;
 
 	//create new sim params, update with new settings
-	FTressFXSimParameters SimulationParams(TressFXHairObject->NumVerticePerStrand, DynamicData.NumFollowStrandsPerGuide);
-	SimulationParams.UpdateSimulationParameters(DynamicData.TressFXSimulationSettings, GFrameNumberRenderThread, DynamicData.HairObject);
+	FTressFXSimParameters SimulationParams(TressFXHairObject->NumVerticePerStrand, DynamicData->NumFollowStrandsPerGuide);
+	SimulationParams.UpdateSimulationParameters(DynamicData->TressFXSimulationSettings, GFrameNumberRenderThread, DynamicData->HairObject);
 	FTressFXSimParametersUniformBuffer SimParamsUniformBuffer = SimulationParams.GetBuffer();
-	SimParamsUniformBuffer.g_centerAndRadius0 = DynamicData.CollisionCapsuleCenterAndRadius0;
-	SimParamsUniformBuffer.g_centerAndRadius1 = DynamicData.CollisionCapsuleCenterAndRadius1;
-	SimParamsUniformBuffer.g_numCollisionCapsules = DynamicData.NumCollisionCapsules;
-	SimParamsUniformBuffer.BoneSkinningMatrix = DynamicData.BoneTransforms;
+	SimParamsUniformBuffer.g_centerAndRadius0 = DynamicData->CollisionCapsuleCenterAndRadius0;
+	SimParamsUniformBuffer.g_centerAndRadius1 = DynamicData->CollisionCapsuleCenterAndRadius1;
+	SimParamsUniformBuffer.g_numCollisionCapsules = DynamicData->NumCollisionCapsules;
+	SimParamsUniformBuffer.BoneSkinningMatrix = DynamicData->BoneTransforms;
 
 	//Shade Params
 	FTressFXShadeParametersUniformBuffer ShadeParametersUniformBuffer;
 
-	ShadeParametersUniformBuffer.g_FiberRadius = DynamicData.TressFXShadeSettings.FiberRadius;
-	ShadeParametersUniformBuffer.g_FiberSpacing = DynamicData.TressFXShadeSettings.FiberSpacing;
+	ShadeParametersUniformBuffer.g_FiberRadius = DynamicData->TressFXShadeSettings.FiberRadius;
+	ShadeParametersUniformBuffer.g_FiberSpacing = DynamicData->TressFXShadeSettings.FiberSpacing;
 	ShadeParametersUniformBuffer.g_NumVerticesPerStrand = TressFXHairObject->NumVerticePerStrand;
-	ShadeParametersUniformBuffer.g_ratio = DynamicData.TressFXShadeSettings.HairThickness;
-	ShadeParametersUniformBuffer.g_RootTangentBlending = DynamicData.TressFXShadeSettings.RootTangentBlending;
+	ShadeParametersUniformBuffer.g_ratio = DynamicData->TressFXShadeSettings.HairThickness;
+	ShadeParametersUniformBuffer.g_RootTangentBlending = DynamicData->TressFXShadeSettings.RootTangentBlending;
 
-	const FTressFXSpecularSettings SpecularSettings = DynamicData.TressFXShadeSettings.Specular;
+	const FTressFXSpecularSettings SpecularSettings = DynamicData->TressFXShadeSettings.Specular;
 	ShadeParametersUniformBuffer.TressFXSettings1 = FVector4
 	(
 		SpecularSettings.SpecularPrimaryScale,
@@ -289,8 +274,8 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 	);
 	ShadeParametersUniformBuffer.TressFXSettings2 = FVector4
 	(
-		DynamicData.TressFXShadeSettings.DiffuseBlend,
-		DynamicData.TressFXShadeSettings.SelfShadowStrength,
+		DynamicData->TressFXShadeSettings.DiffuseBlend,
+		DynamicData->TressFXShadeSettings.SelfShadowStrength,
 		0,
 		0
 	);
@@ -307,21 +292,47 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(const FDynamicRenderData
 
 	InstanceRenderData->SimParametersUniformBuffer = TUniformBufferRef<FTressFXSimParametersUniformBuffer>::CreateUniformBufferImmediate(SimParamsUniformBuffer, UniformBuffer_SingleFrame);
 	InstanceRenderData->ShadeParametersUniformBuffer = TUniformBufferRef<FTressFXShadeParametersUniformBuffer>::CreateUniformBufferImmediate(ShadeParametersUniformBuffer, UniformBuffer_SingleFrame);
-	CollisionType = DynamicData.CollisionType;
+	CollisionType = DynamicData->CollisionType;
 
-	if (CVarTFXSDFDisable.GetValueOnAnyThread() == 0 && CollisionType == ETressFXCollisionType::TFXCollsion_SDF && this->SDFMeshResources)
+	if (CVarTFXSDFDisable.GetValueOnAnyThread() == 0 && CollisionType == ETressFXCollisionType::TFXCollsion_SDF && SDFMeshResources)
 	{
 		FTressFXBoneSkinningUniformBuffer BoneSkinBuffer;
-		BoneSkinBuffer.BoneSkinningMatrix = DynamicData.BoneTransforms; 
-		BoneSkinBuffer.NumMeshVertices = DynamicData.SDFMeshResources->MeshData.Vertices.Num();
+		BoneSkinBuffer.BoneSkinningMatrix = DynamicData->BoneTransforms; 
+		BoneSkinBuffer.NumMeshVertices = DynamicData->SDFMeshResources->MeshData.Vertices.Num();
 		 InstanceRenderData->BoneSkinningUniformBuffer = TUniformBufferRef<FTressFXBoneSkinningUniformBuffer>::CreateUniformBufferImmediate(BoneSkinBuffer, UniformBuffer_SingleFrame);
 
 		//SDF Uniform Buffer
-		FTressFXSDFUniformBuffer SDFUniformBuffer = this->SDFMeshResources->GetConstantBuffer(TressFXHairObject);
+		FTressFXSDFUniformBuffer SDFUniformBuffer = SDFMeshResources->GetConstantBuffer(TressFXHairObject);
 		InstanceRenderData->SDFUniformBuffer = TUniformBufferRef<FTressFXSDFUniformBuffer>::CreateUniformBufferImmediate(SDFUniformBuffer, UniformBuffer_SingleFrame);
 	}
 
-	Material = DynamicData.HairMaterial;
+	Material = DynamicData->HairMaterial;
+
+#if TRESSFX_RAYTRACING && RHI_RAYTRACING
+
+	if (IsRayTracingEnabled() && bRaytraceGeometryNeedsRecreate)
+	{
+		ENQUEUE_RENDER_COMMAND(InitTressFXRayTracingGeometry)(
+			[this](FRHICommandListImmediate& RHICmdList)
+		{
+			const int32 NumPosVerts = TFXComponent->Asset->ImportData->Positions.Num();
+			RayTracingDynamicVertexBuffer.Initialize(sizeof(FVector), NumPosVerts, PF_R32_FLOAT, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("TressFXRayTracingDynamicVertexBuffer"));
+			FRayTracingGeometryInitializer Initializer;
+			Initializer.PositionVertexBuffer = nullptr;// RayTracingDynamicVertexBuffer.Buffer;
+			Initializer.IndexBuffer = TressFXHairObject->IndexBuffer.IndexBufferRHI;
+			Initializer.BaseVertexIndex = 0;
+			Initializer.VertexBufferStride = sizeof(FVector);
+			Initializer.VertexBufferByteOffset = 0;
+			Initializer.TotalPrimitiveCount = (uint32)((TressFXHairObject->TotalIndices / 3));
+			Initializer.VertexBufferElementType = VET_Float3;
+			Initializer.GeometryType = RTGT_Triangles;
+			Initializer.bFastBuild = true;
+			Initializer.bAllowUpdate = true;
+			RayTracingGeometry.SetInitializer(Initializer);
+			RayTracingGeometry.InitResource();
+		});
+	}
+#endif
 
 	if (!bInitialized)
 	{
@@ -425,7 +436,6 @@ void FTressFXSceneProxy::CreateMeshBatchForView(
 	#endif
 		FMeshBatchElement& BatchElement = OutMeshBatch.Elements[0];
 		BatchElement.IndexBuffer = &TressFXHairObject->IndexBuffer;
-		//Mesh.bWireframe = bWireframe;
 		OutMeshBatch.VertexFactory = &VertexFactory;
 		OutMeshBatch.MaterialRenderProxy = MaterialProxy;
 
@@ -437,11 +447,11 @@ void FTressFXSceneProxy::CreateMeshBatchForView(
 
 		BatchElement.FirstIndex = 0;
 	#ifndef TRESSFX_STANDALONE_PLUGIN
-		BatchElement.NumIndices = TressFXHairObject->mtotalIndices;
+		BatchElement.NumIndices = TressFXHairObject->TotalIndices;
 	#endif
-		BatchElement.NumPrimitives = (uint32)((TressFXHairObject->mtotalIndices / 3) * LodRate);
+		BatchElement.NumPrimitives = (uint32)((TressFXHairObject->TotalIndices / 3) * LodRate);
 		BatchElement.MinVertexIndex = 0;
-		BatchElement.MaxVertexIndex = InstanceRenderData->PosTanCollection.PositionsData.Num() - 1;
+		BatchElement.MaxVertexIndex = TressFXHairObject->NumTotalVertice - 1;
 		OutMeshBatch.ReverseCulling = IsLocalToWorldDeterminantNegative();
 		OutMeshBatch.Type = PT_TriangleList;
 		OutMeshBatch.DepthPriorityGroup = SDPG_World;
@@ -531,14 +541,14 @@ void FTressFXSimParameters::SetWind(const FVector& WindDir, const float WindMagn
 
 	FVector WindDirNomalized = FVector(WindDir);
 	WindDirNomalized.Normalize();
-	this->Wind = WindDirNomalized;
-	this->Wind *= Magnitude;
+	Wind = WindDirNomalized;
+	Wind *= Magnitude;
 
 	static const FRotator WindRotator = FRotator(0, -180, 0);
 	FVector FinalWind = FVector(Wind.X, Wind.Y, Wind.Z);
 	FinalWind = WindRotator.RotateVector(FinalWind);
 	FinalWind.Z *= -1.f;
-	this->Wind = FVector4(FinalWind, this->Wind.W);
+	Wind = FVector4(FinalWind, Wind.W);
 }
 
 // NOTE: collision and bones etc need to be set by whatever calls this function!
@@ -614,14 +624,14 @@ void FTressFXSceneProxy::GetDynamicRayTracingInstances(FRayTracingMaterialGather
 {
 	//copied and adapted from proceduralmeshcomponent, also see niagararenderersprites
 	//see GetDynamicRayTracingInstances in NiagaraRendersprites.cpp	
-	FMaterialRenderProxy* MaterialProxy = this->Material->GetRenderProxy();
+	FMaterialRenderProxy* MaterialProxy = Material->GetRenderProxy();
 
 	if (MaterialProxy && TressFXHairObject/* && RayTracingGeometry.RayTracingGeometryRHI.IsValid()*/)
 	{
 		FRayTracingInstance RayTracingInstance;
 		RayTracingInstance.Geometry = &RayTracingGeometry;
-		RayTracingInstance.InstanceTransforms.Add(FMatrix::Identity);
-
+		//RayTracingInstance.InstanceTransforms.Add(FMatrix::Identity);
+		RayTracingInstance.InstanceTransforms.Add(GetLocalToWorld());
 		
 		FMeshBatch MeshBatch;
 		FTressFXVertexFactoryUserDataWrapper& UserDataWrapper = Context.RayTracingMeshResourceCollector.AllocateOneFrameResource<FTressFXVertexFactoryUserDataWrapper>();
@@ -631,7 +641,6 @@ void FTressFXSceneProxy::GetDynamicRayTracingInstances(FRayTracingMaterialGather
 		RayTracingInstance.Materials.Add(MeshBatch);
 
 		const uint32 NumPosVerts = InstanceRenderData->NumTotalVertice;
-
 		Context.DynamicRayTracingGeometriesToUpdate.Add(
 			FRayTracingDynamicGeometryUpdateParams
 			{
@@ -639,7 +648,7 @@ void FTressFXSceneProxy::GetDynamicRayTracingInstances(FRayTracingMaterialGather
 				false,		// bUsingIndirectDraw
 				NumPosVerts, // num verts
 				NumPosVerts * (uint32)sizeof(FVector), // vertex buffer size
-				(uint32)((TressFXHairObject->mtotalIndices / 3) * LodRate), // num triangles
+				(uint32)((TressFXHairObject->TotalIndices / 3) * LodRate), // num triangles
 				&RayTracingGeometry,
 				&RayTracingDynamicVertexBuffer
 			}

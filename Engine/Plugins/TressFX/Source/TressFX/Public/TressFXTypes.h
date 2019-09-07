@@ -374,7 +374,7 @@ public:
 	FReadStructedBuffer BoneIndexDataBuffer;
 
 	FTressFXIndexBuffer					IndexBuffer;
-	uint32								mtotalIndices;
+	uint32								TotalIndices;
 	ETressFXCollisionType				CollisionType;
 
 	TArray<int32>						IndexBufferData;
