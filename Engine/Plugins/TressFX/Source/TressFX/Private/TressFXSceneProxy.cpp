@@ -188,10 +188,10 @@ void FTressFXSceneProxy::CreateRenderThreadResources()
 			Initializer.PositionVertexBuffer = nullptr;
 			Initializer.IndexBuffer = nullptr;// TressFXHairObject->IndexBuffer.IndexBufferRHI;
 			Initializer.BaseVertexIndex = 0;
-			Initializer.VertexBufferStride = sizeof(FVector4);
+			Initializer.VertexBufferStride = sizeof(FVector);
 			Initializer.VertexBufferByteOffset = 0;
 			Initializer.TotalPrimitiveCount = 0;
-			Initializer.VertexBufferElementType = VET_Float4;
+			Initializer.VertexBufferElementType = VET_Float3;
 			Initializer.GeometryType = RTGT_Triangles;
 			Initializer.bFastBuild = true;
 			Initializer.bAllowUpdate = true;
@@ -638,7 +638,7 @@ void FTressFXSceneProxy::GetDynamicRayTracingInstances(FRayTracingMaterialGather
 				RayTracingInstance.Materials,
 				false,		// bUsingIndirectDraw
 				NumPosVerts, // num verts
-				NumPosVerts * (uint32)sizeof(FVector4), // vertex buffer size
+				NumPosVerts * (uint32)sizeof(FVector), // vertex buffer size
 				(uint32)((TressFXHairObject->mtotalIndices / 3) * LodRate), // num triangles
 				&RayTracingGeometry,
 				&RayTracingDynamicVertexBuffer
