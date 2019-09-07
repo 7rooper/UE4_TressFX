@@ -55,7 +55,7 @@ Known Issues/Future Work
 
 Want to help?
 ----------------------
-Please do! Pull request are very welcome! There are are many things that can be improved and several features that are not fully implemented and we want help! See the [issues](https://github.com/kostenickj/UE4_TressFX/issues) on github for starters. 
+Please do! Pull request are very welcome. There are are many things that can be improved and several features that are not fully implemented and we want your help! See the [issues](https://github.com/kostenickj/UE4_TressFX/issues) on github for starters. Feel free to open new issues as well.
 
 Please follow the Unreal Engine [Coding standards](https://docs.unrealengine.com/en-US/Programming/Development/CodingStandard/index.html).
 
@@ -65,7 +65,7 @@ Bugs? Yes. When you encounter bugs please open an [issue](https://github.com/kos
 
 Branches
 ----------------------
-Branches that end with "Main" are generally the stable branches: We try not to push anything there that will crash. Example: 423TFXMain.
+Branches that end with "Main" are generally the stable branches, and there is usually one "Main" branch per engine release. We try not to push anything there that will crash. Example: 423TFXMain.
 
 The main dev branch is \<engine version>Dev. We stage changes here from individual author branches for testing before merging them to Main. Make pull requests against this branch please.
 
@@ -79,7 +79,7 @@ No. It uses some of the same systems and concepts as the Forward Renderer, but i
 
 ### What about VR or instanced stereo?
 
-Untested, but I probably will not work without changes. Its not something i personally plan on adding, but pull requests are certainly welcome :)
+Probably will _not_ work without changes. Its not something I personally plan on adding, but pull requests are certainly welcome :)
 
 ### Raytracing?
 
