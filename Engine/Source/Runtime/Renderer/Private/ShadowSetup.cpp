@@ -4074,11 +4074,17 @@ void FSceneRenderer::InitDynamicShadows(FRHICommandListImmediate& RHICmdList, FG
 	const bool bMobile = FeatureLevel < ERHIFeatureLevel::SM4;
 
 	bool bStaticSceneOnly = false;
+	/*@third party code - BEGIN TressFX*/
+	bool bSceneHasTressFX = false;
+	/*@third party code - END TressFX*/
 
 	for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
 	{
 		FViewInfo& View = Views[ViewIndex];
 		bStaticSceneOnly = bStaticSceneOnly || View.bStaticSceneOnly;
+		/*@third party code - BEGIN TressFX*/
+		bSceneHasTressFX |= (View.bHasTranslucentTressFX || View.bHasOpaqueTressFX);
+		/*@third party code - END TressFX*/
 	}
 
 	const bool bProjectEnablePointLightShadows = Scene->ReadOnlyCVARCache.bEnablePointLightShadows;
@@ -4103,7 +4109,22 @@ void FSceneRenderer::InitDynamicShadows(FRHICommandListImmediate& RHICmdList, FG
 
 			const FLightOcclusionType OcclusionType = GetLightOcclusionType(LightSceneInfoCompact);
 			if (OcclusionType != FLightOcclusionType::Shadowmap)
+				/*@third party code - BEGIN TressFX*/
+				// tressfx geometry cant use raytracing, so force shadow maps for now
+				//continue;
+#if RHI_RAYTRACING
+				if (IsRayTracingEnabled()) 
+				{
+					if (!bSceneHasTressFX) continue;
+				}
+				else 
+				{
+					continue;
+				}
+#else
 				continue;
+#endif
+				/*@third party code - END TressFX*/
 
 			// Only consider lights that may have shadows.
 			if ((LightSceneInfoCompact.bCastStaticShadow || LightSceneInfoCompact.bCastDynamicShadow) && GetShadowQuality() > 0)

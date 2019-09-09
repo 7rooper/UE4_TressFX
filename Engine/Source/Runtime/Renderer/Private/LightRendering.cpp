@@ -734,7 +734,7 @@ void FDeferredShadingSceneRenderer::GatherAndSortLights(FSortedLightSetSceneInfo
 }
 
 
-
+#pragma optimize("",off)
 /** Renders the scene's lighting. */
 void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICmdList, FSortedLightSetSceneInfo &SortedLightSet
 	/*@third party code - BEGIN TressFX*/
@@ -998,6 +998,10 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 				FString LightNameWithLevel;
 				GetLightNameForDrawEvent(LightSceneInfo.Proxy, LightNameWithLevel);
 				SCOPED_DRAW_EVENTF(RHICmdList, EventLightPass, *LightNameWithLevel);
+				
+				/*@third party code - BEGIN TressFX*/
+				bool bRenderedForcedShadowMapsForTressFX = false;
+				/*@third party code - END TressFX*/
 
 				if (bDrawShadows)
 				{
@@ -1175,7 +1179,6 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 							GraphBuilder.Execute();
 						}
 					} // end inline batched raytraced shadow
-
 					if (RHI_RAYTRACING && PreprocessedShadowMaskTextures.Num() > 0 && PreprocessedShadowMaskTextures[LightIndex - AttenuationLightStart])
 					{
 						ScreenShadowMaskTexture = PreprocessedShadowMaskTextures[LightIndex - AttenuationLightStart];
@@ -1249,6 +1252,10 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 					}
 					else // (OcclusionType == FOcclusionType::Shadowmap)
 					{
+/*@third party code - BEGIN TressFX*/
+ForceShadowMapForTressFX:
+/*@third party code - END TressFX*/
+						bRenderedForcedShadowMapsForTressFX = true;
 						for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
 						{
 							const FViewInfo& View = Views[ViewIndex];
@@ -1264,15 +1271,33 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 						FRHIRenderPassInfo RPInfo;
 						if (bSceneHasTressFX && LightIndex == AttenuationLightStart)
 						{
-							FRHITexture* ColorRTs[] =
+							if (RHI_RAYTRACING && IsRayTracingEnabled()) 
 							{
-								ScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture,
-								TressFXScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture
-							};
-							RPInfo = FRHIRenderPassInfo(2, ColorRTs, ERenderTargetActions::Load_Store);
-							if (bClearToWhite)
+								//only clear the tressfx target
+								FRHITexture* ColorRTs[] =
+								{
+									TressFXScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture
+								};
+								RPInfo = FRHIRenderPassInfo(1, ColorRTs, ERenderTargetActions::Load_Store);
+
+								if (bClearToWhite)
+								{
+									RPInfo.ColorRenderTargets[0].Action = ERenderTargetActions::Clear_Store;
+								}
+							}
+							else
 							{
-								RPInfo.ColorRenderTargets[1].Action = ERenderTargetActions::Clear_Store;
+								FRHITexture* ColorRTs[] =
+								{
+									ScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture,
+									TressFXScreenShadowMaskTexture->GetRenderTargetItem().TargetableTexture
+								};
+								RPInfo = FRHIRenderPassInfo(2, ColorRTs, ERenderTargetActions::Load_Store);
+
+								if (bClearToWhite)
+								{
+									RPInfo.ColorRenderTargets[1].Action = ERenderTargetActions::Clear_Store;
+								}
 							}
 						}
 						else
@@ -1311,8 +1336,15 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 									/*@third party code - BEGIN TressFX*/
 									if (bSceneHasTressFX)
 									{
-										FLinearColor Colors[] = { FLinearColor(1, 1, 1, 1), FLinearColor(1, 1, 1, 1) };
-										DrawClearQuadMRT(RHICmdList, true, 2, Colors, false, 0, false, 0);
+										if (RHI_RAYTRACING && IsRayTracingEnabled())
+										{
+											DrawClearQuad(RHICmdList, true, FLinearColor(1, 1, 1, 1), false, 0, false, 0);
+										}
+										else 
+										{
+											FLinearColor Colors[] = { FLinearColor(1, 1, 1, 1), FLinearColor(1, 1, 1, 1) };
+											DrawClearQuadMRT(RHICmdList, true, 2, Colors, false, 0, false, 0);
+										}	
 									}
 									else
 									{
@@ -1335,6 +1367,15 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 
 					bUsedShadowMaskTexture = true;
 				}
+				/*@third party code - BEGIN TressFX*/
+#if RHI_RAYTRACING
+				if (IsRayTracingEnabled() && bSceneHasTressFX && !bRenderedForcedShadowMapsForTressFX)
+				{
+					goto ForceShadowMapForTressFX;
+				}
+#endif
+				/*@third party code - END TressFX*/
+
 
 				for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
 				{
@@ -1409,7 +1450,7 @@ void FDeferredShadingSceneRenderer::RenderLights(FRHICommandListImmediate& RHICm
 		}
 	}
 }
-
+#pragma optimize("",on)
 void FDeferredShadingSceneRenderer::RenderLightArrayForOverlapViewmode(FRHICommandListImmediate& RHICmdList, const TSparseArray<FLightSceneInfoCompact>& LightArray)
 {
 	for (TSparseArray<FLightSceneInfoCompact>::TConstIterator LightIt(LightArray); LightIt; ++LightIt)
