@@ -45,7 +45,7 @@ FAutoConsoleVariableRef CVarTressFXUseComputeResolves(
 
 int32 GBTressRenderInEditorPreview = 1;
 FAutoConsoleVariableRef CVarTressRenderInEditorPreview(
-	TEXT("tfx.PreferCompute"),
+	TEXT("tfx.RenderInPreview"),
 	GBTressRenderInEditorPreview,
 	TEXT("1: (default) Render Hair in Editor Preview worlds Blueprint editor for example. \n")
 	TEXT("0: Dont do that."),
