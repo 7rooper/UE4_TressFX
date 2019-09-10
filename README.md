@@ -9,7 +9,7 @@ This open source Unreal Engine fork implements a **modified** version AMD's [Tre
 
 We are opening the source to the community to get more people involved and help solve the remaining issues.
 
-### Current Features and Changes from AMDs [original library](https://github.com/GPUOpen-Effects/TressFX):
+### Current Feature List/Changes from AMDs [original library](https://github.com/GPUOpen-Effects/TressFX):
 - Support for up to 16 bone influences per hair
 - Morph target support
 - New [exporters for Maya and Blender](https://github.com/kostenickj/TressFXExporter)
@@ -37,13 +37,30 @@ We are opening the source to the community to get more people involved and help 
 Shading Models
 --------------------
 
-Currently, we recommend using UE4's built in hair shading model with TressFX. It has nearly full material editor integration and plays nicer with Unreal's systems. There is also an experimental TressFX shading model, ported from AMD's original sample that has _partial_ material editor integration, but many parameters can only be set from the TressFXComponent.
+Currently, we recommend using UE4's built in hair shading model with TressFX. It has nearly full material editor integration and plays nicer with Unreal's systems. There is also an experimental TressFX shading model, ported from AMD's original sample that has _partial_ material editor integration, but many parameters for this shading model can only be set from the TressFXComponent.
 
 Console Variables
 ----------------------
 All console variables related to TressFX follow the pattern tfx.*
+There are more than what is listed here but they are mainly for dev/debugging purposes.
 
-todo
+- tfx.MorphTargets 
+    - Globally disable morph target calculation during the simulation for all hairs
+- tfx.EnableSimulation
+    - Globally Enable or disable TressFX Simulation. This simulation can also be diabled per component.
+- tfx.PreferCompute
+    - 1: (default) Use compute shaders for resolve passes, if supported.
+    - 0: Use full screen pixel shaders for resolve passes
+- tfx.RenderInPreview
+    - 1: (default) Render Hair in Editor Preview worlds Blueprint editor for example.
+    - 0: Dont do that.
+- tfx.MinAlphaForSceneDepth (float)
+    - The sets minimum alpha value for hair to be written to scene depth and considered for shadows. This only affects shortcut rendering. Note that shadows cast by hair onto the scene dont take hair opacity into account. The default is .05.
+- tfx.OITMode - controls the order independent transparency method when OIT is selected in the material
+    - 0: ShortCut (default)
+    - 1: KBuffer (Experimental/buggy, not recommended)
+- tfx.KBuffer.Size - Size of OIT K-Buffer if using the k-buffer path
+    - default is 8. Max is 16
 
 Known Issues/Future Work
 ----------------------
@@ -69,6 +86,15 @@ Branches that end with "Main" are generally the stable branches, and there is us
 
 The main dev branch is \<engine version>Dev. We stage changes here from individual author branches for testing before merging them to Main. Make pull requests against this branch please.
 
+The Code
+----------------------
+All code modifications of the Unreal Engine source are styled as follows:
+        
+        /*@third party code - BEGIN TressFX*/
+        ...tressfx code
+        /*@third party code - END TressFX*/
+
+If the code is in its own file, this is ommitted.
 
 FAQ
 ----------------------
@@ -79,7 +105,7 @@ No. It uses some of the same systems and concepts as the Forward Renderer, but i
 
 ### What about VR or instanced stereo?
 
-Probably will _not_ work without changes. Its not something I personally plan on adding, but pull requests are certainly welcome :)
+Those Probably will _not_ work without changes. Its not something I personally plan on adding, but pull requests are certainly welcome :)
 
 ### Raytracing?
 
