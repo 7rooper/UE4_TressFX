@@ -1371,7 +1371,13 @@ ForceShadowMapForTressFX:
 #if RHI_RAYTRACING
 				if (IsRayTracingEnabled() && bSceneHasTressFX && !bRenderedForcedShadowMapsForTressFX)
 				{
-					goto ForceShadowMapForTressFX;
+					static IConsoleVariable* CVarTressFXForceShadowMap = IConsoleManager::Get().FindConsoleVariable(TEXT("tfx.ForceShadowMappingDuringRaytracing"));
+					check(CVarTressFXForceShadowMap);
+					const bool bForceShadowMapping = CVarTressFXForceShadowMap->GetInt() != 0;
+					if (bForceShadowMapping)
+					{
+						goto ForceShadowMapForTressFX;
+					}
 				}
 #endif
 				/*@third party code - END TressFX*/

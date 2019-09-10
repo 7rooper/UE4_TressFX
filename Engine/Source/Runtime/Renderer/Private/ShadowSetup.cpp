@@ -4110,12 +4110,15 @@ void FSceneRenderer::InitDynamicShadows(FRHICommandListImmediate& RHICmdList, FG
 			const FLightOcclusionType OcclusionType = GetLightOcclusionType(LightSceneInfoCompact);
 			if (OcclusionType != FLightOcclusionType::Shadowmap)
 				/*@third party code - BEGIN TressFX*/
-				// tressfx geometry cant use raytracing, so force shadow maps for now
+				// tressfx geometry cant use raytracing, so force shadowif cvar is set
 				//continue;
 #if RHI_RAYTRACING
 				if (IsRayTracingEnabled()) 
 				{
-					if (!bSceneHasTressFX) continue;
+					static IConsoleVariable* CVarTressFXForceShadowMap = IConsoleManager::Get().FindConsoleVariable(TEXT("tfx.ForceShadowMappingDuringRaytracing"));
+					check(CVarTressFXForceShadowMap);
+					const bool bForceShadowMapping = CVarTressFXForceShadowMap->GetInt() != 0;
+					if (!bSceneHasTressFX && !bForceShadowMapping) continue;
 				}
 				else 
 				{

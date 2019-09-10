@@ -47,7 +47,7 @@ int32 GBTressRenderInEditorPreview = 1;
 FAutoConsoleVariableRef CVarTressRenderInEditorPreview(
 	TEXT("tfx.RenderInPreview"),
 	GBTressRenderInEditorPreview,
-	TEXT("1: (default) Render Hair in Editor Preview worlds Blueprint editor for example. \n")
+	TEXT("1: (default) Render Hair in Editor Preview worlds. i.e the Blueprint editor. \n")
 	TEXT("0: Dont do that."),
 	ECVF_RenderThreadSafe
 );
@@ -61,11 +61,11 @@ FAutoConsoleVariableRef CVarTressFXMinAlphaForSceneDepth(
 	ECVF_RenderThreadSafe
 );
 
-static TAutoConsoleVariable<int32> CVarTressFXEnableSurfaceShadow(
-	TEXT("tfx.OITSurfaceShadow"),
+static TAutoConsoleVariable<int32> CVarTressForceTressFXShadowMapping(
+	TEXT("tfx.ForceShadowMappingDuringRaytracing"),
 	1,
-	TEXT("Enable surface shadows during shadow projection. If 0, only subsurface is used.\n")
-	TEXT("This is mainly for debugging. Recommended to keep it at 1"),
+	TEXT("1: (default) Use shadow mapping for TressFX shadows even if raytracing is enabled. TressFX does not support raytracing shadows.\n")
+	TEXT("0: Dont do that."),
 	ECVF_RenderThreadSafe
 );
 

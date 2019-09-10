@@ -12,6 +12,10 @@
 #ifndef TRESSFX_SHADOWS
 	#define TRESSFX_SHADOWS 0
 #endif
+
+#ifndef RAYTRACING_ENABLED
+	#define RAYTRACING_ENABLED 0
+#endif
 /*@third party code - END TressFX*/
 
 #ifndef USE_FADE_PLANE
@@ -98,10 +102,20 @@ float3 ModulatedShadowBlendOp(float3 Source)
 float4 CalcTressFXShadows(in float4 SVPos)
 {
     float4 FinalColor = 0;
-    const bool bIsTressFXNonOpaquePixel = true;
-    const FPQMPContext PQMPContext = PQMPInit(SVPos.xy);
 
     float2 ScreenUV = float2(SVPos.xy * View.BufferSizeAndInvSize.zw);
+	#if RAYTRACING_ENABLED
+		FGBufferData GBufferData = GetGBufferData(ScreenUV);
+		const bool bIsTressFXNonOpaquePixel = (GBufferData.SelectiveOutputMask & IS_TRESSFX_NON_OPAQUE_PIXEL);
+		if(!bIsTressFXNonOpaquePixel)
+		{
+			return 1;
+		}
+	#else
+		const bool bIsTressFXNonOpaquePixel = true;
+	#endif
+	
+	const FPQMPContext PQMPContext = PQMPInit(SVPos.xy);
 	//hair depth is in regular scene depth tex
 	float SceneW = CalcSceneDepth( ScreenUV );
     float4 ScreenPosition = float4(((ScreenUV.xy - View.ScreenPositionScaleBias.wz) / View.ScreenPositionScaleBias.xy) * SceneW, SceneW, 1);
@@ -144,9 +158,8 @@ float4 CalcTressFXShadows(in float4 SVPos)
 	// For debugging
 	#define UNFILTERED_SHADOW_PROJECTION 0
 
-	#ifndef TFX_ENABLE_SURFACE_SHADOW
-		#define TFX_ENABLE_SURFACE_SHADOW 0 //can be set from cvar tfx.OITSurfaceShadow
-	#endif
+	#define TFX_ENABLE_SURFACE_SHADOW 1
+	
 	#if UNFILTERED_SHADOW_PROJECTION && TFX_ENABLE_SURFACE_SHADOW
 	{
 		Shadow = LightSpacePixelDepthForOpaque < Texture2DSampleLevel(ShadowDepthTexture, ShadowDepthTextureSampler, ShadowPosition.xy, 0).r;
@@ -301,7 +314,6 @@ float4 CalcTressFXShadows(in float4 SVPos)
 		if(bIsTressFXNonOpaquePixel)
 		{
 			float LightInfluenceMask = GetLightInfluenceMask(WorldPosition);
-			// TFX note: important to multiply by FadedSSSShadow for correct(er) lighting, this is different than normal forward rendering
 			FadedShadow = lerp(1, FadedShadow * saturate( FadedSSSShadow ) + .01f, LightInfluenceMask);
 			FinalColor = EncodeLightAttenuation(FadedShadow);
 		}
@@ -344,14 +356,25 @@ float4 CalcTressFXShadows(in float4 SVPos)
 EARLYDEPTHSTENCIL
 void Main(
 	in float4 SVPos : SV_POSITION,
+/*@third party code - BEGIN TressFX*/ 
+#if !RAYTRACING_ENABLED
+/*@third party code - END TressFX*/
 	out float4 OutColor : SV_Target0
+/*@third party code - BEGIN TressFX*/ 
+#endif
+/*@third party code - END TressFX*/
 /*@third party code - BEGIN TressFX*/
-#if TRESSFX_SHADOWS 
+#if TRESSFX_SHADOWS && !RAYTRACING_ENABLED
 	,out float4 OutTFXColor : SV_Target1
+#elif TRESSFX_SHADOWS && RAYTRACING_ENABLED
+	out float4 OutTFXColor : SV_Target0
 #endif
 /*@third party code - END TressFX*/
 	)
 {
+/*@third party code - BEGIN TressFX*/
+#if !RAYTRACING_ENABLED
+/*@third party code - END TressFX*/
 	const FPQMPContext PQMPContext = PQMPInit(SVPos.xy);
 
 	float2 ScreenUV = float2( SVPos.xy * View.BufferSizeAndInvSize.zw );
@@ -359,7 +382,7 @@ void Main(
 	//float SceneW = CalcSceneDepth( ScreenUV );
 	// TressFX scene depth tex has no hair depth at this point yet, so use that for regular shadows
 #if TRESSFX_SHADOWS 
-	    float SceneW = CalcTressFXSceneDepth(ScreenUV);
+	float SceneW = CalcTressFXSceneDepth(ScreenUV);
 #else
     float SceneW = CalcSceneDepth(ScreenUV);
 #endif
@@ -584,16 +607,21 @@ void Main(
 #endif
 
 /*@third party code - BEGIN TressFX*/
+	#endif //!RAYTRACING_ENABLED
 #if TRESSFX_SHADOWS
 
+	#if !RAYTRACING_ENABLED
 	if(bIsTressFXNonOpaquePixel)
+	#endif
 	{
 		OutTFXColor = CalcTressFXShadows(SVPos);
 	}
+	#if !RAYTRACING_ENABLED
 	else
 	{
 		OutTFXColor = 1;
 	}
+	#endif
 #endif
 /*@third party code - END TressFX*/
 }
