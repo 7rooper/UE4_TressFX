@@ -42,6 +42,7 @@ public:
 		, WindMagnitude(1.0f)
 		, WindDirection(FVector(1, 0, 0))
 	{
+		SimulationQuality = ETressFXSimulationQuality::TFXSim_Full;
 	}
 
 	/*
