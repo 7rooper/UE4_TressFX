@@ -764,6 +764,7 @@ void IntegrationAndGlobalShapeConstraints(
 	// Apply bone skinning to initial position
 	FBoneIndexData IndexData = BoneIndexData[Indices.GlobalStrandIndex];
     float4 BoneQuat;
+
     InitialPos.xyz = ApplyVertexBoneSkinning(InitialPos.xyz, IndexData, BoneQuat);
 
     // we temporarily use HairVertexTangents to hold bone quaternion data compute in ApplyVertexBoneSkinning. 

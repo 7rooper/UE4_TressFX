@@ -75,7 +75,7 @@ void FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::ModifyCompilationEnv
 	OutEnvironment.SetDefine(TEXT("AMD_TRESSFX_MAX_NUM_BONES"), AMD_TRESSFX_MAX_NUM_BONES);
 	OutEnvironment.SetDefine(TEXT("TRESSFX_MORPHS"), TSimFeatures & FTressFXSimFeatures::Morphs ? TEXT("1") : TEXT("0"));
 	OutEnvironment.SetDefine(TEXT("UPDATE_PREV_FOLLOW_HAIRS"), TSimFeatures & FTressFXSimFeatures::Velocity ? TEXT("1") : TEXT("0"));
-	OutEnvironment.SetDefine(TEXT("SIM_QUALITY"), TSimFeatures & FTressFXSimFeatures::FullSimulation ? TEXT("1") : TEXT("0"));
+	OutEnvironment.SetDefine(TEXT("SIM_QUALITY"), TSimFeatures == FTressFXSimFeatures::None ? TEXT("0") : TEXT("1"));
 }
 
 template <FTressFXSimFeatures::Type TSimFeatures>
@@ -146,6 +146,7 @@ IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTress
 IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::MorphsAndVelocity>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
 IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::Velocity>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
 IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::AllFeatures>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::FullSimulation>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
 
 bool FVelocityShockPropagationCS::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
@@ -399,9 +400,9 @@ void SimulateTressFX(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy, int
 		);
 	const bool bNeedsVelocity = Proxy->WantsVelocityDraw();
 
-	if (Proxy->TFXComponent->TressFXSimulationSettings.SimulationQuality != ETressFXSimulationQuality::TFXSim_Disable)
+	if (Proxy->TFXComponent->TressFXSimulationSettings.SimulationQuality == ETressFXSimulationQuality::TFXSim_Disable)
 	{
-		SimulateTressFX_impl<FTressFXSimFeatures::AllFeatures >(RHICmdList, Proxy, CPULocalShapeIterations);
+		SimulateTressFX_impl<FTressFXSimFeatures::None >(RHICmdList, Proxy, CPULocalShapeIterations);
 	}
 	else
 	{
@@ -409,7 +410,7 @@ void SimulateTressFX(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy, int
 		{
 			if (bNeedsVelocity)
 			{
-				SimulateTressFX_impl<FTressFXSimFeatures::MorphsAndVelocity>(RHICmdList, Proxy, CPULocalShapeIterations);
+				SimulateTressFX_impl<FTressFXSimFeatures::AllFeatures>(RHICmdList, Proxy, CPULocalShapeIterations);
 			}
 			else
 			{
@@ -424,7 +425,7 @@ void SimulateTressFX(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy, int
 			}
 			else
 			{
-				SimulateTressFX_impl<FTressFXSimFeatures::None>(RHICmdList, Proxy, CPULocalShapeIterations);
+				SimulateTressFX_impl<FTressFXSimFeatures::FullSimulation>(RHICmdList, Proxy, CPULocalShapeIterations);
 			}
 		}
 	}
