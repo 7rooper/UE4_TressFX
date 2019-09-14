@@ -114,6 +114,9 @@ FTressFXSceneProxy::FTressFXSceneProxy(UPrimitiveComponent * InComponent, FName 
 
 	MaterialRelevance = Material->GetRelevance(InComponent->GetScene()->GetFeatureLevel());
 	BeginInitResource(&VertexFactory);
+#if RHI_RAYTRACING && TRESSFX_RAYTRACING
+	BeginInitResource(&RayTracingGeometry);
+#endif
 	InstanceRenderData = nullptr;
 	TressFXHairObject = nullptr;
 
@@ -318,7 +321,9 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(FDynamicRenderData* InDy
 			const int32 NumPosVerts = TFXComponent->Asset->ImportData->Positions.Num();
 			RayTracingDynamicVertexBuffer.Initialize(sizeof(FVector), NumPosVerts, PF_R32_FLOAT, BUF_UnorderedAccess | BUF_ShaderResource, TEXT("TressFXRayTracingDynamicVertexBuffer"));
 			FRayTracingGeometryInitializer Initializer;
-			Initializer.PositionVertexBuffer = nullptr;// RayTracingDynamicVertexBuffer.Buffer;
+			//Initializer.PositionVertexBuffer = RayTracingDynamicVertexBuffer.Buffer;
+			FRHIResourceCreateInfo CreateInfo;
+			Initializer.PositionVertexBuffer = RHICreateVertexBuffer(NumPosVerts * sizeof(FVector), BUF_ShaderResource, CreateInfo);
 			Initializer.IndexBuffer = TressFXHairObject->IndexBuffer.IndexBufferRHI;
 			Initializer.BaseVertexIndex = 0;
 			Initializer.VertexBufferStride = sizeof(FVector);
@@ -329,7 +334,7 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(FDynamicRenderData* InDy
 			Initializer.bFastBuild = true;
 			Initializer.bAllowUpdate = true;
 			RayTracingGeometry.SetInitializer(Initializer);
-			RayTracingGeometry.InitResource();
+			RayTracingGeometry.UpdateRHI();
 		});
 	}
 #endif
