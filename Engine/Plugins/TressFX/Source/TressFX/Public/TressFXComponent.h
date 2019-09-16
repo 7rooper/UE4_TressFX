@@ -336,7 +336,7 @@ private:
 	FMatrix CachedRelativeTransformMatrix = FMatrix::Identity;
 	FTransform CachedRelativeTransform = FTransform::Identity;
 
-	void UpdateCachedTransformsIfNeeded(bool bForceUpdate = false);
+	void UpdateCachedTransforms();
 
 public:
 

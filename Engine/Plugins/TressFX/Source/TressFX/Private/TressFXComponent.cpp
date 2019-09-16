@@ -52,26 +52,19 @@ void UTressFXComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	UpdateCachedTransformsIfNeeded();
+	UpdateCachedTransforms();
 
 	MarkRenderDynamicDataDirty();
+	LastDeltaTime = DeltaTime;
 }
 
-void UTressFXComponent::UpdateCachedTransformsIfNeeded(bool bForceUpdate /*= false*/)
+void UTressFXComponent::UpdateCachedTransforms()
 {
 	FTransform CurrentRelativeTransform = this->GetRelativeTransform();
 
-	if 
-	(
-		bForceUpdate
-		|| CachedRelativeTransform.GetTranslation() != CurrentRelativeTransform.GetTranslation()
-		|| CachedRelativeTransform.GetRotation() != CurrentRelativeTransform.GetRotation()
-		|| CachedRelativeTransform.GetScale3D() != CurrentRelativeTransform.GetScale3D()
-	)
-	{
-		CachedRelativeTransform = CurrentRelativeTransform;
-		CachedRelativeTransformMatrix = CachedRelativeTransform.ToMatrixWithScale();
-	}
+	CachedRelativeTransform = CurrentRelativeTransform;
+	CachedRelativeTransformMatrix = CachedRelativeTransform.ToMatrixWithScale();
+	
 }
 
 FBoxSphereBounds UTressFXComponent::CalcBounds(const FTransform& LocalToWorld) const
@@ -106,7 +99,7 @@ void UTressFXComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 
 	if(Name == GET_MEMBER_NAME_CHECKED(UTressFXComponent, bEnableMorphTargets) && this->bEnableMorphTargets == true)
 	{
-		UpdateCachedTransformsIfNeeded(true);
+		UpdateCachedTransforms();
 		this->SetUpMorphMapping();
 		this->MarkRenderDynamicDataDirty();
 	}
@@ -117,7 +110,7 @@ void UTressFXComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 	}
 	else if (Name == GET_MEMBER_NAME_CHECKED(UTressFXComponent, bSupportVirtualBones))
 	{
-		UpdateCachedTransformsIfNeeded(true);
+		UpdateCachedTransforms();
 		this->MarkRenderDynamicDataDirty();
 	}
 
@@ -132,7 +125,7 @@ void UTressFXComponent::OnAttachmentChanged()
 {
 	Super::OnAttachmentChanged();
 	ParentSkeletalMeshComponent = Cast<USkeletalMeshComponent>(GetAttachParent());
-	UpdateCachedTransformsIfNeeded(true);
+	UpdateCachedTransforms();
 	SetUpMorphMapping();
 	MarkRenderDynamicDataDirty();
 }
