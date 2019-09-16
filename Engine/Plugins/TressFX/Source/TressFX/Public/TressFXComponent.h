@@ -37,7 +37,7 @@ public:
 		, GlobalShapeRange(0.0f)
 		, LengthConstraintsIterations(2)
 		, Damping(0.08f)
-		, GravityMagnitude(10.0)
+		, GravityMagnitude(1.0)
 		, TipSeparation(0.0f)
 		, WindMagnitude(1.0f)
 		, WindDirection(FVector(1, 0, 0))
@@ -330,6 +330,9 @@ private:
 
 	UPROPERTY(Transient)
 		bool bInstanceDataDirty;
+
+	UPROPERTY()
+		float LastDeltaTime;
 
 
 	//caching to prevent needless re-calculations

@@ -388,6 +388,7 @@ void UTressFXComponent::RunSimulation()
 #endif
 	} while (false);
 
+	DynamicRenderData->LastDeltaTime = LastDeltaTime;
 	DynamicRenderData->bEnableMorphTargets = this->bEnableMorphTargets;
 	DynamicRenderData->TressFXSimulationSettings = TressFXSimulationSettings;
 	DynamicRenderData->TressFXSimulationSettings.WindDirection.X = OutWindDirection.X;

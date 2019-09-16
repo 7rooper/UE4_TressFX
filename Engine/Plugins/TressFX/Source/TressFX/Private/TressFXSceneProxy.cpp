@@ -251,7 +251,7 @@ void FTressFXSceneProxy::UpdateDynamicData_RenderThread(FDynamicRenderData* InDy
 
 	//create new sim params, update with new settings
 	FTressFXSimParameters SimulationParams(TressFXHairObject->NumVerticePerStrand, DynamicData->NumFollowStrandsPerGuide);
-	SimulationParams.UpdateSimulationParameters(DynamicData->TressFXSimulationSettings, GFrameNumberRenderThread, DynamicData->HairObject);
+	SimulationParams.UpdateSimulationParameters(DynamicData->TressFXSimulationSettings, GFrameNumberRenderThread, DynamicData->HairObject, DynamicData->LastDeltaTime);
 	FTressFXSimParametersUniformBuffer SimParamsUniformBuffer = SimulationParams.GetBuffer();
 	SimParamsUniformBuffer.g_centerAndRadius0 = DynamicData->CollisionCapsuleCenterAndRadius0;
 	SimParamsUniformBuffer.g_centerAndRadius1 = DynamicData->CollisionCapsuleCenterAndRadius1;
@@ -499,7 +499,12 @@ FRHIUniformBuffer* FTressFXSceneProxy::GetHairObjectShaderUniformBufferParam()
 }
 
 
-void FTressFXSimParameters::UpdateSimulationParameters(const FTressFXSimulationSettings& InSettings, uint32 Frame, FTressFXHairObject* HairObject)
+void FTressFXSimParameters::UpdateSimulationParameters(
+	const FTressFXSimulationSettings& InSettings, 
+	uint32 Frame, 
+	FTressFXHairObject* HairObject,
+	float LastDeltaTime
+)
 {
 	SetVelocityShockPropogation(InSettings.VSPCoefficient);
 	SetVSPAccelThreshold(InSettings.VSPAccelerationThreshold);
@@ -513,7 +518,8 @@ void FTressFXSimParameters::UpdateSimulationParameters(const FTressFXSimulationS
 	SetTipSeperation(InSettings.TipSeparation);
 	SetTotalHairs(HairObject->NumTotalStrands);
 
-	SetTimeStep(1.f / 60.f);
+	float FPS = FMath::Max(1.0f / LastDeltaTime, 30.f);
+	SetTimeStep(1 / FPS);
 
 	//Note: this sets the z component of g_SimInts/m_SimInts but that flag seems to not be used anymore
 	// eventually probably remove this

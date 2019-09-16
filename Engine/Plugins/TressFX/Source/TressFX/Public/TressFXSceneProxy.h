@@ -113,7 +113,7 @@ public:
 
 	}
 
-	void UpdateSimulationParameters(const FTressFXSimulationSettings& settings, uint32 frame, FTressFXHairObject* HairObject);
+	void UpdateSimulationParameters(const FTressFXSimulationSettings& settings, uint32 frame, FTressFXHairObject* HairObject, float LastDeltaTime);
 
 	void SetWind(const FVector& WindDir, float WindMagnitude, int32 FrameNumber);
 
@@ -165,6 +165,7 @@ public:
 		float LODCullingFactor;
 		float LODScreenSizeThreshold;
 		float MinLODRate;
+		float LastDeltaTime;
 
 		FDynamicRenderData() {}
 
@@ -182,6 +183,7 @@ public:
 			LODCullingFactor = Other.LODCullingFactor;
 			LODScreenSizeThreshold = Other.LODScreenSizeThreshold;
 			MinLODRate = Other.MinLODRate;
+			LastDeltaTime = Other.LastDeltaTime;
 			return *this;
 		}
 	};
