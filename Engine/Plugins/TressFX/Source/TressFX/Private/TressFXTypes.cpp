@@ -79,6 +79,7 @@ void FTressFXHairObject::UpdateTressFXData(FTressFXRuntimeData* InAssetData)
 	AssetData = InAssetData;
 	NumTotalVertice = AssetData->NumTotalVertices;
 	NumTotalStrands = AssetData->NumTotalStrands;
+	NumGuideStrands = AssetData->NumGuideStrands;
 	NumVerticePerStrand = AssetData->NumVerticesPerStrand;
 	TotalIndices = AssetData->GetNumHairTriangleIndices();
 	IndexBufferData = AssetData->TriangleIndices;
@@ -96,7 +97,7 @@ void FTressFXHairObject::InitDynamicRHI()
 
 	HairRootToTipTexcoords.Initialize(sizeof(float), NumTotalVertice, PF_Unknown);
 	BoneSkinningDataBuffer.Initialize(sizeof(FTressFXBoneSkinningData), AssetData->SkinningData.Num(), PF_Unknown);
-	BoneIndexDataBuffer.Initialize(sizeof(FTressFXBoneIndexData), NumTotalStrands, PF_Unknown);
+	BoneIndexDataBuffer.Initialize(sizeof(FTressFXBoneIndexData), NumGuideStrands, PF_Unknown);
 
 	if (!AssetData)
 	{
@@ -112,7 +113,7 @@ void FTressFXHairObject::InitDynamicRHI()
 	UploadGPUData(HairRootToTipTexcoords.Buffer, sizeof(float), NumTotalVertice, AssetData->RootToTipTexcoords.GetData());
 	UploadGPUData(HairThicknessCoeffs.Buffer, sizeof(float), NumTotalVertice, AssetData->ThicknessCoeffs.GetData());
 	UploadGPUData(BoneSkinningDataBuffer.Buffer, sizeof(FTressFXBoneSkinningData), AssetData->SkinningData.Num(), AssetData->SkinningData.GetData());
-	UploadGPUData(BoneIndexDataBuffer.Buffer, sizeof(FTressFXBoneIndexData), NumTotalStrands, AssetData->BoneIndexDataArr.GetData());
+	UploadGPUData(BoneIndexDataBuffer.Buffer, sizeof(FTressFXBoneIndexData), NumGuideStrands, AssetData->BoneIndexDataArr.GetData());
 
 	IndexBuffer.Indices = IndexBufferData;
 	IndexBuffer.NumTotalIndices = TotalIndices;

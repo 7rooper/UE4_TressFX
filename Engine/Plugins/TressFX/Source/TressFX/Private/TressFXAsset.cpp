@@ -465,10 +465,10 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 						}
 					}
 				}
-				for (int i = 0; i < NumFollowStrandsPerGuide + 1; i++)
-				{
+				/*for (int i = 0; i < NumFollowStrandsPerGuide + 1; i++)
+				{*/
 					BoneIndexDataArr.Add(BoneIdxData);
-				}
+				//}
 			}
 			return true;
 			break;

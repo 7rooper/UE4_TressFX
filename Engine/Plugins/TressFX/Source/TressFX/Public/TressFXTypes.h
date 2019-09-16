@@ -359,6 +359,7 @@ public:
 
 	int32 NumTotalVertice;
 	int32 NumTotalStrands;
+	int32 NumGuideStrands;
 	int32 NumVerticePerStrand;
 	int32 CPULocalShapeIterations;
 

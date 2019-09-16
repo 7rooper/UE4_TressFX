@@ -88,6 +88,7 @@ struct FVertexIndices
     uint IndexForSharedMem;
     uint NumVerticesInTheStrand;
     uint StrandType;
+    uint GuideIndex;
 };
 
 struct FStrandIndices
@@ -480,6 +481,7 @@ FVertexIndices CalcIndicesInVertexLevelMaster(uint LocalId, uint GroupId)
 
     Result.LocalStrandIndex = LocalId % NumStrandsPerThreadGroup;
     Result.GlobalStrandIndex = GroupId * NumStrandsPerThreadGroup + Result.LocalStrandIndex;
+    Result.GuideIndex = Result.GlobalStrandIndex - Result.LocalStrandIndex;
     Result.GlobalStrandIndex *= (NumFollowersPerGuideHair + 1);
     Result.LocalVertexIndex = (LocalId - Result.LocalStrandIndex) / NumStrandsPerThreadGroup;
 
@@ -703,7 +705,7 @@ void SimpleUpdateWithoutSimulation(
 #endif
 
     // Apply worldspace bone skinning to initial position
-    FBoneIndexData IndexData = BoneIndexData[Indices.GlobalStrandIndex];
+    FBoneIndexData IndexData = BoneIndexData[Indices.GuideIndex];
     float4 BoneQuat;
     InitialPos.xyz = ApplyVertexBoneSkinning(InitialPos.xyz, IndexData, BoneQuat);
 
@@ -762,7 +764,7 @@ void IntegrationAndGlobalShapeConstraints(
 #endif
 
 	// Apply bone skinning to initial position
-	FBoneIndexData IndexData = BoneIndexData[Indices.GlobalStrandIndex];
+    FBoneIndexData IndexData = BoneIndexData[Indices.GuideIndex];
     float4 BoneQuat;
 
     InitialPos.xyz = ApplyVertexBoneSkinning(InitialPos.xyz, IndexData, BoneQuat);
@@ -774,7 +776,7 @@ void IntegrationAndGlobalShapeConstraints(
     float4 CurrentPos = SharedPos[Indices.IndexForSharedMem] = HairVertexPositions[Indices.GlobalVertexIndex];
 	
 	//not sure this is needed
-	//SharedPos[Indices.IndexForSharedMem] = InitialPos;
+	SharedPos[Indices.IndexForSharedMem] = InitialPos;
 
 	#if UPDATE_PREV_FOLLOW_HAIRS
 	    for (uint i = 0; i < NumFollowersPerGuideHair; i++)
