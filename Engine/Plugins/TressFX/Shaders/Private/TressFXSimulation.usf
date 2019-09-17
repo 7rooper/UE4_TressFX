@@ -481,9 +481,10 @@ FVertexIndices CalcIndicesInVertexLevelMaster(uint LocalId, uint GroupId)
 
     Result.LocalStrandIndex = LocalId % NumStrandsPerThreadGroup;
     Result.GlobalStrandIndex = GroupId * NumStrandsPerThreadGroup + Result.LocalStrandIndex;
-    Result.GuideIndex = Result.GlobalStrandIndex - Result.LocalStrandIndex;
     Result.GlobalStrandIndex *= (NumFollowersPerGuideHair + 1);
     Result.LocalVertexIndex = (LocalId - Result.LocalStrandIndex) / NumStrandsPerThreadGroup;
+
+	Result.GuideIndex = floor(Result.GlobalStrandIndex / max(NumFollowersPerGuideHair,1));
 
     Result.StrandType = GetStrandType(Result.GlobalStrandIndex);
     Result.GlobalVertexIndex = Result.GlobalStrandIndex * Result.NumVerticesInTheStrand + Result.LocalVertexIndex;
