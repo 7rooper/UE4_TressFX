@@ -112,7 +112,7 @@ protected:
 	FVulkanCmdBuffer* LastFrameCommandBuffer = nullptr;
 	uint64 LastFrameFenceCounter = 0;
 
-	void CreateSwapchain();
+	void CreateSwapchain(struct FVulkanSwapChainRecreateInfo* RecreateInfo);
 	void AcquireImageIndex();
 	bool TryAcquireImageIndex();
 
