@@ -570,12 +570,13 @@ void UTressFXComponent::RunSimulation()
 
 	if (LocalTFXProxy)
 	{
+		const bool bSupport16Bones = Asset->bSupport16Bones;
 		ENQUEUE_RENDER_COMMAND(TRessFXSimulateCommand)(
-			[LocalTFXProxy, DynamicRenderData](FRHICommandListImmediate& RHICmdList)
+			[LocalTFXProxy, DynamicRenderData, bSupport16Bones](FRHICommandListImmediate& RHICmdList)
 			{
 				LocalTFXProxy->UpdateDynamicData_RenderThread(&DynamicRenderData.Get());
 				LocalTFXProxy->CopyMorphs(RHICmdList);
-				SimulateTressFX(RHICmdList, LocalTFXProxy, DynamicRenderData->TressFXSimulationSettings.LengthConstraintsIterations);
+				SimulateTressFX(RHICmdList, LocalTFXProxy, DynamicRenderData->TressFXSimulationSettings.LengthConstraintsIterations, bSupport16Bones);
 			}
 		);
 	}

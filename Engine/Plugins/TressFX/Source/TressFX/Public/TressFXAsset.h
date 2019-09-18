@@ -54,6 +54,9 @@ public:
 		float MaxRadiusAroundGuideHair;
 
 	UPROPERTY(EditAnywhere, Category = "Settings")
+		bool bSupport16Bones;
+
+	UPROPERTY(EditAnywhere, Category = "Settings")
 		class UTressFXBoneSkinningAsset* TressFXBoneSkinningAsset;
 
 	UPROPERTY(EditAnywhere, Category = "Settings")

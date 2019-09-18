@@ -381,10 +381,10 @@ static TAutoConsoleVariable<int32> CVarTFXSimPass4(TEXT("tfx.SimPass4"), 1, TEXT
 static TAutoConsoleVariable<int32> CVarTFXSimPass5(TEXT("tfx.SimPass5"), 1, TEXT("Enable/Disable UpdateFollowHairVertices Pass"), ECVF_RenderThreadSafe);
 static TAutoConsoleVariable<int32> CVarTFXSimEnable(TEXT("tfx.EnableSimulation"), 1, TEXT("Globally Enable or disable TressFX Simulation"), ECVF_RenderThreadSafe);
 
-template <FTressFXSimFeatures::Type TSimFeatures>
+template <FTressFXSimFeatures::Type TSimFeatures, bool bSupport16Bones>
 void SimulateTressFX_impl(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, int32 CPULocalShapeIterations);
 
-void SimulateTressFX(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy, int32 CPULocalShapeIterations)
+void SimulateTressFX(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy, int32 CPULocalShapeIterations, bool bSupport16Bones)
 {
 	if (!Proxy->bInitialized || CVarTFXSimEnable.GetValueOnRenderThread() < 1)
 	{
@@ -398,11 +398,19 @@ void SimulateTressFX(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy, int
 			Proxy->MorphPositionDeltaBuffer.NumBytes > 0 &&
 			Proxy->MorphPositionDeltaBuffer.Buffer.IsValid()
 		);
+
 	const bool bNeedsVelocity = Proxy->WantsVelocityDraw();
 
 	if (Proxy->TFXComponent->TressFXSimulationSettings.SimulationQuality == ETressFXSimulationQuality::TFXSim_Disable)
 	{
-		SimulateTressFX_impl<FTressFXSimFeatures::None >(RHICmdList, Proxy, CPULocalShapeIterations);
+		if (bSupport16Bones) 
+		{
+			SimulateTressFX_impl<FTressFXSimFeatures::None, true >(RHICmdList, Proxy, CPULocalShapeIterations);
+		}
+		else
+		{
+			SimulateTressFX_impl<FTressFXSimFeatures::None, false >(RHICmdList, Proxy, CPULocalShapeIterations);
+		}
 	}
 	else
 	{
@@ -410,30 +418,72 @@ void SimulateTressFX(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy, int
 		{
 			if (bNeedsVelocity)
 			{
-				SimulateTressFX_impl<FTressFXSimFeatures::AllFeatures>(RHICmdList, Proxy, CPULocalShapeIterations);
+				if (bSupport16Bones) 
+				{
+					SimulateTressFX_impl<FTressFXSimFeatures::AllFeatures, true>(RHICmdList, Proxy, CPULocalShapeIterations);
+				}
+				else
+				{
+					SimulateTressFX_impl<FTressFXSimFeatures::AllFeatures, false>(RHICmdList, Proxy, CPULocalShapeIterations);
+				}
 			}
 			else
 			{
-				SimulateTressFX_impl<FTressFXSimFeatures::Morphs>(RHICmdList, Proxy, CPULocalShapeIterations);
+				if (bSupport16Bones)
+				{
+					SimulateTressFX_impl<FTressFXSimFeatures::Morphs, true>(RHICmdList, Proxy, CPULocalShapeIterations);
+				}
+				else 
+				{
+					SimulateTressFX_impl<FTressFXSimFeatures::Morphs, false>(RHICmdList, Proxy, CPULocalShapeIterations);
+				}
+				
 			}
 		}
 		else
 		{
 			if (bNeedsVelocity)
 			{
-				SimulateTressFX_impl<FTressFXSimFeatures::Velocity>(RHICmdList, Proxy, CPULocalShapeIterations);
+				if (bSupport16Bones)
+				{
+					SimulateTressFX_impl<FTressFXSimFeatures::Velocity, true>(RHICmdList, Proxy, CPULocalShapeIterations);
+				}
+				else 
+				{
+					SimulateTressFX_impl<FTressFXSimFeatures::Velocity, false>(RHICmdList, Proxy, CPULocalShapeIterations);
+				}				
 			}
 			else
 			{
-				SimulateTressFX_impl<FTressFXSimFeatures::FullSimulation>(RHICmdList, Proxy, CPULocalShapeIterations);
+				if (bSupport16Bones)
+				{
+					SimulateTressFX_impl<FTressFXSimFeatures::FullSimulation, true>(RHICmdList, Proxy, CPULocalShapeIterations);
+				}
+				else
+				{
+					SimulateTressFX_impl<FTressFXSimFeatures::FullSimulation, false>(RHICmdList, Proxy, CPULocalShapeIterations);
+				}				
 			}
 		}
 	}
 }
 
-template <FTressFXSimFeatures::Type TSimFeatures>
+template <FTressFXSimFeatures::Type TSimFeatures, bool bSupport16Bones>
 void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy, int32 CPULocalShapeIterations)
 {
+
+	check(Proxy);
+	if (bSupport16Bones) 
+	{
+		check(Proxy->TressFXHairObject->BoneSkinningDataBuffer.Buffer.IsValid());
+		check(!Proxy->TressFXHairObject->LegacyBoneSkinningDataBuffer.Buffer.IsValid());
+	}
+	else
+	{
+		check(!Proxy->TressFXHairObject->BoneSkinningDataBuffer.Buffer.IsValid());
+		check(Proxy->TressFXHairObject->LegacyBoneSkinningDataBuffer.Buffer.IsValid());
+	}
+	
 
 	const bool bUseSDFCollision = CVarTFXSDFDisable.GetValueOnRenderThread() == 0 && Proxy->CollisionType == ETressFXCollisionType::TFXCollsion_SDF && Proxy->SDFMeshResources;
 	
