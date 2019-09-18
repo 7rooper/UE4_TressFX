@@ -3,6 +3,10 @@
 	#define AMD_TRESSFX_MAX_NUM_BONES 256
 #endif
 
+#ifndef TRESSFX_LEGACY_MAX_INFLUENTIAL_BONE_COUNT
+	#define TRESSFX_LEGACY_MAX_INFLUENTIAL_BONE_COUNT 4
+#endif
+
 // same as c++ and exporter
 #ifndef TRESSFX_MAX_INFLUENTIAL_BONE_COUNT
 	#define TRESSFX_MAX_INFLUENTIAL_BONE_COUNT 16
@@ -18,4 +22,10 @@ struct FBoneSkinningData
 {
     float BoneIndex;
     float BoneWeight;
+};
+
+struct FLegacyBoneSkinningData
+{
+    float4 BoneIndex;
+    float4 BoneWeight;
 };

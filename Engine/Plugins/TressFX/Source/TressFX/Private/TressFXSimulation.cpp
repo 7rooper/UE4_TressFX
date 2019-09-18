@@ -22,7 +22,7 @@ struct FTressFXSimFeatures
 	};
 };
 
-template <FTressFXSimFeatures::Type TSimFeatures>
+template <FTressFXSimFeatures::Type TSimFeatures, bool bSupport16Bones>
 class FIntegrationAndGlobalShapeConstraintsCS : public FGlobalShader
 {
 	DECLARE_SHADER_TYPE(FIntegrationAndGlobalShapeConstraintsCS, Global);
@@ -33,14 +33,14 @@ public:
 
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
 
-	static const TCHAR* GetSourceFilename();;
+	static const TCHAR* GetSourceFilename();
 
-	static const TCHAR*GetFunctionName();;
+	static const TCHAR*GetFunctionName();
 
-	FIntegrationAndGlobalShapeConstraintsCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer);;
+	FIntegrationAndGlobalShapeConstraintsCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer);
 
 
-	FIntegrationAndGlobalShapeConstraintsCS();;
+	FIntegrationAndGlobalShapeConstraintsCS();
 
 	virtual bool Serialize(FArchive& Ar) override;;
 
@@ -52,6 +52,7 @@ public:
 	FRWShaderParameter HairVertexPositionsPrevPrev;
 	FRWShaderParameter HairVertexTangents;
 
+	FShaderResourceParameter LegacyBoneSkinningData;
 	FShaderResourceParameter BoneSkinningData;
 	FShaderResourceParameter BoneIndexData;
 	FShaderResourceParameter InitialHairPositions;
@@ -62,43 +63,53 @@ public:
 
 };
 
-template <FTressFXSimFeatures::Type TSimFeatures>
-bool FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+template <FTressFXSimFeatures::Type TSimFeatures, bool bSupport16Bones>
+bool FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures, bSupport16Bones>::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
 	return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 }
 
-template <FTressFXSimFeatures::Type TSimFeatures>
-void FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+template <FTressFXSimFeatures::Type TSimFeatures, bool bSupport16Bones>
+void FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures, bSupport16Bones>::ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 {
 	FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	OutEnvironment.SetDefine(TEXT("AMD_TRESSFX_MAX_NUM_BONES"), AMD_TRESSFX_MAX_NUM_BONES);
 	OutEnvironment.SetDefine(TEXT("TRESSFX_MORPHS"), TSimFeatures & FTressFXSimFeatures::Morphs ? TEXT("1") : TEXT("0"));
 	OutEnvironment.SetDefine(TEXT("UPDATE_PREV_FOLLOW_HAIRS"), TSimFeatures & FTressFXSimFeatures::Velocity ? TEXT("1") : TEXT("0"));
 	OutEnvironment.SetDefine(TEXT("SIM_QUALITY"), TSimFeatures == FTressFXSimFeatures::None ? TEXT("0") : TEXT("1"));
+	OutEnvironment.SetDefine(TEXT("LEGACY_SKINNING"), bSupport16Bones ? TEXT("0") : TEXT("1"));
 }
 
-template <FTressFXSimFeatures::Type TSimFeatures>
-const TCHAR* FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::GetSourceFilename()
+template <FTressFXSimFeatures::Type TSimFeatures, bool bSupport16Bones>
+const TCHAR* FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures, bSupport16Bones>::GetSourceFilename()
 {
 	return TEXT("TressFXSimulation");
 }
 
-template <FTressFXSimFeatures::Type TSimFeatures>
-const TCHAR* FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::GetFunctionName()
+template <FTressFXSimFeatures::Type TSimFeatures, bool bSupport16Bones>
+const TCHAR* FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures, bSupport16Bones>::GetFunctionName()
 {
 	return TEXT("IntegrationAndGlobalShapeConstraints");
 }
 
-template <FTressFXSimFeatures::Type TSimFeatures>
-FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::FIntegrationAndGlobalShapeConstraintsCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
+template <FTressFXSimFeatures::Type TSimFeatures, bool bSupport16Bones>
+FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures, bSupport16Bones>::FIntegrationAndGlobalShapeConstraintsCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
 {
 	HairVertexPositions.Bind(Initializer.ParameterMap, TEXT("HairVertexPositions"));
 	HairVertexPositionsPrev.Bind(Initializer.ParameterMap, TEXT("HairVertexPositionsPrev"));
 	HairVertexPositionsPrevPrev.Bind(Initializer.ParameterMap, TEXT("HairVertexPositionsPrevPrev"));
 	HairVertexTangents.Bind(Initializer.ParameterMap, TEXT("HairVertexTangents"));
-	BoneSkinningData.Bind(Initializer.ParameterMap, TEXT("BoneSkinningData"));
-	BoneIndexData.Bind(Initializer.ParameterMap, TEXT("BoneIndexData"));
+	
+	if (bSupport16Bones)
+	{
+		BoneIndexData.Bind(Initializer.ParameterMap, TEXT("BoneIndexData"));
+		BoneSkinningData.Bind(Initializer.ParameterMap, TEXT("BoneSkinningData"));
+	}
+	else 
+	{
+		LegacyBoneSkinningData.Bind(Initializer.ParameterMap, TEXT("LegacyBoneSkinningData"));
+	}
+
 	InitialHairPositions.Bind(Initializer.ParameterMap, TEXT("InitialHairPositions"));
 
 	if (TSimFeatures & FTressFXSimFeatures::Morphs)
@@ -114,19 +125,19 @@ FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::FIntegrationAndGlobalShap
 	TressfxSimParametersUniformBuffer.Bind(Initializer.ParameterMap, TEXT("TressfxSimParameters"));
 }
 
-template <FTressFXSimFeatures::Type TSimFeatures>
-FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::FIntegrationAndGlobalShapeConstraintsCS()
+template <FTressFXSimFeatures::Type TSimFeatures, bool bSupport16Bones>
+FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures, bSupport16Bones>::FIntegrationAndGlobalShapeConstraintsCS()
 {
 
 }
 
-template <FTressFXSimFeatures::Type TSimFeatures>
-bool FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::Serialize(FArchive& Ar)
+template <FTressFXSimFeatures::Type TSimFeatures, bool bSupport16Bones>
+bool FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures, bSupport16Bones>::Serialize(FArchive& Ar)
 {
 	bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
 
 	Ar << HairVertexPositions << HairVertexPositionsPrev << HairVertexPositionsPrevPrev
-		<< HairVertexTangents << BoneSkinningData << BoneIndexData << InitialHairPositions;
+		<< HairVertexTangents << InitialHairPositions;
 
 	if (TSimFeatures & FTressFXSimFeatures::Morphs)
 	{
@@ -136,17 +147,35 @@ bool FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>::Serialize(FArchive& 
 	{
 		Ar << FollowHairRootOffset;
 	}
-
+	if (bSupport16Bones) 
+	{
+		Ar << BoneSkinningData << BoneIndexData;
+	}
+	else
+	{
+		Ar << LegacyBoneSkinningData;
+	}
 	return bShaderHasOutdatedParameters;
 }
 
+#define IMPLEMENT_SIMULATION_INTEGRATION_SHADERS(bSupport16Bones)																																								\
+typedef FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::None, bSupport16Bones> FIntegrationAndGlobalShapeConstraints_NoFeatures_##bSupport16Bones;																	\
+typedef FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::MorphsAndVelocity, bSupport16Bones> FIntegrationAndGlobalShapeConstraints_MorphsAndVelocity_##bSupport16Bones;												\
+typedef FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::Velocity, bSupport16Bones> FIntegrationAndGlobalShapeConstraints_Velocity_##bSupport16Bones;																\
+typedef FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::Morphs, bSupport16Bones> FIntegrationAndGlobalShapeConstraints_Morphs##bSupport16Bones;																	\
+typedef FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::AllFeatures, bSupport16Bones> FIntegrationAndGlobalShapeConstraints_AllFeatures_##bSupport16Bones;															\
+typedef FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::FullSimulation, bSupport16Bones> FIntegrationAndGlobalShapeConstraints_FullSimulation_##bSupport16Bones;													\
+IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraints_NoFeatures_##bSupport16Bones, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);		    \
+IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraints_MorphsAndVelocity_##bSupport16Bones, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);	\
+IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraints_Velocity_##bSupport16Bones, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);		    \
+IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraints_Morphs##bSupport16Bones, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);				\
+IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraints_AllFeatures_##bSupport16Bones, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);		\
+IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraints_FullSimulation_##bSupport16Bones, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);		\
 
-IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::None>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
-IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::Morphs>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
-IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::MorphsAndVelocity>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
-IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::Velocity>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
-IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::AllFeatures>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
-IMPLEMENT_SHADER_TYPE(template<>, FIntegrationAndGlobalShapeConstraintsCS<FTressFXSimFeatures::FullSimulation>, TEXT("/Plugin/TressFX/Private/TressFXSimulation.usf"), TEXT("IntegrationAndGlobalShapeConstraints"), SF_Compute);
+IMPLEMENT_SIMULATION_INTEGRATION_SHADERS(true);
+IMPLEMENT_SIMULATION_INTEGRATION_SHADERS(false);
+
+#undef IMPLEMENT_SIMULATION_INTEGRATION_SHADERS
 
 bool FVelocityShockPropagationCS::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
@@ -473,6 +502,7 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 {
 
 	check(Proxy);
+	check(Proxy->TressFXHairObject);
 	if (bSupport16Bones) 
 	{
 		check(Proxy->TressFXHairObject->BoneSkinningDataBuffer.Buffer.IsValid());
@@ -530,14 +560,23 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 			SCOPED_DRAW_EVENT(RHICmdList, IntegrationAndGlobalShapeConstraints);
 			auto Fence = RHICreateComputeFence(TEXT("IntegrationAndGlobalShapeConstraintsCSFence"));
 
-			TShaderMapRef<FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures>> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
+			TShaderMapRef<FIntegrationAndGlobalShapeConstraintsCS<TSimFeatures, bSupport16Bones>> Shader(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 			RHICmdList.SetComputeShader(Shader->GetComputeShader());
 			Proxy->InstanceRenderData->PosTanCollection.SetUAVs(RHICmdList, Shader->GetComputeShader());
 			SetUniformBufferParameter(RHICmdList, Shader->GetComputeShader(), Shader->GetUniformBufferParameter<FTressFXSimParametersUniformBuffer>(), Proxy->InstanceRenderData->SimParametersUniformBuffer);
 
 			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->InitialHairPositions, Proxy->TressFXHairObject->InitialHairPositionsBuffer.SRV);
-			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->BoneSkinningData, Proxy->TressFXHairObject->BoneSkinningDataBuffer.SRV);
-			SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->BoneIndexData, Proxy->TressFXHairObject->BoneIndexDataBuffer.SRV);
+			
+			if (bSupport16Bones) 
+			{
+				SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->BoneSkinningData, Proxy->TressFXHairObject->BoneSkinningDataBuffer.SRV);
+				SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->BoneIndexData, Proxy->TressFXHairObject->BoneIndexDataBuffer.SRV);
+			}
+			else 
+			{
+				SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->LegacyBoneSkinningData, Proxy->TressFXHairObject->LegacyBoneSkinningDataBuffer.SRV);
+			}
+
 			if (bUseMorphs)
 			{
 				SetSRVParameter(RHICmdList, Shader->GetComputeShader(), Shader->MorphDeltas, Proxy->MorphPositionDeltaBuffer.SRV);
