@@ -531,7 +531,13 @@ void SimulateTressFX_impl(FRHICommandList& RHICmdList, FTressFXSceneProxy* Proxy
 
 	// Simulation Start
 	{
-		SCOPED_DRAW_EVENTF(RHICmdList, SimulateTressFXAsset, TEXT("SimulateTressFXAsset %s"), *Proxy->TFXComponent->Asset->GetName());
+		FString WorldName = "None";
+		if (Proxy->TFXComponent->GetWorld())
+		{
+			WorldName = Proxy->TFXComponent->GetWorld()->GetName();
+		}
+		FString EventName = Proxy->TFXComponent->Asset->GetName() + " World: " + WorldName;
+		SCOPED_DRAW_EVENTF(RHICmdList, SimulateTressFXAsset, TEXT("SimulateTressFXAsset %s"), *EventName);
 
 		FRHIUnorderedAccessView* SimResources[] =
 		{
