@@ -495,7 +495,7 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 					{
 						if(SkinngDataIndex < TRESSFX_LEGACY_MAX_INFLUENTIAL_BONE_COUNT)
 						{
-							const int32 DataIndex = (GuideStrandIndex * 4) + SkinngDataIndex;
+							const int32 DataIndex = (GuideStrandIndex * TRESSFX_MAX_INFLUENTIAL_BONE_COUNT) + SkinngDataIndex;
 							if (DataIndex < Asset->JsonVersionImportData.JsonSkinningData.Num())
 							{
 								FTressFXBoneSkinningJSONImportData ImportedSkinData = Asset->JsonVersionImportData.JsonSkinningData[DataIndex];
