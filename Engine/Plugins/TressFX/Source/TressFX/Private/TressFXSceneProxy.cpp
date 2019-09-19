@@ -519,6 +519,7 @@ void FTressFXSimParameters::UpdateSimulationParameters(
 	SetTotalHairs(HairObject->NumTotalStrands);
 
 	float FPS = FMath::Max(1.0f / LastDeltaTime, 30.f);
+	//causes wierd effects when tied to LastDeltaTime
 	//SetTimeStep(1 / FPS);
 	SetTimeStep(1 / 60.f);
 

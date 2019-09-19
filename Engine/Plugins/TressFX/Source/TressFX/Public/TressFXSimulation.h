@@ -229,4 +229,4 @@ public:
 
 };
 
-void TRESSFX_API SimulateTressFX(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, int32 CPULocalShapeIterations, bool bSupport16Bones);
+void TRESSFX_API SimulateTressFX(FRHICommandList& RHICmdList, class FTressFXSceneProxy* Proxy, int32 CPULocalShapeIterations);

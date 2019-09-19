@@ -79,10 +79,6 @@
 	#define TRESSFX_MORPHS 0
 #endif
 
-#ifndef LEGACY_SKINNING
-	#define LEGACY_SKINNING 0
-#endif
-
 struct FVertexIndices
 {
     uint GlobalStrandIndex;
@@ -230,12 +226,10 @@ StructuredBuffer<float4> FollowHairRootOffset;
 	RWStructuredBuffer<Transforms>  g_Transforms;
 #endif
 
-#if LEGACY_SKINNING
-	StructuredBuffer<FLegacyBoneSkinningData> LegacyBoneSkinningData;
-#else
-	StructuredBuffer<FBoneSkinningData> BoneSkinningData;
-	StructuredBuffer<FBoneIndexData> BoneIndexData;
-#endif
+
+StructuredBuffer<FBoneSkinningData> BoneSkinningData;
+StructuredBuffer<FBoneIndexData> BoneIndexData;
+
 
 
 
@@ -621,34 +615,6 @@ bool CapsuleCollision(float4 CurPosition, float4 OldPosition, inout float3 NewPo
     return false;
 }
 
-#if LEGACY_SKINNING
-float3 ApplyLegacyVertexBoneskinng(float3 vertexPos, FLegacyBoneSkinningData SkinningData, inout float4 BoneQuat)
-{
-    float3 NewVertexPos;
-
-    
-    // Interpolate world space bone matrices using weights. 
-    row_major float4x4 BoneMatrix = BoneSkinningMatrix[SkinningData.BoneIndex[0]] * SkinningData.BoneWeight[0];
-    float WeightSum = SkinningData.BoneWeight[0];
-
-    for (int i = 1; i < 4; i++)
-    {
-        if (SkinningData.BoneWeight[i] > 0)
-        {
-            BoneMatrix += BoneSkinningMatrix[SkinningData.BoneIndex[i]] * SkinningData.BoneWeight[i];
-            WeightSum += SkinningData.BoneWeight[i];
-        }
-    }
-
-    BoneMatrix /= WeightSum;
-    BoneQuat = MakeQuaternion(BoneMatrix);
-
-    NewVertexPos = mul(float4(vertexPos, 1), BoneMatrix).xyz;
-   
-    return NewVertexPos;
-}
-#else
-
 float3 ApplyVertexBoneSkinning(float3 VertexPos, FBoneIndexData InBoneIndexData, inout float4 BoneQuat)
 {
     float3 NewVertexPos;
@@ -702,7 +668,7 @@ float3 ApplyVertexBoneSkinning(float3 VertexPos, FBoneIndexData InBoneIndexData,
 
     return NewVertexPos;
 }
-#endif //LEGACY_SKINNING
+
 //--------------------------------------------------------------------------------------
 //
 //  UpdateFinalVertexPositions
@@ -749,13 +715,10 @@ void SimpleUpdateWithoutSimulation(
     // Apply worldspace bone skinning to initial position
     float4 BoneQuat;
     
-	#if LEGACY_SKINNING
-		FLegacyBoneSkinningData SkinningData = LegacyBoneSkinningData[Indices.GlobalStrandIndex];
-		InitialPos.xyz = ApplyLegacyVertexBoneskinng(InitialPos.xyz, SkinningData, BoneQuat);
-	#else
-		FBoneIndexData IndexData = BoneIndexData[Indices.GuideIndex];
-		InitialPos.xyz = ApplyVertexBoneSkinning(InitialPos.xyz, IndexData, BoneQuat);
-	#endif
+
+	FBoneIndexData IndexData = BoneIndexData[Indices.GuideIndex];
+	InitialPos.xyz = ApplyVertexBoneSkinning(InitialPos.xyz, IndexData, BoneQuat);
+
 
     // position when this step starts. In other words, a position from the last step.
     SharedPos[Indices.IndexForSharedMem] = InitialPos;
@@ -812,13 +775,8 @@ void IntegrationAndGlobalShapeConstraints(
 	// Apply bone skinning to initial position
     float4 BoneQuat;
 
-	#if LEGACY_SKINNING
-		FLegacyBoneSkinningData SkinningData = LegacyBoneSkinningData[Indices.GlobalStrandIndex];
-		InitialPos.xyz = ApplyLegacyVertexBoneskinng(InitialPos.xyz, SkinningData, BoneQuat);
-	#else
-		FBoneIndexData IndexData = BoneIndexData[Indices.GuideIndex];
-		InitialPos.xyz = ApplyVertexBoneSkinning(InitialPos.xyz, IndexData, BoneQuat);
-	#endif
+	FBoneIndexData IndexData = BoneIndexData[Indices.GuideIndex];
+	InitialPos.xyz = ApplyVertexBoneSkinning(InitialPos.xyz, IndexData, BoneQuat);
 
     // we temporarily use HairVertexTangents to hold bone quaternion data compute in ApplyVertexBoneSkinning. 
     HairVertexTangents[Indices.GlobalStrandIndex] = BoneQuat;
@@ -827,7 +785,7 @@ void IntegrationAndGlobalShapeConstraints(
     float4 CurrentPos = SharedPos[Indices.IndexForSharedMem] = HairVertexPositions[Indices.GlobalVertexIndex];
 	
 	//not sure this is needed
-	SharedPos[Indices.IndexForSharedMem] = InitialPos;
+	//SharedPos[Indices.IndexForSharedMem] = InitialPos;
 
 	#if UPDATE_PREV_FOLLOW_HAIRS
 	    for (uint i = 0; i < NumFollowersPerGuideHair; i++)

@@ -28,9 +28,6 @@ FTressFXRuntimeData::~FTressFXRuntimeData()
 
 }
 
-const FGuid FTressFXRuntimeDataCustomVersion::GUID(0xD78A4A00, 0xD4584696, 0xBAA819B5, 0x487D16B3);
-FCustomVersionRegistration GTressFXRuntimeDataCustomVersion(FTressFXRuntimeDataCustomVersion::GUID, FTressFXRuntimeDataCustomVersion::LatestVersion, TEXT("TressFXRuntimeDataVer"));
-
 void FTressFXRuntimeData::Serialize(FArchive& Ar)
 {
 	FTressFXImportData::Serialize(Ar);
@@ -50,17 +47,6 @@ void FTressFXRuntimeData::Serialize(FArchive& Ar)
 	Ar << BoneIndexDataArr;
 	Ar << Bounds;
 	Ar << RootToTipTexcoords;
-
-	Ar.UsingCustomVersion(FTressFXRuntimeDataCustomVersion::GUID);
-
-	if(Ar.IsLoading() && Ar.CustomVer(FTressFXRuntimeDataCustomVersion::GUID) < FTressFXRuntimeDataCustomVersion::AddedLegacySkinning)
-	{
-		//dont load it yet till its been serialized
-	}
-	else
-	{
-		Ar << LegacySkinningData;
-	}
 }
 
 FTressFXRuntimeData::FTressFXRuntimeData()
@@ -80,9 +66,8 @@ FTressFXPosTanCollection::FTressFXPosTanCollection()
 
 }
 
-FTressFXHairObject::FTressFXHairObject(bool InbSupport16Bones, FTressFXRuntimeData* InAssetData /*= nullptr*/)
+FTressFXHairObject::FTressFXHairObject(FTressFXRuntimeData* InAssetData /*= nullptr*/)
 {
-	bSupporting16Bones = InbSupport16Bones;
 	if (InAssetData)
 	{
 		UpdateTressFXData(InAssetData);
@@ -112,17 +97,9 @@ void FTressFXHairObject::InitDynamicRHI()
 
 	HairRootToTipTexcoords.Initialize(sizeof(float), NumTotalVertice, PF_Unknown);
 
-	if (bSupporting16Bones)
-	{
-		BoneSkinningDataBuffer.Initialize(sizeof(FTressFXBoneSkinningData), AssetData->SkinningData.Num(), PF_Unknown);
-		BoneIndexDataBuffer.Initialize(sizeof(FTressFXBoneIndexData), NumGuideStrands, PF_Unknown);
-	}
-	else 
-	{
-		LegacyBoneSkinningDataBuffer.Initialize(sizeof(FTressFXLegacyBoneSkinningData), NumTotalStrands, PF_Unknown);
-	}
-
-
+	BoneSkinningDataBuffer.Initialize(sizeof(FTressFXBoneSkinningData), AssetData->SkinningData.Num(), PF_Unknown);
+	BoneIndexDataBuffer.Initialize(sizeof(FTressFXBoneIndexData), NumGuideStrands, PF_Unknown);
+	
 	if (!AssetData)
 	{
 		return;
@@ -136,17 +113,8 @@ void FTressFXHairObject::InitDynamicRHI()
 	UploadGPUData(FollowHairRootOffsetBuffer.Buffer, sizeof(FVector4), NumTotalStrands, AssetData->FollowRootOffsets.GetData());
 	UploadGPUData(HairRootToTipTexcoords.Buffer, sizeof(float), NumTotalVertice, AssetData->RootToTipTexcoords.GetData());
 	UploadGPUData(HairThicknessCoeffs.Buffer, sizeof(float), NumTotalVertice, AssetData->ThicknessCoeffs.GetData());
-
-	if (bSupporting16Bones)
-	{
-		UploadGPUData(BoneSkinningDataBuffer.Buffer, sizeof(FTressFXBoneSkinningData), AssetData->SkinningData.Num(), AssetData->SkinningData.GetData());
-		UploadGPUData(BoneIndexDataBuffer.Buffer, sizeof(FTressFXBoneIndexData), NumGuideStrands, AssetData->BoneIndexDataArr.GetData());
-	}
-	else 
-	{
-		UploadGPUData(LegacyBoneSkinningDataBuffer.Buffer, sizeof(FTressFXLegacyBoneSkinningData), NumTotalStrands, AssetData->LegacySkinningData.GetData());
-	}
-
+	UploadGPUData(BoneSkinningDataBuffer.Buffer, sizeof(FTressFXBoneSkinningData), AssetData->SkinningData.Num(), AssetData->SkinningData.GetData());
+	UploadGPUData(BoneIndexDataBuffer.Buffer, sizeof(FTressFXBoneIndexData), NumGuideStrands, AssetData->BoneIndexDataArr.GetData());
 
 	IndexBuffer.Indices = IndexBufferData;
 	IndexBuffer.NumTotalIndices = TotalIndices;
@@ -167,7 +135,6 @@ void FTressFXHairObject::ReleaseDynamicRHI()
 	FollowHairRootOffsetBuffer.Release();
 	HairThicknessCoeffs.Release();
 	BoneSkinningDataBuffer.Release();
-	LegacyBoneSkinningDataBuffer.Release();
 	BoneIndexDataBuffer.Release();
 	IndexBuffer.ReleaseResource();
 	HairTexCoords.Release();
@@ -382,12 +349,6 @@ FTressFXBoneIndexData::FTressFXBoneIndexData()
 {
 	StartIdx = 0;
 	BoneCount = 0;
-}
-
-FTressFXLegacyBoneSkinningData::FTressFXLegacyBoneSkinningData() : 
-	BoneIndex(-1, -1, -1, -1), Weight(0, 0, 0, 0)
-{
-
 }
 
 FTressFXInstanceRenderData::FTressFXInstanceRenderData(FTressFXRuntimeData* InAssetData /*= nullptr*/)

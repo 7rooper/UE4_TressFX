@@ -14,9 +14,8 @@ UTressFXAsset::UTressFXAsset(const class FObjectInitializer& ObjectInitializer) 
 {
 	NumFollowStrandsPerGuide = 2.f;
 	TipSeparationFactor = 0.4;
-	MaxRadiusAroundGuideHair = 5.f;
+	MaxRadiusAroundGuideHair = 2.f;
 	ImportData = MakeShareable(new FTressFXRuntimeData());
-	bSupport16Bones = true;
 	bIsValid = true; // assume valid at start
 }
 
@@ -75,7 +74,7 @@ FTressFXHairObject* UTressFXAsset::GetOrCreateRenderData()
 {
 	if (SharedRenderData == nullptr)
 	{
-		SharedRenderData = ::new FTressFXHairObject(bSupport16Bones, ImportData.Get());
+		SharedRenderData = ::new FTressFXHairObject(ImportData.Get());
 		BeginInitResource(SharedRenderData);
 	}
 
@@ -110,8 +109,7 @@ void UTressFXAsset::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 	else if 
 	(
 		Name == GET_MEMBER_NAME_STRING_CHECKED(UTressFXAsset, BaseSkeleton) ||
-		Name == GET_MEMBER_NAME_STRING_CHECKED(UTressFXAsset, TressFXBoneSkinningAsset) ||
-		Name == GET_MEMBER_NAME_STRING_CHECKED(UTressFXAsset, bSupport16Bones)
+		Name == GET_MEMBER_NAME_STRING_CHECKED(UTressFXAsset, TressFXBoneSkinningAsset)
 	)
 	{
 		bSomethingChanged = true;
@@ -127,7 +125,7 @@ void UTressFXAsset::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 
 		if (TressFXBoneSkinningAsset && BaseSkeleton)
 		{
-			bIsValid = ImportData->LoadBoneData(BaseSkeleton, TressFXBoneSkinningAsset, bSupport16Bones);
+			bIsValid = ImportData->LoadBoneData(BaseSkeleton, TressFXBoneSkinningAsset);
 		}
 		else
 		{
@@ -137,9 +135,10 @@ void UTressFXAsset::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 
 		for (TObjectIterator<UTressFXComponent> It; It; ++It)
 		{
-			if (It->Asset == this && !It->IsTemplate())
+			if (It->Asset == this)
 			{
-				It->MarkForNeededEndOfFrameRecreate();
+				It->MarkInstanceRenderDataDirty();
+				It->MarkRenderStateDirty();
 			}
 		}
 	}
@@ -415,7 +414,7 @@ TArray<FVector> FTressFXRuntimeData::GetRootPositions()
 }
 
 
-bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTressFXBoneSkinningAsset* Asset, bool bSupport16Bones)
+bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTressFXBoneSkinningAsset* Asset)
 {
 	switch(Asset->AssetType)
 	{
@@ -436,88 +435,40 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 				return false;
 			}
 
-			if(bSupport16Bones)
+			SkinningData.Empty();
+			BoneIndexDataArr.Empty();
+
+			for (int32 GuideStrandIndex = 0; GuideStrandIndex < NumGuideStrands; ++GuideStrandIndex)
 			{
-				SkinningData.Empty();
-				LegacySkinningData.Empty();
-				BoneIndexDataArr.Empty();
+				FTressFXBoneIndexData BoneIdxData;
+				BoneIdxData.StartIdx = SkinningData.Num();
 
-				for (int32 GuideStrandIndex = 0; GuideStrandIndex < NumGuideStrands; ++GuideStrandIndex)
+				for (int32 j = 0; j < TRESSFX_MAX_INFLUENTIAL_BONE_COUNT; ++j)
 				{
-					FTressFXBoneIndexData BoneIdxData;
-					BoneIdxData.StartIdx = SkinningData.Num();
 
-					for (int32 j = 0; j < TRESSFX_MAX_INFLUENTIAL_BONE_COUNT; ++j)
+					FTressFXBoneSkinningData SkinData;
+					const int32 DataIndex = (GuideStrandIndex * TRESSFX_MAX_INFLUENTIAL_BONE_COUNT) + j;
+
+					if (DataIndex < Asset->JsonVersionImportData.JsonSkinningData.Num())
 					{
+						FTressFXBoneSkinningJSONImportData ImportedSkinData = Asset->JsonVersionImportData.JsonSkinningData[DataIndex];
+						int32 EngineBoneIndex = FTressFXUtils::FindEngineBoneIndex(SkeletalMesh, ImportedSkinData.BoneName, true);
 
-						FTressFXBoneSkinningData SkinData;
-						const int32 DataIndex = (GuideStrandIndex * TRESSFX_MAX_INFLUENTIAL_BONE_COUNT) + j;
+						SkinData.BoneIndex = (float)EngineBoneIndex; // Change the joint index to be what the engine wants
+						SkinData.Weight = ImportedSkinData.Weight;
 
-						if (DataIndex < Asset->JsonVersionImportData.JsonSkinningData.Num())
+						if (SkinData.BoneIndex == -1.f && ImportedSkinData.BoneName != NAME_None)
 						{
-							FTressFXBoneSkinningJSONImportData ImportedSkinData = Asset->JsonVersionImportData.JsonSkinningData[DataIndex];
-							int32 EngineBoneIndex = FTressFXUtils::FindEngineBoneIndex(SkeletalMesh, ImportedSkinData.BoneName, true);
-
-							SkinData.BoneIndex = (float)EngineBoneIndex; // Change the joint index to be what the engine wants
-							SkinData.Weight = ImportedSkinData.Weight;
-
-							if (SkinData.BoneIndex == -1.f && ImportedSkinData.BoneName != NAME_None)
-							{
-								UE_LOG(LogTemp, Warning, TEXT("Bone name not found in reference skeleton. bone name: %s"), *ImportedSkinData.BoneName.ToString());
-							}
-							if (SkinData.Weight > 0.0001f && SkinData.BoneIndex >= 0)
-							{
-								SkinningData.Add(SkinData);
-								BoneIdxData.BoneCount++;
-							}
+							UE_LOG(LogTemp, Warning, TEXT("Bone name not found in reference skeleton. bone name: %s"), *ImportedSkinData.BoneName.ToString());
+						}
+						if (SkinData.Weight > 0.0001f && SkinData.BoneIndex >= 0)
+						{
+							SkinningData.Add(SkinData);
+							BoneIdxData.BoneCount++;
 						}
 					}
-					BoneIndexDataArr.Add(BoneIdxData);
 				}
-			}
-			else
-			{
-				//only 4 bone influences
-				int32 BoneSkinningMemSize = NumTotalStrands;
-				SkinningData.Empty();
-				LegacySkinningData.Empty();
-				LegacySkinningData.AddZeroed(BoneSkinningMemSize);
-
-				for (int32 GuideStrandIndex = 0; GuideStrandIndex < NumGuideStrands; ++GuideStrandIndex)
-				{
-					FTressFXLegacyBoneSkinningData SkinData;
-
-					for (int32 SkinngDataIndex = 0; SkinngDataIndex < TRESSFX_LEGACY_MAX_INFLUENTIAL_BONE_COUNT; ++SkinngDataIndex)
-					{
-						//we only want the first 4 of 16
-						const int32 DataIndex = (GuideStrandIndex * TRESSFX_MAX_INFLUENTIAL_BONE_COUNT) + SkinngDataIndex;
-						if (DataIndex < Asset->JsonVersionImportData.JsonSkinningData.Num())
-						{
-							FTressFXBoneSkinningJSONImportData ImportedSkinData = Asset->JsonVersionImportData.JsonSkinningData[DataIndex];
-							int32 EngineBoneIndex = FTressFXUtils::FindEngineBoneIndex(SkeletalMesh, ImportedSkinData.BoneName, true);
-
-							// Change the joint index to be what the engine wants
-							SkinData.BoneIndex[SkinngDataIndex] = (float)EngineBoneIndex;
-							SkinData.Weight[SkinngDataIndex] = ImportedSkinData.Weight;
-							if (SkinData.BoneIndex[SkinngDataIndex] == -1.f && ImportedSkinData.BoneName != NAME_None)
-							{
-								UE_LOG(LogTemp, Warning, TEXT("Bone name not found in reference skeleton. bone name: %s"), *ImportedSkinData.BoneName.ToString());
-							}
-							if (SkinData.Weight[SkinngDataIndex] == 0.f)
-							{
-								SkinData.BoneIndex[SkinngDataIndex] = -1.f;
-							}
-						}
-					}
-
-					// If bone index is -1, then it means that there is no bone associated to this. In this case we simply replace it with zero.
-					// This is safe because the corresponding weight should be zero anyway.
-					SkinData.BoneIndex[0] = SkinData.BoneIndex[0] == -1.f ? 0 : SkinData.BoneIndex[0];
-					SkinData.BoneIndex[1] = SkinData.BoneIndex[1] == -1.f ? 0 : SkinData.BoneIndex[1];
-					SkinData.BoneIndex[2] = SkinData.BoneIndex[2] == -1.f ? 0 : SkinData.BoneIndex[2];
-					SkinData.BoneIndex[3] = SkinData.BoneIndex[3] == -1.f ? 0 : SkinData.BoneIndex[3];
-					LegacySkinningData[GuideStrandIndex * (NumFollowStrandsPerGuide + 1)] = SkinData;
-				}
+				BoneIndexDataArr.Add(BoneIdxData);
 			}
 			
 			return true;

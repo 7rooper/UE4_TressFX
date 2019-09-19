@@ -14,7 +14,6 @@
 #pragma warning( disable : 5038)
 
 #define TRESSFX_MAX_INFLUENTIAL_BONE_COUNT 16
-#define TRESSFX_LEGACY_MAX_INFLUENTIAL_BONE_COUNT 4
 
 #define AMD_TRESSFX_VERSION_MAJOR                    4
 #define AMD_TRESSFX_VERSION_MINOR                    0
@@ -161,25 +160,6 @@ public:
 
 };
 
-//Literally just a map of bone index, to bone Weights in the parent skel
-struct TRESSFX_API FTressFXLegacyBoneSkinningData
-{
-public:
-
-	FTressFXLegacyBoneSkinningData();
-
-	FVector4 BoneIndex;
-	FVector4 Weight;
-
-	friend FArchive& operator << (FArchive& Ar, FTressFXLegacyBoneSkinningData & Data)
-	{
-		Ar << Data.BoneIndex << Data.Weight;
-
-		return Ar;
-	}
-
-};
-
 class TRESSFX_API FTressFXImportData
 {
 
@@ -220,29 +200,6 @@ public:
 	virtual void InitDynamicRHI() override;
 };
 
-struct FTressFXRuntimeDataCustomVersion
-{
-	enum Type
-	{
-		// Before any version changes were made
-		BeforeCustomVersionWasAdded = 0,
-		// added option to use legacy skinning
-		AddedLegacySkinning = 1,
-
-		// -----<new versions can be added above this line>-------------------------------------------------
-		VersionPlusOne,
-		LatestVersion = VersionPlusOne - 1
-	};
-
-	// The GUID for this custom version number
-	const static FGuid GUID;
-
-private:
-	FTressFXRuntimeDataCustomVersion() {}
-};
-
-
-
 class TRESSFX_API FTressFXRuntimeData : public FTressFXImportData
 {
 public:
@@ -266,7 +223,6 @@ public:
 	TMap<int32, FName> BoneNameIndexMap;
 
 	TArray<FTressFXBoneSkinningData> SkinningData;
-	TArray<FTressFXLegacyBoneSkinningData> LegacySkinningData;
 
 	TArray<FTressFXBoneIndexData> BoneIndexDataArr;
 
@@ -286,7 +242,7 @@ public:
 	FBoxSphereBounds CalcBounds();
 
 	// Loads *.tfxbone data
-	bool LoadBoneData(const class USkeletalMesh* SkeletalMesh, class UTressFXBoneSkinningAsset* Asset, bool bSupport16Bones);
+	bool LoadBoneData(const class USkeletalMesh* SkeletalMesh, class UTressFXBoneSkinningAsset* Asset);
 
 	inline uint32 GetNumHairSegments() const { return NumTotalStrands * (NumVerticesPerStrand - 1); }
 	inline uint32 GetNumHairTriangleIndices() const { return 6 * GetNumHairSegments(); }
@@ -396,9 +352,7 @@ class TRESSFX_API FTressFXHairObject : public FRenderResource
 {
 
 public:
-	FTressFXHairObject(bool InbSupport16Bones, FTressFXRuntimeData* InAssetData = nullptr);
-
-	bool bSupporting16Bones;
+	FTressFXHairObject(FTressFXRuntimeData* InAssetData = nullptr);
 
 	void UpdateTressFXData(FTressFXRuntimeData* InAssetData);
 	FTressFXRuntimeData* AssetData;
@@ -418,7 +372,6 @@ public:
 	FReadStructedBuffer HairRefVecsInLocalFrameBuffer;
 	FReadStructedBuffer FollowHairRootOffsetBuffer;
 	FReadStructedBuffer BoneSkinningDataBuffer;
-	FReadStructedBuffer LegacyBoneSkinningDataBuffer;
 	FReadStructedBuffer BoneIndexDataBuffer;
 
 	FTressFXIndexBuffer					IndexBuffer;

@@ -50,12 +50,7 @@ bool UTressFXComponent::ShouldCreateRenderState() const
 		Asset != nullptr 
 		&& Asset->ImportData.IsValid() 
 		&& Asset->IsValid() 
-		&& 
-		(
-			(Asset->bSupport16Bones && Asset->ImportData->SkinningData.Num()) 
-			|| 
-			(!Asset->bSupport16Bones && Asset->ImportData->LegacySkinningData.Num())
-		)
+		&& Asset->ImportData->SkinningData.Num()
 	);
 }
 
@@ -581,13 +576,12 @@ void UTressFXComponent::RunSimulation()
 
 	if (LocalTFXProxy)
 	{
-		const bool bSupport16Bones = Asset->bSupport16Bones;
 		ENQUEUE_RENDER_COMMAND(TRessFXSimulateCommand)(
-			[LocalTFXProxy, DynamicRenderData, bSupport16Bones](FRHICommandListImmediate& RHICmdList)
+			[LocalTFXProxy, DynamicRenderData](FRHICommandListImmediate& RHICmdList)
 			{
 				LocalTFXProxy->UpdateDynamicData_RenderThread(&DynamicRenderData.Get());
 				LocalTFXProxy->CopyMorphs(RHICmdList);
-				SimulateTressFX(RHICmdList, LocalTFXProxy, DynamicRenderData->TressFXSimulationSettings.LengthConstraintsIterations, bSupport16Bones);
+				SimulateTressFX(RHICmdList, LocalTFXProxy, DynamicRenderData->TressFXSimulationSettings.LengthConstraintsIterations);
 			}
 		);
 	}
