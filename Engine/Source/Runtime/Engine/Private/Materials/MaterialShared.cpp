@@ -2095,7 +2095,6 @@ FShaderPipeline* FMaterial::GetShaderPipeline(class FShaderPipelineType* ShaderP
 		UE_LOG(LogMaterial, Fatal,
 			TEXT("		With VF=%s, Platform=%s\n")
 			TEXT("		MaterialUsageDesc: %s"),
-			ShaderPipelineType->GetName(), *GetFriendlyName(),
 			VertexFactoryType->GetName(), *LegacyShaderPlatformToShaderFormat(ShaderPlatform).ToString(),
 			*MaterialUsage
 			);
