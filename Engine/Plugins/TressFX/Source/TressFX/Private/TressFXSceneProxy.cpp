@@ -519,7 +519,8 @@ void FTressFXSimParameters::UpdateSimulationParameters(
 	SetTotalHairs(HairObject->NumTotalStrands);
 
 	float FPS = FMath::Max(1.0f / LastDeltaTime, 30.f);
-	SetTimeStep(1 / FPS);
+	//SetTimeStep(1 / FPS);
+	SetTimeStep(1 / 60.f);
 
 	//Note: this sets the z component of g_SimInts/m_SimInts but that flag seems to not be used anymore
 	// eventually probably remove this
