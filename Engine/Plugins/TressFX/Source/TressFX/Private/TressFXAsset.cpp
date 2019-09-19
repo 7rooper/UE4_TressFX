@@ -121,7 +121,7 @@ void UTressFXAsset::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 	{
 		RawGuideCount = ImportData->NumGuideStrands;
 		TotalStrandCount = ImportData->NumGuideStrands * (NumFollowStrandsPerGuide + 1);
-		VertexCountPerStrand = ImportData->NumGuideVertices / TotalStrandCount;
+		VertexCountPerStrand = ImportData->NumVerticesPerStrand;
 		TotalVertexCount = ImportData->NumGuideVertices;
 		TotalTriangleCount = ImportData->GetNumHairTriangleIndices() / 3;
 
@@ -131,19 +131,15 @@ void UTressFXAsset::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 		}
 		else
 		{
-			//SkinningData.Empty();
 			bIsValid = false;
 			return;
 		}
 
-
-
 		for (TObjectIterator<UTressFXComponent> It; It; ++It)
 		{
-			if (It->Asset == this)
+			if (It->Asset == this && !It->IsTemplate())
 			{
-				It->MarkInstanceRenderDataDirty();
-				It->MarkRenderStateDirty();
+				It->MarkForNeededEndOfFrameRecreate();
 			}
 		}
 	}
@@ -491,32 +487,26 @@ bool FTressFXRuntimeData::LoadBoneData(const USkeletalMesh* SkeletalMesh, UTress
 				{
 					FTressFXLegacyBoneSkinningData SkinData;
 
-					for (int32 SkinngDataIndex = 0; SkinngDataIndex < TRESSFX_MAX_INFLUENTIAL_BONE_COUNT; ++SkinngDataIndex)
+					for (int32 SkinngDataIndex = 0; SkinngDataIndex < TRESSFX_LEGACY_MAX_INFLUENTIAL_BONE_COUNT; ++SkinngDataIndex)
 					{
-						if(SkinngDataIndex < TRESSFX_LEGACY_MAX_INFLUENTIAL_BONE_COUNT)
+						//we only want the first 4 of 16
+						const int32 DataIndex = (GuideStrandIndex * TRESSFX_MAX_INFLUENTIAL_BONE_COUNT) + SkinngDataIndex;
+						if (DataIndex < Asset->JsonVersionImportData.JsonSkinningData.Num())
 						{
-							const int32 DataIndex = (GuideStrandIndex * TRESSFX_MAX_INFLUENTIAL_BONE_COUNT) + SkinngDataIndex;
-							if (DataIndex < Asset->JsonVersionImportData.JsonSkinningData.Num())
-							{
-								FTressFXBoneSkinningJSONImportData ImportedSkinData = Asset->JsonVersionImportData.JsonSkinningData[DataIndex];
-								int32 EngineBoneIndex = FTressFXUtils::FindEngineBoneIndex(SkeletalMesh, ImportedSkinData.BoneName, true);
+							FTressFXBoneSkinningJSONImportData ImportedSkinData = Asset->JsonVersionImportData.JsonSkinningData[DataIndex];
+							int32 EngineBoneIndex = FTressFXUtils::FindEngineBoneIndex(SkeletalMesh, ImportedSkinData.BoneName, true);
 
-								// Change the joint index to be what the engine wants
-								SkinData.BoneIndex[SkinngDataIndex] = (float)EngineBoneIndex;
-								SkinData.Weight[SkinngDataIndex] = ImportedSkinData.Weight;
-								if (SkinData.BoneIndex[SkinngDataIndex] == -1.f && ImportedSkinData.BoneName != NAME_None)
-								{
-									UE_LOG(LogTemp, Warning, TEXT("Bone name not found in reference skeleton. bone name: %s"), *ImportedSkinData.BoneName.ToString());
-								}
-								if (SkinData.Weight[SkinngDataIndex] == 0.f)
-								{
-									SkinData.BoneIndex[SkinngDataIndex] = -1.f;
-								}
+							// Change the joint index to be what the engine wants
+							SkinData.BoneIndex[SkinngDataIndex] = (float)EngineBoneIndex;
+							SkinData.Weight[SkinngDataIndex] = ImportedSkinData.Weight;
+							if (SkinData.BoneIndex[SkinngDataIndex] == -1.f && ImportedSkinData.BoneName != NAME_None)
+							{
+								UE_LOG(LogTemp, Warning, TEXT("Bone name not found in reference skeleton. bone name: %s"), *ImportedSkinData.BoneName.ToString());
 							}
-						}
-						else 
-						{
-							continue;
+							if (SkinData.Weight[SkinngDataIndex] == 0.f)
+							{
+								SkinData.BoneIndex[SkinngDataIndex] = -1.f;
+							}
 						}
 					}
 

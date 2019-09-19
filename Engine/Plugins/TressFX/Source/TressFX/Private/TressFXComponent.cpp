@@ -45,7 +45,18 @@ FPrimitiveSceneProxy* UTressFXComponent::CreateSceneProxy()
 
 bool UTressFXComponent::ShouldCreateRenderState() const
 {
-	return Asset != nullptr && Asset->ImportData.IsValid() && Asset->IsValid() && Asset->ImportData->SkinningData.Num();
+	return 
+	(
+		Asset != nullptr 
+		&& Asset->ImportData.IsValid() 
+		&& Asset->IsValid() 
+		&& 
+		(
+			(Asset->bSupport16Bones && Asset->ImportData->SkinningData.Num()) 
+			|| 
+			(!Asset->bSupport16Bones && Asset->ImportData->LegacySkinningData.Num())
+		)
+	);
 }
 
 void UTressFXComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
