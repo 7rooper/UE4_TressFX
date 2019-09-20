@@ -388,15 +388,8 @@ FBoxSphereBounds FTressFXRuntimeData::CalcBounds()
 	{
 		Box += FVector(Positions[i]);
 	}
-
 	//Double the bounds to account for simulation
-	FTransform Transform;
-	Transform.SetScale3D(FVector(2, 2, 2));
-	FQuat ZeroRot = FQuat(EForceInit::ForceInitToZero);
-	ZeroRot.Normalize();
-	Transform.SetRotation(ZeroRot);
-	Transform.SetTranslation(FVector(0, 0, 0));
-	return FBoxSphereBounds(Box.TransformBy(Transform));
+	return FBoxSphereBounds(Box.ExpandBy(Box.GetSize().X * 2));
 }
 
 TArray<FVector> FTressFXRuntimeData::GetRootPositions()
