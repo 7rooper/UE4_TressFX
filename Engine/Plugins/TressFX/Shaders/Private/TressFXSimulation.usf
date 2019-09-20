@@ -231,10 +231,6 @@ StructuredBuffer<FBoneSkinningData> BoneSkinningData;
 StructuredBuffer<FBoneIndexData> BoneIndexData;
 
 
-
-
-
-
 #if TRESSFX_MORPHS
 	StructuredBuffer<float3> MorphDeltas;
 #endif
@@ -491,7 +487,7 @@ FVertexIndices CalcIndicesInVertexLevelMaster(uint LocalId, uint GroupId)
     Result.GlobalStrandIndex *= (NumFollowersPerGuideHair + 1);
     Result.LocalVertexIndex = (LocalId - Result.LocalStrandIndex) / NumStrandsPerThreadGroup;
 
-	Result.GuideIndex = floor(Result.GlobalStrandIndex / max(NumFollowersPerGuideHair,1));
+	Result.GuideIndex = Result.GlobalStrandIndex / (NumFollowersPerGuideHair + 1);
 
     Result.StrandType = GetStrandType(Result.GlobalStrandIndex);
     Result.GlobalVertexIndex = Result.GlobalStrandIndex * Result.NumVerticesInTheStrand + Result.LocalVertexIndex;
@@ -706,9 +702,7 @@ void SimpleUpdateWithoutSimulation(
     float4 InitialPos = InitialHairPositions[Indices.GlobalVertexIndex]; // rest position
 
 #if TRESSFX_MORPHS
-		// this should always be a whole number, so this is fine
-		int GuideIndex = Indices.GlobalStrandIndex / (NumFollowersPerGuideHair + 1);
-		float3 Delta = MorphDeltas[GuideIndex];
+		float3 Delta = MorphDeltas[Indices.GuideIndex];
 		InitialPos.xyz += Delta;
 #endif
 
