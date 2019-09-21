@@ -137,8 +137,7 @@ void UTressFXAsset::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 		{
 			if (It->Asset == this)
 			{
-				It->MarkInstanceRenderDataDirty();
-				It->MarkRenderStateDirty();
+				It->RecreateRenderState_Concurrent();
 			}
 		}
 	}

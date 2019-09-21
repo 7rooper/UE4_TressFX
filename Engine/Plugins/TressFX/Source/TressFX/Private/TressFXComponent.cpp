@@ -184,10 +184,10 @@ void UTressFXComponent::ReleaseInstanceRenderData()
 
 		ENQUEUE_RENDER_COMMAND(CleanupHairObject)(
 			[LocalInstanceRenderData](FRHICommandListImmediate& RHICmdList)
-		{
-			LocalInstanceRenderData->ReleaseResource();
-			delete LocalInstanceRenderData;
-		}
+			{
+				LocalInstanceRenderData->ReleaseResource();
+				delete LocalInstanceRenderData;
+			}
 		);
 	}
 }
