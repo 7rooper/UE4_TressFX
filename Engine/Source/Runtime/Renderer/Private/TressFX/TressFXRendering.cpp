@@ -69,6 +69,22 @@ static TAutoConsoleVariable<int32> CVarTressFXEnableSurfaceShadow(
 	ECVF_RenderThreadSafe
 );
 
+int32 GTressFXOITMode = 0;
+FAutoConsoleVariableRef CVarTressOITMode(
+	TEXT("tfx.OITMode"),
+	GTressFXOITMode,
+	TEXT("0: ShortCut (default)\n")
+	TEXT("1: KBuffer (Experimental, not recommended)"),
+	ECVF_RenderThreadSafe
+);
+
+int32 GTressFXKBufferSize = 8;
+FAutoConsoleVariableRef CVarTressFXKBufferSize(
+	TEXT("tfx.KBuffer.Size"),
+	GTressFXKBufferSize,
+	TEXT("Size of OIT K-Buffer if using the k-buffer path"),
+	ECVF_RenderThreadSafe
+);
 
 /////////////////////////////////////////////////////////////////////////////////
 //  FTressFXFillColorPS - Pixel shader for Third pass of shortcut, and PPLL build of kbuffer
