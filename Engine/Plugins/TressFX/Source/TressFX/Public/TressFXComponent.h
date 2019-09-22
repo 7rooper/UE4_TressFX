@@ -39,7 +39,7 @@ public:
 		, Damping(0.08f)
 		, GravityMagnitude(1.0)
 		, TipSeparation(0.0f)
-		, WindMagnitude(1.0f)
+		, WindMagnitude(1000.0f)
 		, WindDirection(FVector(1, 0, 0))
 	{
 		SimulationQuality = ETressFXSimulationQuality::TFXSim_Full;
@@ -117,7 +117,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFXSimulation")
 	float TipSeparation;
 
-	// Scale up or down the wind strength on a per component basis
+	// Scale up or down the wind strength on a per component basis. It needs a very high value for wind to have any effect.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TressFXSimulation")
 	float WindMagnitude;
 
