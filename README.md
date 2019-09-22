@@ -10,7 +10,7 @@ This open source Unreal Engine fork implements a **modified** version AMD's [Tre
 We are opening the source to the community to get more people involved and help solve the remaining issues.
 
 ### Current Feature List/Changes from AMDs [original library](https://github.com/GPUOpen-Effects/TressFX):
-- Support for up to 16 bone influences per hair
+- Support for up to 16 bone influences per hair (as opposed to the original 4)
 - Morph target support
 - New [exporters for Maya and Blender](https://github.com/kostenickj/TressFXExporter)
 
@@ -72,7 +72,7 @@ Known Issues/Future Work
 
 Want to help?
 ----------------------
-Please do! Pull request are very welcome. There are are many things that can be improved and several features that are not fully implemented and we want your help! See the [issues](https://github.com/kostenickj/UE4_TressFX/issues) on github for starters. Feel free to open new issues as well.
+Please do! My goal is for this to become a community project where many developers can contribute. There are are many things that can be improved and several features that are not fully implemented and we want your help! See the [issues](https://github.com/kostenickj/UE4_TressFX/issues) on github for starters. Feel free to open new issues as well.
 
 Please follow the Unreal Engine [Coding standards](https://docs.unrealengine.com/en-US/Programming/Development/CodingStandard/index.html).
 
@@ -82,7 +82,7 @@ Bugs? Yes. When you encounter bugs please open an [issue](https://github.com/kos
 
 Branches
 ----------------------
-Branches that end with "Main" are generally the stable branches, and there is usually one "Main" branch per engine release. We try not to push anything there that will crash. Example: 423TFXMain.
+The Branch that ends with "Main" is the stable "official" branch, and there is one "Main" branch per engine release. We try not to push anything there that will crash. Example: 423TFXMain.
 
 The main dev branch is \<engine version>Dev. We stage changes here from individual author branches for testing before merging them to Main. Make pull requests against this branch please.
 
@@ -94,7 +94,7 @@ All code modifications of the Unreal Engine source are styled as follows:
         ...tressfx code
         /*@third party code - END TressFX*/
 
-If the code is in its own file, this is ommitted.
+If the code is in its own file, this is omitted.
 
 FAQ
 ----------------------
@@ -103,13 +103,13 @@ FAQ
 No. It uses some of the same systems and concepts as the Forward Renderer, but it is _not_ compatible with forward rendering. The lighting system is comparable to the "Translucency Surface Forward Shading" lighting mode.
 
 
-### What about VR or instanced stereo?
+### VR or instanced stereo?
 
-Those Probably will _not_ work without changes. Its not something I personally plan on adding, but pull requests are certainly welcome :)
+These will Probably _not_ work without changes. Its not something I personally plan on adding, but pull requests are certainly welcome :)
 
 ### Raytracing?
 
-Not _yet_.
+Not _yet_. see see [here](https://github.com/kostenickj/UE4_TressFX/issues/22)
 
 
 ---
