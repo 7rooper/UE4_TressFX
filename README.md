@@ -65,7 +65,7 @@ There are more than what is listed here but they are mainly for dev/debugging pu
 Known Issues/Future Work
 ----------------------
 - Dynamic Shadows technically "work" but improvement is needed.
-    - Hair can recieve shadow and cast shadow onto the scene, but self shadow is not quite good enough yet. I plan on implementing Adaptive Volumetric Shadow Maps for self shadowing. I Would love to hear other ideas.
+    - Hair can recieve shadow and cast shadow onto the scene, but self shadow is not quite good enough yet. Ideas welcome.
 - Raytracing Support, see [here](https://github.com/kostenickj/UE4_TressFX/issues/22).
 - Only 4 dynamic lights currently supported at once with OIT (opaque has no limitation). Would love to hear others' ideas on how to increase this to 8.
 
