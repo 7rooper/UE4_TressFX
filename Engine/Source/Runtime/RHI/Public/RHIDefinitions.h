@@ -81,7 +81,7 @@ enum EShaderPlatform
 	SP_METAL_TVOS			= 30,
 	SP_METAL_MRT_TVOS		= 31,
 
-#if PLATFORM_WIN64
+#if PLATFORM_WINDOWS && PLATFORM_64BITS
 	SP_XXX					= 32, // this is a temporary solution for 4.23 only to an issue with platform extensions and binary builds
 #endif
 
