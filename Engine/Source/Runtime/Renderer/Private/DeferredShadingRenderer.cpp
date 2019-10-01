@@ -1586,7 +1586,7 @@ void FDeferredShadingSceneRenderer::Render(FRHICommandListImmediate& RHICmdList)
 	TRefCountPtr<IPooledRenderTarget> GlobalIlluminationRT;
 
 	const bool bRayTracingEnabled = IsRayTracingEnabled();
-	if (bRayTracingEnabled && bCanOverlayRayTracingOutput)
+	if (bRayTracingEnabled && bCanOverlayRayTracingOutput && bRenderDeferredLighting)
 	{		
 		RenderRayTracingSkyLight(RHICmdList, SkyLightRT, SkyLightHitDistanceRT);
 		RenderRayTracingGlobalIllumination(RHICmdList, GlobalIlluminationRT); 
