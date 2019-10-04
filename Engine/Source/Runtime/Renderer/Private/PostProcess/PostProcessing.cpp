@@ -148,14 +148,6 @@ static TAutoConsoleVariable<int32> CVarAlphaChannel(
 	TEXT(" 2: same as 1, but also enable it through the tonemapper. Compositing after the tonemapper is incorrect, as their is no meaning to tonemap the alpha channel. This is only meant to be use exclusively for broadcasting hardware that does not support linear color space compositing and tonemapping."),
 	ECVF_ReadOnly);
 
-static TAutoConsoleVariable<int32> CVarAlphaSupportOverride(
-	TEXT("r.PostProcessing.PropagateAlphaOverride"),
-	0,
-	TEXT("CVar to allow overriding of the r.PostProcessing.PropagateAlpha CVar at runtime.\n")
-	TEXT(" 0: disabled (default);\n")
-	TEXT(" 1: enabled"),
-	ECVF_Default);
-
 static TAutoConsoleVariable<int32> CVarPostProcessingPreferCompute(
 	TEXT("r.PostProcessing.PreferCompute"),
 	0,
@@ -2726,5 +2718,5 @@ void FPostProcessing::ProcessPlanarReflection(FRHICommandListImmediate& RHICmdLi
 
 bool FPostProcessing::HasAlphaChannelSupport()
 {
-	return CVarAlphaChannel.GetValueOnAnyThread() != 0 || CVarAlphaSupportOverride.GetValueOnAnyThread() != 0;
+	return CVarAlphaChannel.GetValueOnAnyThread() != 0;
 }

@@ -2042,10 +2042,6 @@ namespace OculusHMD
 
 		if (!ovrp_GetInitialized())
 		{
-			// 4.23.1 workaround: enable the alpha-channel in the tonemapper.
-			static auto AlphaSupportOverrideCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.PostProcessing.PropagateAlphaOverride"));
-			AlphaSupportOverrideCVar->Set(1);
-
 #if !UE_BUILD_SHIPPING
 			ovrpLogCallback logCallback = OvrpLogCallback;
 #else
