@@ -143,7 +143,7 @@ FVulkanViewport::FVulkanViewport(FVulkanDynamicRHI* InRHI, FVulkanDevice* InDevi
 
 	if (FVulkanPlatform::SupportsStandardSwapchain())
 	{
-		for (int32 Index = 0; Index < NUM_BUFFERS; ++Index)
+		for (int32 Index = 0, NumBuffers = RenderingDoneSemaphores.Num(); Index < NumBuffers; ++Index)
 		{
 			RenderingDoneSemaphores[Index] = new VulkanRHI::FSemaphore(*InDevice);
 			RenderingDoneSemaphores[Index]->AddRef();
@@ -163,7 +163,7 @@ FVulkanViewport::~FVulkanViewport()
 	
 	if (FVulkanPlatform::SupportsStandardSwapchain())
 	{
-		for (int32 Index = 0; Index < NUM_BUFFERS; ++Index)
+		for (int32 Index = 0, NumBuffers = RenderingDoneSemaphores.Num(); Index < NumBuffers; ++Index)
 		{
 			RenderingDoneSemaphores[Index]->Release();
 
@@ -538,7 +538,7 @@ void FVulkanViewport::RecreateSwapchain(void* NewNativeWindow, bool bForce)
 	FVulkanSwapChainRecreateInfo RecreateInfo = { VK_NULL_HANDLE, VK_NULL_HANDLE };
 	if (FVulkanPlatform::SupportsStandardSwapchain())
 	{
-		for (int32 Index = 0; Index < NUM_BUFFERS; ++Index)
+		for (int32 Index = 0, NumBuffers = BackBufferImages.Num(); Index < NumBuffers; ++Index)
 		{
 			TextureViews[Index].Destroy(*Device);
 			Device->NotifyDeletedImage(BackBufferImages[Index]);
@@ -608,7 +608,7 @@ void FVulkanViewport::RecreateSwapchainFromRT(EPixelFormat PreferredPixelFormat)
 	FVulkanSwapChainRecreateInfo RecreateInfo = { VK_NULL_HANDLE, VK_NULL_HANDLE};
 	if (FVulkanPlatform::SupportsStandardSwapchain())
 	{
-		for (int32 Index = 0; Index < NUM_BUFFERS; ++Index)
+		for (int32 Index = 0, NumBuffers = BackBufferImages.Num(); Index < NumBuffers; ++Index)
 		{
 			TextureViews[Index].Destroy(*Device);
 			Device->NotifyDeletedImage(BackBufferImages[Index]);
@@ -647,7 +647,10 @@ void FVulkanViewport::CreateSwapchain(FVulkanSwapChainRecreateInfo* RecreateInfo
 			RecreateInfo
 		);
 
-		checkf(Images.Num() == NUM_BUFFERS, TEXT("Actual Num: %i"), Images.Num());
+		checkf(Images.Num() >= NUM_BUFFERS, TEXT("We wanted at least %i images, actual Num: %i"), NUM_BUFFERS, Images.Num());
+		BackBufferImages.SetNum(Images.Num());
+		RenderingDoneSemaphores.SetNum(Images.Num());
+		TextureViews.SetNum(Images.Num());
 
 		FVulkanCmdBuffer* CmdBuffer = Device->GetImmediateContext().GetCommandBufferManager()->GetUploadCmdBuffer();
 		ensure(CmdBuffer->IsOutsideRenderPass());
