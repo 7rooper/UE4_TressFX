@@ -338,12 +338,10 @@ void FEditorSessionSummaryWriter::Tick(float DeltaTime)
 void FEditorSessionSummaryWriter::Shutdown()
 {
 	FCoreDelegates::OnHandleSystemError.RemoveAll(this);
-	FCoreDelegates::ApplicationHasReactivatedDelegate.RemoveAll(this);
-	FCoreDelegates::ApplicationWillDeactivateDelegate.RemoveAll(this);
-	FCoreDelegates::ApplicationWillEnterBackgroundDelegate.RemoveAll(this);
-	FCoreDelegates::ApplicationHasEnteredForegroundDelegate.RemoveAll(this);
 	FCoreDelegates::ApplicationWillTerminateDelegate.RemoveAll(this);
 	FCoreDelegates::IsVanillaProductChanged.RemoveAll(this);
+
+	FUserActivityTracking::OnActivityChanged.RemoveAll(this);
 
 	// Skip Slate if terminating, since we can't guarantee which thread called us.
 	if (!CurrentSession->bIsTerminating) 
