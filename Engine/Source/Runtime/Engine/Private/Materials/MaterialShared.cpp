@@ -2110,7 +2110,6 @@ FShaderPipeline* FMaterial::GetShaderPipeline(class FShaderPipelineType* ShaderP
 		UE_LOG(LogMaterial, Fatal,
 			TEXT("		With VF=%s, Platform=%s\n")
 			TEXT("		MaterialUsageDesc: %s"),
-			ShaderPipelineType->GetName(), *GetFriendlyName(),
 			VertexFactoryType->GetName(), *LegacyShaderPlatformToShaderFormat(ShaderPlatform).ToString(),
 			*MaterialUsage
 			);
@@ -3765,7 +3764,7 @@ void FMaterialResourceMemoryWriter::SerializeToParentArchive()
 	check(Ar.IsSaving() && this->IsByteSwapping() == Ar.IsByteSwapping());
 
 	// Make a array of unique names used by the shader map
-	TArray<NAME_INDEX> DisplayIndices;
+	TArray<FNameEntryId> DisplayIndices;
 	auto NumNames = Name2Indices.Num();
 	DisplayIndices.Empty(NumNames);
 	DisplayIndices.AddDefaulted(NumNames);
@@ -3775,7 +3774,7 @@ void FMaterialResourceMemoryWriter::SerializeToParentArchive()
 	}
 
 	Ar << NumNames;
-	for (NAME_INDEX DisplayIdx : DisplayIndices)
+	for (FNameEntryId DisplayIdx : DisplayIndices)
 	{
 		FName::GetEntry(DisplayIdx)->Write(Ar);
 	}
