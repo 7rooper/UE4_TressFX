@@ -518,10 +518,11 @@ void FTressFXSimParameters::UpdateSimulationParameters(
 	SetTipSeperation(InSettings.TipSeparation);
 	SetTotalHairs(HairObject->NumTotalStrands);
 
-	float FPS = FMath::Max(1.0f / LastDeltaTime, 30.f);
-	//causes wierd effects when tied to LastDeltaTime
+	
+	//causes wierd effects when tied to actual LastDeltaTime, hardcoding for now
+	//float FPS = FMath::Max(1.0f / LastDeltaTime, 30.f);
 	//SetTimeStep(1 / FPS);
-	SetTimeStep(1 / 60.f);
+	SetTimeStep(0.01f);
 
 	//Note: this sets the z component of g_SimInts/m_SimInts but that flag seems to not be used anymore
 	// eventually probably remove this
@@ -562,6 +563,11 @@ void FTressFXSimParameters::SetWind(const FVector& WindDir, const float WindMagn
 	FinalWind = WindRotator.RotateVector(FinalWind);
 	FinalWind.Z *= -1.f;
 	Wind = FVector4(FinalWind, Wind.W);
+	check(Wind.ContainsNaN() == false);
+	Wind.X = FMath::Clamp(Wind.X, -1024.f, 1024.f);
+	Wind.Y = FMath::Clamp(Wind.Y, -1024.f, 1024.f);
+	Wind.Z = FMath::Clamp(Wind.Z, -1024.f, 1024.f);
+	Wind.W = FMath::Clamp(Wind.W, -1024.f, 1024.f);
 }
 
 // NOTE: collision and bones etc need to be set by whatever calls this function!

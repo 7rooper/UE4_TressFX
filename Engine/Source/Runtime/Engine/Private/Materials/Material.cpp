@@ -6030,7 +6030,7 @@ static bool IsPropertyActive_Internal(EMaterialProperty InProperty,
 		Active = true;
 		break;
 	case MP_PixelDepthOffset:
-		Active = !bIsTranslucentBlendMode;
+		Active = !bIsTranslucentBlendMode /*@third party code - BEGIN TressFX*/ && !bTressFX /*@third party code - END TressFX*/;
 		break;
 	case MP_ShadingModel:
 		Active = bUsesShadingModelFromMaterialExpression;

@@ -252,9 +252,13 @@ void FVulkanDepthStencilState::SetupCreateInfo(const FGraphicsPipelineStateIniti
 {
 	ZeroVulkanStruct(OutDepthStencilState, VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO);
 
-	OutDepthStencilState.depthTestEnable = (Initializer.DepthTest != CF_Always || Initializer.bEnableDepthWrite) ? VK_TRUE : VK_FALSE;
+	/*@third party code - BEGIN TressFX*/
+	OutDepthStencilState.depthTestEnable = Initializer.bForceDisableDepth ? VK_FALSE : (Initializer.DepthTest != CF_Always || Initializer.bEnableDepthWrite ? VK_TRUE : VK_FALSE);
+	OutDepthStencilState.depthWriteEnable = (Initializer.DepthWriteMask != DWM_Zero) ? (Initializer.bEnableDepthWrite ? VK_TRUE : VK_FALSE) : VK_FALSE;
+	/*@third party code - END TressFX*/
+	//OutDepthStencilState.depthTestEnable = (Initializer.DepthTest != CF_Always || Initializer.bEnableDepthWrite) ? VK_TRUE : VK_FALSE;
 	OutDepthStencilState.depthCompareOp = CompareOpToVulkan(Initializer.DepthTest);
-	OutDepthStencilState.depthWriteEnable = Initializer.bEnableDepthWrite ? VK_TRUE : VK_FALSE;
+	//OutDepthStencilState.depthWriteEnable = Initializer.bEnableDepthWrite ? VK_TRUE : VK_FALSE;
 
 	{
 		// This will be filled in from the PSO

@@ -393,8 +393,12 @@ bool FOpenGLRasterizerState::GetInitializer(FRasterizerStateInitializerRHI& Init
 FDepthStencilStateRHIRef FOpenGLDynamicRHI::RHICreateDepthStencilState(const FDepthStencilStateInitializerRHI& Initializer)
 {
 	FOpenGLDepthStencilState* DepthStencilState = new FOpenGLDepthStencilState;
-	DepthStencilState->Data.bZEnable = Initializer.DepthTest != CF_Always || Initializer.bEnableDepthWrite;
-	DepthStencilState->Data.bZWriteEnable = Initializer.bEnableDepthWrite;
+	/*@third party code - BEGIN TressFX*/
+	DepthStencilState->Data.bZEnable = Initializer.bForceDisableDepth ? false : (Initializer.DepthTest != CF_Always || Initializer.bEnableDepthWrite);
+	DepthStencilState->Data.bZWriteEnable = (Initializer.DepthWriteMask != DWM_Zero) ? Initializer.bEnableDepthWrite : false;
+	/*@third party code - END TressFX*/
+	//DepthStencilState->Data.bZEnable = Initializer.DepthTest != CF_Always || Initializer.bEnableDepthWrite;
+	//DepthStencilState->Data.bZWriteEnable = Initializer.bEnableDepthWrite;
 	DepthStencilState->Data.ZFunc = TranslateCompareFunction(Initializer.DepthTest);
 	DepthStencilState->Data.bStencilEnable = Initializer.bEnableFrontFaceStencil || Initializer.bEnableBackFaceStencil;
 	DepthStencilState->Data.bTwoSidedStencilMode = Initializer.bEnableBackFaceStencil;
