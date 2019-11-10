@@ -5,7 +5,7 @@ TressFX Hair for Unreal
 Overview
 ----------------------
 
-This open source Unreal Engine fork implements a **modified** version AMD's [TressFX](https://github.com/GPUOpen-Effects/TressFX) hair/fur rendering and simulation technology into Unreal Engine. TressFX makes use of the processing power of high-performance GPUs to do realistic rendering and utilizes compute shaders to physically simulate each individual strand of hair.
+This open source Unreal Engine fork implements a **modified** version AMD's [TressFX](https://github.com/GPUOpen-Effects/TressFX) hair/fur rendering and simulation technology into Unreal Engine. It uses the GPU and compute shaders to physically simulate each individual strand of hair.
 
 We are opening the source to the community to get more people involved and help solve the remaining issues.
 
@@ -32,7 +32,7 @@ We are opening the source to the community to get more people involved and help 
 - Physics asset integration
 	- Capsule collision with up to 10 capsules can be used.
 	- Only capsules/sphyls are currently supported.
-	- Uses the same physics asset as the underlying mesh. To mark a capsule for TressFX collision, the name of the capsule must end with "tressfx". A bool flag will be added eventually.
+	- Uses the same physics asset as the underlying mesh. To mark a capsule for TressFX collision, the name of the capsule must end with "tressfx". I considered a bool flag but dont want to ruin the physics body serialization
 
 Shading Models
 --------------------
@@ -61,6 +61,12 @@ There are more than what is listed here but they are mainly for dev/debugging pu
     - 1: KBuffer (Experimental/buggy, not recommended)
 - tfx.KBuffer.Size - Size of OIT K-Buffer if using the k-buffer path
     - default is 8. Max is 16
+	
+Demo/Sample Repo
+----------------------
+https://github.com/CraigMason/UE4TressFX-Sample
+
+Check out the sample repo and example asset to see how to set things up in your own projects.
 
 Known Issues/Future Work
 ----------------------
@@ -109,8 +115,20 @@ These will Probably _not_ work without changes. Its not something I personally p
 
 ### Raytracing?
 
-Not _yet_. see see [here](https://github.com/kostenickj/UE4_TressFX/issues/22)
+Not _yet_. see see [here](https://github.com/kostenickj/UE4_TressFX/issues/22). Ideas welcome.
 
+### Authors
+
+- Code:
+	- AMD
+	- Jacob Kostenick kostenickj@gmail.com
+	- Leon Rosengarten lion032@gmail.com
+	- zwywilliam https://github.com/zwywilliam
+
+
+- Assets:
+	- Craig Mason craig.mason@stasismedia.com
+	- Iain Kilner iain.kilner@stasismedia.com
 
 ---
 ---
