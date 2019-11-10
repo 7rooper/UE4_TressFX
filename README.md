@@ -9,6 +9,9 @@ This open source Unreal Engine fork implements a **modified** version AMD's [Tre
 
 We are opening the source to the community to get more people involved and help solve the remaining issues.
 
+![thumb](https://i.vimeocdn.com/video/812671106.jpg?mw=600&mh=675&q=70)
+![thumb](https://i.imgur.com/IG2aNLu.png?1)
+
 ### Current Feature List/Changes from AMDs [original library](https://github.com/GPUOpen-Effects/TressFX):
 - Support for up to 16 bone influences per hair (as opposed to the original 4)
 - Morph target support
